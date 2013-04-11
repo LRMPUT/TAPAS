@@ -3,7 +3,7 @@
 
 #include <string>
 #include <boost/circular_buffer.hpp>
-#include "SerialPort.h"
+#include "../include/SerialPort.h"
 
 
 namespace trobot {
@@ -50,7 +50,7 @@ namespace trobot {
 		SerialPort	*			serialPort_;
 		unsigned int			baud_;
 		GpsPosition				position_;
-		circular_buffer<char>	buffer_;
+		boost::circular_buffer<char>	buffer_;
 		unsigned int			index_;
 		int						end_;
 		int						start_;

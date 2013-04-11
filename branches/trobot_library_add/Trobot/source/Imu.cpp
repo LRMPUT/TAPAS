@@ -61,7 +61,7 @@ namespace trobot
 		{
 			try
 			{
-				serial_port = new SerialPort(Baud, port);
+				serial_port = new SerialPort(Baud, *port);
 			}
 			catch(...)
 			{

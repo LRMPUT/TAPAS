@@ -1,9 +1,10 @@
-#include "../include/Gps.h"
 #include <string>
 #include <boost/circular_buffer.hpp>
-#include "SerialPort.h"
+#include "../include/Gps.h"
+#include "../include/SerialPort.h"
 
 using namespace std;
+using namespace boost;
 
 namespace trobot {
 
@@ -144,7 +145,7 @@ namespace trobot {
 	string Gps::frameToString() {
 		string result = "";
 		while (index_ != end_) {
-			result.append(&buffer_[ index_ ]);
+			result.append(1, buffer_[ index_ ]);
 			index_++;
 		}
 		return result;
@@ -166,7 +167,7 @@ namespace trobot {
 		serialPort_->DetectComPorts(comList, 128);
 
 		for(vector<string>::iterator port = comList.begin(); port != comList.end(); port++) {
-			serialPort_->open(baud_, port);
+			serialPort_->open(baud_, *port);
 			if( connectionTestOk() )
 				return;
 		}

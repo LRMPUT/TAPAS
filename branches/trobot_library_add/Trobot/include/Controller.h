@@ -3,7 +3,7 @@
 
 #include <string>
 #include <boost/circular_buffer.hpp>
-#include "SerialPort.h"
+#include "../include/SerialPort.h"
 
 namespace trobot {
 	enum pinModeType {

@@ -1,4 +1,11 @@
-#include "..\include\RobotDrive.h"
+#include "../include/RobotDrive.h"
+#include "../include/RoboteqDevice.h"
+#include "../include/SerialPort.h"
+#include <boost/circular_buffer.hpp>
+#include <string>
+
+using namespace std;
+using namespace boost;
 
 namespace trobot {
 	RobotDrive::RobotDrive(const string& device, unsigned int baud)
@@ -221,7 +228,7 @@ namespace trobot {
 
 			if((s1 == 0) && (s2 == 0)) {
 				if (posCheckedFlag_ == true) {
-					posCheckedFlag = false;
+					posCheckedFlag_ = false;
 					return true;
 				}
 				else {
@@ -292,13 +299,13 @@ namespace trobot {
 			setConfig("KI", 2, positionPid.ki);
 
 			cout << "Config set\n";
-			Sleep(50);
+			usleep(50000);
 
 
 			setConfig("MMOD", 1, 3);
 			setConfig("MMOD", 2, 3);
 			cout << "Position mode\n";
-			Sleep(50);
+			usleep(50000);
 
 
 			setRuntime("P",1, encoder1);
@@ -308,7 +315,7 @@ namespace trobot {
 
 
 			mode_ = POSITION;
-			Sleep(500);
+			usleep(500000);
 			setRuntime("MG",0,0);
 			cout << "quit emergency mode\n";
 		}
@@ -365,7 +372,7 @@ namespace trobot {
 		comm = sstream.str();
 
 		serialPort_->write(comm);
-		Sleep(50);
+		usleep(50000);
 		
 		// preapre string of expected reply to look for
 		sResult << uppercase << command <<"=";
@@ -400,7 +407,7 @@ namespace trobot {
 
 	bool RobotDrive::connectionTestOk() {
 		serialPort_->write("?FID_");
-		Sleep(750);
+		usleep(750000);
 
 		circular_buffer<char> data = serialPort_->getDataRead();
 
@@ -419,10 +426,10 @@ namespace trobot {
 		if(serialPort_->isActive())
 			serialPort_->close();
 		serialPort_ = new SerialPort(115200, comList[0]);
-		for each (std::string port in comList) {
+		for(vector<string>::iterator port = comList.begin(); port != comList.end(); port++) {
 			try {
 				cout << "Checking "<< port << endl;
-				serialPort_->open(baud_, port);
+				serialPort_->open(baud_, *port);
 			}
 			catch (...) {
 				continue;

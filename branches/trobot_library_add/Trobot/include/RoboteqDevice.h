@@ -28,7 +28,7 @@ protected:
 	
 	int Read(std::string &str, int count);
 
-	int IssueCommand(std::string commandType, std::string command, std::string args, int waitms, string &response, bool isplusminus = false);
+	int IssueCommand(std::string commandType, std::string command, std::string args, int waitms, std::string &response, bool isplusminus = false);
 	int IssueCommand(std::string commandType, std::string command, int waitms, std::string &response, bool isplusminus = false);
 
 public:

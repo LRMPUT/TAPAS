@@ -1,9 +1,9 @@
-#include "../include/Controller.h"
 #include <iostream>
 #include <cmath>
 #include <string>
 #include <boost/circular_buffer.hpp>
-#include "SerialPort.h"
+#include "../include/SerialPort.h"
+#include "../include/Controller.h"
 
 using namespace std;
 using namespace boost;
@@ -234,7 +234,7 @@ void Controller::searchForDevice() {
 
 	for(vector<string>::iterator port = comList.begin(); port != comList.end(); port++) {
 		try {
-			serialPort_ = new SerialPort(baud_, port);
+			serialPort_ = new SerialPort(baud_, *port);
 		}
 		catch(...) {
 			cout << "Controller: connection to " << port << " did not succeed. "<< endl;

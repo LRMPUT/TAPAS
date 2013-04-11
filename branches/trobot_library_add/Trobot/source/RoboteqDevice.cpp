@@ -1,8 +1,11 @@
-#include "RoboteqDevice.h"
-#include "ErrorCodes.h"
+#include <string>
+#include "../include/RoboteqDevice.h"
+#include "../include/ErrorCodes.h"
+#include "../include/SerialPort.h"
 
 
 using namespace std;
+using namespace boost;
 
 namespace trobot {
 
@@ -302,12 +305,12 @@ namespace trobot {
 
 	void sleepms(int milliseconds)
 	{
-		Sleep(milliseconds);
+		usleep(milliseconds*1000);
 	}
 
 	bool RoboteqDevice::connectionTestOk() {
 		serialPort_->write("?FID_");
-		Sleep(500);
+		usleep(500000);
 
 		circular_buffer<char> data = serialPort_->getDataRead();
 
@@ -324,8 +327,8 @@ namespace trobot {
 		std::vector<std::string> comList;
 		serialPort_->DetectComPorts(comList, 128);
 
-		for each (std::string port in comList) {
-			serialPort_->open(baud_, port);
+		for(vector<string>::iterator port = comList.begin(); port != comList.end(); port++) {
+			serialPort_->open(baud_, *port);
 			if( connectionTestOk() )
 				cout << "Roboteq driver connected!\n";
 				return;

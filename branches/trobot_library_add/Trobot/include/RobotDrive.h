@@ -1,7 +1,7 @@
 #ifndef ROBOT_DRIVE_H
 #define ROBOT_DRIVE_H
 
-#include "RoboteqDevice.h"
+#include "../include/RoboteqDevice.h"
 #include <string>
 
 #define STOP 0

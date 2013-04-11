@@ -1,5 +1,23 @@
-#include "SerialPort.h"
+#include <boost/bind.hpp>
+#include <boost/asio.hpp>
+#include <boost/asio/serial_port.hpp>
+#include <boost/thread.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/date_time/posix_time/posix_time_types.hpp>
+#include <boost/circular_buffer.hpp>
+
+#include <deque>
 #include <iostream>
+#include <string>
+#include <cstdlib>
+#include <dirent.h>
+#include <cstdio>
+#include <sys/types.h>
+
+#include "SerialPort.h"
+
+using namespace std;
+using namespace boost;
 
 namespace trobot {
 	SerialPort::SerialPort(unsigned int baud, const string& device) 
@@ -25,7 +43,7 @@ namespace trobot {
 		asio::serial_port_base::baud_rate baud_option(baud); 
 		serialPort_->set_option(baud_option); // set the baud rate after the port has been opened 
 		readStart();
-		thread_ = new thread(boost::bind(&boost::asio::io_service::run, &io_service_)); 
+		thread_ = new thread(bind(&asio::io_service::run, &io_service_));
 		counting = false;
 		newDataAvaialble_ = false;
 		
@@ -48,7 +66,7 @@ namespace trobot {
 	}
 
 
-	void SerialPort::readComplete(const boost::system::error_code& error, size_t bytes_transferred) 
+	void SerialPort::readComplete(const system::error_code& error, size_t bytes_transferred)
         { 
                 if (!error) 
                 { // read completed, so process the data 
@@ -167,42 +185,44 @@ namespace trobot {
 		asio::serial_port Serial;
 		Serial.
 		}*/
-		if (windows) {
-			for(size_t i=1; i<=upperLimit; i++)
+#if defined(WIN32) || defined(_WIN32)
+		for(size_t i=1; i<=upperLimit; i++)
+		{
+			TCHAR sPort[32] = {0};
+			_stprintf(sPort, _T("\\\\.\\COM%d"), i);
+
+			BOOL bSuccess = FALSE;
+			HANDLE hPort = ::CreateFile(sPort, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, 0, 0);
+			if (hPort == INVALID_HANDLE_VALUE)
 			{
-				TCHAR sPort[32] = {0};
-				_stprintf(sPort, _T("\\\\.\\COM%d"), i);   
+				DWORD dwError = GetLastError();
 
-				BOOL bSuccess = FALSE;
-				HANDLE hPort = ::CreateFile(sPort, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, 0, 0);
-				if (hPort == INVALID_HANDLE_VALUE)
-				{
-					DWORD dwError = GetLastError();
-
-					//Check to see if the error was because some other app had the port open or a general failure
-					if (dwError == ERROR_ACCESS_DENIED || dwError == ERROR_GEN_FAILURE || dwError == ERROR_SHARING_VIOLATION || dwError == ERROR_SEM_TIMEOUT)
-						bSuccess = TRUE;
-				}
-				else
-				{
-					//The port was opened successfully
+				//Check to see if the error was because some other app had the port open or a general failure
+				if (dwError == ERROR_ACCESS_DENIED || dwError == ERROR_GEN_FAILURE || dwError == ERROR_SHARING_VIOLATION || dwError == ERROR_SEM_TIMEOUT)
 					bSuccess = TRUE;
+			}
+			else
+			{
+				//The port was opened successfully
+				bSuccess = TRUE;
 
-					//Don't forget to close the port, since we are going to do nothing with it anyway
-					CloseHandle(hPort);
-				}
+				//Don't forget to close the port, since we are going to do nothing with it anyway
+				CloseHandle(hPort);
+			}
 
-				//Add the port number to the array which will be returned
-				if (bSuccess) {
-					char result[32];
-					wcstombs(result,sPort,sizeof(sPort));
-					ports.push_back(result);
-				}
+			//Add the port number to the array which will be returned
+			if (bSuccess) {
+				char result[32];
+				wcstombs(result,sPort,sizeof(sPort));
+				ports.push_back(result);
 			}
 		}
-		else {
-			throw std::exception("DetectComPorts works currently only on windows. Sorry!");
-		}
+#else
+		//TODO Napisac obsługę wykrywania portów pod Linuxa
+		//dirent** namelist;
+		//int n = scandir("/dev", &namelist, , alphasort);
+
+#endif
 	}
 	
 
@@ -229,7 +249,7 @@ namespace trobot {
 		asio::serial_port_base::baud_rate baud_option(baud); 
 		serialPort_->set_option(baud_option); // set the baud rate after the port has been opened 
 		readStart();
-		thread_ = new thread(boost::bind(&boost::asio::io_service::run, &io_service_)); 
+		thread_ = new thread(bind(&asio::io_service::run, &io_service_));
 		counting = false;
 	}
 
@@ -260,17 +280,14 @@ namespace trobot {
 	}
 	
 	
-	std::wstring SerialPort::s2ws(const std::string& s)
-{
- int len;
- int slength = (int)s.length() + 1;
- len = MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, 0, 0); 
- wchar_t* buf = new wchar_t[len];
- MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, buf, len);
- std::wstring r(buf);
- delete[] buf;
- return r;
-}	
+	std::wstring SerialPort::s2ws(const string& s){
+		int len;
+		wchar_t buf[MAX_WSTR_LEN];
+		mbstowcs(buf, s.c_str(), MAX_WSTR_LEN);
+		std::wstring r(buf);
+		delete[] buf;
+		return r;
+	}
 		
 	void SerialPort::flush() {
 		if(readBuffer_.size() != 0)
