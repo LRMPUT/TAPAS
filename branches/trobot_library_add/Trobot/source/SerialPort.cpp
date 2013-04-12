@@ -14,7 +14,7 @@
 #include <cstdio>
 #include <sys/types.h>
 
-#include "SerialPort.h"
+#include "../include/SerialPort.h"
 
 using namespace std;
 using namespace boost;
@@ -31,12 +31,12 @@ namespace trobot {
 		}
 		catch (...) {
 			active_ = false;
-			throw std::exception("Failed to open serial port\n");
+			throw "Failed to open serial port";
 		}
 		if (!serialPort_->is_open()) 
 		{
 			cerr << "Failed to open serial port\n"; 
-			throw std::exception("Failed to open serial port\n");
+			throw "Failed to open serial port";
 			return; 
 		} 
 		
@@ -242,7 +242,7 @@ namespace trobot {
 		if (!serialPort_->is_open()) 
 		{
 			cerr << "Failed to open serial port\n"; 
-			throw std::exception("Failed to open serial port\n");
+			throw "Failed to open serial port";
 			return; 
 		} 
 		
@@ -285,7 +285,6 @@ namespace trobot {
 		wchar_t buf[MAX_WSTR_LEN];
 		mbstowcs(buf, s.c_str(), MAX_WSTR_LEN);
 		std::wstring r(buf);
-		delete[] buf;
 		return r;
 	}
 		

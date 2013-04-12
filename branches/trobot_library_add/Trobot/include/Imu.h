@@ -1,9 +1,9 @@
 #ifndef IMU_H
 #define IMU_H
 
-#include "..\include\SerialPort.h"
-#include "..\include\Address.h"
-#include "..\include\const_inttypes.h"
+#include "../include/SerialPort.h"
+#include "../include/Address.h"
+#include "../include/const_inttypes.h"
 #include <ctime>
 #include <string>
 

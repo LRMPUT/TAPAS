@@ -237,7 +237,6 @@ namespace trobot {
 
 			}
 
-			int  s1, s2;
 			getRuntime("S", 0, &s1, &s2);
 
 			if((s1 == 0) && (s2 == 0)) {
@@ -428,14 +427,14 @@ namespace trobot {
 		serialPort_ = new SerialPort(115200, comList[0]);
 		for(vector<string>::iterator port = comList.begin(); port != comList.end(); port++) {
 			try {
-				cout << "Checking "<< port << endl;
+				cout << "Checking "<< *port << endl;
 				serialPort_->open(baud_, *port);
 			}
 			catch (...) {
 				continue;
 			}
 			if( connectionTestOk() )
-				cout << "Roboteq driver connected! Port: "<< port <<endl;
+				cout << "Roboteq driver connected! Port: "<< *port <<endl;
 				return;
 		}
 

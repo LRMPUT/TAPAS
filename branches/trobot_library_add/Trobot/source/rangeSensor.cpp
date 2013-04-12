@@ -1,4 +1,4 @@
-#include "..\include\rangeSensor.h"
+#include "../include/rangeSensor.h"
 
 namespace trobot {
 	rangeSensor::rangeSensor(unsigned int pinNo, Controller * controller, SensorModel model)

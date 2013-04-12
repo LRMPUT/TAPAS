@@ -67,7 +67,7 @@ namespace trobot
 			{
 				continue;
 			}
-			device_ = port;
+			device_ = *port;
 			if( connectionTestOk() )
 				return;
 		}

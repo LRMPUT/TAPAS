@@ -46,7 +46,7 @@ unsigned int Controller::getAnalogReading(unsigned int pinNo) {
 			processFrame();
 		return analogReading_[pinNo];
 	}
-	else throw std::exception("Bad pin number",1);
+	else throw "Bad pin number";
 }
 
 bool Controller::getPinState(unsigned int pinNo) {
@@ -55,7 +55,7 @@ bool Controller::getPinState(unsigned int pinNo) {
 			processFrame();
 		return pinState_[ pinNo ];
 	}
-	else throw std::exception("Bad pin number",1);
+	else throw "Bad pin number";
 }
 
 pinModeType Controller::getPinMode(unsigned int pinNo) {
@@ -64,13 +64,13 @@ pinModeType Controller::getPinMode(unsigned int pinNo) {
 			processFrame();
 		return pinMode_[ pinNo ];
 	}
-	else throw std::exception("Bad pin number",1);
+	else throw "Bad pin number";
 }
 
 void Controller::setPinMode(unsigned int pinNo, trobot::pinModeType pinMode) {
 	if (pinNo < nDigitalPins_)
 		pinModeToWrite_[ pinNo ] = pinMode;
-	else throw std::exception("Bad pin number",1);
+	else throw "Bad pin number";
 }
 
 void Controller::processFrame() {
@@ -149,7 +149,7 @@ void Controller::processFrame() {
 void Controller::setPinState(unsigned int pinNo, bool state) {
 	if (pinNo < nDigitalPins_)
 		pinStateToWrite_[ pinNo ] = state;
-	else throw std::exception("Bad pin number",1);
+	else throw "Bad pin number";
 }
 
 void Controller::sendData() {
@@ -237,14 +237,14 @@ void Controller::searchForDevice() {
 			serialPort_ = new SerialPort(baud_, *port);
 		}
 		catch(...) {
-			cout << "Controller: connection to " << port << " did not succeed. "<< endl;
+			cout << "Controller: connection to " << *port << " did not succeed. "<< endl;
 			continue;
 		}
-		device_ = port;
+		device_ = *port;
 		if( connectionTestOk() )
 			return;
 		else
-			cout << "Controller: connection to " << port << " did not succeed. "<< endl;
+			cout << "Controller: connection to " << *port << " did not succeed. "<< endl;
 	}
 
 }
