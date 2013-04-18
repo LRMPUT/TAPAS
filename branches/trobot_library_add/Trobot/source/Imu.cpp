@@ -28,6 +28,7 @@ namespace trobot
 		ConfigArray();
 
 		broadcasting_ = false;
+		//fetch = true;
 		//SerialPacketReadIMU.header1 = 's';
 		//SerialPacketReadIMU.header2 = 'n';
 		//SerialPacketReadIMU.header3 = 'p';

@@ -4,8 +4,45 @@
 
 TEMPLATE = app
 TARGET = 
-DEPENDPATH += .
+DEPENDPATH += . ../Trobot/include ../Trobot/source
 INCLUDEPATH += . /usr/local/include/opencv
+
+LIBS += -L/usr/local/lib \
+		-lopencv_core \
+		-lopencv_imgproc \
+		-lopencv_calib3d \
+		-lopencv_video \
+		-lopencv_features2d \
+		-lopencv_ml \
+		-lopencv_highgui \
+		-lopencv_objdetect \
+		-lopencv_contrib \
+		-lopencv_legacy \
+		-lopencv_gpu \
+		-L/usr/lib \
+		-lboost_date_time \
+		-lboost_filesystem \
+		-lboost_graph_parallel \
+		-lboost_graph \
+		-lboost_iostreams \
+		-lboost_math_c99f \
+		-lboost_math_c99l \
+		-lboost_math_c99 \
+		-lboost_math_tr1f \
+		-lboost_math_tr1l \
+		-lboost_math_tr1 \
+		-lboost_mpi-mt \
+		-lboost_mpi \
+		-lboost_prg_exec_monitor \
+		-lboost_program_options \
+		-lboost_regex \
+		-lboost_serialization \
+		-lboost_signals \
+		-lboost_system \
+		-lboost_thread \
+		-lboost_wave \
+		-lboost_wserialization
+		
 
 # Input
 HEADERS += CameraWindow.h \
@@ -26,4 +63,11 @@ SOURCES += CameraWindow.cpp \
            gui.cpp \
            ImuChart.cpp \
            QtRobotDrive.cpp \
-           trobotqt.cpp
+           trobotqt.cpp \
+           ../Trobot/source/RobotDrive.cpp \
+           ../Trobot/source/RoboteqDevice.cpp \
+           ../Trobot/source/SerialPort.cpp \
+           ../Trobot/source/Imu.cpp \
+           ../Trobot/source/Controller.cpp \
+           ../Trobot/source/Gps.cpp \
+           ../Trobot/source/rangeSensor.cpp

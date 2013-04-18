@@ -15,7 +15,7 @@ using namespace std;
 #define SCALE_FACT_POW 5
 
 Value values[NUM_VALUES] = {
-	Value(4*trobot::ACCEL_PROC_XY + 2,	Qt::red,		QString("accel x"),		0.000183105),
+	Value(4*trobot::ACCEL_PROC_XY + 2,	Qt::red,		"accel x",		0.000183105),
 	Value(4*trobot::ACCEL_PROC_XY,		Qt::darkRed,	"accel y",		0.000183105),
 	Value(4*trobot::ACCEL_PROC_Z + 2,	Qt::green,		"accel z",		0.000183105),
 	Value(4*trobot::GYRO_PROC_XY + 2,	Qt::darkGreen,	"gyro x",		0.0610352),
@@ -271,7 +271,7 @@ void ImuChart::collectData(){
 			newData.push_back(vector<float>(1, tmp));
 		}
 	}
-	imu->fetch = true;
+	//imu->fetch = true;
 	//cout << "Adding data to chart, vector size = " << newData.size() << endl;
 	chart->addData(newData);
 }

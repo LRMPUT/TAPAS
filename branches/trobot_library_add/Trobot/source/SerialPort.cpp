@@ -5,6 +5,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 #include <boost/circular_buffer.hpp>
+#include <boost/filesystem.hpp>
 
 #include <deque>
 #include <iostream>
@@ -218,10 +219,14 @@ namespace trobot {
 			}
 		}
 #else
-		//TODO Napisac obsługę wykrywania portów pod Linuxa
-		//dirent** namelist;
-		//int n = scandir("/dev", &namelist, , alphasort);
-
+		const filesystem::path dirPath("/dev");
+		const string name("ttyUSB");
+		filesystem::directory_iterator endIt;
+		for(filesystem::directory_iterator dirIt(dirPath); dirIt != endIt; dirIt++){
+			if(string(dirIt->path().filename().c_str()).find(name) != string::npos){
+				ports.push_back(dirIt->path().c_str());
+			}
+		}
 #endif
 	}
 	

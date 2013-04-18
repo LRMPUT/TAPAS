@@ -957,6 +957,7 @@ namespace trobot
 	{
 		public:
 			
+			//volatile bool fetch;
 			//! Length of array called Register
 			static const int length_array = 256;
 			//! Serial port baud length

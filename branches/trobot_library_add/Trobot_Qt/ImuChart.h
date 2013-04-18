@@ -14,7 +14,7 @@
 
 struct Value {
 	Value();
-	Value(int iaddr, QColor icolor, char* iname, float ifactor, QCheckBox* icheckBox = NULL, QLineEdit* iscale = NULL){
+	Value(int iaddr, QColor icolor, const char* iname, float ifactor, QCheckBox* icheckBox = NULL, QLineEdit* iscale = NULL){
 		address = iaddr;
 		color = icolor;
 		name = QString(iname);
