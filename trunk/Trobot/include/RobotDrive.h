@@ -33,7 +33,7 @@ namespace trobot {
 		void	runMotor(int speed, int channel);			///< runs a motor connected to a specific channel
 		bool	positionReached();							///< checks whether robot reached desired position. Also returns true if the robot was in the other mode than position. It is assumed that position is reached, when speed of the robot is 0.
 		void	resume(void);								///< resumes motion of a robot after obstacle was removed.
-
+		void	getEncoder(int* enc1, int* enc2);
 
 	private:
 		
