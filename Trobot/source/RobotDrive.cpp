@@ -137,6 +137,10 @@ namespace trobot {
 
 	}
 
+	void RobotDrive::getEncoder(int* enc1, int* enc2){
+		getRuntime("C", enc1, enc2);
+	}
+
 	void RobotDrive::initConfig() {
 		// disable echo
 		setConfig("ECHOF", 1, 1);
