@@ -9,8 +9,10 @@ using namespace std;
 TrobotQt::TrobotQt(QWidget *parent, Qt::WFlags flags)
 	: cap(0), QMainWindow(parent, flags), remoteCamera(NULL), drive(NULL)
 {
+	cout << "TrobotQt::TrobotQt" << endl;
 	if(!cap.isOpened()){ // check if we succeeded
-        exit(-1);
+        cout << "No camera detected" << endl;
+		//exit(-1);
 	}
 	ui.setupUi(this);
 	std::vector<string> ports;
@@ -31,6 +33,8 @@ TrobotQt::TrobotQt(QWidget *parent, Qt::WFlags flags)
 	ui.robotDrivePortCombo->addItems(portList);
 
 	imuChart = new ImuChart(&ui);
+	cout << "TrobotQt::TrobotQt end" << endl;
+
 }
 
 TrobotQt::~TrobotQt(){
@@ -38,15 +42,17 @@ TrobotQt::~TrobotQt(){
 }
 
 void TrobotQt::captureFrame(){
-	cv::Mat tmpFrame;
-	cap >> tmpFrame;
-	cv::resize(tmpFrame, frame, cv::Size(CAMERA_WIDTH, CAMERA_HEIGHT));
-	if(ui.cameraLabel->isVisible() == true){
-		ui.cameraLabel->setPixmap(QPixmap::fromImage(QImage(frame.ptr(), frame.cols, frame.rows, QImage::Format_RGB888)));
-		ui.cameraLabel->update();
-	}
-	if(remoteCamera->isVisible() == true){
-		remoteCamera->setFrame(frame.ptr(), frame.cols, frame.rows);
+	if(cap.isOpened()){
+		cv::Mat tmpFrame;
+		cap >> tmpFrame;
+		cv::resize(tmpFrame, frame, cv::Size(CAMERA_WIDTH, CAMERA_HEIGHT));
+		if(ui.cameraLabel->isVisible() == true){
+			ui.cameraLabel->setPixmap(QPixmap::fromImage(QImage(frame.ptr(), frame.cols, frame.rows, QImage::Format_RGB888)));
+			ui.cameraLabel->update();
+		}
+		if(remoteCamera->isVisible() == true){
+			remoteCamera->setFrame(frame.ptr(), frame.cols, frame.rows);
+		}
 	}
 }
 

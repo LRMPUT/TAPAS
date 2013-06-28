@@ -1,5 +1,8 @@
 #include "trobotqt.h"
 #include <QtGui/QApplication>
+#include <iostream>
+
+using namespace std;
 
 int main(int argc, char *argv[])
 {

@@ -220,7 +220,7 @@ namespace trobot {
 		}
 #else
 		const filesystem::path dirPath("/dev");
-		const string name("ttyUSB");
+		const string name("ttyACM");
 		filesystem::directory_iterator endIt;
 		for(filesystem::directory_iterator dirIt(dirPath); dirIt != endIt; dirIt++){
 			if(string(dirIt->path().filename().c_str()).find(name) != string::npos){

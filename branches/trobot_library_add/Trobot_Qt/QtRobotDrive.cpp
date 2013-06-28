@@ -105,7 +105,7 @@ void QtRobotDrive::stop(){
 }
 
 void QtRobotDrive::motorValChanged(int val){
-	cout << "motorValChanged" << endl;
+	//cout << "motorValChanged" << endl;
 	if(val != NO_SLIDER_VAL){
 		if(motorVal[LEFT_CHANNEL - 1] == 0 && motorVal[RIGHT_CHANNEL - 1] == 0){
 			driveState = Nothing;
@@ -119,14 +119,14 @@ void QtRobotDrive::motorValChanged(int val){
 	ui->robotDriveLeftMotorLabel->setText(QString("%1").arg(motorVal[LEFT_CHANNEL - 1]));
 	ui->robotDriveRightMotorLabel->setText(QString("%1").arg(motorVal[RIGHT_CHANNEL - 1]));
 #ifdef DRIVE_DBG
-	printf("runMotor(%d, LEFT_CHANNEL)\n", motorVal[0]);
+	printf("runMotor(%d, LEFT_CHANNEL)\n", motorVal[LEFT_CHANNEL - 1]);
 #else
-	runMotor(motorVal[0], LEFT_CHANNEL);
+	runMotor(motorVal[LEFT_CHANNEL - 1], LEFT_CHANNEL);
 #endif
 
 #ifdef DRIVE_DBG
-	printf("runMotor(%d, RIGHT_CHANNEL)\n", motorVal[1]);
+	printf("runMotor(%d, RIGHT_CHANNEL)\n", motorVal[RIGHT_CHANNEL - 1]);
 #else
-	runMotor(motorVal[1], RIGHT_CHANNEL);
+	runMotor(motorVal[RIGHT_CHANNEL - 1], RIGHT_CHANNEL);
 #endif
 }

@@ -1,15 +1,15 @@
 #ifndef QT_ROBOT_DRIVE
 #define QT_ROBOT_DRIVE
 
-#define DRIVE_DBG
+//#define DRIVE_DBG
 
 #include <QtCore/QObject>
 #include <string>
 #include "../Trobot/include/RobotDrive.h"
 #include "ui_trobotqt.h"
 
-#define LEFT_CHANNEL 1
-#define RIGHT_CHANNEL 2
+#define LEFT_CHANNEL 2
+#define RIGHT_CHANNEL 1
 
 enum Action {
 	Nothing,
@@ -50,4 +50,4 @@ public slots:
 	void motorValChanged(int val);
 };
 
-#endif QT_ROBOT_DRIVE
+#endif //QT_ROBOT_DRIVE

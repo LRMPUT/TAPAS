@@ -11,23 +11,28 @@ namespace trobot {
 	RobotDrive::RobotDrive(const string& device, unsigned int baud)
 
 	{
+		//cout << "RobotDrive::RobotDrive" << endl;
 		baud_ = baud;
 		device_ = device;
 
 		try {
+			cout << "Opening serial port " << device << endl;
 			serialPort_ = new SerialPort(baud, device);
 		}
-		catch (std::exception e) {
+		catch (...) {
+			//cout << "Caught exception" << endl;
 			std::vector<std::string> comList;
-			serialPort_->DetectComPorts(comList, 128);		
-			serialPort_ = new SerialPort(baud, comList[0]);
+			serialPort_->DetectComPorts(comList, 128);
 			searchForDevice();
 		}
-		if(!connectionTestOk())
+		if(!connectionTestOk()){
+			serialPort_->close();
+			delete serialPort_;
 			searchForDevice();
-		else
+		}
+		else{
 			cout << "Roboteq driver connected!\n";
-
+		}
 
 		encoderCPR = 48 * 75; //encoder CPR * gear ratio
 		//encoderCPR = 64 * 122; //encoder CPR * gear ratio
@@ -52,6 +57,8 @@ namespace trobot {
 
 	RobotDrive::~RobotDrive(void)
 	{
+		serialPort_->close();
+		delete serialPort_;
 	}
 
 	void RobotDrive::runMotor(int speed, int channel) {
@@ -409,6 +416,12 @@ namespace trobot {
 		usleep(750000);
 
 		circular_buffer<char> data = serialPort_->getDataRead();
+		if(data.size() >0){
+			for(circular_buffer<char>::iterator it = data.begin(); it != data.end(); it++){
+				cout << *it;
+			}
+			cout << endl;
+		}
 
 		int result = searchBufferR(data, "FID=");
 		if (result >= 0)
@@ -418,27 +431,35 @@ namespace trobot {
 	}
 
 	void RobotDrive::searchForDevice() {
-		cout << "looking for Roboteq driver\n";
+		cout << "Seeking for Roboteq driver\n";
 		std::vector<std::string> comList;
 		serialPort_->DetectComPorts(comList, 128);
 		
-		if(serialPort_->isActive())
+		if(serialPort_->isActive()){
 			serialPort_->close();
-		serialPort_ = new SerialPort(115200, comList[0]);
+			delete serialPort_;
+		}
 		for(vector<string>::iterator port = comList.begin(); port != comList.end(); port++) {
 			try {
 				cout << "Checking "<< *port << endl;
-				serialPort_->open(baud_, *port);
+				serialPort_ = new SerialPort(baud_, *port);
 			}
 			catch (...) {
+				//cout << "continue;" << endl;
 				continue;
 			}
-			if( connectionTestOk() )
+			if( connectionTestOk() ){
 				cout << "Roboteq driver connected! Port: "<< *port <<endl;
 				return;
+			}
+			else{
+				cout << "Wrong port" << endl;
+				serialPort_->close();
+			}
 		}
-
+		delete serialPort_;
 	}
+
 	void RobotDrive::resume() {
 		int speed = lastSpeed;
 		int actualRpms = (int)(maxRpms *  abs(speed) / 1000);
