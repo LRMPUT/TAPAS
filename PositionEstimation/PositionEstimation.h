@@ -9,6 +9,7 @@
 #ifndef POSITIONESTIMATION_H_
 #define POSITIONESTIMATION_H_
 
+#include <vector>
 #include "Encoders/Encoders.h"
 #include "GPS/GPS.h"
 #include "IMU/IMU.h"
@@ -34,6 +35,15 @@ public:
 
 	// Encoders - predict
 	void KalmanPredict();
+
+	//left, right encoder
+	void getEncoderData(std::vector<int>& data);
+
+	//x, y position
+	void getGpsData(std::vector<int>& data);
+
+	//acc, gyro, magnet, euler
+	void getImuData(std::vector<float>& data);
 };
 
 #endif /* POSITIONESTIMATION_H_ */

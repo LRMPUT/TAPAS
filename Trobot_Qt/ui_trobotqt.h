@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'trobotqt.ui'
 **
-** Created: Thu Jun 27 19:50:24 2013
+** Created: Mon Jul 1 16:08:44 2013
 **      by: Qt User Interface Compiler version 4.8.1
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -171,6 +171,29 @@ public:
     QLabel *label_8;
     QComboBox *hokuyoPortCombo;
     QLabel *hokuyoStatusLabel;
+    QWidget *recordTab;
+    QGroupBox *saRateGroupBox;
+    QWidget *verticalLayoutWidget;
+    QVBoxLayout *verticalLayout;
+    QCheckBox *includeHokuyoCheckBox;
+    QLineEdit *saRateHokuyoLineEdit;
+    QCheckBox *includeEncodersCheckBox;
+    QLineEdit *saRateEncodersLineEdit;
+    QCheckBox *includeGpsCheckBox;
+    QLineEdit *saRateGpsLineEdit;
+    QCheckBox *includeCamerasCheckBox;
+    QLineEdit *saRateCamerasLineEdit;
+    QCheckBox *includeImuCheckBox;
+    QLineEdit *saRateImuLineEdit;
+    QGroupBox *groupBox_2;
+    QWidget *verticalLayoutWidget_2;
+    QVBoxLayout *verticalLayout_2;
+    QLabel *label_17;
+    QLineEdit *recPathLineEdit;
+    QPushButton *startRecButton;
+    QPushButton *pauseResumeRecButton;
+    QPushButton *stopRecButon;
+    QLabel *recStatusLabel;
     QMenuBar *mainMenu;
 
     void setupUi(QMainWindow *TrobotQtClass)
@@ -253,7 +276,7 @@ public:
         gyroGroupBox->setGeometry(QRect(0, 130, 141, 100));
         gridLayoutWidget_9 = new QWidget(gyroGroupBox);
         gridLayoutWidget_9->setObjectName(QString::fromUtf8("gridLayoutWidget_9"));
-        gridLayoutWidget_9->setGeometry(QRect(0, 20, 141, 81));
+        gridLayoutWidget_9->setGeometry(QRect(0, 20, 141, 85));
         gridLayout_7 = new QGridLayout(gridLayoutWidget_9);
         gridLayout_7->setSpacing(6);
         gridLayout_7->setContentsMargins(11, 11, 11, 11);
@@ -293,7 +316,7 @@ public:
         magGroupBox->setGeometry(QRect(0, 240, 141, 100));
         gridLayoutWidget_8 = new QWidget(magGroupBox);
         gridLayoutWidget_8->setObjectName(QString::fromUtf8("gridLayoutWidget_8"));
-        gridLayoutWidget_8->setGeometry(QRect(0, 20, 141, 80));
+        gridLayoutWidget_8->setGeometry(QRect(0, 20, 141, 85));
         gridLayout_6 = new QGridLayout(gridLayoutWidget_8);
         gridLayout_6->setSpacing(6);
         gridLayout_6->setContentsMargins(11, 11, 11, 11);
@@ -333,7 +356,7 @@ public:
         eulerGroupBox->setGeometry(QRect(0, 350, 141, 100));
         gridLayoutWidget_10 = new QWidget(eulerGroupBox);
         gridLayoutWidget_10->setObjectName(QString::fromUtf8("gridLayoutWidget_10"));
-        gridLayoutWidget_10->setGeometry(QRect(0, 20, 141, 81));
+        gridLayoutWidget_10->setGeometry(QRect(0, 20, 147, 85));
         gridLayout_8 = new QGridLayout(gridLayoutWidget_10);
         gridLayout_8->setSpacing(6);
         gridLayout_8->setContentsMargins(11, 11, 11, 11);
@@ -370,7 +393,7 @@ public:
 
         verticalLayoutWidget_5 = new QWidget(imuTab);
         verticalLayoutWidget_5->setObjectName(QString::fromUtf8("verticalLayoutWidget_5"));
-        verticalLayoutWidget_5->setGeometry(QRect(680, 10, 131, 118));
+        verticalLayoutWidget_5->setGeometry(QRect(680, 10, 131, 141));
         verticalLayout_5 = new QVBoxLayout(verticalLayoutWidget_5);
         verticalLayout_5->setSpacing(6);
         verticalLayout_5->setContentsMargins(11, 11, 11, 11);
@@ -489,7 +512,7 @@ public:
         gpsDisplayLabel->setFrameShape(QFrame::StyledPanel);
         verticalLayoutWidget_7 = new QWidget(gpsTab);
         verticalLayoutWidget_7->setObjectName(QString::fromUtf8("verticalLayoutWidget_7"));
-        verticalLayoutWidget_7->setGeometry(QRect(670, 20, 131, 118));
+        verticalLayoutWidget_7->setGeometry(QRect(670, 20, 131, 141));
         verticalLayout_7 = new QVBoxLayout(verticalLayoutWidget_7);
         verticalLayout_7->setSpacing(6);
         verticalLayout_7->setContentsMargins(11, 11, 11, 11);
@@ -574,7 +597,7 @@ public:
         sensorsTab->setObjectName(QString::fromUtf8("sensorsTab"));
         verticalLayoutWidget_10 = new QWidget(sensorsTab);
         verticalLayoutWidget_10->setObjectName(QString::fromUtf8("verticalLayoutWidget_10"));
-        verticalLayoutWidget_10->setGeometry(QRect(670, 20, 131, 118));
+        verticalLayoutWidget_10->setGeometry(QRect(670, 20, 131, 141));
         verticalLayout_10 = new QVBoxLayout(verticalLayoutWidget_10);
         verticalLayout_10->setSpacing(6);
         verticalLayout_10->setContentsMargins(11, 11, 11, 11);
@@ -778,7 +801,7 @@ public:
 
         verticalLayoutWidget_6 = new QWidget(robotDriveTab);
         verticalLayoutWidget_6->setObjectName(QString::fromUtf8("verticalLayoutWidget_6"));
-        verticalLayoutWidget_6->setGeometry(QRect(660, 20, 131, 151));
+        verticalLayoutWidget_6->setGeometry(QRect(660, 20, 131, 174));
         verticalLayout_6 = new QVBoxLayout(verticalLayoutWidget_6);
         verticalLayout_6->setSpacing(6);
         verticalLayout_6->setContentsMargins(11, 11, 11, 11);
@@ -823,7 +846,7 @@ public:
         hokuyoDisplayLabel->setFrameShape(QFrame::StyledPanel);
         verticalLayoutWidget_11 = new QWidget(hokuyoTab);
         verticalLayoutWidget_11->setObjectName(QString::fromUtf8("verticalLayoutWidget_11"));
-        verticalLayoutWidget_11->setGeometry(QRect(660, 30, 131, 118));
+        verticalLayoutWidget_11->setGeometry(QRect(660, 30, 131, 141));
         verticalLayout_11 = new QVBoxLayout(verticalLayoutWidget_11);
         verticalLayout_11->setSpacing(6);
         verticalLayout_11->setContentsMargins(11, 11, 11, 11);
@@ -855,15 +878,130 @@ public:
         verticalLayout_11->addWidget(hokuyoStatusLabel);
 
         mainTab->addTab(hokuyoTab, QString());
+        recordTab = new QWidget();
+        recordTab->setObjectName(QString::fromUtf8("recordTab"));
+        saRateGroupBox = new QGroupBox(recordTab);
+        saRateGroupBox->setObjectName(QString::fromUtf8("saRateGroupBox"));
+        saRateGroupBox->setGeometry(QRect(30, 30, 201, 391));
+        verticalLayoutWidget = new QWidget(saRateGroupBox);
+        verticalLayoutWidget->setObjectName(QString::fromUtf8("verticalLayoutWidget"));
+        verticalLayoutWidget->setGeometry(QRect(10, 30, 181, 347));
+        verticalLayout = new QVBoxLayout(verticalLayoutWidget);
+        verticalLayout->setSpacing(6);
+        verticalLayout->setContentsMargins(11, 11, 11, 11);
+        verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
+        verticalLayout->setContentsMargins(0, 0, 0, 0);
+        includeHokuyoCheckBox = new QCheckBox(verticalLayoutWidget);
+        includeHokuyoCheckBox->setObjectName(QString::fromUtf8("includeHokuyoCheckBox"));
+        includeHokuyoCheckBox->setCheckable(true);
+        includeHokuyoCheckBox->setChecked(true);
+
+        verticalLayout->addWidget(includeHokuyoCheckBox);
+
+        saRateHokuyoLineEdit = new QLineEdit(verticalLayoutWidget);
+        saRateHokuyoLineEdit->setObjectName(QString::fromUtf8("saRateHokuyoLineEdit"));
+
+        verticalLayout->addWidget(saRateHokuyoLineEdit);
+
+        includeEncodersCheckBox = new QCheckBox(verticalLayoutWidget);
+        includeEncodersCheckBox->setObjectName(QString::fromUtf8("includeEncodersCheckBox"));
+        includeEncodersCheckBox->setChecked(true);
+
+        verticalLayout->addWidget(includeEncodersCheckBox);
+
+        saRateEncodersLineEdit = new QLineEdit(verticalLayoutWidget);
+        saRateEncodersLineEdit->setObjectName(QString::fromUtf8("saRateEncodersLineEdit"));
+
+        verticalLayout->addWidget(saRateEncodersLineEdit);
+
+        includeGpsCheckBox = new QCheckBox(verticalLayoutWidget);
+        includeGpsCheckBox->setObjectName(QString::fromUtf8("includeGpsCheckBox"));
+        includeGpsCheckBox->setChecked(true);
+
+        verticalLayout->addWidget(includeGpsCheckBox);
+
+        saRateGpsLineEdit = new QLineEdit(verticalLayoutWidget);
+        saRateGpsLineEdit->setObjectName(QString::fromUtf8("saRateGpsLineEdit"));
+
+        verticalLayout->addWidget(saRateGpsLineEdit);
+
+        includeCamerasCheckBox = new QCheckBox(verticalLayoutWidget);
+        includeCamerasCheckBox->setObjectName(QString::fromUtf8("includeCamerasCheckBox"));
+        includeCamerasCheckBox->setChecked(true);
+
+        verticalLayout->addWidget(includeCamerasCheckBox);
+
+        saRateCamerasLineEdit = new QLineEdit(verticalLayoutWidget);
+        saRateCamerasLineEdit->setObjectName(QString::fromUtf8("saRateCamerasLineEdit"));
+
+        verticalLayout->addWidget(saRateCamerasLineEdit);
+
+        includeImuCheckBox = new QCheckBox(verticalLayoutWidget);
+        includeImuCheckBox->setObjectName(QString::fromUtf8("includeImuCheckBox"));
+        includeImuCheckBox->setChecked(true);
+
+        verticalLayout->addWidget(includeImuCheckBox);
+
+        saRateImuLineEdit = new QLineEdit(verticalLayoutWidget);
+        saRateImuLineEdit->setObjectName(QString::fromUtf8("saRateImuLineEdit"));
+
+        verticalLayout->addWidget(saRateImuLineEdit);
+
+        groupBox_2 = new QGroupBox(recordTab);
+        groupBox_2->setObjectName(QString::fromUtf8("groupBox_2"));
+        groupBox_2->setGeometry(QRect(240, 29, 191, 261));
+        verticalLayoutWidget_2 = new QWidget(groupBox_2);
+        verticalLayoutWidget_2->setObjectName(QString::fromUtf8("verticalLayoutWidget_2"));
+        verticalLayoutWidget_2->setGeometry(QRect(10, 29, 171, 211));
+        verticalLayout_2 = new QVBoxLayout(verticalLayoutWidget_2);
+        verticalLayout_2->setSpacing(6);
+        verticalLayout_2->setContentsMargins(11, 11, 11, 11);
+        verticalLayout_2->setObjectName(QString::fromUtf8("verticalLayout_2"));
+        verticalLayout_2->setContentsMargins(0, 0, 0, 0);
+        label_17 = new QLabel(verticalLayoutWidget_2);
+        label_17->setObjectName(QString::fromUtf8("label_17"));
+        sizePolicy1.setHeightForWidth(label_17->sizePolicy().hasHeightForWidth());
+        label_17->setSizePolicy(sizePolicy1);
+
+        verticalLayout_2->addWidget(label_17);
+
+        recPathLineEdit = new QLineEdit(verticalLayoutWidget_2);
+        recPathLineEdit->setObjectName(QString::fromUtf8("recPathLineEdit"));
+
+        verticalLayout_2->addWidget(recPathLineEdit);
+
+        startRecButton = new QPushButton(verticalLayoutWidget_2);
+        startRecButton->setObjectName(QString::fromUtf8("startRecButton"));
+
+        verticalLayout_2->addWidget(startRecButton);
+
+        pauseResumeRecButton = new QPushButton(verticalLayoutWidget_2);
+        pauseResumeRecButton->setObjectName(QString::fromUtf8("pauseResumeRecButton"));
+
+        verticalLayout_2->addWidget(pauseResumeRecButton);
+
+        stopRecButon = new QPushButton(verticalLayoutWidget_2);
+        stopRecButon->setObjectName(QString::fromUtf8("stopRecButon"));
+
+        verticalLayout_2->addWidget(stopRecButon);
+
+        recStatusLabel = new QLabel(verticalLayoutWidget_2);
+        recStatusLabel->setObjectName(QString::fromUtf8("recStatusLabel"));
+        sizePolicy1.setHeightForWidth(recStatusLabel->sizePolicy().hasHeightForWidth());
+        recStatusLabel->setSizePolicy(sizePolicy1);
+
+        verticalLayout_2->addWidget(recStatusLabel);
+
+        mainTab->addTab(recordTab, QString());
         TrobotQtClass->setCentralWidget(centralWidget);
         mainMenu = new QMenuBar(TrobotQtClass);
         mainMenu->setObjectName(QString::fromUtf8("mainMenu"));
-        mainMenu->setGeometry(QRect(0, 0, 829, 21));
+        mainMenu->setGeometry(QRect(0, 0, 829, 25));
         TrobotQtClass->setMenuBar(mainMenu);
 
         retranslateUi(TrobotQtClass);
 
-        mainTab->setCurrentIndex(1);
+        mainTab->setCurrentIndex(6);
 
 
         QMetaObject::connectSlotsByName(TrobotQtClass);
@@ -962,6 +1100,25 @@ public:
         label_8->setText(QApplication::translate("TrobotQtClass", "Serial port:", 0, QApplication::UnicodeUTF8));
         hokuyoStatusLabel->setText(QApplication::translate("TrobotQtClass", "Status", 0, QApplication::UnicodeUTF8));
         mainTab->setTabText(mainTab->indexOf(hokuyoTab), QApplication::translate("TrobotQtClass", "Hokuyo", 0, QApplication::UnicodeUTF8));
+        saRateGroupBox->setTitle(QApplication::translate("TrobotQtClass", "Sampling rate [Sa/s]", 0, QApplication::UnicodeUTF8));
+        includeHokuyoCheckBox->setText(QApplication::translate("TrobotQtClass", "Hokuyo", 0, QApplication::UnicodeUTF8));
+        saRateHokuyoLineEdit->setText(QApplication::translate("TrobotQtClass", "10", 0, QApplication::UnicodeUTF8));
+        includeEncodersCheckBox->setText(QApplication::translate("TrobotQtClass", "Encoders", 0, QApplication::UnicodeUTF8));
+        saRateEncodersLineEdit->setText(QApplication::translate("TrobotQtClass", "10000", 0, QApplication::UnicodeUTF8));
+        includeGpsCheckBox->setText(QApplication::translate("TrobotQtClass", "GPS", 0, QApplication::UnicodeUTF8));
+        saRateGpsLineEdit->setText(QApplication::translate("TrobotQtClass", "1", 0, QApplication::UnicodeUTF8));
+        includeCamerasCheckBox->setText(QApplication::translate("TrobotQtClass", "Cameras", 0, QApplication::UnicodeUTF8));
+        saRateCamerasLineEdit->setText(QApplication::translate("TrobotQtClass", "1", 0, QApplication::UnicodeUTF8));
+        includeImuCheckBox->setText(QApplication::translate("TrobotQtClass", "IMU", 0, QApplication::UnicodeUTF8));
+        saRateImuLineEdit->setText(QApplication::translate("TrobotQtClass", "10", 0, QApplication::UnicodeUTF8));
+        groupBox_2->setTitle(QApplication::translate("TrobotQtClass", "Control", 0, QApplication::UnicodeUTF8));
+        label_17->setText(QApplication::translate("TrobotQtClass", "File path", 0, QApplication::UnicodeUTF8));
+        recPathLineEdit->setText(QApplication::translate("TrobotQtClass", "data", 0, QApplication::UnicodeUTF8));
+        startRecButton->setText(QApplication::translate("TrobotQtClass", "Start", 0, QApplication::UnicodeUTF8));
+        pauseResumeRecButton->setText(QApplication::translate("TrobotQtClass", "Pause", 0, QApplication::UnicodeUTF8));
+        stopRecButon->setText(QApplication::translate("TrobotQtClass", "Stop", 0, QApplication::UnicodeUTF8));
+        recStatusLabel->setText(QApplication::translate("TrobotQtClass", "status", 0, QApplication::UnicodeUTF8));
+        mainTab->setTabText(mainTab->indexOf(recordTab), QApplication::translate("TrobotQtClass", "Recording", 0, QApplication::UnicodeUTF8));
     } // retranslateUi
 
 };
