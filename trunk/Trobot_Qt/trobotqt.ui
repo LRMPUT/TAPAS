@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>829</width>
-    <height>685</height>
+    <height>705</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -23,7 +23,7 @@
       <x>0</x>
       <y>0</y>
       <width>831</width>
-      <height>661</height>
+      <height>671</height>
      </rect>
     </property>
     <property name="currentIndex">
@@ -87,7 +87,7 @@
       <property name="geometry">
        <rect>
         <x>680</x>
-        <y>130</y>
+        <y>150</y>
         <width>141</width>
         <height>451</height>
        </rect>
@@ -101,7 +101,7 @@
          <x>0</x>
          <y>20</y>
          <width>141</width>
-         <height>100</height>
+         <height>101</height>
         </rect>
        </property>
        <property name="title">
@@ -113,7 +113,7 @@
           <x>0</x>
           <y>20</y>
           <width>141</width>
-          <height>91</height>
+          <height>81</height>
          </rect>
         </property>
         <layout class="QGridLayout" name="gridLayout_5">
@@ -182,7 +182,7 @@
          <x>0</x>
          <y>130</y>
          <width>141</width>
-         <height>100</height>
+         <height>101</height>
         </rect>
        </property>
        <property name="title">
@@ -257,7 +257,7 @@
          <x>0</x>
          <y>240</y>
          <width>141</width>
-         <height>100</height>
+         <height>101</height>
         </rect>
        </property>
        <property name="title">
@@ -269,7 +269,7 @@
           <x>0</x>
           <y>20</y>
           <width>141</width>
-          <height>80</height>
+          <height>81</height>
          </rect>
         </property>
         <layout class="QGridLayout" name="gridLayout_6">
@@ -332,7 +332,7 @@
          <x>0</x>
          <y>350</y>
          <width>141</width>
-         <height>100</height>
+         <height>101</height>
         </rect>
        </property>
        <property name="title">
@@ -343,7 +343,7 @@
          <rect>
           <x>0</x>
           <y>20</y>
-          <width>141</width>
+          <width>149</width>
           <height>81</height>
          </rect>
         </property>
@@ -408,7 +408,7 @@
         <x>680</x>
         <y>10</y>
         <width>131</width>
-        <height>118</height>
+        <height>141</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -616,7 +616,7 @@
         <x>670</x>
         <y>20</y>
         <width>131</width>
-        <height>118</height>
+        <height>141</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_7">
@@ -743,7 +743,7 @@
         <x>670</x>
         <y>20</y>
         <width>131</width>
-        <height>118</height>
+        <height>141</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_10">
@@ -1124,7 +1124,7 @@
         <x>660</x>
         <y>20</y>
         <width>131</width>
-        <height>151</height>
+        <height>174</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -1195,7 +1195,7 @@
         <x>660</x>
         <y>30</y>
         <width>131</width>
-        <height>118</height>
+        <height>141</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_11">
@@ -1233,6 +1233,203 @@
       </layout>
      </widget>
     </widget>
+    <widget class="QWidget" name="recordTab">
+     <attribute name="title">
+      <string>Recording</string>
+     </attribute>
+     <widget class="QGroupBox" name="saRateGroupBox">
+      <property name="geometry">
+       <rect>
+        <x>30</x>
+        <y>30</y>
+        <width>201</width>
+        <height>391</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>Sampling rate [Sa/s]</string>
+      </property>
+      <widget class="QWidget" name="verticalLayoutWidget">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>30</y>
+         <width>181</width>
+         <height>347</height>
+        </rect>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <widget class="QCheckBox" name="includeHokuyoCheckBox">
+          <property name="text">
+           <string>Hokuyo</string>
+          </property>
+          <property name="checkable">
+           <bool>true</bool>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="saRateHokuyoLineEdit">
+          <property name="text">
+           <string>10</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="includeEncodersCheckBox">
+          <property name="text">
+           <string>Encoders</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="saRateEncodersLineEdit">
+          <property name="text">
+           <string>10000</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="includeGpsCheckBox">
+          <property name="text">
+           <string>GPS</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="saRateGpsLineEdit">
+          <property name="text">
+           <string>1</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="includeCamerasCheckBox">
+          <property name="text">
+           <string>Cameras</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="saRateCamerasLineEdit">
+          <property name="text">
+           <string>1</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="includeImuCheckBox">
+          <property name="text">
+           <string>IMU</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="saRateImuLineEdit">
+          <property name="text">
+           <string>10</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+     <widget class="QGroupBox" name="groupBox_2">
+      <property name="geometry">
+       <rect>
+        <x>240</x>
+        <y>29</y>
+        <width>191</width>
+        <height>261</height>
+       </rect>
+      </property>
+      <property name="title">
+       <string>Control</string>
+      </property>
+      <widget class="QWidget" name="verticalLayoutWidget_2">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>29</y>
+         <width>171</width>
+         <height>211</height>
+        </rect>
+       </property>
+       <layout class="QVBoxLayout" name="verticalLayout_2">
+        <item>
+         <widget class="QLabel" name="label_17">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>File path</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="recPathLineEdit">
+          <property name="text">
+           <string>data</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="startRecButton">
+          <property name="text">
+           <string>Start</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pauseResumeRecButton">
+          <property name="text">
+           <string>Pause</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="stopRecButon">
+          <property name="text">
+           <string>Stop</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="recStatusLabel">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="text">
+           <string>status</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </widget>
    </widget>
   </widget>
   <widget class="QMenuBar" name="mainMenu">
@@ -1241,14 +1438,12 @@
      <x>0</x>
      <y>0</y>
      <width>829</width>
-     <height>21</height>
+     <height>25</height>
     </rect>
    </property>
   </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
- <resources>
-  <include location="trobotqt.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>

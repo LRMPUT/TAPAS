@@ -9,6 +9,9 @@
 //#include "Camera/***"
 #include "Hokuyo/Hokuyo.h"
 #include "Sharp/Sharp.h"
+#include <vector>
+#include <opencv2/opencv.hpp>
+
 
 class MovementConstaints {
 
@@ -23,6 +26,12 @@ class MovementConstaints {
 public:
 	MovementConstaints();
 	virtual ~MovementConstaints();
+
+	//x, y points
+	void getHokuyoData(std::vector<int>& data);
+
+	//left, right image
+	void getCameraData(std::vector<cv::Mat>& data);
 };
 
 #endif /* MOVEMENTCONSTAINTS_H_ */

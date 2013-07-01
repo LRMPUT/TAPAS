@@ -34,7 +34,7 @@
 									<listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/4.6/include-fixed"/>
 									<listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/4.6/include"/>
 									<listOptionValue builtIn="false" value="/usr/include/qt4"/>
-									<listOptionValue builtIn="false" value="/usr/local/include/opencv"/>
+									<listOptionValue builtIn="false" value="/usr/local/include"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.851628123" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -50,7 +50,7 @@
 									<listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/4.6/include-fixed"/>
 									<listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/4.6/include"/>
 									<listOptionValue builtIn="false" value="/usr/include/qt4"/>
-									<listOptionValue builtIn="false" value="/usr/local/include/opencv"/>
+									<listOptionValue builtIn="false" value="/usr/local/include"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1211761148" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
@@ -71,7 +71,7 @@
 									<listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/4.6/include-fixed"/>
 									<listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/4.6/include"/>
 									<listOptionValue builtIn="false" value="/usr/include/qt4"/>
-									<listOptionValue builtIn="false" value="/usr/local/include/opencv"/>
+									<listOptionValue builtIn="false" value="/usr/local/include"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1374331771" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
@@ -114,6 +114,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/RobotsIntellect/Trobot/include}&quot;"/>
 									<listOptionValue builtIn="false" value="/usr/include/qt4"/>
 									<listOptionValue builtIn="false" value="/usr/local/include/opencv"/>
+									<listOptionValue builtIn="false" value="/usr/local/include/urg_c"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.531262908" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -131,6 +132,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/RobotsIntellect/Trobot/include}&quot;"/>
 									<listOptionValue builtIn="false" value="/usr/include/qt4"/>
 									<listOptionValue builtIn="false" value="/usr/local/include/opencv"/>
+									<listOptionValue builtIn="false" value="/usr/local/include/urg_c"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1621515781" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
@@ -153,6 +155,7 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/RobotsIntellect/Trobot/include}&quot;"/>
 									<listOptionValue builtIn="false" value="/usr/include/qt4"/>
 									<listOptionValue builtIn="false" value="/usr/local/include/opencv"/>
+									<listOptionValue builtIn="false" value="/usr/local/include/urg_c"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.640053617" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
@@ -165,21 +168,6 @@
 	</storageModule>
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
 		<project id="RobotsIntellect.cdt.managedbuild.target.gnu.exe.1450787982" name="Executable" projectType="cdt.managedbuild.target.gnu.exe"/>
-	</storageModule>
-	<storageModule moduleId="scannerConfiguration">
-		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.897285008;cdt.managedbuild.config.gnu.exe.debug.897285008.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.305032586;cdt.managedbuild.tool.gnu.cpp.compiler.input.851628123">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.897285008;cdt.managedbuild.config.gnu.exe.debug.897285008.;cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1123931395;cdt.managedbuild.tool.gnu.c.compiler.input.1211761148">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.95159129;cdt.managedbuild.config.gnu.exe.release.95159129.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1183236761;cdt.managedbuild.tool.gnu.cpp.compiler.input.531262908">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.95159129;cdt.managedbuild.config.gnu.exe.release.95159129.;cdt.managedbuild.tool.gnu.c.compiler.exe.release.667651504;cdt.managedbuild.tool.gnu.c.compiler.input.1621515781">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		</scannerConfigBuildInfo>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
 	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets">
@@ -196,5 +184,20 @@
 	</storageModule>
 	<storageModule moduleId="refreshScope" versionNumber="1">
 		<resource resourceType="PROJECT" workspacePath="/RobotsIntellect"/>
+	</storageModule>
+	<storageModule moduleId="scannerConfiguration">
+		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.897285008;cdt.managedbuild.config.gnu.exe.debug.897285008.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.305032586;cdt.managedbuild.tool.gnu.cpp.compiler.input.851628123">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.95159129;cdt.managedbuild.config.gnu.exe.release.95159129.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1183236761;cdt.managedbuild.tool.gnu.cpp.compiler.input.531262908">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.95159129;cdt.managedbuild.config.gnu.exe.release.95159129.;cdt.managedbuild.tool.gnu.c.compiler.exe.release.667651504;cdt.managedbuild.tool.gnu.c.compiler.input.1621515781">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.897285008;cdt.managedbuild.config.gnu.exe.debug.897285008.;cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1123931395;cdt.managedbuild.tool.gnu.c.compiler.input.1211761148">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
 	</storageModule>
 </cproject>
