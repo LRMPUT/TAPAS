@@ -11,6 +11,10 @@
 #include "../Planning/GlobalPlanner.h"
 #include <fstream>
 #include <string>
+#include <opencv2/opencv.hpp>
+
+#define RASTER_SIZE 200		//[mm]
+#define MAP_SIZE	10000/RASTER_SIZE	//[u] 10m
 
 class Robot {
 
@@ -25,12 +29,14 @@ public:
 	Robot();
 	virtual ~Robot();
 
+	//----------------------MODES OF OPERATION
 	void switchToManualMode();
 
 	void switchToAutonomousMode();
 
 	void setMotorsVel(float mot1, float mot2);
 
+	//----------------------MENAGMENT OF GlobalPlanner DEVICES
 	//Robots Drive
 	void openRobotsDrive(std::string port);
 
@@ -38,6 +44,7 @@ public:
 
 	bool isRobotsDriveOpen();
 
+	//----------------------MENAGMENT OF PositionEstimation DEVICES
 	//Gps
 	void openGps(std::string port);
 
@@ -45,42 +52,51 @@ public:
 
 	bool isGpsOpen();
 
+	//Imu
+	void openImu(std::string port);
+
+	void closeImu();
+
+	bool isImuOpen();
+
+	//----------------------MENAGMENT OF MovementConstraints DEVICES
 	//Hokuyo
-	void openHokuyo();
+	void openHokuyo(std::string port);
 
 	void closeHokuyo();
 
 	bool isHokuyoOpen();
 
 	//Camera
-	void openCamera();
+	void openCameras();
 
-	void closeCamera();
+	void closeCameras();
 
-	bool isCameraOpen();
+	bool areCamerasOpen();
 
-	//Imu
-	void openImu(std::string port);
 
-	void closeImu();
+	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
+	//CV_32UC1 2x1: left, right encoder
+	cv::Mat getEncoderData();
 
-	bool isImuClosed();
+	//CV_32SC1 2x1: x, y position
+	cv::Mat getGpsData();
 
-	//left, right encoder
-	void getEncoderData(std::vector<int>& data);
+	//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
+	cv::Mat getImuData();
 
-	//x, y position
-	void getGpsData(std::vector<int>& data);
+	//CV_32SC1 2x1440: x, y points from left to right
+	cv::Mat getHokuyoData();
 
-	//acc, gyro, magnet, euler
-	void getImuData(std::vector<float>& data);
+	//CV_8UC3 2x640x480: left, right image
+	cv::Mat getCamerasData();
 
-	//x, y points
-	void getHokuyoData(std::vector<int>& data);
+	//----------------------ACCESS TO COMPUTED DATA
+	//CV_32SC1 3x1: x, y, fi
+	cv::Mat getEstimatedPosition();
 
-	//left, right image
-	void getCameraData(std::vector<cv::Mat>& data);
-
+	//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robots position (MAP_SIZE/2, 0)
+	cv::Mat getMovementConstraints();
 };
 
 #endif /* ROBOT_H_ */

@@ -33,6 +33,10 @@ public:
 	 */
 	void initController(char *PortName, int BaudRate);
 	/**
+	 * Stops the module
+	 */
+	void deinitController();
+	/**
 	 * Default virtual destructor.
 	 */
 	virtual ~GPS();
@@ -64,6 +68,10 @@ public:
 	 * @warning Use only when fix available.
 	 */
 	void setZeroXY(double Latitude, double Longitude);
+	/**
+	 * Checks if port is opened
+	 */
+	bool isOpen();
 
 private:
 	double PosLat, PosLon;
@@ -79,6 +87,7 @@ private:
 	void start();
 	void join();
 	int openPort();
+	void closePort();
 	void monitorSerialPort();
 	int calculateRadius();
 

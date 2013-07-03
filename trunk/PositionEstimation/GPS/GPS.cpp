@@ -54,9 +54,14 @@ void GPS::initController(char *PortName, int BaudRate){
 	start();
 }
 
-GPS::~GPS() {
+void GPS::deinitController(){
+	join();
 	nmea_parser_destroy(&Parser);
-	close(FD);
+	closePort();
+}
+
+GPS::~GPS() {
+	deinitController();
 }
 
 //Otwiera port
@@ -143,20 +148,35 @@ int GPS::openPort(){
 	return 0;
 }
 
+void GPS::closePort()
+{
+	close(FD);
+	FD = 0;
+}
+
+bool GPS::isOpen()
+{
+	return (FD > 0);
+}
+
 double GPS::getPosX(){
 	PosX = (nmea_ndeg2degree(Info.lon) - StartPosLon)*Radius;
 	return PosX;
 }
+
 double GPS::getPosY(){
 	PosY = (nmea_ndeg2degree(Info.lat) - StartPosLat)*Radius;
 	return PosY;
 }
+
 double GPS::getLat(){
 	return PosLat;
 }
+
 double GPS::getLon(){
 	return PosLon;
 }
+
 double GPS::getHorPrec(){
 	return Info.HDOP;
 }
@@ -171,10 +191,12 @@ void GPS::start()
 {
     m_Thread = boost::thread(&GPS::monitorSerialPort, this);
 }
+
 void GPS::join()
 {
     m_Thread.join();
 }
+
 void GPS::monitorSerialPort()
 {
 	boost::posix_time::milliseconds WorkTime2(50);
