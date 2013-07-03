@@ -13,12 +13,13 @@
 #include "Encoders/Encoders.h"
 #include "GPS/GPS.h"
 #include "IMU/IMU.h"
+#include "../Robot.h"
 
 class PositionEstimation {
 
 private:
-	// Encoders
-	Encoders encoders;
+	// Encoders - moved to GlobalPlanner
+	//Encoders encoders;
 
 	// GPS
 	GPS gps;
@@ -26,8 +27,11 @@ private:
 	// IMU
 	IMU imu;
 
+	//Parent class Robot
+	Robot* robot;
+
 public:
-	PositionEstimation();
+	PositionEstimation(Robot* irobot);
 	virtual ~PositionEstimation();
 
 	// Update Kalman - updates on GPS
@@ -36,14 +40,27 @@ public:
 	// Encoders - predict
 	void KalmanPredict();
 
-	//left, right encoder
-	void getEncoderData(std::vector<int>& data);
+	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
+	//CV_32SC1 2x1: x, y position
+	cv::Mat getGpsData();
 
-	//x, y position
-	void getGpsData(std::vector<int>& data);
+	//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
+	cv::Mat getImuData();
 
-	//acc, gyro, magnet, euler
-	void getImuData(std::vector<float>& data);
+	//----------------------MENAGMENT OF PositionEstimation DEVICES
+	//Gps
+	void openGps(std::string port);
+
+	void closeGps();
+
+	bool isGpsOpen();
+
+	//Imu
+	void openImu(std::string port);
+
+	void closeImu();
+
+	bool isImuOpen();
 };
 
 #endif /* POSITIONESTIMATION_H_ */
