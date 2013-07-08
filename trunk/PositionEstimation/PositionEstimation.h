@@ -9,11 +9,12 @@
 #ifndef POSITIONESTIMATION_H_
 #define POSITIONESTIMATION_H_
 
-#include <vector>
+#include <opencv2/opencv.hpp>
 #include "Encoders/Encoders.h"
 #include "GPS/GPS.h"
 #include "IMU/IMU.h"
-#include "../Robot.h"
+
+class Robot;
 
 class PositionEstimation {
 
@@ -40,6 +41,10 @@ public:
 	// Encoders - predict
 	void KalmanPredict();
 
+	//----------------------ACCESS TO COMPUTED DATA
+	//CV_32SC1 3x1: x, y, fi
+	cv::Mat getEstimatedPosition();
+
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
 	//CV_32SC1 2x1: x, y position
 	cv::Mat getGpsData();
@@ -62,5 +67,7 @@ public:
 
 	bool isImuOpen();
 };
+
+#include "../Robot/Robot.h"
 
 #endif /* POSITIONESTIMATION_H_ */

@@ -7,11 +7,15 @@
 #ifndef ROBOT_H_
 #define ROBOT_H_
 
-#include "../PositionEstimation/PositionEstimation.h"
-#include "../Planning/GlobalPlanner.h"
 #include <fstream>
 #include <string>
 #include <opencv2/opencv.hpp>
+
+class Robot;
+
+#include "../PositionEstimation/PositionEstimation.h"
+#include "../MovementConstraints/MovementConstraints.h"
+#include "../Planning/GlobalPlanner.h"
 
 #define RASTER_SIZE 200		//[mm]
 #define MAP_SIZE	10000/RASTER_SIZE	//[u] 10m
@@ -19,22 +23,21 @@
 class Robot {
 
 	// Class containing information about our position estimation from sensors
-	PositionEstimation positionEstimate;
+	PositionEstimation positionEstimation;
 
 	// Class responsible for planning
 	GlobalPlanner globalPlanner;
 
+	MovementConstraints movementConstraints;
 
 public:
 	Robot();
 	virtual ~Robot();
 
 	//----------------------MODES OF OPERATION
-	void switchToManualMode();
+	void switchMode(OperationMode mode);
 
-	void switchToAutonomousMode();
-
-	void setMotorsVel(float mot1, float mot2);
+	void setMotorsVel(float motLeft, float motRight);
 
 	//----------------------MENAGMENT OF GlobalPlanner DEVICES
 	//Robots Drive
@@ -68,15 +71,15 @@ public:
 	bool isHokuyoOpen();
 
 	//Camera
-	void openCameras();
+	void openCamera();
 
-	void closeCameras();
+	void closeCamera();
 
-	bool areCamerasOpen();
+	bool isCameraOpen();
 
 
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
-	//CV_32UC1 2x1: left, right encoder
+	//CV_32SC1 2x1: left, right encoder
 	cv::Mat getEncoderData();
 
 	//CV_32SC1 2x1: x, y position
@@ -85,17 +88,17 @@ public:
 	//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
 	cv::Mat getImuData();
 
-	//CV_32SC1 2x1440: x, y points from left to right
+	//CV_32SC1 2xHOKUYO_SCANS: x, y points from left to right
 	cv::Mat getHokuyoData();
 
 	//CV_8UC3 2x640x480: left, right image
-	cv::Mat getCamerasData();
+	cv::Mat getCameraData();
 
 	//----------------------ACCESS TO COMPUTED DATA
 	//CV_32SC1 3x1: x, y, fi
 	cv::Mat getEstimatedPosition();
 
-	//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robots position (MAP_SIZE/2, 0)
+	//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)
 	cv::Mat getMovementConstraints();
 };
 

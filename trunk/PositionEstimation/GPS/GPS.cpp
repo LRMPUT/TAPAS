@@ -24,7 +24,6 @@ GPS::GPS() {
 	PosY = 0.0;
 	PosLat = 0.0;
 	PosLon = 0.0;
-	Port = 0;
 	Baud = 9600;
 	FD = 0;
 	StartPosLat = 0.0;
@@ -32,25 +31,23 @@ GPS::GPS() {
 	Radius = 0.0;
 }
 
-GPS::GPS(char *PortName, int BaudRate){
+GPS::GPS(const char *PortName, int BaudRate){
 	PosX = 0.0;
 	PosY = 0.0;
 	PosLat = 0.0;
 	PosLon = 0.0;
-	Port = PortName;
 	Baud = BaudRate;
 	FD = 0;
 	StartPosLat = 0.0;
 	StartPosLon = 0.0;
 	Radius = 0.0;
-	openPort();
+	openPort(PortName);
 	start();
 }
 
-void GPS::initController(char *PortName, int BaudRate){
-	Port = PortName;
+void GPS::initController(const char *PortName, int BaudRate){
 	Baud = BaudRate;
-	openPort();
+	openPort(PortName);
 	start();
 }
 
@@ -65,11 +62,11 @@ GPS::~GPS() {
 }
 
 //Otwiera port
-int GPS::openPort(){
+int GPS::openPort(const char* port){
 	struct termios toptions;
 	bzero(&toptions, sizeof(toptions));
 
-	FD = open(Port, O_RDWR | O_NOCTTY | O_NDELAY);
+	FD = open(port, O_RDWR | O_NOCTTY | O_NDELAY);
 	if (FD == -1)  {
 		perror("init_serialport: Unable to open port \n");
 		printf("Failed to open port \n");

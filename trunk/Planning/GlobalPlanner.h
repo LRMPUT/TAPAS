@@ -8,14 +8,32 @@
 #ifndef GLOBALPLANNER_H_
 #define GLOBALPLANNER_H_
 
-#include "../Robot.h"
+#include <opencv2/opencv.hpp>
+#include "../Trobot/include/RobotDrive.h"
+
+class Robot;
+
+enum OperationMode{
+	Manual,
+	Autonomous
+};
 
 class GlobalPlanner {
 	//parent class robot
 	Robot* robot;
+
+	//Driver
+	trobot::RobotDrive* robotDrive;
+
+	OperationMode currentMode;
 public:
 	GlobalPlanner(Robot* irobot);
 	virtual ~GlobalPlanner();
+
+	//----------------------MODES OF OPERATION
+	void switchMode(OperationMode mode);
+
+	void setMotorsVel(float motLeft, float motRight);
 
 	//----------------------MENAGMENT OF GlobalPlanner DEVICES
 	//Robots Drive
@@ -26,8 +44,10 @@ public:
 	bool isRobotsDriveOpen();
 
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
-	//CV_32UC1 2x1: left, right encoder
+	//CV_32SC1 2x1: left, right encoder
 	cv::Mat getEncoderData();
 };
+
+#include "../Robot/Robot.h"
 
 #endif /* GLOBALPLANNER_H_ */
