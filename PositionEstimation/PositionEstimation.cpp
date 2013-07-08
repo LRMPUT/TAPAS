@@ -7,7 +7,6 @@
 
 #include <opencv2/opencv.hpp>
 #include <string>
-#include <cstdint>
 #include "PositionEstimation.h"
 
 using namespace cv;
@@ -22,12 +21,18 @@ PositionEstimation::~PositionEstimation() {
 	closeImu();
 }
 
+//----------------------ACCESS TO COMPUTED DATA
+//CV_32SC1 3x1: x, y, fi
+cv::Mat PositionEstimation::getEstimatedPosition(){
+	return Mat(3, 1, CV_32SC1);
+}
+
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 //CV_32SC1 2x1: x, y position
 cv::Mat PositionEstimation::getGpsData(){
 	Mat ret(2, 1, CV_32SC1);
-	ret.at<int32_t>(0) = (int32_t)gps.getPosX();
-	ret.at<int32_t>(1) = (int32_t)gps.getPosY();
+	ret.at<int>(0) = (int)gps.getPosX();
+	ret.at<int>(1) = (int)gps.getPosY();
 	return ret;
 }
 

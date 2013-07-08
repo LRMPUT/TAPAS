@@ -25,13 +25,13 @@ public:
 	 * @param[in] PortName Pointer to array containing name of port, to which the GPS module is attached
 	 * @param[in] BaudRate Baud rate for serial communication with module, default 9600.
 	 */
-	GPS(char *PortName, int BaudRate);
+	GPS(const char *PortName, int BaudRate);
 	/**
 	 * Start the module. Use with default constructor.
 	 * @param[in] PortName Pointer to array containing name of port, to which the GPS module is attached
 	 * @param[in] BaudRate Baud rate for serial communication with module, default 9600.
 	 */
-	void initController(char *PortName, int BaudRate);
+	void initController(const char *PortName, int BaudRate);
 	/**
 	 * Stops the module
 	 */
@@ -77,7 +77,6 @@ private:
 	double PosLat, PosLon;
 	double PosX, PosY;
 	double StartPosLat, StartPosLon;
-	char* Port;
 	int Baud;
 	int FD;
 	double Radius;
@@ -86,7 +85,7 @@ private:
 
 	void start();
 	void join();
-	int openPort();
+	int openPort(const char* port);
 	void closePort();
 	void monitorSerialPort();
 	int calculateRadius();
