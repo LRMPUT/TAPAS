@@ -11,10 +11,7 @@
 #include <QtCore/QObject>
 #include <QtCore/QTimer>
 #include <QtCore/QElapsedTimer>
-#include "../Trobot/include/Imu.h"
-#include "../Trobot/include/RobotDrive.h"
-#include "../PositionEstimation/GPS/GPS.h"
-#include <urg_c/urg_sensor.h>
+#include "../Robot/Robot.h"
 #include "ui_trobotqt.h"
 #include <fstream>
 
@@ -29,10 +26,7 @@ private:
 	//QTimer camerasTimer;
 	QElapsedTimer time;
 
-	trobot::Imu* imu;
-	trobot::RobotDrive* drive;
-	GPS* gps;
-	urg_t* hokuyo;
+	Robot* robot;
 
 	std::fstream file;
 
@@ -49,7 +43,7 @@ private slots:
 	void getDataCameras();
 
 public slots:
-	void startRec(trobot::Imu* imu, trobot::RobotDrive* drive, GPS* gps, urg_t* hokuyo);
+	void startRec(Robot* irobot);
 	void pauseResumeRec();
 	void stopRec();
 };

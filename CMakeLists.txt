@@ -42,10 +42,10 @@ set(RobotsIntellect_SOURCES
 	Trobot/source/RobotDrive.cpp
 	Trobot/source/RoboteqDevice.cpp
 	Trobot/source/SerialPort.cpp
-	main.cpp
 )
 add_executable (RobotsIntellect 
 	${RobotsIntellect_SOURCES}
+	main.cpp
 )
 target_link_libraries(RobotsIntellect ${OpenCV_LIBS} ${Boost_LIBRARIES} ${urg_LIBRARIES})
 
