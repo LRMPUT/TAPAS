@@ -47,6 +47,8 @@ void QtRobotDrive::setButtonsEnabled(bool state){
 	ui->robotDriveDownButton->setEnabled(state);
 	ui->robotDriveLeftButton->setEnabled(state);
 	ui->robotDriveRightButton->setEnabled(state);
+	ui->robotDriveSteeringScrollBar->setEnabled(state);
+	ui->robotDriveThrottleScrollBar->setEnabled(state);
 }
 
 void QtRobotDrive::goForward(){
@@ -127,6 +129,13 @@ void QtRobotDrive::motorValChanged(int val){
 #endif
 }
 
+void QtRobotDrive::throttleChanged(int val){
+
+}
+
+void QtRobotDrive::steeringChanged(int val){
+
+}
 
 bool QtRobotDrive::isOpen(){
 	return robot->isRobotsDriveOpen();

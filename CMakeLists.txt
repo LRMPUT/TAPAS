@@ -77,7 +77,15 @@ add_executable(Trobot_Qt/gui
 	${trobotQt_SOURCES}
 	${trobotQt_HEADERS_MOC}
 	${trobotQt_FORMS_HEADERS})
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
+message("Copying generated ui headers")
+foreach(file ${trobotQt_FORMS_HEADERS})
+	get_filename_component(filename ${file} NAME)
+	message("Copying: " ${filename})
+	add_custom_command(
+		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Trobot_Qt/${filename}
+		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${filename} ${CMAKE_CURRENT_SOURCE_DIR}/Trobot_Qt/${filename}
+		MAIN_DEPENDENCY ${CMAKE_CURRENT_BINARY_DIR}/${filename})
+endforeach()
 target_link_libraries(Trobot_Qt/gui
 	${QT_LIBRARIES}
 	${OpenCV_LIBS}
