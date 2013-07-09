@@ -44,6 +44,8 @@ public slots:
 	void rightMotorStop();
 	void stop();
 	void motorValChanged(int val);
+	void throttleChanged(int val);
+	void steeringChanged(int val);
 	void openRobotDrive();
 	void closeRobotDrive();
 	void searchRobotDrive();
