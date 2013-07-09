@@ -13,7 +13,7 @@ CameraWindow::~CameraWindow(){
 }
 
 void CameraWindow::keyPressEvent(QKeyEvent* event){
-	if(mainWindow->drive != NULL && event->isAutoRepeat() == false){
+	if(mainWindow->drive->isOpen() && event->isAutoRepeat() == false){
 		if(mainWindow->drive->getState() == Nothing){
 			switch(event->key()){
 				case Qt::Key_W :{
@@ -46,7 +46,7 @@ void CameraWindow::keyPressEvent(QKeyEvent* event){
 }
 
 void CameraWindow::keyReleaseEvent(QKeyEvent* event){
-	if(mainWindow->drive != NULL && event->isAutoRepeat() == false){
+	if(mainWindow->drive->isOpen() && event->isAutoRepeat() == false){
 		switch(event->key()){
 			case Qt::Key_W :{
 				if(mainWindow->drive->getState() == Forward){

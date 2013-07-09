@@ -42,7 +42,7 @@ void Recording::getDataCameras(){
 }
 
 
-void Recording::startRec(trobot::Imu* imu, trobot::RobotDrive* drive, GPS* gps, urg_t* hokuyo){
+void Recording::startRec(Robot* irobot){
 	ui->saRateGroupBox->setEnabled(false);
 	file.open(ui->recPathLineEdit->text().toAscii().data(), ios_base::out);
 	if(!file.is_open()){
@@ -50,35 +50,35 @@ void Recording::startRec(trobot::Imu* imu, trobot::RobotDrive* drive, GPS* gps, 
 		return;
 	}
 	if(ui->includeHokuyoCheckBox->isChecked() == true){
-		if(!hokuyo->is_active){
+		if(!robot->isHokuyoOpen()){
 			ui->recStatusLabel->setText("Hokuyo not active");
 			return;
 		}
-		hokuyoTimer.setInterval(max(1/ui->saRateHokuyoLineEdit->text().toFloat(), 1));
+		hokuyoTimer.setInterval(max((int)(1/ui->saRateHokuyoLineEdit->text().toFloat()), 1));
 		hokuyoTimer.start();
 	}
 	if(ui->includeEncodersCheckBox->isChecked() == true){
-		if(drive == NULL){	//TODO there should be functions to check if it's open
+		if(robot->isRobotsDriveOpen()){
 			ui->recStatusLabel->setText("Robot's drive error");
 			return;
 		}
-		encodersTimer.setInterval(max(1/ui->saRateEncodersLineEdit->text().toFloat(), 1));
+		encodersTimer.setInterval(max((int)(1/ui->saRateEncodersLineEdit->text().toFloat()), 1));
 		encodersTimer.start();
 	}
 	if(ui->includeGpsCheckBox->isChecked() == true){
-		if(gps == NULL){	//TODO there should be functions to check if it's open
+		if(robot->isGpsOpen()){
 			ui->recStatusLabel->setText("GPS error");
 			return;
 		}
-		gpsTimer.setInterval(max(1/ui->saRateGpsLineEdit->text().toFloat(), 1));
+		gpsTimer.setInterval(max((int)(1/ui->saRateGpsLineEdit->text().toFloat()), 1));
 		gpsTimer.start();
 	}
 	if(ui->includeImuCheckBox->isChecked() == true){
-		if(imu == NULL){	//TODO there should be functions to check if it's open
+		if(robot->isImuOpen()){
 			ui->recStatusLabel->setText("IMU error");
 			return;
 		}
-		imuTimer.setInterval(max(1/ui->saRateImuLineEdit->text().toFloat(), 1));
+		imuTimer.setInterval(max((int)(1/ui->saRateImuLineEdit->text().toFloat()), 1));
 		imuTimer.start();
 	}
 	time.start();

@@ -52,9 +52,11 @@ void GPS::initController(const char *PortName, int BaudRate){
 }
 
 void GPS::deinitController(){
-	join();
-	nmea_parser_destroy(&Parser);
-	closePort();
+	if(FD != 0){
+		join();
+		nmea_parser_destroy(&Parser);
+		closePort();
+	}
 }
 
 GPS::~GPS() {
