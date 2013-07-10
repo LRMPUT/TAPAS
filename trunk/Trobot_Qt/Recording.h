@@ -38,7 +38,7 @@ private:
 	ImuChart* imuChart;
 
 	// Saving Streams
-	std::ofstream imuStream;
+	std::ofstream imuStream, gpsStream;
 public:
 	Recording(Ui::TrobotQtClass* iui, ImuChart* iimuChart);
 	~Recording();

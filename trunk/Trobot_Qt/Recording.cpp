@@ -16,6 +16,7 @@ Recording::Recording(Ui::TrobotQtClass* iui, ImuChart* iimuChart) : ui(iui){
 	connect(&imuTimer, SIGNAL(timeout()), this, SLOT(getDataImu()));
 
 	imuChart = iimuChart;
+	robot = new Robot();
 }
 
 Recording::~Recording(){
@@ -32,7 +33,9 @@ void Recording::getDataEncoders(){
 }
 
 void Recording::getDataGps(){
-
+	cv::Mat gpsData = robot->getGpsData();
+	gpsStream<<time.elapsed()<<" ";
+	gpsStream<<gpsData.at<double>(0)<<" "<<gpsData.at<double>(1)<<std::endl;
 }
 
 void Recording::getDataImu(){
@@ -58,6 +61,11 @@ void Recording::startRec(Robot* irobot){
 		ui->recStatusLabel->setText("Could not open file");
 		return;
 	}
+
+	// Moved it here, because sometimes checking if open can take seconds and other may
+	// want to write sth to their streams
+	time.start();
+
 	if(ui->includeHokuyoCheckBox->isChecked() == true){
 		if(!robot->isHokuyoOpen()){
 			ui->recStatusLabel->setText("Hokuyo not active");
@@ -75,23 +83,32 @@ void Recording::startRec(Robot* irobot){
 		encodersTimer.start();
 	}
 	if(ui->includeGpsCheckBox->isChecked() == true){
+		// How to find which one ?
+		robot->openGps("/dev/tty0");
 		if(robot->isGpsOpen()){
 			ui->recStatusLabel->setText("GPS error");
 			return;
 		}
+		gpsStream.open("gps.data");
 		gpsTimer.setInterval(max((int)(1/ui->saRateGpsLineEdit->text().toFloat()), 1));
 		gpsTimer.start();
 	}
 	if(ui->includeImuCheckBox->isChecked() == true){
-		if(robot->isImuOpen()){
+		/*if(robot->isImuOpen()){
+			ui->recStatusLabel->setText("IMU error");
+			return;
+		}*/
+
+		if ( imuChart->testConnection()) {
 			ui->recStatusLabel->setText("IMU error");
 			return;
 		}
+
 		imuStream.open("imu.data");
 		imuTimer.setInterval(max((int)(1/ui->saRateImuLineEdit->text().toFloat()), 1));
 		imuTimer.start();
 	}
-	time.start();
+
 }
 
 void Recording::pauseResumeRec(){
@@ -136,6 +153,7 @@ void Recording::stopRec(){
 	}
 	if(ui->includeGpsCheckBox->isChecked() == true){
 		gpsTimer.stop();
+		gpsStream.close();
 	}
 	if(ui->includeImuCheckBox->isChecked() == true){
 		imuTimer.stop();

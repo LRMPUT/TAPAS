@@ -59,6 +59,7 @@ public:
 
 	// Just for dumping
 	std::vector<double> getImuData();
+	bool testConnection();
 public slots:
 	void start();
 	void stop();
