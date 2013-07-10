@@ -3,17 +3,18 @@ cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 project(RobotsIntellect)
 
 set(urg_LIBRARIES_DIR /usr/local/lib)
-set(urg_LIBRARIES urg_c)
+set(urg_LIBRARIES c_urg)
 
 find_package(OpenCV REQUIRED)
 find_package(Boost COMPONENTS system filesystem thread REQUIRED)
+include_directories(/usr/local/include)
 include_directories(Trobot/include)
 link_directories(${URG_LIBRARIES_DIR})
 set(RobotsIntellect_SOURCES
 	MechanicalGrabber/MechanicalGrabber.cpp
 	MovementConstraints/Hokuyo/Hokuyo.cpp
 	MovementConstraints/Sharp/Sharp.cpp
-	MovementConstraints/Camera/Camera.cpp
+	#MovementConstraints/Camera/Camera.cpp
 	MovementConstraints/MovementConstraints.cpp
 	#Planning/PlanningSearching/LocalPlannerSearching.cpp
 	#Planning/PlanningToGold/LocalPlannerToGold.cpp
