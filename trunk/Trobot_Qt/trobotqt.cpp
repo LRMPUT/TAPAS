@@ -33,6 +33,8 @@ TrobotQt::TrobotQt(QWidget *parent, Qt::WFlags flags)
 	drive = new QtRobotDrive(&robot, &ui);
 
 	imuChart = new ImuChart(&ui);
+
+	recording = new Recording(&ui, imuChart);
 	cout << "TrobotQt::TrobotQt end" << endl;
 
 }

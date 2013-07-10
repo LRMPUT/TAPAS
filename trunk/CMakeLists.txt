@@ -68,7 +68,7 @@ set(trobotQt_HEADERS
 set(trobotQt_FORMS
 	Trobot_Qt/CameraWindow.ui
 	Trobot_Qt/trobotqt.ui)
-qt4_wrap_cpp(trobotQt_HEADERS_MOC ${trobotQt_HEADERS})
+qt4_wrap_cpp(trobotQt_HEADERS_MOC ${trobotQt_HEADERS} OPTIONS -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED -DBOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION)
 qt4_wrap_ui(trobotQt_FORMS_HEADERS ${trobotQt_FORMS})
 include(${QT_USE_FILE})
 add_definitions(${QT_DEFINITIONS})

@@ -13,6 +13,7 @@
 #include <QtCore/QElapsedTimer>
 #include "../Robot/Robot.h"
 #include "ui_trobotqt.h"
+#include "ImuChart.h"
 #include <fstream>
 
 class Recording : public QObject {
@@ -31,8 +32,11 @@ private:
 	std::fstream file;
 
 	Ui::TrobotQtClass* ui;
+	ImuChart* imuChart;
+
+	std::ofstream imuStream;
 public:
-	Recording(Ui::TrobotQtClass* iui);
+	Recording(Ui::TrobotQtClass* iui, ImuChart* iimuChart);
 	~Recording();
 
 private slots:
