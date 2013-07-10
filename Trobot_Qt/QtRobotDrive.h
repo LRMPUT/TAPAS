@@ -30,6 +30,7 @@ public:
 private:
 	Ui::TrobotQtClass* ui;
 	void setButtonsEnabled(bool state);
+	void calcVelSteering();
 
 	Action driveState;
 	const int speed;

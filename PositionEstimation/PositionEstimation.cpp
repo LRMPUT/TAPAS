@@ -12,7 +12,7 @@
 using namespace cv;
 using namespace std;
 
-PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot) {
+PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot), KF(6, 2, 3) {
 
 	float dt = 0.1; // Right now hard-coded -> cannot be like that    
 	float transData[]  = {  1, 0, 0, dt, 0, 0,
@@ -21,7 +21,7 @@ PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot) {
 							0, 0, 0, 1, 0, 0,
 							0, 0, 0, 0, 1, 0,
 							0, 0 ,0, 0, 0, 1 };
-	memcpy( KF.transitionMatrix->data.fl, transData, sizeof(transData));
+	//memcpy( KF.transitionMatrix.data.fl, transData, sizeof(transData));
 
 	float contrData[]  = {  1, 0, 0,
             				0, 1, 0,
@@ -29,7 +29,7 @@ PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot) {
 							0, 0, 0,
 							0, 0, 0,
 							0, 0 ,0 };
-	memcpy( KF.controlMatrix->data.fl, contrData, sizeof(contrData));
+	//memcpy( KF.controlMatrix->data.fl, contrData, sizeof(contrData));
 
 	float measData[]  = {   1, 0,
             				0, 1,
@@ -37,7 +37,7 @@ PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot) {
 							0, 0,
 							0, 0,
 							0, 0 };
-	memcpy( KF.measurementMatrix->data.fl, measData, sizeof(measData));
+	//memcpy( KF.measurementMatrix->data.fl, measData, sizeof(measData));
 
 }
 
@@ -61,12 +61,12 @@ void PositionEstimation::KalmanUpdate()
 // Encoders - predict
 void PositionEstimation::KalmanPredict()
 {
-	cv::Mat pred = this->Robot->globalPlanner.getEncoderData;
+	//cv::Mat pred = this.robot->globalPlanner.getEncoderData;
 	// pred.at<float>(0) *= pred.at<float>(0) / TICK_PER_ROUND * 2 * PI * wheel_radius 
 	// pred.at<float>(1) *= pred.at<float>(1) / TICK_PER_ROUND * 2 * PI * wheel_radius 
 	// pred.at<float>(2) = ( pred.at<float>(1) - pred.at<float>(0) ) / TICK_PER_ROUND * 2 * PI * wheel_radius / ( 2 * PI * WHEEL_BASE ) * 360 
 	//
-	state = KF.predict(pred);
+	//state = KF.predict(pred);
 }
 
 //----------------------ACCESS TO COMPUTED DATA

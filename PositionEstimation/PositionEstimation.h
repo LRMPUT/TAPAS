@@ -24,7 +24,7 @@ private:
 
 	// Kalman filter to gather position information
 	cv::Mat state;
-	cv::KalmanFilter KF(6, 2, 3);
+	cv::KalmanFilter KF;
 
 	// GPS
 	GPS gps;
