@@ -16,7 +16,3 @@ LocalPlannerSearching::~LocalPlannerSearching() {
 	// TODO Auto-generated destructor stub
 }
 
-void LocalPlannerSearching::calculateAction() {
-
-}
-

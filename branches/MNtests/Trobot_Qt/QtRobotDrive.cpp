@@ -1,14 +1,13 @@
 #include "QtRobotDrive.h"
 
 #define NO_SLIDER_VAL 1001
+#define LEFT_CHANNEL 1
+#define RIGHT_CHANNEL 2
 
 using namespace std;
 
-QtRobotDrive::QtRobotDrive(const string& device, Ui::TrobotQtClass* iui, unsigned int baud):
-#ifndef DRIVE_DBG
-RobotDrive(device, baud),
-#endif
-ui(iui), driveState(Nothing), speed(800)
+QtRobotDrive::QtRobotDrive(Robot* irobot, Ui::TrobotQtClass* iui):
+ui(iui), robot(irobot), driveState(Nothing), speed(800)
 {
 	motorVal[0] = 0;
 	motorVal[1] = 0;
@@ -24,7 +23,10 @@ ui(iui), driveState(Nothing), speed(800)
 	QObject::connect(ui->robotDriveDownButton, SIGNAL(released()), this, SLOT(stop()));
 	QObject::connect(ui->robotDriveLeftButton, SIGNAL(released()), this, SLOT(stop()));
 	QObject::connect(ui->robotDriveRightButton, SIGNAL(released()), this, SLOT(stop()));
-	setButtonsEnabled(true);
+	QObject::connect(ui->robotDriveConnectButton, SIGNAL(clicked()), this, SLOT(openRobotDrive()));
+	QObject::connect(ui->robotDriveDisconnectButton, SIGNAL(clicked()), this, SLOT(closeRobotDrive()));
+	QObject::connect(ui->robotDriveSearchButton, SIGNAL(clicked()), this, SLOT(searchRobotDrive()));
+	setButtonsEnabled(false);
 }
 
 QtRobotDrive::~QtRobotDrive(){
@@ -45,6 +47,8 @@ void QtRobotDrive::setButtonsEnabled(bool state){
 	ui->robotDriveDownButton->setEnabled(state);
 	ui->robotDriveLeftButton->setEnabled(state);
 	ui->robotDriveRightButton->setEnabled(state);
+	ui->robotDriveSteeringScrollBar->setEnabled(state);
+	ui->robotDriveThrottleScrollBar->setEnabled(state);
 }
 
 void QtRobotDrive::goForward(){
@@ -119,14 +123,38 @@ void QtRobotDrive::motorValChanged(int val){
 	ui->robotDriveLeftMotorLabel->setText(QString("%1").arg(motorVal[LEFT_CHANNEL - 1]));
 	ui->robotDriveRightMotorLabel->setText(QString("%1").arg(motorVal[RIGHT_CHANNEL - 1]));
 #ifdef DRIVE_DBG
-	printf("runMotor(%d, LEFT_CHANNEL)\n", motorVal[LEFT_CHANNEL - 1]);
+	printf("robot->setMotorsVel(%d, %d)\n", motorVal[LEFT_CHANNEL - 1], motorVal[RIGHT_CHANNEL - 1]);
 #else
-	runMotor(motorVal[LEFT_CHANNEL - 1], LEFT_CHANNEL);
-#endif
-
-#ifdef DRIVE_DBG
-	printf("runMotor(%d, RIGHT_CHANNEL)\n", motorVal[RIGHT_CHANNEL - 1]);
-#else
-	runMotor(motorVal[RIGHT_CHANNEL - 1], RIGHT_CHANNEL);
+	robot->setMotorsVel(motorVal[LEFT_CHANNEL - 1], motorVal[RIGHT_CHANNEL - 1]);
 #endif
 }
+
+void QtRobotDrive::throttleChanged(int val){
+
+}
+
+void QtRobotDrive::steeringChanged(int val){
+
+}
+
+bool QtRobotDrive::isOpen(){
+	return robot->isRobotsDriveOpen();
+}
+
+void QtRobotDrive::openRobotDrive(){
+	if(ui->robotDrivePortCombo->count() != 0){
+		robot->openRobotsDrive(string(ui->robotDrivePortCombo->currentText().toAscii().data()));
+		setButtonsEnabled(true);
+	}
+}
+
+void QtRobotDrive::closeRobotDrive(){
+	setButtonsEnabled(false);
+	robot->closeRobotsDrive();
+}
+
+
+void QtRobotDrive::searchRobotDrive(){
+
+}
+

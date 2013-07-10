@@ -5,6 +5,8 @@
 
 #include "Robot/Robot.h"
 
+using namespace std;
+
 // Starting point for our robot program
 // Testing comment
 int main()
@@ -13,7 +15,7 @@ int main()
 
 
 	// Streams to save data
-	std::ofstream encoderStream, imuStream, gpsStream;
+	ofstream encoderStream, imuStream, gpsStream;
 	encoderStream.open("encoder.data");
 	imuStream.open("imu.data");
 	gpsStream.open("gps.data");
@@ -34,18 +36,18 @@ int main()
 			gpsData = ourRobot->getGpsData();
 			imuData = ourRobot->getImuData();
 
-			// enc data 2x1
-			encoderStream << encoderData.at<unsigned char>(0)<< " "<<encoderData.at<unsigned char>(1) << std::endl;
+			// enc data 2x1 - użyj operatora .at<int>()
+			//encoderStream << encoderData[0]<< " "<<encoderData[1] << endl;
 
 			// gps data 2x1
-			gpsStream << gpsData.at<signed char>(0) << " " << gpsData.at<unsigned char>(1) << std::endl;
+			//gpsStream << gpsData[0] << " " << gpsData[1] << endl;
 
 			// I changed dimensions to be row-aligned -> each row represents data from 1 sensor
 			// imu data 4x3
 			for (int i = 0; i < 4; i++)
 				for (int j=0; j<3; j++)
-					imuStream << imuData.at<double>(i,j) << " ";
-			imuStream << std::endl;
+					//imuStream << imuData[i][j] << " ";
+			imuStream << endl;
 
 			// Waiting 50 ms to have some rational data stream catching -> max 20 Hz
 			usleep(50 * 1000);
@@ -60,3 +62,4 @@ int main()
 
 	delete ourRobot;
 }
+

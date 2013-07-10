@@ -13,6 +13,7 @@
 class TrobotQt;
 
 #include "ui_trobotqt.h"
+#include "../Robot/Robot.h"
 #include "CameraWindow.h"
 #include "QtRobotDrive.h"
 #include "ImuChart.h"
@@ -32,6 +33,8 @@ private:
 	Ui::TrobotQtClass ui;
 	QStringList portList;
 	
+	Robot robot;
+
 	cv::VideoCapture cap;
 	cv::Mat frame;
 	QTimer cameraTimer;
@@ -44,10 +47,6 @@ private slots:
 	void captureFrame();
 	void openCameraWindow();
 	void cameraWindowClosed();
-
-	void openRobotDrive();
-	void closeRobotDrive();
-	void searchRobotDrive();
 };
 
 #endif // TROBOTQT_H

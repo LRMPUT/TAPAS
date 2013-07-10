@@ -8,15 +8,16 @@
 
 #include <string>
 #include <opencv2/opencv.hpp>
-//#include "Camera/***"
+#include "Camera/Camera.h"
 #include "Hokuyo/Hokuyo.h"
 #include "Sharp/Sharp.h"
-#include "../Robot/Robot.h"
 
+class Robot;
 
-class MovementConstaints {
+class MovementConstraints {
 
 	// Class to get data from Camera
+	Camera camera;
 
 	// Class to get data from Hokuyo
 	Hokuyo hokuyo;
@@ -28,16 +29,19 @@ class MovementConstaints {
 	Robot* robot;
 
 public:
-	//MovementConstaints(Robot* irobot);
-	MovementConstaints();
-	virtual ~MovementConstaints();
+	MovementConstraints(Robot* irobot);
+	virtual ~MovementConstraints();
+
+	//----------------------ACCESS TO COMPUTED DATA
+	//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)
+	cv::Mat getMovementConstraints();
 
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
-	//CV_32SC1 2x1440: x, y points from left to right
+	//CV_32SC1 2xHOKUYO_SCANS: x, y points from left to right
 	cv::Mat getHokuyoData();
 
 	//CV_8UC3 2x640x480: left, right image
-	cv::Mat getCamerasData();
+	cv::Mat getCameraData();
 
 	//----------------------MENAGMENT OF MovementConstraints DEVICES
 	//Hokuyo
@@ -48,11 +52,13 @@ public:
 	bool isHokuyoOpen();
 
 	//Camera
-	void openCameras();
+	void openCamera();
 
-	void closeCameras();
+	void closeCamera();
 
-	bool areCamerasOpen();
+	bool isCameraOpen();
 };
+
+#include "../Robot/Robot.h"
 
 #endif /* MOVEMENTCONSTAINTS_H_ */

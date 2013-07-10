@@ -1,5 +1,7 @@
 #include <iostream>
+
 #include "trobotqt.h"
+
 using namespace std;
 
 #define CAMERA_WIDTH 640
@@ -7,7 +9,7 @@ using namespace std;
 #define PORTS_UPPER_LIMIT 100
 
 TrobotQt::TrobotQt(QWidget *parent, Qt::WFlags flags)
-	: cap(0), QMainWindow(parent, flags), remoteCamera(NULL), drive(NULL)
+	: cap(0), QMainWindow(parent, flags), remoteCamera(NULL)
 {
 	cout << "TrobotQt::TrobotQt" << endl;
 	if(!cap.isOpened()){ // check if we succeeded
@@ -27,10 +29,8 @@ TrobotQt::TrobotQt(QWidget *parent, Qt::WFlags flags)
 	cameraTimer.setInterval(50);
 	cameraTimer.start();
 
-	QObject::connect(ui.robotDriveConnectButton, SIGNAL(clicked()), this, SLOT(openRobotDrive()));
-	QObject::connect(ui.robotDriveDisconnectButton, SIGNAL(clicked()), this, SLOT(closeRobotDrive()));
-	QObject::connect(ui.robotDriveSearchButton, SIGNAL(clicked()), this, SLOT(searchRobotDrive()));
 	ui.robotDrivePortCombo->addItems(portList);
+	drive = new QtRobotDrive(&robot, &ui);
 
 	imuChart = new ImuChart(&ui);
 	cout << "TrobotQt::TrobotQt end" << endl;
@@ -39,6 +39,8 @@ TrobotQt::TrobotQt(QWidget *parent, Qt::WFlags flags)
 
 TrobotQt::~TrobotQt(){
 	delete remoteCamera;
+	delete drive;
+	delete imuChart;
 }
 
 void TrobotQt::captureFrame(){
@@ -62,23 +64,5 @@ void TrobotQt::openCameraWindow(){
 }
 
 void TrobotQt::cameraWindowClosed(){
-
-}
-
-void TrobotQt::openRobotDrive(){
-	if(ui.robotDrivePortCombo->count() != 0){
-		drive = new QtRobotDrive(string(ui.robotDrivePortCombo->currentText().toAscii().data()), &ui);
-	}
-}
-
-void TrobotQt::closeRobotDrive(){
-	if(drive != NULL){
-		delete drive;
-		drive = NULL;
-	}
-}
-
-
-void TrobotQt::searchRobotDrive(){
 
 }

@@ -5,11 +5,8 @@
 
 #include <QtCore/QObject>
 #include <string>
-#include "../Trobot/include/RobotDrive.h"
+#include "../Robot/Robot.h"
 #include "ui_trobotqt.h"
-
-#define LEFT_CHANNEL 2
-#define RIGHT_CHANNEL 1
 
 enum Action {
 	Nothing,
@@ -21,17 +18,15 @@ enum Action {
 };
 
 class QtRobotDrive : public QObject
-#ifndef DRIVE_DBG
-	,public trobot::RobotDrive
-#endif
 {
 
 	Q_OBJECT
 
 public:
-	QtRobotDrive(const std::string& device, Ui::TrobotQtClass* iui, unsigned int baud = 115200);
+	QtRobotDrive(Robot* irobot,  Ui::TrobotQtClass* iui);
 	~QtRobotDrive();
 	Action getState();
+	bool isOpen();
 private:
 	Ui::TrobotQtClass* ui;
 	void setButtonsEnabled(bool state);
@@ -39,6 +34,7 @@ private:
 	Action driveState;
 	const int speed;
 	int motorVal[2];
+	Robot* robot;
 public slots:
 	void goForward();
 	void goBackward();
@@ -48,6 +44,11 @@ public slots:
 	void rightMotorStop();
 	void stop();
 	void motorValChanged(int val);
+	void throttleChanged(int val);
+	void steeringChanged(int val);
+	void openRobotDrive();
+	void closeRobotDrive();
+	void searchRobotDrive();
 };
 
 #endif //QT_ROBOT_DRIVE

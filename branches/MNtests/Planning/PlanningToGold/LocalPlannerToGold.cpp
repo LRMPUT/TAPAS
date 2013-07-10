@@ -15,6 +15,4 @@ LocalPlannerToGold::LocalPlannerToGold() {
 	// TODO Auto-generated constructor stub
 
 }
-void LocalPlannerToGold::calculateAction() {
 
-}

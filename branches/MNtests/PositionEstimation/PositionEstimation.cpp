@@ -5,26 +5,78 @@
  *      Author: smi
  */
 
+#include <opencv2/opencv.hpp>
+#include <string>
 #include "PositionEstimation.h"
 
 using namespace cv;
 using namespace std;
 
-/*PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot) {
+PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot) {
 
-}*/
+	float dt = 0.1; // Right now hard-coded -> cannot be like that    
+	float transData[]  = {  1, 0, 0, dt, 0, 0,
+            				0, 1, 0, 0, dt, 1,
+            				0, 0, 1, 0, 0, dt,
+							0, 0, 0, 1, 0, 0,
+							0, 0, 0, 0, 1, 0,
+							0, 0 ,0, 0, 0, 1 };
+	memcpy( KF.transitionMatrix->data.fl, transData, sizeof(transData));
+
+	float contrData[]  = {  1, 0, 0,
+            				0, 1, 0,
+            				0, 0, 1,
+							0, 0, 0,
+							0, 0, 0,
+							0, 0 ,0 };
+	memcpy( KF.controlMatrix->data.fl, contrData, sizeof(contrData));
+
+	float measData[]  = {   1, 0,
+            				0, 1,
+            				0, 0,
+							0, 0,
+							0, 0,
+							0, 0 };
+	memcpy( KF.measurementMatrix->data.fl, measData, sizeof(measData));
+
+}
 
 PositionEstimation::~PositionEstimation() {
 	closeGps();
 	closeImu();
 }
 
+// Update Kalman - updates on GPS
+void PositionEstimation::KalmanUpdate()
+{
+	state = KF.correct( this->getGpsData() );
+	
+	// Optional stuff
+	//cv::Mat imu = this->getImuData();
+	// Change measurementMatrix
+	// 
+	// Add magneto
+}
+
+// Encoders - predict
+void PositionEstimation::KalmanPredict()
+{
+	cv::Mat pred = this->Robot->globalPlanner.getEncoderData;
+	state = KF.predict(pred);
+}
+
+//----------------------ACCESS TO COMPUTED DATA
+//CV_32SC1 3x1: x, y, fi
+cv::Mat PositionEstimation::getEstimatedPosition(){
+	return Mat(3, 1, CV_32SC1);
+}
+
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 //CV_32SC1 2x1: x, y position
 cv::Mat PositionEstimation::getGpsData(){
 	Mat ret(2, 1, CV_32SC1);
-	ret.at<int32_t>(0) = (int32_t)gps.getPosX();
-	ret.at<int32_t>(1) = (int32_t)gps.getPosY();
+	ret.at<int>(0) = (int)gps.getPosX();
+	ret.at<int>(1) = (int)gps.getPosY();
 	return ret;
 }
 
@@ -36,12 +88,7 @@ cv::Mat PositionEstimation::getImuData(){
 //----------------------MENAGMENT OF PositionEstimation DEVICES
 //Gps
 void PositionEstimation::openGps(std::string port){
-	// This is madness!!!
-	// Either string or char*, but char* is reaaallly deprecated
-	char *cstr = new char[port.length() + 1];
-	strcpy(cstr, port.c_str());
-	gps.initController( cstr , 9600);
-    delete [] cstr;
+	gps.initController(port.c_str(), 9600);
 }
 
 void PositionEstimation::closeGps(){

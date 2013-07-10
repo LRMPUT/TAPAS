@@ -15,7 +15,3 @@ LocalPlannerWithGold::~LocalPlannerWithGold() {
 
 }
 
-void LocalPlannerWithGold::calculateAction() {
-
-}
-

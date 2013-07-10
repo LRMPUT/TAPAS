@@ -1,4 +1,4 @@
-#include "../include/Motor.h"
+#include "Motor.h"
 
 namespace trobot {
 	Motor::Motor(void) {

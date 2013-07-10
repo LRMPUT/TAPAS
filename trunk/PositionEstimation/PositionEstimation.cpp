@@ -14,11 +14,55 @@ using namespace std;
 
 PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot) {
 
+	float dt = 0.1; // Right now hard-coded -> cannot be like that    
+	float transData[]  = {  1, 0, 0, dt, 0, 0,
+            				0, 1, 0, 0, dt, 1,
+            				0, 0, 1, 0, 0, dt,
+							0, 0, 0, 1, 0, 0,
+							0, 0, 0, 0, 1, 0,
+							0, 0 ,0, 0, 0, 1 };
+	memcpy( KF.transitionMatrix->data.fl, transData, sizeof(transData));
+
+	float contrData[]  = {  1, 0, 0,
+            				0, 1, 0,
+            				0, 0, 1,
+							0, 0, 0,
+							0, 0, 0,
+							0, 0 ,0 };
+	memcpy( KF.controlMatrix->data.fl, contrData, sizeof(contrData));
+
+	float measData[]  = {   1, 0,
+            				0, 1,
+            				0, 0,
+							0, 0,
+							0, 0,
+							0, 0 };
+	memcpy( KF.measurementMatrix->data.fl, measData, sizeof(measData));
+
 }
 
 PositionEstimation::~PositionEstimation() {
 	closeGps();
 	closeImu();
+}
+
+// Update Kalman - updates on GPS
+void PositionEstimation::KalmanUpdate()
+{
+	state = KF.correct( this->getGpsData() );
+	
+	// Optional stuff
+	//cv::Mat imu = this->getImuData();
+	// Change measurementMatrix
+	// 
+	// Add magneto
+}
+
+// Encoders - predict
+void PositionEstimation::KalmanPredict()
+{
+	cv::Mat pred = this->Robot->globalPlanner.getEncoderData;
+	state = KF.predict(pred);
 }
 
 //----------------------ACCESS TO COMPUTED DATA
