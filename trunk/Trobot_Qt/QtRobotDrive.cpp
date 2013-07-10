@@ -3,6 +3,9 @@
 #define NO_SLIDER_VAL 1001
 #define LEFT_CHANNEL 1
 #define RIGHT_CHANNEL 2
+#define MAX_VEL 1000
+#define MAX_STEERING 100
+#define MAX_THROTTLE 1000
 
 using namespace std;
 
@@ -26,6 +29,8 @@ ui(iui), robot(irobot), driveState(Nothing), speed(800)
 	QObject::connect(ui->robotDriveConnectButton, SIGNAL(clicked()), this, SLOT(openRobotDrive()));
 	QObject::connect(ui->robotDriveDisconnectButton, SIGNAL(clicked()), this, SLOT(closeRobotDrive()));
 	QObject::connect(ui->robotDriveSearchButton, SIGNAL(clicked()), this, SLOT(searchRobotDrive()));
+	QObject::connect(ui->robotDriveSteeringScrollBar, SIGNAL(valueChanged(int)), this, SLOT(steeringChanged(int)));
+	QObject::connect(ui->robotDriveThrottleScrollBar, SIGNAL(valueChanged(int)), this, SLOT(throttleChanged(int)));
 	setButtonsEnabled(false);
 }
 
@@ -120,8 +125,8 @@ void QtRobotDrive::motorValChanged(int val){
 	}
 	motorVal[LEFT_CHANNEL - 1] = ui->robotDriveLeftMotorSlider->value();
 	motorVal[RIGHT_CHANNEL - 1] = ui->robotDriveRightMotorSlider->value();
-	ui->robotDriveLeftMotorLabel->setText(QString("%1").arg(motorVal[LEFT_CHANNEL - 1]));
-	ui->robotDriveRightMotorLabel->setText(QString("%1").arg(motorVal[RIGHT_CHANNEL - 1]));
+	ui->robotDriveLeftMotorLabel->setText(QString("%1%").arg((double)motorVal[LEFT_CHANNEL - 1]/10, 4, 'f', 1));
+	ui->robotDriveRightMotorLabel->setText(QString("%1%").arg((double)motorVal[RIGHT_CHANNEL - 1]/10, 4, 'f', 1));
 #ifdef DRIVE_DBG
 	printf("robot->setMotorsVel(%d, %d)\n", motorVal[LEFT_CHANNEL - 1], motorVal[RIGHT_CHANNEL - 1]);
 #else
@@ -129,12 +134,33 @@ void QtRobotDrive::motorValChanged(int val){
 #endif
 }
 
-void QtRobotDrive::throttleChanged(int val){
+void QtRobotDrive::calcVelSteering(){
+	int throttle = ui->robotDriveThrottleScrollBar->value();
+	int steering = ui->robotDriveSteeringScrollBar->value();
+	if(steering >= 0){	//straight, right turn
+		ui->robotDriveLeftMotorSlider->setValue(throttle);
+		ui->robotDriveRightMotorSlider->setValue(throttle - 2*steering*throttle/MAX_STEERING);
+	}
+	else{
+		ui->robotDriveLeftMotorSlider->setValue(throttle + 2*steering*throttle/MAX_STEERING);
+		ui->robotDriveRightMotorSlider->setValue(throttle);
+	}
+	ui->robotDriveThrottleLabel->setText(QString("%1%").arg((double)throttle/10, 4, 'f', 1));
+	ui->robotDriveSteeringLabel->setText(QString("%1").arg(steering));
+}
 
+void QtRobotDrive::throttleChanged(int val){
+	if(val == 0){
+		driveState = Nothing;
+	}
+	else{
+		driveState = UserDefined;
+	}
+	calcVelSteering();
 }
 
 void QtRobotDrive::steeringChanged(int val){
-
+	calcVelSteering();
 }
 
 bool QtRobotDrive::isOpen(){
