@@ -62,13 +62,17 @@ void PositionEstimation::KalmanUpdate()
 void PositionEstimation::KalmanPredict()
 {
 	cv::Mat pred = this->Robot->globalPlanner.getEncoderData;
+	// pred.at<float>(0) *= pred.at<float>(0) / TICK_PER_ROUND * 2 * PI * wheel_radius 
+	// pred.at<float>(1) *= pred.at<float>(1) / TICK_PER_ROUND * 2 * PI * wheel_radius 
+	// pred.at<float>(2) = ( pred.at<float>(1) - pred.at<float>(0) ) / TICK_PER_ROUND * 2 * PI * wheel_radius / ( 2 * PI * WHEEL_BASE ) * 360 
+	//
 	state = KF.predict(pred);
 }
 
 //----------------------ACCESS TO COMPUTED DATA
 //CV_32SC1 3x1: x, y, fi
 cv::Mat PositionEstimation::getEstimatedPosition(){
-	return Mat(3, 1, CV_32SC1);
+	return state;
 }
 
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
