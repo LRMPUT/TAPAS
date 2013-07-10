@@ -15,6 +15,9 @@
 #include "ui_trobotqt.h"
 #include "ImuChart.h"
 #include <fstream>
+#include <sys/time.h>
+#include <stdio.h>
+#include <unistd.h>
 
 class Recording : public QObject {
 	Q_OBJECT
@@ -34,6 +37,7 @@ private:
 	Ui::TrobotQtClass* ui;
 	ImuChart* imuChart;
 
+	// Saving Streams
 	std::ofstream imuStream;
 public:
 	Recording(Ui::TrobotQtClass* iui, ImuChart* iimuChart);
