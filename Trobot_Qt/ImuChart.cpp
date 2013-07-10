@@ -308,6 +308,8 @@ void ImuChart::disconnect(){
 	ui->imuClearButton->setEnabled(true);
 }
 
+// Dumping stuff
+
 std::vector<double> ImuChart::getImuData()
 {
 	trobot::XYZ_Response tmp;
@@ -325,4 +327,8 @@ std::vector<double> ImuChart::getImuData()
 	// euler
 	tmp2 = imu->GetEuler();
 	ret.push_back(tmp2.phi); ret.push_back(tmp2.psi); ret.push_back(tmp2.theta);
+}
+
+bool ImuChart::testConnection() {
+	return imu->testConnection();
 }

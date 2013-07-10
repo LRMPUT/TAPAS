@@ -76,11 +76,11 @@ cv::Mat PositionEstimation::getEstimatedPosition(){
 }
 
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
-//CV_32SC1 2x1: x, y position
+//CV_32FC1 2x1: x, y position
 cv::Mat PositionEstimation::getGpsData(){
-	Mat ret(2, 1, CV_32SC1);
-	ret.at<int>(0) = (int)gps.getPosX();
-	ret.at<int>(1) = (int)gps.getPosY();
+	Mat ret(2, 1, CV_32FC1);
+	ret.at<double>(0) = (double)gps.getPosX();
+	ret.at<double>(1) = (double)gps.getPosY();
 	return ret;
 }
 
