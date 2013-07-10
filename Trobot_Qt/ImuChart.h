@@ -10,6 +10,8 @@
 #include "../Trobot/include/Imu.h"
 #include "../Trobot/include/Address.h"
 
+#include <vector>
+
 #define NUM_VALUES 12
 
 struct Value {
@@ -54,6 +56,9 @@ class ImuChart : public QObject {
 public:
 	ImuChart(Ui::TrobotQtClass* iui);
 	~ImuChart();
+
+	// Just for dumping
+	std::vector<double> getImuData();
 public slots:
 	void start();
 	void stop();
@@ -63,6 +68,7 @@ public slots:
 	void collectData();
 	void connect();
 	void disconnect();
+
 };
 
 

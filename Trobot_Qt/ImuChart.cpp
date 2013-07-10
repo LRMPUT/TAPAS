@@ -307,3 +307,22 @@ void ImuChart::disconnect(){
 	setEnableStartButton(true);
 	ui->imuClearButton->setEnabled(true);
 }
+
+std::vector<double> ImuChart::getImuData()
+{
+	trobot::XYZ_Response tmp;
+	trobot::Euler_Response tmp2;
+	std::vector<double> ret;
+	// gyro
+	tmp = imu->GetGyro();
+	ret.push_back(tmp.x); ret.push_back(tmp.y); ret.push_back(tmp.z);
+	// accel
+	tmp = imu->GetAccel();
+	ret.push_back(tmp.x); ret.push_back(tmp.y); ret.push_back(tmp.z);
+	// magneto
+	tmp = imu->GetMag();
+	ret.push_back(tmp.x); ret.push_back(tmp.y); ret.push_back(tmp.z);
+	// euler
+	tmp2 = imu->GetEuler();
+	ret.push_back(tmp2.phi); ret.push_back(tmp2.psi); ret.push_back(tmp2.theta);
+}

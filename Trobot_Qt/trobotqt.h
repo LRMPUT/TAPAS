@@ -17,6 +17,7 @@ class TrobotQt;
 #include "CameraWindow.h"
 #include "QtRobotDrive.h"
 #include "ImuChart.h"
+#include "Recording.h"
 
 class TrobotQt : public QMainWindow
 {
@@ -43,6 +44,8 @@ private:
 	QtRobotDrive* drive;
 
 	ImuChart* imuChart;
+
+	Recording* recording;
 private slots:
 	void captureFrame();
 	void openCameraWindow();

@@ -9,11 +9,13 @@
 
 using namespace std;
 
-Recording::Recording(Ui::TrobotQtClass* iui) : ui(iui){
+Recording::Recording(Ui::TrobotQtClass* iui, ImuChart* iimuChart) : ui(iui){
 	connect(&hokuyoTimer, SIGNAL(timeout()), this, SLOT(getDataHokuyo()));
 	connect(&encodersTimer, SIGNAL(timeout()), this, SLOT(getDataEncoders()));
 	connect(&gpsTimer, SIGNAL(timeout()), this, SLOT(getDataGps()));
 	connect(&imuTimer, SIGNAL(timeout()), this, SLOT(getDataImu()));
+
+	imuChart = iimuChart;
 }
 
 Recording::~Recording(){
@@ -35,6 +37,11 @@ void Recording::getDataGps(){
 
 void Recording::getDataImu(){
 
+	vector<double> tmp;
+	tmp = imuChart->getImuData();
+	for ( int i=0; i < 3 + 3 + 3 + 3; i++)
+		imuStream<<tmp[i]<<" ";
+	imuStream<<std::endl;
 }
 
 void Recording::getDataCameras(){
@@ -78,6 +85,7 @@ void Recording::startRec(Robot* irobot){
 			ui->recStatusLabel->setText("IMU error");
 			return;
 		}
+		imuStream.open("imu.data");
 		imuTimer.setInterval(max((int)(1/ui->saRateImuLineEdit->text().toFloat()), 1));
 		imuTimer.start();
 	}
@@ -129,6 +137,7 @@ void Recording::stopRec(){
 	}
 	if(ui->includeImuCheckBox->isChecked() == true){
 		imuTimer.stop();
+		imuStream.close();
 	}
 	file.close();
 }
