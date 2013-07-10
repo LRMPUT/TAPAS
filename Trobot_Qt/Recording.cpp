@@ -39,6 +39,8 @@ void Recording::getDataImu(){
 
 	vector<double> tmp;
 	tmp = imuChart->getImuData();
+
+	imuStream<<time.elapsed()<<" ";
 	for ( int i=0; i < 3 + 3 + 3 + 3; i++)
 		imuStream<<tmp[i]<<" ";
 	imuStream<<std::endl;
