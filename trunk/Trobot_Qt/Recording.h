@@ -13,7 +13,6 @@
 #include <QtCore/QElapsedTimer>
 #include "../Robot/Robot.h"
 #include "ui_trobotqt.h"
-#include "ImuChart.h"
 #include <fstream>
 #include <sys/time.h>
 #include <stdio.h>
@@ -35,12 +34,11 @@ private:
 	std::fstream file;
 
 	Ui::TrobotQtClass* ui;
-	ImuChart* imuChart;
 
 	// Saving Streams
 	std::ofstream imuStream, gpsStream;
 public:
-	Recording(Ui::TrobotQtClass* iui, ImuChart* iimuChart);
+	Recording(Ui::TrobotQtClass* iui, Robot* irobot);
 	~Recording();
 
 private slots:
@@ -48,10 +46,10 @@ private slots:
 	void getDataEncoders();
 	void getDataGps();
 	void getDataImu();
-	void getDataCameras();
+	void getDataCamera();
 
 public slots:
-	void startRec(Robot* irobot);
+	void startRec();
 	void pauseResumeRec();
 	void stopRec();
 };

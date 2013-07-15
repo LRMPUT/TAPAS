@@ -9,7 +9,7 @@
 
 using namespace std;
 
-QtRobotDrive::QtRobotDrive(Robot* irobot, Ui::TrobotQtClass* iui):
+QtRobotDrive::QtRobotDrive(Ui::TrobotQtClass* iui, Robot* irobot):
 ui(iui), robot(irobot), driveState(Nothing), speed(800)
 {
 	motorVal[0] = 0;

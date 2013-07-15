@@ -27,7 +27,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>4</number>
+     <number>1</number>
     </property>
     <widget class="QWidget" name="cameraTab">
      <attribute name="title">
@@ -696,7 +696,7 @@
       <property name="geometry">
        <rect>
         <x>670</x>
-        <y>150</y>
+        <y>180</y>
         <width>131</width>
         <height>131</height>
        </rect>

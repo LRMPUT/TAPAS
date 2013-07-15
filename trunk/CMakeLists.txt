@@ -57,6 +57,7 @@ set(trobotQt_SOURCES
 	Trobot_Qt/ImuChart.cpp
 	Trobot_Qt/QtRobotDrive.cpp
 	Trobot_Qt/Recording.cpp
+	Trobot_Qt/QtGps.cpp
 	Trobot_Qt/trobotqt.cpp)
 set(trobotQt_HEADERS
 	Trobot_Qt/CameraWindow.h
@@ -64,6 +65,7 @@ set(trobotQt_HEADERS
 	Trobot_Qt/ImuChart.h
 	Trobot_Qt/QtRobotDrive.h
 	Trobot_Qt/Recording.h
+	Trobot_Qt/QtGps.h
 	Trobot_Qt/trobotqt.h)
 set(trobotQt_FORMS
 	Trobot_Qt/CameraWindow.ui

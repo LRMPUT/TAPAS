@@ -220,11 +220,15 @@ namespace trobot {
 		}
 #else
 		const filesystem::path dirPath("/dev");
-		const string name("ttyACM");
+		vector<string> names;
+		names.push_back(string("ttyACM"));
+		names.push_back(string("ttyUSB"));
 		filesystem::directory_iterator endIt;
 		for(filesystem::directory_iterator dirIt(dirPath); dirIt != endIt; dirIt++){
-			if(string(dirIt->path().filename().c_str()).find(name) != string::npos){
-				ports.push_back(dirIt->path().c_str());
+			for(int i = 0; i < names.size(); i++){
+				if(string(dirIt->path().filename().c_str()).find(names[i]) != string::npos){
+					ports.push_back(dirIt->path().c_str());
+				}
 			}
 		}
 #endif

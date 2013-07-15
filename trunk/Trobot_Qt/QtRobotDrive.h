@@ -23,7 +23,7 @@ class QtRobotDrive : public QObject
 	Q_OBJECT
 
 public:
-	QtRobotDrive(Robot* irobot,  Ui::TrobotQtClass* iui);
+	QtRobotDrive(Ui::TrobotQtClass* iui, Robot* irobot);
 	~QtRobotDrive();
 	Action getState();
 	bool isOpen();
