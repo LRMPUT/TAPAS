@@ -29,12 +29,16 @@ TrobotQt::TrobotQt(QWidget *parent, Qt::WFlags flags)
 	cameraTimer.setInterval(50);
 	cameraTimer.start();
 
+	ui.gpsPortCombo->addItems(portList);
+	qtGps = new QtGps(&ui, &robot);
+
 	ui.robotDrivePortCombo->addItems(portList);
-	drive = new QtRobotDrive(&robot, &ui);
+	drive = new QtRobotDrive(&ui, &robot);
 
-	imuChart = new ImuChart(&ui);
+	ui.imuPortCombo->addItems(portList);
+	imuChart = new ImuChart(&ui, &robot);
 
-	recording = new Recording(&ui, imuChart);
+	recording = new Recording(&ui, &robot);
 	cout << "TrobotQt::TrobotQt end" << endl;
 
 }

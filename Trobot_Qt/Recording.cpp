@@ -4,19 +4,18 @@
  *  Created on: 01-07-2013
  *      Author: robots
  */
-#include "Recording.h"
+
 #include <algorithm>
+#include "Recording.h"
 
 using namespace std;
+using namespace cv;
 
-Recording::Recording(Ui::TrobotQtClass* iui, ImuChart* iimuChart) : ui(iui){
+Recording::Recording(Ui::TrobotQtClass* iui, Robot* irobot) : ui(iui), robot(irobot){
 	connect(&hokuyoTimer, SIGNAL(timeout()), this, SLOT(getDataHokuyo()));
 	connect(&encodersTimer, SIGNAL(timeout()), this, SLOT(getDataEncoders()));
 	connect(&gpsTimer, SIGNAL(timeout()), this, SLOT(getDataGps()));
 	connect(&imuTimer, SIGNAL(timeout()), this, SLOT(getDataImu()));
-
-	imuChart = iimuChart;
-	robot = new Robot();
 }
 
 Recording::~Recording(){
@@ -33,28 +32,29 @@ void Recording::getDataEncoders(){
 }
 
 void Recording::getDataGps(){
-	cv::Mat gpsData = robot->getGpsData();
+	Mat gpsData = robot->getGpsData();
 	gpsStream<<time.elapsed()<<" ";
 	gpsStream<<gpsData.at<double>(0)<<" "<<gpsData.at<double>(1)<<std::endl;
 }
 
 void Recording::getDataImu(){
-
-	vector<double> tmp;
-	tmp = imuChart->getImuData();
+	Mat imuData = robot->getImuData();
 
 	imuStream<<time.elapsed()<<" ";
-	for ( int i=0; i < 3 + 3 + 3 + 3; i++)
-		imuStream<<tmp[i]<<" ";
+	for(int val = 0; val < 4; val++){
+		for(int i = 0; i < 3; i++){
+			imuStream<<imuData.at<float>(i, val)<<" ";
+		}
+	}
 	imuStream<<std::endl;
 }
 
-void Recording::getDataCameras(){
+void Recording::getDataCamera(){
 
 }
 
 
-void Recording::startRec(Robot* irobot){
+void Recording::startRec(){
 	ui->saRateGroupBox->setEnabled(false);
 	file.open(ui->recPathLineEdit->text().toAscii().data(), ios_base::out);
 	if(!file.is_open()){
@@ -84,7 +84,7 @@ void Recording::startRec(Robot* irobot){
 	}
 	if(ui->includeGpsCheckBox->isChecked() == true){
 		// How to find which one ?
-		robot->openGps("/dev/tty0");
+		//robot->openGps("/dev/tty0");
 		if(robot->isGpsOpen()){
 			ui->recStatusLabel->setText("GPS error");
 			return;
@@ -94,15 +94,15 @@ void Recording::startRec(Robot* irobot){
 		gpsTimer.start();
 	}
 	if(ui->includeImuCheckBox->isChecked() == true){
-		/*if(robot->isImuOpen()){
-			ui->recStatusLabel->setText("IMU error");
-			return;
-		}*/
-
-		if ( imuChart->testConnection()) {
+		if(robot->isImuOpen()){
 			ui->recStatusLabel->setText("IMU error");
 			return;
 		}
+
+		/*if ( imuChart->testConnection()) {
+			ui->recStatusLabel->setText("IMU error");
+			return;
+		}*/
 
 		imuStream.open("imu.data");
 		imuTimer.setInterval(max((int)(1/ui->saRateImuLineEdit->text().toFloat()), 1));
@@ -160,4 +160,6 @@ void Recording::stopRec(){
 		imuStream.close();
 	}
 	file.close();
+	gpsStream.close();
+	imuStream.close();
 }

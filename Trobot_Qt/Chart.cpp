@@ -74,12 +74,12 @@ void Chart::setColor(int chan, QColor newColor){
 }
 
 void Chart::addData(const vector<vector<float> >& newData){
+	//cout << "Adding data, newData.size() = " << newData.size() << endl;
+	//cout << "data.size() = " << data.size() << endl;
 	if(pos + newData[0].size() > data[0].size()){
 		throw "Buffer overload";
 		return;
 	}
-	//cout << "Adding data, newData.size() = " << newData.size() << endl;
-	//cout << "data.size() = " << data.size() << endl;
 	for(int ch = 0; ch < channels; ch++){
 		for(int i = 0; i < newData[0].size(); i++){
 			//cout << "Dodaje wartosc " << newData[ch][i] << " na pozycji " << pos + i << ", w kanale " << ch << endl;

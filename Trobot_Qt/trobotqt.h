@@ -18,6 +18,7 @@ class TrobotQt;
 #include "QtRobotDrive.h"
 #include "ImuChart.h"
 #include "Recording.h"
+#include "QtGps.h"
 
 class TrobotQt : public QMainWindow
 {
@@ -44,6 +45,8 @@ private:
 	QtRobotDrive* drive;
 
 	ImuChart* imuChart;
+
+	QtGps* qtGps;
 
 	Recording* recording;
 private slots:

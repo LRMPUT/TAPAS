@@ -30,7 +30,6 @@ Quantity quantities[NUM_VALUES] = {
 };
 
 IMU::IMU() : imu(NULL) {
-	// TODO Auto-generated constructor stub
 
 }
 
@@ -39,7 +38,7 @@ IMU::~IMU() {
 }
 
 void IMU::openPort(std::string port){
-	imu = new Imu(115200, "/dev/ttyACM0");
+	imu = new Imu(115200, port);
 }
 
 void IMU::closePort(){
@@ -58,7 +57,6 @@ cv::Mat IMU::getData(){
 	for(int i = 0; i < NUM_VALUES; i++){
 		float tmp = (short)((imu->Register[quantities[i].address / 4]._int >> 8*(quantities[i].address % 4)) & 0xffff);
 		tmp *= quantities[i].factor;
-		cout << "Extracted value " << tmp << endl;
 		ret.at<float>(i % 3, i / 3) = tmp;
 	}
 	return ret;

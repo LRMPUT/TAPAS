@@ -1,8 +1,10 @@
 #include <QtGui/QPainter>
+#include <opencv2/opencv.hpp>
 #include <iostream>
 #include "ImuChart.h"
 
 using namespace std;
+using namespace cv;
 
 #define REFRESH_RATE 10
 #define IMU_DATA_RATE 100
@@ -29,7 +31,7 @@ Value values[NUM_VALUES] = {
 	Value(4*trobot::EULER_PSI,			Qt::darkYellow,	"euler yaw",	0.0109863)
 };
 
-ImuChart::ImuChart(Ui::TrobotQtClass* iui) : chart(NULL), imu(NULL), ui(iui) {
+ImuChart::ImuChart(Ui::TrobotQtClass* iui, Robot* irobot) : chart(NULL), robot(irobot), ui(iui) {
 	cout << "Constructing ImuChart" << endl;
 	timerRefresh.setInterval(1000/REFRESH_RATE);
 	timerCollectData.setInterval(1000/IMU_DATA_RATE);
@@ -90,14 +92,12 @@ ImuChart::~ImuChart(){
 	if(chart != NULL){
 		delete chart;
 	}
-	if(imu != NULL){
-		delete imu;
-	}
+	robot->closeImu();
 }
 
 void ImuChart::createChart(){
-	if(imu == NULL){
-		return;
+	if(!robot->isImuOpen()){
+		throw "Error creating chart - IMU not open";
 	}
 	int count = 0;
 	for(int i = 0; i < NUM_VALUES; i++){
@@ -264,10 +264,11 @@ void ImuChart::clear(){
 void ImuChart::collectData(){
 	int ind = 0;
 	vector<vector<float> > newData;
+	Mat data = robot->getImuData();
 	for(int i = 0; i < NUM_VALUES; i++){
 		if(values[i].checkBox->isChecked() == true){
-			float tmp = (short)((imu->Register[values[i].address / 4]._int >> 8*(values[i].address % 4)) & 0xffff);
-			cout << "Extracted value " << (short)((imu->Register[values[i].address / 4]._int >> 8*(values[i].address % 4)) & 0xffff) << endl;
+			float tmp = data.at<float>(i % 3, i / 3);
+			//cout << "data.at<float>(" << i % 3 << ", " << i / 3 << ") = " << data.at<float>(i % 3, i / 3) << endl;
 			newData.push_back(vector<float>(1, tmp));
 		}
 	}
@@ -277,6 +278,7 @@ void ImuChart::collectData(){
 }
 
 void ImuChart::update(){
+	cout << "ImuChart::update()" << endl;
 	chart->updateFromLast();
 	ui->imuDisplayLabel->setPixmap(*chart);
 	//cout << "Label repainted" << endl;
@@ -295,7 +297,7 @@ void ImuChart::repaint(){
 
 void ImuChart::connect(){
 	cout << "Connecting" << endl;
-	imu = new trobot::Imu(BAUD, ui->imuPortCombo->currentText().toAscii().data());
+	robot->openImu(ui->imuPortCombo->currentText().toAscii().data());
 	setEnableStartButton(true);
 	ui->imuClearButton->setEnabled(true);
 	cout << "Connected" << endl;
@@ -303,14 +305,14 @@ void ImuChart::connect(){
 
 void ImuChart::disconnect(){
 	clear();
-	delete imu;
+	robot->closeImu();
 	setEnableStartButton(true);
 	ui->imuClearButton->setEnabled(true);
 }
 
 // Dumping stuff
 
-std::vector<double> ImuChart::getImuData()
+/*std::vector<double> ImuChart::getImuData()
 {
 	trobot::XYZ_Response tmp;
 	trobot::Euler_Response tmp2;
@@ -331,4 +333,4 @@ std::vector<double> ImuChart::getImuData()
 
 bool ImuChart::testConnection() {
 	return imu->testConnection();
-}
+}*/
