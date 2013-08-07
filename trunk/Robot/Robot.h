@@ -7,12 +7,19 @@
 #ifndef ROBOT_H_
 #define ROBOT_H_
 
+//STL
 #include <fstream>
 #include <string>
+//OpenCV
 #include <opencv2/opencv.hpp>
+//TinyXML
+#include <tinyxml.h>
+//Boost
+#include <boost/filesystem.hpp>
 
 class Robot;
 
+//RobotsIntellect
 #include "../PositionEstimation/PositionEstimation.h"
 #include "../MovementConstraints/MovementConstraints.h"
 #include "../Planning/GlobalPlanner.h"
@@ -28,10 +35,10 @@ class Robot {
 	// Class responsible for planning
 	GlobalPlanner globalPlanner;
 
-	MovementConstraints movementConstraints;
+	MovementConstraints* movementConstraints;
 
 public:
-	Robot();
+	Robot(boost::filesystem::path settings);
 	virtual ~Robot();
 
 	//----------------------MODES OF OPERATION

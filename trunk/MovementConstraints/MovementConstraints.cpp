@@ -8,8 +8,12 @@
 using namespace cv;
 using namespace std;
 
-MovementConstraints::MovementConstraints(Robot* irobot) : robot(irobot) {
-	camera = new Camera(this, NULL);
+MovementConstraints::MovementConstraints(Robot* irobot, TiXmlElement* settings) : robot(irobot) {
+	if(!settings){
+		throw "Bad settings file - entry MovementConstraints not found";
+	}
+	TiXmlElement pCamera = settings->FirstChildElement("Camera");
+	camera = new Camera(this, pCamera);
 }
 
 MovementConstraints::~MovementConstraints() {

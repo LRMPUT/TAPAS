@@ -7,9 +7,19 @@
 
 #include "Robot.h"
 
-Robot::Robot() : globalPlanner(this), movementConstraints(this), positionEstimation(this) {
-
-
+Robot::Robot(boost::filesystem::path settingsFile) : globalPlanner(this), positionEstimation(this) {
+	TiXmlDocument settings(settingsFile.c_str());
+	if(!settings.LoadFile()){
+		throw "Error loading settings file";
+	}
+	TiXmlElement pSettings(&settings);
+	TiXmlElement* pRobot;
+	pRobot = pSettings.FirstChildElement("Robot");
+	if(!pRobot){
+		throw "Bad settings file - entry Robot not found";
+	}
+	TiXmlElement* pMovementConstraints = pRobot->FirstChildElement("MovementConstraints");
+	movementConstraints = new MovementConstraints(this, pMovementConstraints);
 }
 
 Robot::~Robot() {
@@ -69,28 +79,28 @@ bool Robot::isImuOpen(){
 //----------------------MENAGMENT OF MovementConstraints DEVICES
 //Hokuyo
 void Robot::openHokuyo(std::string port){
-	movementConstraints.openHokuyo(port);
+	movementConstraints->openHokuyo(port);
 }
 
 void Robot::closeHokuyo(){
-	movementConstraints.closeHokuyo();
+	movementConstraints->closeHokuyo();
 }
 
 bool Robot::isHokuyoOpen(){
-	return movementConstraints.isHokuyoOpen();
+	return movementConstraints->isHokuyoOpen();
 }
 
 //Camera
 void Robot::openCamera(){
-	movementConstraints.openCamera();
+	movementConstraints->openCamera();
 }
 
 void Robot::closeCamera(){
-	movementConstraints.closeCamera();
+	movementConstraints->closeCamera();
 }
 
 bool Robot::isCameraOpen(){
-	return movementConstraints.isCameraOpen();
+	return movementConstraints->isCameraOpen();
 }
 
 
@@ -112,12 +122,12 @@ const cv::Mat Robot::getImuData(){
 
 //CV_32SC1 2xHOKUYO_SCANS: x, y points from left to right
 const cv::Mat Robot::getHokuyoData(){
-	return movementConstraints.getHokuyoData();
+	return movementConstraints->getHokuyoData();
 }
 
 //CV_8UC3 2x640x480: left, right image
 const std::vector<cv::Mat> Robot::getCameraData(){
-	return movementConstraints.getCameraData();
+	return movementConstraints->getCameraData();
 }
 
 //----------------------ACCESS TO COMPUTED DATA
@@ -128,5 +138,5 @@ const cv::Mat Robot::getEstimatedPosition(){
 
 //CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)
 const cv::Mat Robot::getMovementConstraints(){
-	return movementConstraints.getMovementConstraints();
+	return movementConstraints->getMovementConstraints();
 }

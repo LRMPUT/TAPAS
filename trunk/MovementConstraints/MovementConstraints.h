@@ -6,9 +6,14 @@
 #ifndef MOVEMENTCONSTAINTS_H_
 #define MOVEMENTCONSTAINTS_H_
 
+//STL
 #include <string>
 #include <vector>
+//OpenCV
 #include <opencv2/opencv.hpp>
+//TinyXML
+#include <tinyxml.h>
+//RobotsIntellect
 #include "Camera/Camera.h"
 #include "Hokuyo/Hokuyo.h"
 #include "Sharp/Sharp.h"
@@ -30,7 +35,7 @@ class MovementConstraints {
 	Robot* robot;
 
 public:
-	MovementConstraints(Robot* irobot);
+	MovementConstraints(Robot* irobot, TiXmlElement* settings);
 	virtual ~MovementConstraints();
 
 	//----------------------ACCESS TO COMPUTED DATA

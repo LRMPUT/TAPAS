@@ -24,7 +24,11 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 		movementConstraints(imovementConstraints),
 		cameraGrid(40)
 {
+	if(!settings){
+		throw "Bad settings file - entry Camera not found";
+	}
 	readSettings(settings);
+
 	groundPolygons.resize(CAMERAS_COUNT);
 	for(int cam = 0; cam < CAMERAS_COUNT; cam++){
 		groundPolygons[cam].resize(ROWS/cameraGrid);
@@ -131,8 +135,24 @@ cv::Mat Camera::classifySlidingWindow(cv::Mat image){
 
 }
 
-void Camera::readSettings(TiXmlElement* settings){
+//Run as separate thread
+void Camera::cameraThread(){
 
+}
+
+void Camera::readSettings(TiXmlElement* settings){
+	settings->QueryIntAttribute("number", &numCameras);
+	settings->QueryIntAttribute("rows", &numRows);
+	settings->QueryIntAttribute("cols", &numCols);
+	settings->QueryIntAttribute("angle_x", &angleX);
+	settings->QueryIntAttribute("angle_y", &angleY);
+
+	TiXmlElement pPtr = settings->FirstChildElement("cache");
+	pPtr.QueryBoolAttribute("enabled", &cacheEnabled);
+
+	pPtr = settings->FirstChildElement("svm");
+	pPtr
+	//TODO dokończyć wczytywanie ustawień
 }
 
 void Camera::readCache(boost::filesystem::path cacheFile){
