@@ -96,37 +96,37 @@ bool Robot::isCameraOpen(){
 
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 //CV_32UC1 2x1: left, right encoder
-cv::Mat Robot::getEncoderData(){
+const cv::Mat Robot::getEncoderData(){
 	return globalPlanner.getEncoderData();
 }
 
 //CV_32SC1 2x1: x, y position
-cv::Mat Robot::getGpsData(){
+const cv::Mat Robot::getGpsData(){
 	return positionEstimation.getGpsData();
 }
 
 //CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
-cv::Mat Robot::getImuData(){
+const cv::Mat Robot::getImuData(){
 	return positionEstimation.getImuData();
 }
 
 //CV_32SC1 2xHOKUYO_SCANS: x, y points from left to right
-cv::Mat Robot::getHokuyoData(){
+const cv::Mat Robot::getHokuyoData(){
 	return movementConstraints.getHokuyoData();
 }
 
 //CV_8UC3 2x640x480: left, right image
-cv::Mat Robot::getCameraData(){
+const std::vector<cv::Mat> Robot::getCameraData(){
 	return movementConstraints.getCameraData();
 }
 
 //----------------------ACCESS TO COMPUTED DATA
 //CV_32SC1 3x1: x, y, fi
-cv::Mat Robot::getEstimatedPosition(){
+const cv::Mat Robot::getEstimatedPosition(){
 	return positionEstimation.getEstimatedPosition();
 }
 
 //CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)
-cv::Mat Robot::getMovementConstraints(){
+const cv::Mat Robot::getMovementConstraints(){
 	return movementConstraints.getMovementConstraints();
 }

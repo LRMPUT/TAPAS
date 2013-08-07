@@ -80,26 +80,26 @@ public:
 
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
 	//CV_32SC1 2x1: left, right encoder
-	cv::Mat getEncoderData();
+	const cv::Mat getEncoderData();
 
 	//CV_32SC1 2x1: x, y position
-	cv::Mat getGpsData();
+	const cv::Mat getGpsData();
 
 	//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
-	cv::Mat getImuData();
+	const cv::Mat getImuData();
 
 	//CV_32SC1 2xHOKUYO_SCANS: x, y points from left to right
-	cv::Mat getHokuyoData();
+	const cv::Mat getHokuyoData();
 
 	//CV_8UC3 2x640x480: left, right image
-	cv::Mat getCameraData();
+	const std::vector<cv::Mat> getCameraData();
 
 	//----------------------ACCESS TO COMPUTED DATA
 	//CV_32SC1 3x1: x, y, fi
-	cv::Mat getEstimatedPosition();
+	const cv::Mat getEstimatedPosition();
 
 	//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)
-	cv::Mat getMovementConstraints();
+	const cv::Mat getMovementConstraints();
 };
 
 #endif /* ROBOT_H_ */

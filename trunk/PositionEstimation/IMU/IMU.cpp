@@ -52,7 +52,7 @@ bool IMU::isPortOpen(){
 }
 
 //CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
-cv::Mat IMU::getData(){
+const cv::Mat IMU::getData(){
 	Mat ret(3, 4, CV_32FC1);
 	for(int i = 0; i < NUM_VALUES; i++){
 		float tmp = (short)((imu->Register[quantities[i].address / 4]._int >> 8*(quantities[i].address % 4)) & 0xffff);

@@ -26,7 +26,7 @@ public:
 	bool isOpen();
 
 	//CV_32SC1 2xHOKUYO_SCANS: x, y points from left to right
-	cv::Mat getData();
+	const cv::Mat getData();
 };
 
 #endif /* HOKUYO_H_ */

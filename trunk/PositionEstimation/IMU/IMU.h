@@ -33,7 +33,7 @@ public:
 	bool isPortOpen();
 
 	//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
-	cv::Mat getData();
+	const cv::Mat getData();
 };
 
 #endif /* IMU_H_ */

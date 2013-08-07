@@ -36,7 +36,7 @@ bool Hokuyo::isOpen(){
 }
 
 //CV_32SC1 2xHOKUYO_SCANS: x, y points from left to right
-cv::Mat Hokuyo:: getData(){
+const cv::Mat Hokuyo:: getData(){
 	long data[HOKUYO_SCANS];
 	long time;
 	Mat ret(2, HOKUYO_SCANS, CV_32SC1);

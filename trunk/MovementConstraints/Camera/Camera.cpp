@@ -13,22 +13,46 @@
 #define CAMERA_X_ANGLE 45
 #define CAMERA_Y_ANGLE 45
 #define CAMERAS_COUNT 2
+#define ROWS 480
+#define COLS 640
 
 using namespace cv;
 using namespace std;
 
-Camera::Camera(MovementConstraints* imovementConstraints) : movementConstraints(imovementConstraints) {
-
+Camera::Camera(MovementConstraints* imovementConstraints) :
+		movementConstraints(imovementConstraints),
+		cameraGrid(40)
+{
+	groundPolygons.resize(CAMERAS_COUNT);
+	for(int cam = 0; cam < CAMERAS_COUNT; cam++){
+		groundPolygons[cam].resize(ROWS/cameraGrid);
+		for(int row = 0; row < ROWS/cameraGrid; row++){
+			groundPolygons[cam][row].resize(COLS/cameraGrid);
+			for(int col = 0; col < COLS/cameraGrid; col++){
+				groundPolygons[cam][row][col] = new Point[4];
+			}
+		}
+	}
 }
 
 Camera::~Camera(){
-
+	for(int cam = 0; cam < CAMERAS_COUNT; cam++){
+		for(int row = 0; row < ROWS/cameraGrid; row++){
+			for(int col = 0; col < COLS/cameraGrid; col++){
+				delete[] groundPolygons[cam][row][col];
+			}
+		}
+	}
 }
 
 void Camera::computeConstraints(std::vector<cv::Mat> image){
+
+}
+
+void Camera::computeGroundPolygons(){
+	int rows = ROWS/cameraGrid;
+	int cols = COLS/cameraGrid;
 	for(int im = 0; im < CAMERAS_COUNT; im++){
-		int rows = image[im].rows;
-		int cols = image[im].cols;
 		Mat cornersX(rows + 1, cols + 1, CV_32SC1);
 		Mat cornersY(rows + 1, cols + 1, CV_32SC1);
 		for(int nrow = 0; nrow < rows; nrow++){
@@ -63,7 +87,15 @@ void Camera::computeConstraints(std::vector<cv::Mat> image){
 												im);
 		cornersX.at<int>(rows, cols) = point.x;
 		cornersY.at<int>(rows, cols) = point.y;
-		//TODO Rysowanie trapezów na mapie
+		//Polygons on the ground for each image region
+		for(int nrow = 0; nrow < rows; nrow++){
+			for(int ncol = 0; ncol < cols; ncol++){
+				groundPolygons[im][nrow][ncol][0] = Point(cornersX.at<int>(nrow, ncol), cornersY.at<int>(nrow, ncol));
+				groundPolygons[im][nrow][ncol][1] = Point(cornersX.at<int>(nrow, ncol+1), cornersY.at<int>(nrow, ncol+1));
+				groundPolygons[im][nrow][ncol][2] = Point(cornersX.at<int>(nrow+1, ncol+1), cornersY.at<int>(nrow+1, ncol+1));
+				groundPolygons[im][nrow][ncol][3] = Point(cornersX.at<int>(nrow+1, ncol), cornersY.at<int>(nrow+1, ncol));
+			}
+		}
 	}
 }
 
@@ -84,11 +116,18 @@ cv::Point3f Camera::computePointProjection(cv::Point2f imPoint, int cameraInd){
 	return ret;
 }
 
+//Returns constraints map and inserts time of data from cameras fetch
+const cv::Mat Camera::getConstraints(int* timestamp){
+
+}
+
 //CV_8UC3 2x640x480: left, right image
-cv::Mat Camera::getData(){
+const std::vector<cv::Mat> Camera::getData(){
 	//empty matrix
-	int size[] = {2, 640, 480};
-	return Mat(3, size, CV_8UC3);
+	vector<Mat> ret;
+	ret.push_back(Mat(ROWS, COLS, CV_8UC3));
+	ret.push_back(Mat(ROWS, COLS, CV_8UC3));
+	return ret;
 }
 
 void Camera::open(){

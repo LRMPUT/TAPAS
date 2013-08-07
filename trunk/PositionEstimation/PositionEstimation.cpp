@@ -71,13 +71,13 @@ void PositionEstimation::KalmanPredict()
 
 //----------------------ACCESS TO COMPUTED DATA
 //CV_32SC1 3x1: x, y, fi
-cv::Mat PositionEstimation::getEstimatedPosition(){
+const cv::Mat PositionEstimation::getEstimatedPosition(){
 	return state;
 }
 
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 //CV_32FC1 2x1: x, y position
-cv::Mat PositionEstimation::getGpsData(){
+const cv::Mat PositionEstimation::getGpsData(){
 	Mat ret(2, 1, CV_32FC1);
 	ret.at<double>(0) = (double)gps.getPosX();
 	ret.at<double>(1) = (double)gps.getPosY();
@@ -85,7 +85,7 @@ cv::Mat PositionEstimation::getGpsData(){
 }
 
 //CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
-cv::Mat PositionEstimation::getImuData(){
+const cv::Mat PositionEstimation::getImuData(){
 	return imu.getData();
 }
 
