@@ -8,12 +8,12 @@
 using namespace cv;
 using namespace std;
 
-MovementConstraints::MovementConstraints(Robot* irobot) : robot(irobot), camera(this) {
-
+MovementConstraints::MovementConstraints(Robot* irobot) : robot(irobot) {
+	camera = new Camera(this, NULL);
 }
 
 MovementConstraints::~MovementConstraints() {
-
+	delete camera;
 }
 
 //----------------------ACCESS TO COMPUTED DATA
@@ -30,7 +30,7 @@ const cv::Mat MovementConstraints::getHokuyoData(){
 
 //CV_8UC3 2x640x480: left, right image
 const std::vector<cv::Mat> MovementConstraints::getCameraData(){
-	return camera.getData();
+	return camera->getData();
 }
 
 //----------------------MENAGMENT OF MovementConstraints DEVICES
@@ -49,13 +49,13 @@ bool MovementConstraints::isHokuyoOpen(){
 
 //Camera
 void MovementConstraints::openCamera(){
-	camera.open();
+	camera->open();
 }
 
 void MovementConstraints::closeCamera(){
-	camera.close();
+	camera->close();
 }
 
 bool MovementConstraints::isCameraOpen(){
-	return camera.isOpen();
+	return camera->isOpen();
 }

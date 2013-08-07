@@ -1,0 +1,17 @@
+<Robot>
+	<MovementConstraints>
+		<Camera number="2" rows="640" cols="480" angle_x="45" angle_y="45">
+			<cache enabled="true"/>
+			<svm type="C_SVC">
+				<kernelType value="POLY"/>
+				<bins value="256"/>
+				<grid value="40"/>
+				<gamma value="0.5"/>
+				<degree value="2"/>
+			</svm>
+			<classification grid="40"/>
+			<learning dir="../../MovementConstraints/Camera/training_data">
+		</Camera>
+	</MovementConstraints>
+</Robot>
+

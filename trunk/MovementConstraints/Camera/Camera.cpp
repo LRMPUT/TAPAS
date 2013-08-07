@@ -15,24 +15,27 @@
 #define CAMERAS_COUNT 2
 #define ROWS 480
 #define COLS 640
+#define POLY_VERT 4
 
 using namespace cv;
 using namespace std;
 
-Camera::Camera(MovementConstraints* imovementConstraints) :
+Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings) :
 		movementConstraints(imovementConstraints),
 		cameraGrid(40)
 {
+	readSettings(settings);
 	groundPolygons.resize(CAMERAS_COUNT);
 	for(int cam = 0; cam < CAMERAS_COUNT; cam++){
 		groundPolygons[cam].resize(ROWS/cameraGrid);
 		for(int row = 0; row < ROWS/cameraGrid; row++){
 			groundPolygons[cam][row].resize(COLS/cameraGrid);
 			for(int col = 0; col < COLS/cameraGrid; col++){
-				groundPolygons[cam][row][col] = new Point[4];
+				groundPolygons[cam][row][col] = new Point[POLY_VERT];
 			}
 		}
 	}
+	computeGroundPolygons();
 }
 
 Camera::~Camera(){
@@ -114,6 +117,30 @@ cv::Point3f Camera::computePointProjection(cv::Point2f imPoint, int cameraInd){
 	point = trans + point * a;
 	Point3f ret(point.at<float>(0), point.at<float>(1), point.at<float>(2));
 	return ret;
+}
+
+void Camera::learn(cv::Mat samples, int label){
+
+}
+
+void Camera::learnFromDir(boost::filesystem::path dir){
+
+}
+
+cv::Mat Camera::classifySlidingWindow(cv::Mat image){
+
+}
+
+void Camera::readSettings(TiXmlElement* settings){
+
+}
+
+void Camera::readCache(boost::filesystem::path cacheFile){
+
+}
+
+void Camera::saveCache(boost::filesystem::path cacheFile){
+
 }
 
 //Returns constraints map and inserts time of data from cameras fetch
