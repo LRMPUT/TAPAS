@@ -1,6 +1,6 @@
 <Robot>
 	<MovementConstraints>
-		<Camera number="2" rows="640" cols="480" angle_x="45" angle_y="45">
+		<Camera number="2" rows="640" cols="480" angle_x="450" angle_y="450">
 			<cache enabled="true"/>
 			<svm type="C_SVC">
 				<kernelType value="POLY"/>

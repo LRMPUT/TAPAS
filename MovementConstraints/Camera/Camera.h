@@ -10,13 +10,10 @@
 
 //STL
 #include <vector>
-
 //OpenCV
 #include <opencv2/opencv.hpp>
-
 //Boost
 #include <boost/filesystem.hpp>
-
 //TinyXML
 #include <tinyxml.h>
 
@@ -31,6 +28,14 @@ struct Entry{
 class Camera {
 	//Parent MovementConstraints class
 	MovementConstraints* movementConstraints;
+
+	int numCameras, numRows, numCols, angleX, angleY;
+
+	bool cacheEnabled;
+
+	int classifyGrid;
+
+	boost::filesystem::path learningDir;
 
 	//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)
 	cv::Mat constraints;
@@ -66,6 +71,9 @@ class Camera {
 	void learnFromDir(boost::filesystem::path dir);
 
 	cv::Mat classifySlidingWindow(cv::Mat image);
+
+	//Run as separate thread
+	void cameraThread();
 
 	void readSettings(TiXmlElement* settings);
 
