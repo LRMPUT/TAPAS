@@ -8,10 +8,25 @@
 #ifndef CAMERA_H_
 #define CAMERA_H_
 
+//STL
 #include <vector>
+
+//OpenCV
 #include <opencv2/opencv.hpp>
 
+//Boost
+#include <boost/filesystem.hpp>
+
+//TinyXML
+#include <tinyxml.h>
+
 class MovementConstraints;
+
+struct Entry{
+	int label;
+	cv::Mat descriptor;
+	Entry(int ilabel, cv::Mat idescriptor) : label(ilabel), descriptor(idescriptor){}
+};
 
 class Camera {
 	//Parent MovementConstraints class
@@ -29,6 +44,14 @@ class Camera {
 	//Grid of image classification
 	int cameraGrid;
 
+	int currentTimeStamp;
+
+	boost::filesystem::path settingsFile;
+
+	CvSVM svm;
+
+	CvSVMParams svmParams;
+
 	//array containing polygon vertices for all image regions
 	std::vector<std::vector<std::vector<cv::Point*> > > groundPolygons;
 
@@ -37,8 +60,20 @@ class Camera {
 	void computeGroundPolygons();
 
 	cv::Point3f computePointProjection(cv::Point2f imPoint, int cameraInd);
+
+	void learn(cv::Mat samples, int label);
+
+	void learnFromDir(boost::filesystem::path dir);
+
+	cv::Mat classifySlidingWindow(cv::Mat image);
+
+	void readSettings(TiXmlElement* settings);
+
+	void readCache(boost::filesystem::path cacheFile);
+
+	void saveCache(boost::filesystem::path cacheFile);
 public:
-	Camera(MovementConstraints* imovementConstraints);
+	Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings);
 	virtual ~Camera();
 
 	//Returns constraints map and inserts time of data from cameras fetch

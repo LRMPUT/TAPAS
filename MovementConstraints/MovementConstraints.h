@@ -18,7 +18,7 @@ class Robot;
 class MovementConstraints {
 
 	// Class to get data from Camera
-	Camera camera;
+	Camera* camera;
 
 	// Class to get data from Hokuyo
 	Hokuyo hokuyo;

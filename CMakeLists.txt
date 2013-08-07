@@ -7,7 +7,8 @@ set(urg_LIBRARIES urg_c)
 
 find_package(OpenCV REQUIRED)
 find_package(Boost COMPONENTS system filesystem thread REQUIRED)
-include_directories(Trobot/include)
+find_package(TinyXML REQUIRED)
+include_directories(Trobot/include ${TinyXML_INCLUDE_DIRS})
 link_directories(${URG_LIBRARIES_DIR})
 set(RobotsIntellect_SOURCES
 	MechanicalGrabber/MechanicalGrabber.cpp
@@ -47,7 +48,11 @@ add_executable (RobotsIntellect
 	${RobotsIntellect_SOURCES}
 	main.cpp
 )
-target_link_libraries(RobotsIntellect ${OpenCV_LIBS} ${Boost_LIBRARIES} ${urg_LIBRARIES})
+target_link_libraries(RobotsIntellect
+	${OpenCV_LIBS}
+	${Boost_LIBRARIES}
+	${urg_LIBRARIES}
+	${TinyXML_LIBRARIES})
 
 find_package(Qt4 REQUIRED)
 set(trobotQt_SOURCES
@@ -92,4 +97,5 @@ target_link_libraries(Trobot_Qt/gui
 	${QT_LIBRARIES}
 	${OpenCV_LIBS}
 	${Boost_LIBRARIES}
-	${urg_LIBRARIES})
+	${urg_LIBRARIES}
+	${TinyXML_LIBRARIES})
