@@ -29,15 +29,23 @@ class Camera {
 	//Grid of image classification
 	int cameraGrid;
 
+	//array containing polygon vertices for all image regions
+	std::vector<std::vector<std::vector<cv::Point*> > > groundPolygons;
+
 	void computeConstraints(std::vector<cv::Mat> image);
+
+	void computeGroundPolygons();
 
 	cv::Point3f computePointProjection(cv::Point2f imPoint, int cameraInd);
 public:
 	Camera(MovementConstraints* imovementConstraints);
 	virtual ~Camera();
 
+	//Returns constraints map and inserts time of data from cameras fetch
+	const cv::Mat getConstraints(int* timestamp);
+
 	//CV_8UC3 2x640x480: left, right image
-	cv::Mat getData();
+	const std::vector<cv::Mat> getData();
 
 	void open();
 

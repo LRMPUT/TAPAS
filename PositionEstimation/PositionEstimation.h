@@ -47,14 +47,14 @@ public:
 
 	//----------------------ACCESS TO COMPUTED DATA
 	//CV_32SC1 3x1: x, y, fi
-	cv::Mat getEstimatedPosition();
+	const cv::Mat getEstimatedPosition();
 
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
 	//CV_32SC1 2x1: x, y position
-	cv::Mat getGpsData();
+	const cv::Mat getGpsData();
 
 	//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
-	cv::Mat getImuData();
+	const cv::Mat getImuData();
 
 	//----------------------MENAGMENT OF PositionEstimation DEVICES
 	//Gps
