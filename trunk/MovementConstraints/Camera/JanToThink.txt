@@ -1,5 +1,0 @@
-Zastanow sie jak zwracac te dane z kamery w rozsadny sposob. Chodzi mi o to, ze my potrzebujemy info
-do planowania wczesniej niz gdy juz bedziemy wyjezdzali ;p
-
-Mozesz tez stworzyc wspolna nadklase Camera, Hokuyo, Sharp z wirtualnymi metodami, ale nie wiem jak masz
-napisane kamery, wiec nie bede narzucal.

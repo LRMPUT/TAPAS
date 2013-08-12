@@ -6,8 +6,16 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
-	QApplication a(argc, argv);
-	TrobotQt w;
-	w.show();
-	return a.exec();
+	try{
+		QApplication a(argc, argv);
+		if(argc != 2){
+			throw "Usage: gui settings_file";
+		}
+		TrobotQt w(argv[1]);
+		w.show();
+		return a.exec();
+	}
+	catch(char const* error){
+		cout << error << endl;
+	}
 }

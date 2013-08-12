@@ -8,8 +8,9 @@ using namespace std;
 #define CAMERA_HEIGHT 480
 #define PORTS_UPPER_LIMIT 100
 
-TrobotQt::TrobotQt(QWidget *parent, Qt::WFlags flags)
-	: cap(0), QMainWindow(parent, flags), remoteCamera(NULL)
+TrobotQt::TrobotQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
+	: cap(0), QMainWindow(parent, flags), remoteCamera(NULL),
+	  robot(settingsFile)
 {
 	cout << "TrobotQt::TrobotQt" << endl;
 	if(!cap.isOpened()){ // check if we succeeded

@@ -4,11 +4,10 @@ project(RobotsIntellect)
 
 set(urg_LIBRARIES_DIR /usr/local/lib)
 set(urg_LIBRARIES urg_c)
+set(TinyXML_LIBRARIES tinyxml)
 
 find_package(OpenCV REQUIRED)
 find_package(Boost COMPONENTS system filesystem thread REQUIRED)
-find_package(TinyXML REQUIRED)
-include_directories(Trobot/include ${TinyXML_INCLUDE_DIRS})
 link_directories(${URG_LIBRARIES_DIR})
 set(RobotsIntellect_SOURCES
 	MechanicalGrabber/MechanicalGrabber.cpp
@@ -38,7 +37,6 @@ set(RobotsIntellect_SOURCES
 	Trobot/source/Controller.cpp
 	Trobot/source/Gps.cpp
 	Trobot/source/Imu.cpp
-	Trobot/source/Motor.cpp
 	Trobot/source/rangeSensor.cpp
 	Trobot/source/RobotDrive.cpp
 	Trobot/source/RoboteqDevice.cpp

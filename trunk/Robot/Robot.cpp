@@ -4,17 +4,16 @@
  *  Created on: Mar 31, 2013
  *      Author: smi
  */
-
+#include <iostream>
 #include "Robot.h"
 
 Robot::Robot(boost::filesystem::path settingsFile) : globalPlanner(this), positionEstimation(this) {
 	TiXmlDocument settings(settingsFile.c_str());
 	if(!settings.LoadFile()){
-		throw "Error loading settings file";
+		throw settings.ErrorDesc();
 	}
-	TiXmlElement pSettings(&settings);
 	TiXmlElement* pRobot;
-	pRobot = pSettings.FirstChildElement("Robot");
+	pRobot = settings.FirstChildElement("Robot");
 	if(!pRobot){
 		throw "Bad settings file - entry Robot not found";
 	}
