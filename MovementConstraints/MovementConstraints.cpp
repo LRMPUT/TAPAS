@@ -12,7 +12,7 @@ MovementConstraints::MovementConstraints(Robot* irobot, TiXmlElement* settings) 
 	if(!settings){
 		throw "Bad settings file - entry MovementConstraints not found";
 	}
-	TiXmlElement pCamera = settings->FirstChildElement("Camera");
+	TiXmlElement* pCamera = settings->FirstChildElement("Camera");
 	camera = new Camera(this, pCamera);
 }
 

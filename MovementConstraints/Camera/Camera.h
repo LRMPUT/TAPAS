@@ -29,7 +29,7 @@ class Camera {
 	//Parent MovementConstraints class
 	MovementConstraints* movementConstraints;
 
-	int numCameras, numRows, numCols, angleX, angleY;
+	int numCameras, numRows, numCols, angleX, angleY, cameraZ;
 
 	bool cacheEnabled;
 
@@ -56,6 +56,8 @@ class Camera {
 	CvSVM svm;
 
 	CvSVMParams svmParams;
+
+	std::vector<Entry> entries;
 
 	//array containing polygon vertices for all image regions
 	std::vector<std::vector<std::vector<cv::Point*> > > groundPolygons;

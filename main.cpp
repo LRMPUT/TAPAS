@@ -11,7 +11,7 @@ using namespace std;
 // Testing comment
 int main()
 {
-	Robot *ourRobot  = new Robot();
+	Robot *ourRobot  = new Robot("settings.xml");
 
 
 	// Streams to save data

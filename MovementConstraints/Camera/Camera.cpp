@@ -5,17 +5,23 @@
  *      Author: jachu
  */
 
+//OpenCV
 #include <opencv2/opencv.hpp>
+//STL
 #include <cmath>
+#include <sstream>
+//RobotsIntellect
 #include "Camera.h"
 
-#define CAMERA_Z 1
+/*#define CAMERA_Z 1
 #define CAMERA_X_ANGLE 45
 #define CAMERA_Y_ANGLE 45
 #define CAMERAS_COUNT 2
 #define ROWS 480
-#define COLS 640
+#define COLS 640*/
 #define POLY_VERT 4
+#define LEFT_CAMERA 0
+#define RIGHT_CAMERA 1
 
 using namespace cv;
 using namespace std;
@@ -29,12 +35,12 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 	}
 	readSettings(settings);
 
-	groundPolygons.resize(CAMERAS_COUNT);
-	for(int cam = 0; cam < CAMERAS_COUNT; cam++){
-		groundPolygons[cam].resize(ROWS/cameraGrid);
-		for(int row = 0; row < ROWS/cameraGrid; row++){
-			groundPolygons[cam][row].resize(COLS/cameraGrid);
-			for(int col = 0; col < COLS/cameraGrid; col++){
+	groundPolygons.resize(numCameras);
+	for(int cam = 0; cam < numCameras; cam++){
+		groundPolygons[cam].resize(numRows/cameraGrid);
+		for(int row = 0; row < numRows/cameraGrid; row++){
+			groundPolygons[cam][row].resize(numCols/cameraGrid);
+			for(int col = 0; col < numCols/cameraGrid; col++){
 				groundPolygons[cam][row][col] = new Point[POLY_VERT];
 			}
 		}
@@ -43,9 +49,9 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 }
 
 Camera::~Camera(){
-	for(int cam = 0; cam < CAMERAS_COUNT; cam++){
-		for(int row = 0; row < ROWS/cameraGrid; row++){
-			for(int col = 0; col < COLS/cameraGrid; col++){
+	for(int cam = 0; cam < numCameras; cam++){
+		for(int row = 0; row < numRows/cameraGrid; row++){
+			for(int col = 0; col < numCols/cameraGrid; col++){
 				delete[] groundPolygons[cam][row][col];
 			}
 		}
@@ -57,9 +63,9 @@ void Camera::computeConstraints(std::vector<cv::Mat> image){
 }
 
 void Camera::computeGroundPolygons(){
-	int rows = ROWS/cameraGrid;
-	int cols = COLS/cameraGrid;
-	for(int im = 0; im < CAMERAS_COUNT; im++){
+	int rows = numRows/cameraGrid;
+	int cols = numCols/cameraGrid;
+	for(int im = 0; im < numCameras; im++){
 		Mat cornersX(rows + 1, cols + 1, CV_32SC1);
 		Mat cornersY(rows + 1, cols + 1, CV_32SC1);
 		for(int nrow = 0; nrow < rows; nrow++){
@@ -108,15 +114,15 @@ void Camera::computeGroundPolygons(){
 
 cv::Point3f Camera::computePointProjection(cv::Point2f imPoint, int cameraInd){
 	Mat point(3, 1, CV_32FC1);
-	point.at<float>(0) = imPoint.x * CAMERA_Z * tan(CAMERA_X_ANGLE/2);
-	point.at<float>(1) = imPoint.y * CAMERA_Z * tan(CAMERA_Y_ANGLE/2);
-	point.at<float>(2) = -CAMERA_Z;
+	point.at<float>(0) = imPoint.x * cameraZ * tan(angleX/2);
+	point.at<float>(1) = imPoint.y * cameraZ * tan(angleY/2);
+	point.at<float>(2) = -cameraZ;
 
-	Mat rot(cameraOrig[cameraInd], Rect(0, 0, 2, 2));
-	Mat trans(cameraOrig[cameraInd], Rect(0, 3, 2, 3));
+	Mat rot(cameraOrig[cameraInd], Rect(Point(0, 0), Point(3, 3)));
+	Mat trans(cameraOrig[cameraInd], Rect(Point(3, 0), Point(4, 3)));
 	point = rot * point;
-	Mat planeABC(groundPlane, Rect(0, 0, 2, 0));
-	Mat planeD(groundPlane, Rect(3, 0, 3, 0));
+	Mat planeABC(groundPlane, Rect(Point(0, 0), Point(1, 3)));
+	Mat planeD(groundPlane, Rect(Point(0, 3), Point(1, 4)));
 	Mat a = (-planeABC.t() * trans - planeD) / (planeABC.t() * point);
 	point = trans + point * a;
 	Point3f ret(point.at<float>(0), point.at<float>(1), point.at<float>(2));
@@ -141,18 +147,159 @@ void Camera::cameraThread(){
 }
 
 void Camera::readSettings(TiXmlElement* settings){
-	settings->QueryIntAttribute("number", &numCameras);
-	settings->QueryIntAttribute("rows", &numRows);
-	settings->QueryIntAttribute("cols", &numCols);
-	settings->QueryIntAttribute("angle_x", &angleX);
-	settings->QueryIntAttribute("angle_y", &angleY);
+	if(settings->QueryIntAttribute("number", &numCameras) != TIXML_SUCCESS){
+		throw "Bad settings file - wrong number of cameras";
+	}
+	if(settings->QueryIntAttribute("rows", &numRows) != TIXML_SUCCESS){
+		throw "Bad settings file - wrong number of rows";
+	}
+	if(settings->QueryIntAttribute("cols", &numCols) != TIXML_SUCCESS){
+		throw "Bad settings file - wrong number of cols";
+	}
+	if(settings->QueryIntAttribute("angle_x", &angleX) != TIXML_SUCCESS){
+		throw "Bad settings file - wrong angle x";
+	}
+	if(settings->QueryIntAttribute("angle_y", &angleY) != TIXML_SUCCESS){
+		throw "Bad settings file - wrong angle y";
+	}
+	if(settings->QueryIntAttribute("camera_z", &cameraZ) != TIXML_SUCCESS){
+		throw "Bad settings file - wrong camera z";
+	}
 
-	TiXmlElement pPtr = settings->FirstChildElement("cache");
-	pPtr.QueryBoolAttribute("enabled", &cacheEnabled);
+	cacheEnabled = true;
+	TiXmlElement* pPtr = settings->FirstChildElement("cache");
+	if(!pPtr){
+		throw "Bad settings file - no cache setting";
+	}
+	pPtr->QueryBoolAttribute("enabled", &cacheEnabled);
 
 	pPtr = settings->FirstChildElement("svm");
-	pPtr
-	//TODO dokończyć wczytywanie ustawień
+	if(!pPtr){
+		throw "Bad settings file - no svm settings";
+	}
+
+	int svmType;
+	string tmp;
+	pPtr->QueryStringAttribute("type", &tmp);
+	if(tmp == "C_SVC"){
+		svmType = CvSVM::C_SVC;
+	}
+	else if(tmp == "NU_SVC"){
+		svmType = CvSVM::NU_SVC;
+	}
+	else if(tmp == "ONE_CLASS"){
+		svmType = CvSVM::ONE_CLASS;
+	}
+	else{
+		throw "Bad settings file - wrong SVM type";
+	}
+
+	int kernelType;
+	TiXmlElement* svmPtr = pPtr->FirstChildElement("kernelType");
+	if(!svmPtr){
+		throw "Bad settings file - no kernel type";
+	}
+	svmPtr->QueryStringAttribute("value", &tmp);
+	if(tmp == "LINEAR"){
+		kernelType = CvSVM::LINEAR;
+	}
+	else if(tmp == "POLY"){
+		kernelType = CvSVM::POLY;
+	}
+	else if(tmp == "RBF"){
+		kernelType = CvSVM::RBF;
+	}
+	else if(tmp == "SIGMOID"){
+		kernelType = CvSVM::SIGMOID;
+	}
+	else{
+		throw "Bad settings file - wrong kernel type";
+	}
+
+	int bins = 256;
+	svmPtr = pPtr->FirstChildElement("bins");
+	if(!svmPtr){
+		throw "Bad settings file - no bins number";
+	}
+	svmPtr->QueryIntAttribute("value", &bins);
+
+	double gamma = 0.5;
+	svmPtr = pPtr->FirstChildElement("gamma");
+	if(!svmPtr){
+		throw "Bad settings file - no gamma value";
+	}
+	svmPtr->QueryDoubleAttribute("value", &gamma);
+
+	double degree = 2;
+	svmPtr = pPtr->FirstChildElement("degree");
+	if(!svmPtr){
+		throw "Bad settings file - no degree value";
+	}
+	svmPtr->QueryDoubleAttribute("value", &degree);
+
+	classifyGrid = 40;
+	pPtr = settings->FirstChildElement("classification");
+	if(!pPtr){
+		throw "Bad settings file - no classification settings";
+	}
+	pPtr->QueryIntAttribute("grid", &classifyGrid);
+
+	pPtr = settings->FirstChildElement("learning");
+	if(!pPtr){
+		throw "Bad settings file - no learning settings";
+	}
+	pPtr->QueryStringAttribute("dir", &tmp);
+	learningDir = tmp;
+
+	pPtr = settings->FirstChildElement("sensor");
+	for(int i = 0; i < numCameras; i++){
+		if(!pPtr){
+			throw "Bad settings file - no sensor settings";
+		}
+		pPtr->QueryStringAttribute("id", &tmp);
+		int idx = 0;
+		if(tmp == "left"){
+			idx = LEFT_CAMERA;
+		}
+		else if(tmp == "right"){
+			idx = RIGHT_CAMERA;
+		}
+		else{
+			throw "Bad settings file - wrong camera id";
+		}
+		TiXmlElement* posPtr = pPtr->FirstChildElement("position");
+		if(!posPtr){
+			throw "Bad settings file - no position of sensor";
+		}
+		stringstream tmpStr(posPtr->Value());
+		cameraOrig[idx] = Mat(4, 4, CV_32FC1);
+		for(int row = 0; row < 4; row++){
+			for(int col = 0; col < 4; col++){
+				float tmpVal;
+				tmpStr >> tmpVal;
+				cameraOrig[idx].at<float>(row, col) = tmpVal;
+			}
+		}
+		pPtr = pPtr->NextSiblingElement("sensor");
+	}
+
+	groundPlane = Mat(4, 1, CV_32FC1);
+	pPtr = settings->FirstChildElement("ground_plane");
+	if(!pPtr){
+		throw "Bad settings file - no ground plane equation";
+	}
+	stringstream tmpStr(pPtr->Value());
+	for(int i = 0; i < 4; i++){
+		float tmpVal;
+		tmpStr >> tmpVal;
+		groundPlane.at<float>(i) = tmpVal;
+	}
+
+	svmParams = CvSVMParams();	//default values
+	svmParams.kernel_type = kernelType;
+	svmParams.svm_type = svmType;
+	svmParams.degree = degree;
+	svmParams.gamma = gamma;
 }
 
 void Camera::readCache(boost::filesystem::path cacheFile){
@@ -172,8 +319,8 @@ const cv::Mat Camera::getConstraints(int* timestamp){
 const std::vector<cv::Mat> Camera::getData(){
 	//empty matrix
 	vector<Mat> ret;
-	ret.push_back(Mat(ROWS, COLS, CV_8UC3));
-	ret.push_back(Mat(ROWS, COLS, CV_8UC3));
+	ret.push_back(Mat(numRows, numCols, CV_8UC3));
+	ret.push_back(Mat(numRows, numCols, CV_8UC3));
 	return ret;
 }
 

@@ -27,7 +27,7 @@ class TrobotQt : public QMainWindow
 	friend class CameraWindow;
 
 public:
-	TrobotQt(QWidget *parent = 0, Qt::WFlags flags = 0);
+	TrobotQt(const char* settingsFile, QWidget *parent = 0, Qt::WFlags flags = 0);
 	~TrobotQt();
 protected:
 
