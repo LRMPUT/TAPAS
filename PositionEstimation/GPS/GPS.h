@@ -82,6 +82,7 @@ private:
 	double Radius;
 	char Buffer[2048];
 	void ClearBuffer();
+	volatile bool threadEnd;
 
 	void start();
 	void join();

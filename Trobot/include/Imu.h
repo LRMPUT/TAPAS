@@ -1192,6 +1192,7 @@ namespace trobot
 			bool				connectionTestOk(); ///< tests if the connection to the controller was properly established
 		
 			boost::thread *		thread_;
+			volatile bool		threadEnd;
 
 			//!Variable is in charge of answer from UM6.
 			eMsgFromUM6			raport;

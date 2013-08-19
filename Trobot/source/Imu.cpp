@@ -23,6 +23,7 @@ namespace trobot
 			searchForDevice();
 
 		G_FwVersionRegister.FwVersion = 0;
+		threadEnd = false;
 		thread_ = new thread(bind(&Imu::Get_Data_From_UM6, this));
 		//printf("Testing port");
 		ConfigArray();
@@ -36,6 +37,7 @@ namespace trobot
 
 	Imu::~Imu(void)
 	{
+		threadEnd = true;
 		thread_->join();
 		if(serial_port->isActive()) serial_port->close();
 		delete serial_port;
@@ -45,11 +47,13 @@ namespace trobot
 	{
 		CommRegister.Bytes.Byte1.bitsB1.baud_rate = baud;
 		WriteConfiguration();
+		threadEnd = true;
 		thread_->join();
 		delete [] thread_;
 		if(!serial_port->isActive()) serial_port->close();
 		delete serial_port;
 		serial_port = new SerialPort(baud, device);
+		threadEnd = false;
 		thread_ = new thread(boost::bind(&Imu::Get_Data_From_UM6, this));
 	}
 
@@ -272,7 +276,7 @@ namespace trobot
 				Accel_Cal_12						=	Register[ACCEL_CAL_12]._float;
 			if(rejestr[i] == ACCEL_CAL_20)
 				Accel_Cal_20						=	Register[ACCEL_CAL_20]._float;
-			if(rejestr[i] = ACCEL_CAL_21)
+			if(rejestr[i] == ACCEL_CAL_21)
 				Accel_Cal_21						=	Register[ACCEL_CAL_21]._float;
 			if(rejestr[i] == ACCEL_CAL_22)
 				Accel_Cal_22						=	Register[ACCEL_CAL_22]._float;
