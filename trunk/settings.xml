@@ -1,6 +1,6 @@
 <Robot>
 	<MovementConstraints>
-		<Camera number="2" rows="640" cols="480" angle_x="450" angle_y="450">
+		<Camera number="2" rows="640" cols="480" angle_x="450" angle_y="450" camera_z="1">
 			<cache enabled="true" />
 			<svm type="C_SVC">
 				<kernelType value="POLY" />
@@ -10,6 +10,25 @@
 			</svm>
 			<classification grid="40" />
 			<learning dir="../../MovementConstraints/Camera/training_data" />
+			<sensor id="left">
+				<position>
+					1 0 0 0
+					0	1	0	0
+					0	0	1	0
+					0	0	0	1
+				</position>
+			</sensor>
+			<sensor id="right">
+				<position>
+					1 0 0 0
+					0	1	0	0
+					0	0	1	0
+					0	0	0	1
+				</position>
+			</sensor>
+			<ground_plane>
+				0	0	1 -30
+			</ground_plane>
 		</Camera>
 	</MovementConstraints>
 </Robot>

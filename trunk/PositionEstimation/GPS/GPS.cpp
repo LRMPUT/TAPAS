@@ -6,6 +6,8 @@
  */
 #include "GPS.h"
 
+#include <iostream>
+
 #include <cmath>
 #include <string.h>
 #include <termios.h>
@@ -13,6 +15,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
+
+using namespace std;
 
 //EquatorialRadius
 #define EqRd  6378.137
@@ -25,7 +29,7 @@ GPS::GPS() {
 	PosLat = 0.0;
 	PosLon = 0.0;
 	Baud = 9600;
-	FD = 0;
+	FD = -1;
 	StartPosLat = 0.0;
 	StartPosLon = 0.0;
 	Radius = 0.0;
@@ -37,7 +41,7 @@ GPS::GPS(const char *PortName, int BaudRate){
 	PosLat = 0.0;
 	PosLon = 0.0;
 	Baud = BaudRate;
-	FD = 0;
+	FD = -1;
 	StartPosLat = 0.0;
 	StartPosLon = 0.0;
 	Radius = 0.0;
@@ -52,9 +56,12 @@ void GPS::initController(const char *PortName, int BaudRate){
 }
 
 void GPS::deinitController(){
-	if(FD != 0){
+	if(FD != -1){
+		cout << "Joining thread" << endl;
 		join();
+		cout << "Destroying parser" << endl;
 		nmea_parser_destroy(&Parser);
+		cout << "Closing port" << endl;
 		closePort();
 	}
 }
@@ -150,12 +157,12 @@ int GPS::openPort(const char* port){
 void GPS::closePort()
 {
 	close(FD);
-	FD = 0;
+	FD = -1;
 }
 
 bool GPS::isOpen()
 {
-	return (FD > 0);
+	return (FD >= 0);
 }
 
 double GPS::getPosX(){
@@ -188,17 +195,19 @@ void GPS::setZeroXY(double Latitude, double Longitude){
 
 void GPS::start()
 {
+	threadEnd = false;
     m_Thread = boost::thread(&GPS::monitorSerialPort, this);
 }
 
 void GPS::join()
 {
+	threadEnd = true;
     m_Thread.join();
 }
 
 void GPS::monitorSerialPort()
 {
-	boost::posix_time::milliseconds WorkTime2(50);
+	boost::posix_time::milliseconds WorkTime2(500);
     nmea_zero_INFO(&Info);
     nmea_parser_init(&Parser);
 	int N = 0;
@@ -215,7 +224,7 @@ void GPS::monitorSerialPort()
 		N = 0;
 		j=0;
 		BuffLen = 0;
-		ClearBuffer();
+		//ClearBuffer();
 		nmea_parser_buff_clear(&Parser);
 		do{
 			N = read(FD, Ptr, 90);
@@ -227,13 +236,17 @@ void GPS::monitorSerialPort()
 			}
 		}
 		while ((N != -1) || j<5);
-		boost::this_thread::sleep(WorkTime2);
 		if (Success){
 			Ptr = Buffer;
 			nmea_parse(&Parser, Ptr, BuffLen, &Info);
 			PosLat = nmea_ndeg2degree(Info.lat);
 			PosLon = nmea_ndeg2degree(Info.lon);
 		}
+		if(threadEnd == true){
+			return;
+		}
+		cout << "GPS parse sleeping" << endl;
+		boost::this_thread::sleep(WorkTime2);
 	}
 }
 void GPS::ClearBuffer(){
