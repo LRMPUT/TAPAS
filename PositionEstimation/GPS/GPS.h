@@ -9,7 +9,14 @@
 
 
 #include <boost/thread.hpp>
+#include <boost/asio.hpp>
+#include <boost/asio/serial_port.hpp>
+
+#include "../../Trobot/include/SerialPort.h"
+
 #include "nmea/nmea.h"
+
+#define BUFFER_SIZE 2048
 
 /**
  * GPS Class
@@ -25,7 +32,7 @@ public:
 	 * @param[in] PortName Pointer to array containing name of port, to which the GPS module is attached
 	 * @param[in] BaudRate Baud rate for serial communication with module, default 9600.
 	 */
-	GPS(const char *PortName, int BaudRate);
+	GPS(const char *PortName, int BaudRate = 9600);
 	/**
 	 * Start the module. Use with default constructor.
 	 * @param[in] PortName Pointer to array containing name of port, to which the GPS module is attached
@@ -77,16 +84,15 @@ private:
 	double PosLat, PosLon;
 	double PosX, PosY;
 	double StartPosLat, StartPosLon;
-	int Baud;
-	int FD;
+	trobot::SerialPort SerialPort;
 	double Radius;
-	char Buffer[2048];
+	char Buffer[BUFFER_SIZE];
 	void ClearBuffer();
 	volatile bool threadEnd;
 
 	void start();
 	void join();
-	int openPort(const char* port);
+	int openPort(const char* port, int BaudRate);
 	void closePort();
 	void monitorSerialPort();
 	int calculateRadius();

@@ -32,7 +32,7 @@ namespace trobot {
 	class SerialPort
 	{
 	public:
-		
+		SerialPort();
 		SerialPort(unsigned int baud, const std::string& device);
 
 		void			test();
@@ -63,8 +63,8 @@ namespace trobot {
 		unsigned int		bytesTransffered_;
 
 		boost::asio::io_service	io_service_; ///< the main IO service that runs this connection
-		boost::thread				*thread_; ///< thread that runs the boost serial port
-        boost::asio::serial_port	*serialPort_; ///< the serial port this instance is connected to
+		boost::thread				thread_; ///< thread that runs the boost serial port
+        boost::asio::serial_port	serialPort_; ///< the serial port this instance is connected to
 		static std::vector<std::string> availablePorts; ///< stores list of all available COM ports
 
 		bool				active_; ///< remains true while this object is still operating 
