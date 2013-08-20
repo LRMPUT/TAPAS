@@ -21,32 +21,23 @@ using namespace std;
 using namespace boost;
 
 namespace trobot {
+
+
+	SerialPort::SerialPort() :
+			active_(false),
+			io_service_(),
+			serialPort_(io_service_),
+			readBuffer_(max_read_length)
+	{
+	}
+
 	SerialPort::SerialPort(unsigned int baud, const string& device) 
-                : active_(true), 
-                  io_service_(), 
-                  //serialPort_(io_service_, device),
+                : active_(false),
+                  io_service_(),
+                  serialPort_(io_service_),
 				  readBuffer_(max_read_length)
 	{
-		try {
-			serialPort_ = new asio::serial_port(io_service_, device);
-		}
-		catch (...) {
-			active_ = false;
-			throw "Failed to open serial port";
-		}
-		if (!serialPort_->is_open()) 
-		{
-			cerr << "Failed to open serial port\n"; 
-			throw "Failed to open serial port";
-			return; 
-		} 
-		
-		asio::serial_port_base::baud_rate baud_option(baud); 
-		serialPort_->set_option(baud_option); // set the baud rate after the port has been opened 
-		readStart();
-		thread_ = new thread(bind(&asio::io_service::run, &io_service_));
-		counting = false;
-		newDataAvaialble_ = false;
+		open(baud, device);
 		
 	}
 
@@ -59,7 +50,7 @@ namespace trobot {
 	}
 
 	void SerialPort::readStart(void) {
-		serialPort_->async_read_some(asio::buffer(read_msg_, max_read_length), 
+		serialPort_.async_read_some(asio::buffer(read_msg_, max_read_length),
 									bind(&SerialPort::readComplete, 
 										this, 
 										asio::placeholders::error, 
@@ -112,7 +103,7 @@ namespace trobot {
                 //else 
                         //cout << "Error: Connection did not succeed.\n"; 
                 //cout << "Press Enter to exit\n"; 
-                serialPort_->close(); 
+                serialPort_.close();
                 active_ = false; 
         }
 
@@ -130,7 +121,7 @@ namespace trobot {
 
 	void SerialPort::writeStart(void) 
         { // Start an asynchronous write and call write_complete when it completes or fails 
-                asio::async_write(*serialPort_, 
+                asio::async_write(serialPort_,
 								asio::buffer(&write_msgs_.front(), 1), 
 								bind(&SerialPort::writeComplete, 
 									this, 
@@ -146,7 +137,7 @@ namespace trobot {
 	void SerialPort::close() // call the do_close function via the io service in the other thread 
         { 
                 io_service_.post(boost::bind(&SerialPort::doClose, this, boost::system::error_code())); 
-				thread_->join();
+				thread_.join();
         } 
 
 	bool SerialPort::isActive() // return true if the socket is still active 
@@ -156,7 +147,14 @@ namespace trobot {
 
 	circular_buffer<char>  SerialPort::getDataRead() {
 		readBufferGuard_.lock();
-		circular_buffer<char> returnData = readBuffer_;
+		//cout << "Getting data read" << endl;
+		circular_buffer<char> returnData;
+		returnData.set_capacity(readBuffer_.size());
+		while(readBuffer_.size() > 0){
+			//cout << "size = " << readBuffer_.size() << endl;
+			returnData.push_back(readBuffer_.front());
+			readBuffer_.pop_front();
+		}
 		newDataAvaialble_ = false;
 		readBufferGuard_.unlock();
 		return returnData;
@@ -236,19 +234,11 @@ namespace trobot {
 	
 
 	void SerialPort::open(unsigned int baud, const std::string &device) {
-		/*try{
-			if(serialPort_ != NULL) {
-				if(serialPort_->is_open()) {
-				close();
-				}
-			}
-		
+		if(isActive()){
+			close();
 		}
-		catch(...) {
-			;
-		}*/
-		serialPort_->open(device);
-		if (!serialPort_->is_open()) 
+		serialPort_.open(device);
+		if (!serialPort_.is_open())
 		{
 			cerr << "Failed to open serial port\n"; 
 			throw "Failed to open serial port";
@@ -256,10 +246,11 @@ namespace trobot {
 		} 
 		
 		asio::serial_port_base::baud_rate baud_option(baud); 
-		serialPort_->set_option(baud_option); // set the baud rate after the port has been opened 
+		serialPort_.set_option(baud_option); // set the baud rate after the port has been opened
 		readStart();
-		thread_ = new thread(bind(&asio::io_service::run, &io_service_));
+		thread_ = thread(bind(&asio::io_service::run, &io_service_));
 		counting = false;
+		active_ = true;
 	}
 
 	void SerialPort::write(const std::string &msg) {
