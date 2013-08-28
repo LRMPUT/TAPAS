@@ -12,32 +12,45 @@
 using namespace cv;
 using namespace std;
 
-PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot), KF(6, 2, 3) {
+PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot) {
+
+	KF = new KalmanFilter();
+	KF->init(6,2,3);
 
 	float dt = 0.1; // Right now hard-coded -> cannot be like that    
-	float transData[]  = {  1, 0, 0, dt, 0, 0,
-            				0, 1, 0, 0, dt, 1,
-            				0, 0, 1, 0, 0, dt,
-							0, 0, 0, 1, 0, 0,
-							0, 0, 0, 0, 1, 0,
-							0, 0 ,0, 0, 0, 1 };
-	//memcpy( KF.transitionMatrix.data.fl, transData, sizeof(transData));
 
-	float contrData[]  = {  1, 0, 0,
-            				0, 1, 0,
-            				0, 0, 1,
-							0, 0, 0,
-							0, 0, 0,
-							0, 0 ,0 };
-	//memcpy( KF.controlMatrix->data.fl, contrData, sizeof(contrData));
 
-	float measData[]  = {   1, 0,
-            				0, 1,
-            				0, 0,
-							0, 0,
-							0, 0,
-							0, 0 };
-	//memcpy( KF.measurementMatrix->data.fl, measData, sizeof(measData));
+	/* KALMAN:
+	 * - we track 6 values -> x, y, phi, vx, vy, omega_phi
+	 *
+	 * - to predict we can use values from encoders
+	 * - to correct we can use information from the GPS
+	 *
+	 */
+
+	KF->transitionMatrix =
+			*(Mat_<double>(6, 6) << 1, 0, 0, dt, 0, 0,
+									0, 1, 0, 0, dt, 1,
+									0, 0, 1, 0, 0, dt,
+									0, 0, 0, 1, 0, 0,
+									0, 0, 0, 0, 1, 0,
+									0, 0 ,0, 0, 0, 1);
+
+	KF->controlMatrix =
+			*(Mat_<double>(6, 3) << 1, 0, 0,
+									0, 1, 0,
+									0, 0, 1,
+									0, 0, 0,
+									0, 0, 0,
+									0, 0 ,0);
+
+	KF->measurementMatrix =
+			*(Mat_<double>(6, 2) << 1, 0,
+									0, 1,
+									0, 0,
+									0, 0,
+									0, 0,
+									0, 0);
 
 }
 
@@ -49,7 +62,7 @@ PositionEstimation::~PositionEstimation() {
 // Update Kalman - updates on GPS
 void PositionEstimation::KalmanUpdate()
 {
-	state = KF.correct( this->getGpsData() );
+	state = KF->correct( this->getGpsData() );
 	
 	// Optional stuff
 	//cv::Mat imu = this->getImuData();
@@ -61,12 +74,20 @@ void PositionEstimation::KalmanUpdate()
 // Encoders - predict
 void PositionEstimation::KalmanPredict()
 {
-	//cv::Mat pred = this.robot->globalPlanner.getEncoderData;
-	// pred.at<float>(0) *= pred.at<float>(0) / TICK_PER_ROUND * 2 * PI * wheel_radius 
-	// pred.at<float>(1) *= pred.at<float>(1) / TICK_PER_ROUND * 2 * PI * wheel_radius 
-	// pred.at<float>(2) = ( pred.at<float>(1) - pred.at<float>(0) ) / TICK_PER_ROUND * 2 * PI * wheel_radius / ( 2 * PI * WHEEL_BASE ) * 360 
-	//
-	//state = KF.predict(pred);
+	// TODO:
+	// - move encoder TICK somewhere up
+	// - what is wheel base
+	int TICK_PER_ROUND = 1000;
+	int WHEEL_BASE = 100;
+	double PI = 3.1415265;
+	int wheel_radius = 10;
+
+	cv::Mat pred = this->robot->getEncoderData();
+	pred.at<float>(0) *= pred.at<float>(0) / TICK_PER_ROUND * 2 * PI * wheel_radius;
+	pred.at<float>(1) *= pred.at<float>(1) / TICK_PER_ROUND * 2 * PI * wheel_radius;
+	pred.at<float>(2) = ( pred.at<float>(1) - pred.at<float>(0) ) / TICK_PER_ROUND * 2 * PI * wheel_radius / ( 2 * PI * WHEEL_BASE ) * 360;
+
+	state = KF->predict(pred);
 }
 
 //----------------------ACCESS TO COMPUTED DATA
