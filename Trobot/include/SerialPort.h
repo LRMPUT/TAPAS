@@ -56,19 +56,20 @@ namespace trobot {
 		
 		
 		
-		static const int	max_read_length = 512; // maximum amount of data to read in one operation 
+		static const int	max_read_length = 512; // maximum amount of data to read in one operation
 	private:
 		boost::mutex		readBufferGuard_; ///<prevents read buffer to be read and modified by multiple threads simultaneously
 
 		unsigned int		bytesTransffered_;
 
 		boost::asio::io_service	io_service_; ///< the main IO service that runs this connection
+		boost::asio::io_service::work io_service_work;	///< Ensures that service's run() won't exit when there's nothing to do
 		boost::thread				thread_; ///< thread that runs the boost serial port
         boost::asio::serial_port	serialPort_; ///< the serial port this instance is connected to
 		static std::vector<std::string> availablePorts; ///< stores list of all available COM ports
 
-		bool				active_; ///< remains true while this object is still operating 
-		bool				newDataAvaialble_;
+		volatile bool				active_; ///< remains true while this object is still operating
+		volatile bool				newDataAvaialble_;
         
 		char					read_msg_[max_read_length]; // data read from the socket 
 		boost::circular_buffer<char>	readBuffer_; ///< nice structure to store data from boost library

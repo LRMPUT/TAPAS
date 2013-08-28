@@ -26,16 +26,18 @@ namespace trobot {
 	SerialPort::SerialPort() :
 			active_(false),
 			io_service_(),
+			io_service_work(io_service_),
 			serialPort_(io_service_),
-			readBuffer_(max_read_length)
+			readBuffer_(4*max_read_length)
 	{
 	}
 
 	SerialPort::SerialPort(unsigned int baud, const string& device) 
                 : active_(false),
                   io_service_(),
+                  io_service_work(io_service_),
                   serialPort_(io_service_),
-				  readBuffer_(max_read_length)
+				  readBuffer_(4*max_read_length)
 	{
 		open(baud, device);
 		
@@ -95,29 +97,34 @@ namespace trobot {
 	}
 
 	void SerialPort::doClose(const system::error_code& error) 
-        { // something has gone wrong, so close the socket & make this object inactive 
-                if (error == asio::error::operation_aborted) // if this call is the result of a timer cancel() 
-                        return; // ignore it because the connection cancelled the timer 
-                if (error) 
-                        cerr << "Error: " << error.message() << endl; // show the error message 
-                //else 
-                        //cout << "Error: Connection did not succeed.\n"; 
-                //cout << "Press Enter to exit\n"; 
-                serialPort_.close();
-                active_ = false; 
-        }
+	{
+		cout << "SerialPort::doClose()" << endl;
+		// something has gone wrong, so close the socket & make this object inactive
+		if (error == asio::error::operation_aborted) // if this call is the result of a timer cancel()
+				return; // ignore it because the connection cancelled the timer
+		if (error)
+				cerr << "Error: " << error.message() << endl; // show the error message
+		//else
+				//cout << "Error: Connection did not succeed.\n";
+		//cout << "Press Enter to exit\n";
+		io_service_.stop();
+		serialPort_.close();
+		active_ = false;
+	}
 
 	void SerialPort::writeComplete(const boost::system::error_code& error) 
-        { // the asynchronous read operation has now completed or failed and returned an error 
-                if (!error) 
-                { // write completed, so send next write data 
-                        write_msgs_.pop_front(); // remove the completed data 
-                        if (!write_msgs_.empty()) // if there is anthing left to be written 
-                                writeStart(); // then start sending the next item in the buffer 
-                } 
-                else 
-                        doClose(error); 
-        }
+    { // the asynchronous read operation has now completed or failed and returned an error
+		if (!error)
+		{ // write completed, so send next write data
+			write_msgs_.pop_front(); // remove the completed data
+			if (!write_msgs_.empty()){ // if there is anthing left to be written
+				writeStart(); // then start sending the next item in the buffer
+			}
+		}
+		else{
+			doClose(error);
+		}
+    }
 
 	void SerialPort::writeStart(void) 
         { // Start an asynchronous write and call write_complete when it completes or fails 
@@ -136,8 +143,10 @@ namespace trobot {
         
 	void SerialPort::close() // call the do_close function via the io service in the other thread 
         { 
+				cout << "SerialPort::close()" << endl;
                 io_service_.post(boost::bind(&SerialPort::doClose, this, boost::system::error_code())); 
 				thread_.join();
+				cout << "SerialPort::close(): Thread joined" << endl;
         } 
 
 	bool SerialPort::isActive() // return true if the socket is still active 
@@ -243,11 +252,12 @@ namespace trobot {
 			cerr << "Failed to open serial port\n"; 
 			throw "Failed to open serial port";
 			return; 
-		} 
+		}
 		
-		asio::serial_port_base::baud_rate baud_option(baud); 
+		asio::serial_port_base::baud_rate baud_option(baud);
 		serialPort_.set_option(baud_option); // set the baud rate after the port has been opened
 		readStart();
+		io_service_.reset();
 		thread_ = thread(bind(&asio::io_service::run, &io_service_));
 		counting = false;
 		active_ = true;
