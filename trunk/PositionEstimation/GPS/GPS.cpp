@@ -129,7 +129,7 @@ void GPS::join()
 void GPS::monitorSerialPort()
 {
 	cout << "Starting monitoring serial port" << endl;
-	boost::posix_time::milliseconds SleepTime(50);
+	boost::posix_time::milliseconds SleepTime(100);
     nmea_zero_INFO(&Info);
     nmea_parser_init(&Parser);
 	nmea_parser_buff_clear(&Parser);
