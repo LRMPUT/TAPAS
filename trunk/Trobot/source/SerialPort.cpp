@@ -45,6 +45,7 @@ namespace trobot {
 
 	SerialPort::~SerialPort(void)
 	{
+		close();
 	}
 
 	void SerialPort::test() {
@@ -142,19 +143,22 @@ namespace trobot {
         } 
         
 	void SerialPort::close() // call the do_close function via the io service in the other thread 
-        { 
-				cout << "SerialPort::close()" << endl;
-                io_service_.post(boost::bind(&SerialPort::doClose, this, boost::system::error_code())); 
-				thread_.join();
-				cout << "SerialPort::close(): Thread joined" << endl;
-        } 
+    {
+		if(active_){
+			cout << "SerialPort::close()" << endl;
+			io_service_.post(boost::bind(&SerialPort::doClose, this, boost::system::error_code()));
+			thread_.join();
+			cout << "SerialPort::close(): Thread joined" << endl;
+		}
+    }
 
 	bool SerialPort::isActive() // return true if the socket is still active 
-        { 
-                return active_; 
-        } 
+	{
+		return active_;
+	}
 
-	circular_buffer<char>  SerialPort::getDataRead() {
+	circular_buffer<char>  SerialPort::getDataRead()
+	{
 		readBufferGuard_.lock();
 		//cout << "Getting data read" << endl;
 		circular_buffer<char> returnData;
@@ -226,10 +230,12 @@ namespace trobot {
 			}
 		}
 #else
-		const filesystem::path dirPath("/dev");
+		filesystem::path dirPath("/dev/robots");
 		vector<string> names;
-		names.push_back(string("ttyACM"));
-		names.push_back(string("ttyUSB"));
+		names.push_back(string("gps"));
+		names.push_back(string("imu"));
+		names.push_back(string("driver"));
+		names.push_back(string("arduino"));
 		filesystem::directory_iterator endIt;
 		for(filesystem::directory_iterator dirIt(dirPath); dirIt != endIt; dirIt++){
 			for(int i = 0; i < names.size(); i++){

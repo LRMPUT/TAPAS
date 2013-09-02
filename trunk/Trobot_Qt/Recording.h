@@ -36,7 +36,7 @@ private:
 	Ui::TrobotQtClass* ui;
 
 	// Saving Streams
-	std::ofstream imuStream, gpsStream;
+	std::ofstream imuStream, gpsStream, encodersStream;
 public:
 	Recording(Ui::TrobotQtClass* iui, Robot* irobot);
 	~Recording();

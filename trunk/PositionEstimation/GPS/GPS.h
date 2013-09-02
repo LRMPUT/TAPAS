@@ -69,6 +69,10 @@ public:
 	 *
 	 */
 	double getHorPrec();
+
+	int getFixStatus();
+
+	int getSatelitesUsed();
 	/*
 	 * Used to set the Zero Point for measuring relative distance.
 	 * By default the X and Y axis are oriented as latitude and longitude respectively.

@@ -53,6 +53,11 @@ public:
 	//CV_32SC1 2x1: x, y position
 	const cv::Mat getGpsData();
 
+	//1 - no fix, 2 - 2D, 3 - 3D
+	int getGpsFixStatus();
+
+	int getGpsSatelitesUsed();
+
 	//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
 	const cv::Mat getImuData();
 

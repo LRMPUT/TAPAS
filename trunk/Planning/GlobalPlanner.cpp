@@ -21,7 +21,7 @@ GlobalPlanner::GlobalPlanner(Robot* irobot) : robot(irobot), robotDrive(NULL) {
 }
 
 GlobalPlanner::~GlobalPlanner(){
-
+	closeRobotsDrive();
 }
 
 //----------------------MODES OF OPERATION
@@ -43,8 +43,10 @@ void GlobalPlanner::openRobotsDrive(std::string port){
 }
 
 void GlobalPlanner::closeRobotsDrive(){
-	delete robotDrive;
-	robotDrive = NULL;
+	if(robotDrive != NULL){
+		delete robotDrive;
+		robotDrive = NULL;
+	}
 }
 
 bool GlobalPlanner::isRobotsDriveOpen(){

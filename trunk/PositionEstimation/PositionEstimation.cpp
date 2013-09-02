@@ -104,6 +104,14 @@ const cv::Mat PositionEstimation::getGpsData(){
 	ret.at<double>(1) = (double)gps.getPosY();
 	return ret;
 }
+//1 - no fix, 2 - 2D, 3 - 3D
+int PositionEstimation::getGpsFixStatus(){
+	return gps.getFixStatus();
+}
+
+int PositionEstimation::getGpsSatelitesUsed(){
+	return gps.getSatelitesUsed();
+}
 
 //CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
 const cv::Mat PositionEstimation::getImuData(){

@@ -16,6 +16,9 @@ Recording::Recording(Ui::TrobotQtClass* iui, Robot* irobot) : ui(iui), robot(iro
 	connect(&encodersTimer, SIGNAL(timeout()), this, SLOT(getDataEncoders()));
 	connect(&gpsTimer, SIGNAL(timeout()), this, SLOT(getDataGps()));
 	connect(&imuTimer, SIGNAL(timeout()), this, SLOT(getDataImu()));
+	connect(ui->startRecButton, SIGNAL(clicked()), this, SLOT(startRec()));
+	connect(ui->stopRecButon, SIGNAL(clicked()), this, SLOT(stopRec()));
+	connect(ui->pauseResumeRecButton, SIGNAL(clicked()), this, SLOT(pauseResumeRec()));
 }
 
 Recording::~Recording(){
@@ -28,13 +31,18 @@ void Recording::getDataHokuyo(){
 }
 
 void Recording::getDataEncoders(){
-
+	const Mat encoderData = robot->getEncoderData();
+	encodersStream << time.elapsed() << " ";
+	encodersStream << encoderData.at<int>(0) << " " << encoderData.at<int>(1) << endl;
 }
 
 void Recording::getDataGps(){
-	Mat gpsData = robot->getGpsData();
+	//cout << "Recording::gatDataGps()" << endl;
+	const Mat gpsData = robot->getGpsData();
+	//cout << "Data dims = (" << gpsData.rows << ", " << gpsData.cols << ")" << endl;
 	gpsStream<<time.elapsed()<<" ";
 	gpsStream<<gpsData.at<double>(0)<<" "<<gpsData.at<double>(1)<<std::endl;
+	//cout << "end Recording::getDataGps()" << endl;
 }
 
 void Recording::getDataImu(){
@@ -55,12 +63,13 @@ void Recording::getDataCamera(){
 
 
 void Recording::startRec(){
+	cout << "Recording::startRec()" << endl;
 	ui->saRateGroupBox->setEnabled(false);
-	file.open(ui->recPathLineEdit->text().toAscii().data(), ios_base::out);
+	/*file.open(ui->recPathLineEdit->text().toAscii().data(), ios_base::out);
 	if(!file.is_open()){
 		ui->recStatusLabel->setText("Could not open file");
 		return;
-	}
+	}*/
 
 	// Moved it here, because sometimes checking if open can take seconds and other may
 	// want to write sth to their streams
@@ -71,44 +80,40 @@ void Recording::startRec(){
 			ui->recStatusLabel->setText("Hokuyo not active");
 			return;
 		}
-		hokuyoTimer.setInterval(max((int)(1/ui->saRateHokuyoLineEdit->text().toFloat()), 1));
+		hokuyoTimer.setInterval(max((int)(1000/ui->saRateHokuyoLineEdit->text().toFloat()), 1));
 		hokuyoTimer.start();
 	}
 	if(ui->includeEncodersCheckBox->isChecked() == true){
-		if(robot->isRobotsDriveOpen()){
+		if(!robot->isRobotsDriveOpen()){
 			ui->recStatusLabel->setText("Robot's drive error");
 			return;
 		}
-		encodersTimer.setInterval(max((int)(1/ui->saRateEncodersLineEdit->text().toFloat()), 1));
+		encodersStream.open("encoders.data");
+		encodersTimer.setInterval(max((int)(1000/ui->saRateEncodersLineEdit->text().toFloat()), 1));
 		encodersTimer.start();
 	}
 	if(ui->includeGpsCheckBox->isChecked() == true){
 		// How to find which one ?
 		//robot->openGps("/dev/tty0");
-		if(robot->isGpsOpen()){
+		if(!robot->isGpsOpen()){
 			ui->recStatusLabel->setText("GPS error");
 			return;
 		}
 		gpsStream.open("gps.data");
-		gpsTimer.setInterval(max((int)(1/ui->saRateGpsLineEdit->text().toFloat()), 1));
+		gpsTimer.setInterval(max((int)(1000/ui->saRateGpsLineEdit->text().toFloat()), 1));
 		gpsTimer.start();
 	}
 	if(ui->includeImuCheckBox->isChecked() == true){
-		if(robot->isImuOpen()){
+		if(!robot->isImuOpen()){
 			ui->recStatusLabel->setText("IMU error");
 			return;
 		}
 
-		/*if ( imuChart->testConnection()) {
-			ui->recStatusLabel->setText("IMU error");
-			return;
-		}*/
-
 		imuStream.open("imu.data");
-		imuTimer.setInterval(max((int)(1/ui->saRateImuLineEdit->text().toFloat()), 1));
+		imuTimer.setInterval(max((int)(1000/ui->saRateImuLineEdit->text().toFloat()), 1));
 		imuTimer.start();
 	}
-
+	cout << "end Recording::startRec()" << endl;
 }
 
 void Recording::pauseResumeRec(){
@@ -150,6 +155,7 @@ void Recording::stopRec(){
 	}
 	if(ui->includeEncodersCheckBox->isChecked() == true){
 		encodersTimer.stop();
+		encodersStream.close();
 	}
 	if(ui->includeGpsCheckBox->isChecked() == true){
 		gpsTimer.stop();
@@ -159,7 +165,6 @@ void Recording::stopRec(){
 		imuTimer.stop();
 		imuStream.close();
 	}
-	file.close();
-	gpsStream.close();
-	imuStream.close();
+	ui->saRateGroupBox->setEnabled(true);
+	cout << "end Recording::stopRec()" << endl;
 }
