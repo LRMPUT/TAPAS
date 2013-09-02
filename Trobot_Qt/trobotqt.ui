@@ -27,7 +27,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>1</number>
+     <number>2</number>
     </property>
     <widget class="QWidget" name="cameraTab">
      <attribute name="title">
@@ -698,21 +698,21 @@
         <x>670</x>
         <y>180</y>
         <width>131</width>
-        <height>131</height>
+        <height>181</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_9">
        <item>
         <widget class="QLabel" name="label_7">
          <property name="text">
-          <string>GPS time:</string>
+          <string>Satelites in use:</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="gpsTimeLabel">
+        <widget class="QLabel" name="gpsSatelitesLabel">
          <property name="text">
-          <string>time</string>
+          <string>satelites</string>
          </property>
         </widget>
        </item>
@@ -727,6 +727,27 @@
         <widget class="QLabel" name="gpsFixLabel">
          <property name="text">
           <string>fix?</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_18">
+         <property name="text">
+          <string>Position:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="gpsXLabel">
+         <property name="text">
+          <string>X</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="gpsYLabel">
+         <property name="text">
+          <string>Y</string>
          </property>
         </widget>
        </item>
@@ -1366,7 +1387,7 @@
            <bool>true</bool>
           </property>
           <property name="checked">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
          </widget>
         </item>
@@ -1417,7 +1438,7 @@
            <string>Cameras</string>
           </property>
           <property name="checked">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
          </widget>
         </item>

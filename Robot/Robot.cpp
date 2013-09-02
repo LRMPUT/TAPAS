@@ -114,6 +114,15 @@ const cv::Mat Robot::getGpsData(){
 	return positionEstimation.getGpsData();
 }
 
+//1 - no fix, 2 - 2D, 3 - 3D
+int Robot::getGpsFixStatus(){
+	return positionEstimation.getGpsFixStatus();
+}
+
+int Robot::getGpsSatelitesUsed(){
+	return positionEstimation.getGpsSatelitesUsed();
+}
+
 //CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
 const cv::Mat Robot::getImuData(){
 	return positionEstimation.getImuData();

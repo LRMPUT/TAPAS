@@ -44,6 +44,7 @@ void IMU::openPort(std::string port){
 void IMU::closePort(){
 	if(imu != NULL){
 		delete imu;
+		imu = NULL;
 	}
 }
 

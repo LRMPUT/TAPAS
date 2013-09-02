@@ -108,6 +108,14 @@ double GPS::getHorPrec(){
 	return Info.HDOP;
 }
 
+int GPS::getFixStatus(){
+	return Info.fix;
+}
+
+int GPS::getSatelitesUsed(){
+	return Info.satinfo.inuse;
+}
+
 void GPS::setZeroXY(double Latitude, double Longitude){
 	StartPosLat = Latitude;
 	StartPosLon = Longitude;
@@ -129,32 +137,32 @@ void GPS::join()
 void GPS::monitorSerialPort()
 {
 	cout << "Starting monitoring serial port" << endl;
-	boost::posix_time::milliseconds SleepTime(100);
+	boost::posix_time::milliseconds SleepTime(200);
     nmea_zero_INFO(&Info);
     nmea_parser_init(&Parser);
 	nmea_parser_buff_clear(&Parser);
 	while(1){
 		circular_buffer<char> data = SerialPort.getDataRead();
-		cout << "Read " << data.size() << endl;
+		//cout << "Read " << data.size() << endl;
 
-		/*int cnt = 0;
+		int cnt = 0;
 		circular_buffer<char>::array_range rg = data.array_one();
-		memcpy(Buffer, rg.first, cnt);
+		memcpy(Buffer, rg.first, rg.second);
 		cnt += rg.second;
 
 		rg = data.array_two();
 		memcpy(Buffer + cnt, rg.first, rg.second);
-		cnt += rg.second;*/
+		cnt += rg.second;
 
-		int cnt = data.size();
-		for(int i = 0; i < data.size(); i++){
-			Buffer[i] = data[i];
+		//int cnt = data.size();
+		/*for(int i = 0; i < data.size(); i++){
+			//Buffer[i] = data[i];
 			cout << Buffer[i];
 		}
-		cout << endl;
+		cout << endl;*/
 		if(cnt > 0){
 			int packetsRead = nmea_parse(&Parser, Buffer, cnt, &Info);
-			cout << "Parsed " << packetsRead << endl;
+			cout << "GPS parsed " << packetsRead << endl;
 			if(packetsRead > 0){
 				PosLat = nmea_ndeg2degree(Info.lat);
 				PosLon = nmea_ndeg2degree(Info.lon);
@@ -163,7 +171,7 @@ void GPS::monitorSerialPort()
 		if(threadEnd == true){
 			return;
 		}
-		cout << "GPS parse sleeping" << endl;
+		//cout << "GPS parse sleeping" << endl;
 		boost::this_thread::sleep(SleepTime);
 	}
 }

@@ -39,8 +39,9 @@ namespace trobot
 	{
 		threadEnd = true;
 		thread_->join();
-		if(serial_port->isActive()) serial_port->close();
+		delete thread_;
 		delete serial_port;
+		//cout << "end Imu::~Imu()" << endl;
 	}
 
 	void Imu::ChangeSerialPortConfiguartion(eBaud baud, const string& device)
@@ -49,8 +50,7 @@ namespace trobot
 		WriteConfiguration();
 		threadEnd = true;
 		thread_->join();
-		delete [] thread_;
-		if(!serial_port->isActive()) serial_port->close();
+		delete thread_;
 		delete serial_port;
 		serial_port = new SerialPort(baud, device);
 		threadEnd = false;
@@ -639,99 +639,102 @@ namespace trobot
 	{
 		while(true) {
 			
-		if (serial_port->newDataAvailable()) 
-		{
-			
-			const circular_buffer<char>  data = serial_port->getDataRead();
-			int length = data.size();
-			int packet_length = 1;
-			uint8 address_array[16];
-			Packet SerialPacketReadIMU;
-
-			raport = _NOTHING;
-			//if(serial_port->newDataAvailable())
-			for(int i = 0; i < length - packet_length; i += packet_length)
+			if (serial_port->newDataAvailable())
 			{
-				if(	   (data[i]		== 's')
-					&& (data[i + 1] == 'n')
-					&& (data[i + 2] == 'p'))
+
+				const circular_buffer<char>  data = serial_port->getDataRead();
+				int length = data.size();
+				int packet_length = 1;
+				uint8 address_array[16];
+				Packet SerialPacketReadIMU;
+
+				raport = _NOTHING;
+				//if(serial_port->newDataAvailable())
+				for(int i = 0; i < length - packet_length; i += packet_length)
 				{
-					SerialPacketReadIMU.packet_type.byte = data[i+3];
-					SerialPacketReadIMU.address = data[i+4];
-
-					if(SerialPacketReadIMU.packet_type.byte != 0 && SerialPacketReadIMU.packet_type.bits.HasData == 1)
+					if(	   (data[i]		== 's')
+						&& (data[i + 1] == 'n')
+						&& (data[i + 2] == 'p'))
 					{
+						SerialPacketReadIMU.packet_type.byte = data[i+3];
+						SerialPacketReadIMU.address = data[i+4];
 
-						reportAddress = SerialPacketReadIMU.address;
-
-						if(SerialPacketReadIMU.packet_type.bits.IsBatch == 0)
+						if(SerialPacketReadIMU.packet_type.byte != 0 && SerialPacketReadIMU.packet_type.bits.HasData == 1)
 						{
-							address_array[0] = SerialPacketReadIMU.address;
 
-							for(int h = 0; h <4; h++)
-								SerialPacketReadIMU.data[h] = data[i+5+h];
+							reportAddress = SerialPacketReadIMU.address;
 
-							packet_length = 11;
-						}
-
-						else if(SerialPacketReadIMU.packet_type.bits.IsBatch == 1)
-						{
-							for(int j = 0; j <SerialPacketReadIMU.packet_type.bits.BL; j++)
+							if(SerialPacketReadIMU.packet_type.bits.IsBatch == 0)
 							{
-								address_array[j] = SerialPacketReadIMU.address + j;
+								address_array[0] = SerialPacketReadIMU.address;
 
 								for(int h = 0; h <4; h++)
-									SerialPacketReadIMU.data[j*4+h] = data[h+j*4+i+5];
+									SerialPacketReadIMU.data[h] = data[i+5+h];
+
+								packet_length = 11;
 							}
 
-							packet_length = 7 + 4 * SerialPacketReadIMU.packet_type.bits.BL ;
+							else if(SerialPacketReadIMU.packet_type.bits.IsBatch == 1)
+							{
+								for(int j = 0; j <SerialPacketReadIMU.packet_type.bits.BL; j++)
+								{
+									address_array[j] = SerialPacketReadIMU.address + j;
+
+									for(int h = 0; h <4; h++)
+										SerialPacketReadIMU.data[j*4+h] = data[h+j*4+i+5];
+								}
+
+								packet_length = 7 + 4 * SerialPacketReadIMU.packet_type.bits.BL ;
+							}
+
+							addDataToRegister(SerialPacketReadIMU, SerialPacketReadIMU.address, SerialPacketReadIMU.packet_type.bits.BL);
+							UpdateRegister(address_array);
+							raport = _READ_COMPLETE;
 						}
 
-						addDataToRegister(SerialPacketReadIMU, SerialPacketReadIMU.address, SerialPacketReadIMU.packet_type.bits.BL);
-						UpdateRegister(address_array);
-						raport = _READ_COMPLETE;
-					}
+						else if(SerialPacketReadIMU.packet_type.byte == 0)
+						{
+							packet_length = 7;
+							raport = _WRITE_COMPLETE;
+						}
 
-					else if(SerialPacketReadIMU.packet_type.byte == 0)
-					{
-						packet_length = 7;
-						raport = _WRITE_COMPLETE;
-					}
+						else if(SerialPacketReadIMU.address == BAD_CHECKSUM)
+						{
+							packet_length = 7;
+							raport = _BAD_CHEKSUM;
+						}
 
-					else if(SerialPacketReadIMU.address == BAD_CHECKSUM)
-					{
-						packet_length = 7;
-						raport = _BAD_CHEKSUM;
-					}
+						else if(SerialPacketReadIMU.address == UNKNOWN_ADDRESS)
+						{
+							packet_length = 7;
+							raport = _UNKNOWN_ADDRESS;
+						}
 
-					else if(SerialPacketReadIMU.address == UNKNOWN_ADDRESS)
-					{
-						packet_length = 7;
-						raport = _UNKNOWN_ADDRESS;
-					}
+						else if(SerialPacketReadIMU.address == INVALID_BATCH_SIZE)
+						{
+							packet_length = 7;
+							raport = _INVALID_BATCH_SIZE;
+						}
 
-					else if(SerialPacketReadIMU.address == INVALID_BATCH_SIZE)
-					{
-						packet_length = 7;
-						raport = _INVALID_BATCH_SIZE;
-					}
+						else if(SerialPacketReadIMU.packet_type.byte == 0)
+						{
+							packet_length = 7;
+							raport = _COMMAND_COMPLETE;
+						}
 
-					else if(SerialPacketReadIMU.packet_type.byte == 0)
-					{
-						packet_length = 7;
-						raport = _COMMAND_COMPLETE;
-					}
-
-					else if(SerialPacketReadIMU.packet_type.bits.CF == 1)
-					{
-						packet_length = 7;
-						raport = _COMMAND_FAILED;
+						else if(SerialPacketReadIMU.packet_type.bits.CF == 1)
+						{
+							packet_length = 7;
+							raport = _COMMAND_FAILED;
+						}
 					}
 				}
 			}
-		}
-		posix_time::milliseconds time(20);
-		this_thread::sleep(time);
+			if(threadEnd == true){
+				return;
+			}
+			posix_time::milliseconds time(20);
+			this_thread::sleep(time);
 		}
 	}
 
