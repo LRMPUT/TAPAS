@@ -22,6 +22,7 @@ class MovementConstraints;
 struct Entry{
 	int label;
 	cv::Mat descriptor;
+	Entry() {}
 	Entry(int ilabel, cv::Mat idescriptor) : label(ilabel), descriptor(idescriptor){}
 };
 
@@ -56,6 +57,8 @@ class Camera {
 	CvSVM svm;
 
 	CvSVMParams svmParams;
+
+	int bins;
 
 	std::vector<Entry> entries;
 
