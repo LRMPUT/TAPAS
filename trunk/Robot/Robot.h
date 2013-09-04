@@ -89,13 +89,15 @@ public:
 	//CV_32SC1 2x1: left, right encoder
 	const cv::Mat getEncoderData();
 
-	//CV_32SC1 2x1: x, y position
+	//CV_32SC1 4x1: x, y, lat, lon position
 	const cv::Mat getGpsData();
 
 	//1 - no fix, 2 - 2D, 3 - 3D
 	int getGpsFixStatus();
 
 	int getGpsSatelitesUsed();
+
+	void setGpsZeroPoint(double lat, double lon);
 
 	//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
 	const cv::Mat getImuData();

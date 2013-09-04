@@ -17,6 +17,7 @@ QtGps::QtGps(Ui::TrobotQtClass* iui, Robot* irobot) : ui(iui), robot(irobot) {
 	QObject::connect(ui->gpsConnectButton, SIGNAL(clicked()), this, SLOT(connect()));
 	QObject::connect(ui->gpsDisconnectButton, SIGNAL(clicked()), this, SLOT(disconnect()));
 	QObject::connect(&(this->refreshTimer), SIGNAL(timeout()), this, SLOT(refresh()));
+	QObject::connect(ui->gpsZeroPointButton, SIGNAL(clicked()), this, SLOT(setZeroPoint()));
 	refreshTimer.setInterval(500);
 }
 
@@ -37,10 +38,14 @@ void QtGps::disconnect(){
 }
 
 void QtGps::refresh(){
-	Mat tmp = robot->getGpsData();
-	ui->gpsXLabel->setText(QString("%1").arg(tmp.at<float>(0)));
-	ui->gpsYLabel->setText(QString("%1").arg(tmp.at<float>(1)));
+	const Mat tmp = robot->getGpsData();
+	ui->gpsXLabel->setText(QString("%1").arg(tmp.at<double>(2)));
+	ui->gpsYLabel->setText(QString("%1").arg(tmp.at<double>(3)));
 	ui->gpsFixLabel->setText(QString("%1").arg(robot->getGpsFixStatus()));
 	ui->gpsSatelitesLabel->setText(QString("%1").arg(robot->getGpsSatelitesUsed()));
 }
 
+void QtGps::setZeroPoint(){
+	const Mat tmp = robot->getGpsData();
+	robot->setGpsZeroPoint(tmp.at<double>(2), tmp.at<double>(3));
+}
