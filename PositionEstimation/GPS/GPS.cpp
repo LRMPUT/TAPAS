@@ -9,24 +9,19 @@
 #include <iostream>
 //Boost
 #include <boost/circular_buffer.hpp>
-
+//C library
 #include <cmath>
-#include <string.h>
-#include <termios.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <stdio.h>
+#include <cstring>
 //RobotsIntellect
 #include "GPS.h"
 
 using namespace std;
 using namespace boost;
 
-//EquatorialRadius
-#define EqRd  6378.137
-//PolarRadius
-#define PlRd 6356.7523
+//EquatorialRadius [mm]
+#define EqRd  6378137000.0
+//PolarRadius [mm]
+#define PlRd 6356752300.0
 
 GPS::GPS() {
 	PosX = 0.0;
@@ -87,21 +82,23 @@ bool GPS::isOpen()
 }
 
 double GPS::getPosX(){
-	PosX = (nmea_ndeg2degree(Info.lon) - StartPosLon)*Radius;
+	PosX = (nmea_ndeg2radian(Info.lon - StartPosLon))*Radius;
+	cout << "Angular difference X = " << Info.lon << " - " << StartPosLon << " = " <<
+			 nmea_ndeg2radian(Info.lon - StartPosLon) << endl;
 	return PosX;
 }
 
 double GPS::getPosY(){
-	PosY = (nmea_ndeg2degree(Info.lat) - StartPosLat)*Radius;
+	PosY = (nmea_ndeg2radian(Info.lat) - nmea_degree2radian(StartPosLat))*Radius;
 	return PosY;
 }
 
 double GPS::getLat(){
-	return PosLat;
+	return Info.lat;
 }
 
 double GPS::getLon(){
-	return PosLon;
+	return Info.lon;
 }
 
 double GPS::getHorPrec(){
@@ -113,7 +110,7 @@ int GPS::getFixStatus(){
 }
 
 int GPS::getSatelitesUsed(){
-	return Info.satinfo.inuse;
+	return Info.satinfo.inuse + 100*Info.satinfo.inview;
 }
 
 void GPS::setZeroXY(double Latitude, double Longitude){
@@ -162,7 +159,7 @@ void GPS::monitorSerialPort()
 		cout << endl;*/
 		if(cnt > 0){
 			int packetsRead = nmea_parse(&Parser, Buffer, cnt, &Info);
-			cout << "GPS parsed " << packetsRead << endl;
+			//cout << "GPS parsed " << packetsRead << endl;
 			if(packetsRead > 0){
 				PosLat = nmea_ndeg2degree(Info.lat);
 				PosLon = nmea_ndeg2degree(Info.lon);
@@ -185,7 +182,9 @@ int GPS::calculateRadius(){
 	if(StartPosLat==0.0 || StartPosLon==0.0){
 		return -1;
 	}
-	Radius = sqrt( ((pow( pow(EqRd,2.0)*cos(StartPosLat),2.0)) + (pow( pow( PlRd ,2.0)*sin(StartPosLat),2.0)))
-			/ ((pow( EqRd*cos(StartPosLat),2.0)) + (pow( PlRd*sin(StartPosLat),2.0))));
+	double StartPosLatRad = nmea_ndeg2radian(StartPosLat);
+	Radius = sqrt( ((pow( pow(EqRd,2.0)*cos(StartPosLatRad),2.0)) + (pow( pow( PlRd ,2.0)*sin(StartPosLatRad),2.0)))
+			/ ((pow( EqRd*cos(StartPosLatRad),2.0)) + (pow( PlRd*sin(StartPosLatRad),2.0))));
+	cout << "Radius = " << Radius << endl;
 	return 0;
 }

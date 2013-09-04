@@ -31,6 +31,7 @@ public slots:
 	void connect();
 	void disconnect();
 	void refresh();
+	void setZeroPoint();
 };
 
 

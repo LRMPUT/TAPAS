@@ -109,7 +109,7 @@ const cv::Mat Robot::getEncoderData(){
 	return globalPlanner.getEncoderData();
 }
 
-//CV_32SC1 2x1: x, y position
+//CV_32SC1 4x1: x, y, lat, lon position
 const cv::Mat Robot::getGpsData(){
 	return positionEstimation.getGpsData();
 }
@@ -121,6 +121,10 @@ int Robot::getGpsFixStatus(){
 
 int Robot::getGpsSatelitesUsed(){
 	return positionEstimation.getGpsSatelitesUsed();
+}
+
+void Robot::setGpsZeroPoint(double lat, double lon){
+	positionEstimation.setGpsZeroPoint(lat, lon);
 }
 
 //CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
