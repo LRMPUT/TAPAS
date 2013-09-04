@@ -216,7 +216,7 @@ void Camera::readSettings(TiXmlElement* settings){
 		throw "Bad settings file - wrong kernel type";
 	}
 
-	int bins = 256;
+	bins = 256;
 	svmPtr = pPtr->FirstChildElement("bins");
 	if(!svmPtr){
 		throw "Bad settings file - no bins number";
@@ -303,11 +303,48 @@ void Camera::readSettings(TiXmlElement* settings){
 }
 
 void Camera::readCache(boost::filesystem::path cacheFile){
-
+	entries.clear();
+	TiXmlDocument doc(cacheFile.c_str());
+	if(!doc.LoadFile()){
+		throw "Could not load cache file";
+	}
+	TiXmlElement* pDatabase = doc.FirstChildElement("database");
+	if(!pDatabase){
+		throw "Bad cache file - database not found";
+	}
+	TiXmlElement* pEntry = pDatabase->FirstChildElement("entry");
+	while(pEntry){
+		Entry entry;
+		entry.descriptor = Mat(bins, 1, CV_32FC1);
+		pEntry->QueryIntAttribute("label", &entry.label);
+		stringstream tmpStr(pEntry->GetText());
+		for(int i = 0; i < bins; i++){
+			float tmp;
+			tmpStr >> tmp;
+			entry.descriptor.at<float>(i) = tmp;
+		}
+		entries.push_back(entry);
+		pEntry = pEntry->NextSiblingElement("entry");
+	}
 }
 
 void Camera::saveCache(boost::filesystem::path cacheFile){
-
+	TiXmlDocument doc;
+	TiXmlDeclaration* decl = new TiXmlDeclaration("1.0", "UTF-8", "");
+	doc.LinkEndChild(decl);
+	TiXmlElement* pDatabase = new TiXmlElement("database");
+	doc.LinkEndChild(pDatabase);
+	for(int entr = 0; entr < entries.size(); entr++){
+		TiXmlElement* pEntry = new TiXmlElement("entry");
+		pDatabase->LinkEndChild(pEntry);
+		pEntry->SetAttribute("label", entries[entr].label);
+		stringstream tmpStr;
+		for(int i = 0; i < bins; i++){
+			tmpStr << entries[entr].descriptor.at<float>(i) << " ";
+		}
+		pEntry->SetValue(tmpStr.str());
+	}
+	doc.SaveFile(cacheFile.c_str());
 }
 
 //Returns constraints map and inserts time of data from cameras fetch
