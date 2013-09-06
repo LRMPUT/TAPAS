@@ -39,8 +39,8 @@ void QtGps::disconnect(){
 
 void QtGps::refresh(){
 	const Mat tmp = robot->getGpsData();
-	ui->gpsXLabel->setText(QString("%1").arg(tmp.at<double>(2)));
-	ui->gpsYLabel->setText(QString("%1").arg(tmp.at<double>(3)));
+	ui->gpsXLabel->setText(QString("%1").arg(tmp.at<double>(0)));
+	ui->gpsYLabel->setText(QString("%1").arg(tmp.at<double>(1)));
 	ui->gpsFixLabel->setText(QString("%1").arg(robot->getGpsFixStatus()));
 	ui->gpsSatelitesLabel->setText(QString("%1").arg(robot->getGpsSatelitesUsed()));
 }

@@ -10,6 +10,10 @@
 			</svm>
 			<classification grid="40" />
 			<learning dir="../../MovementConstraints/Camera/training_data" />
+			<labels>
+				<label text="grass" id="0"/>
+				<label text="pavement" id="1"/>
+			</labels>
 			<sensor id="left">
 				<position>
 					1 0 0 0

@@ -83,13 +83,13 @@ bool GPS::isOpen()
 
 double GPS::getPosX(){
 	PosX = (nmea_ndeg2radian(Info.lon - StartPosLon))*Radius;
-	cout << "Angular difference X = " << Info.lon << " - " << StartPosLon << " = " <<
-			 nmea_ndeg2radian(Info.lon - StartPosLon) << endl;
+	//cout << "Angular difference X = " << Info.lon << " - " << StartPosLon << " = " <<
+	//		 nmea_ndeg2radian(Info.lon - StartPosLon) << endl;
 	return PosX;
 }
 
 double GPS::getPosY(){
-	PosY = (nmea_ndeg2radian(Info.lat) - nmea_degree2radian(StartPosLat))*Radius;
+	PosY = (nmea_ndeg2radian(Info.lat - StartPosLat))*Radius;
 	return PosY;
 }
 
@@ -185,6 +185,6 @@ int GPS::calculateRadius(){
 	double StartPosLatRad = nmea_ndeg2radian(StartPosLat);
 	Radius = sqrt( ((pow( pow(EqRd,2.0)*cos(StartPosLatRad),2.0)) + (pow( pow( PlRd ,2.0)*sin(StartPosLatRad),2.0)))
 			/ ((pow( EqRd*cos(StartPosLatRad),2.0)) + (pow( PlRd*sin(StartPosLatRad),2.0))));
-	cout << "Radius = " << Radius << endl;
+	//cout << "Radius = " << Radius << endl;
 	return 0;
 }

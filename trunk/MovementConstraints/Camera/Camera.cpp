@@ -13,6 +13,9 @@
 //RobotsIntellect
 #include "Camera.h"
 
+using namespace boost;
+using namespace std;
+
 /*#define CAMERA_Z 1
 #define CAMERA_X_ANGLE 45
 #define CAMERA_Y_ANGLE 45
@@ -133,8 +136,82 @@ void Camera::learn(cv::Mat samples, int label){
 
 }
 
-void Camera::learnFromDir(boost::filesystem::path dir){
+cv::Mat Camera::selectPolygonPixels(std::vector<cv::Point2i> polygon, const cv::Mat& image){
+	Mat mask(image.rows, image.cols, CV_8UC1, Scalar(0));
+	int polyCnt[] = {polygon.size()};
+	const Point2i* points[] = {polygon.data()};
+	//Point2i array
+	fillPoly(mask, points, polyCnt, 1, Scalar(1));
+	int count = countNonZero(mask);
+	Mat ret(count, 1, CV_8UC3);
+	int idx = 0;
+	for(int row = 0; row < image.rows; row++){
+		for(int col = 0; col < image.cols; col++){
+			if(mask.at<int>(row, col) != 0){
+				ret.at<Vec3b>(idx) = image.at<Vec3b>(row, col);
+			}
+		}
+	}
+	return ret;
+}
 
+void Camera::learnFromDir(boost::filesystem::path dir){
+	filesystem::directory_iterator endIt;
+	for(filesystem::directory_iterator dirIt(dir); dirIt != endIt; dirIt++){
+		if(dirIt->path().filename().string().find(".xml") != string::npos){
+			TiXmlDocument data(dirIt->path().string());
+			if(!data.LoadFile()){
+				throw "Bad data file";
+			}
+			TiXmlElement* pAnnotation = data.FirstChildElement("annotation");
+			if(!pAnnotation){
+				throw "Bad data file - no annotation entry";
+			}
+			TiXmlElement* pFile = pAnnotation->FirstChildElement("filename");
+			if(!pFile){
+				throw "Bad data file - no filename entry";
+			}
+			Mat image = imread(dir.string() + pFile->GetText());
+			if(image.data == NULL){
+				throw "Bad image file";
+			}
+			TiXmlElement* pObject = pAnnotation->FirstChildElement("object");
+			while(pObject){
+
+				TiXmlElement* pPolygon = pObject->FirstChildElement("polygon");
+				if(!pPolygon){
+					throw "Bad data file - no polygon inside object";
+				}
+				vector<Point2i> poly;
+
+				TiXmlElement* pPt = pPolygon->FirstChildElement("pt");
+				while(pPt){
+					int x = atoi(pPt->FirstChildElement("x")->GetText());
+					int y = atoi(pPt->FirstChildElement("y")->GetText());
+					poly.push_back(Point2i(x, y));
+					pPt = pPt->NextSiblingElement("pt");
+				}
+
+				TiXmlElement* pAttributes = pObject->FirstChildElement("attributes");
+				if(!pAttributes){
+					throw "Bad data file - no object attributes";
+				}
+				string labelText = pAttributes->GetText();
+				int label = 0;
+				for(int i = 0; i < labels.size(); i++){
+					if(labelText == labels[i]){
+						label = i;
+						break;
+					}
+				}
+
+				Mat samples = selectPolygonPixels(poly, image);
+				learn(samples, label);
+
+				pObject = pObject->NextSiblingElement("object");
+			}
+		}
+	}
 }
 
 cv::Mat Camera::classifySlidingWindow(cv::Mat image){
@@ -250,6 +327,20 @@ void Camera::readSettings(TiXmlElement* settings){
 	}
 	pPtr->QueryStringAttribute("dir", &tmp);
 	learningDir = tmp;
+
+	pPtr = settings->FirstChildElement("labels");
+	TiXmlElement* pLabel = pPtr->FirstChildElement("label");
+	while(pLabel){
+		string text;
+		int id;
+		pLabel->QueryStringAttribute("text", &text);
+		pLabel->QueryIntAttribute("id", &id);
+		if(labels.size() <= id){
+			labels.resize(id + 1);
+		}
+		labels[id] = text;
+		pLabel = pLabel->NextSiblingElement("label");
+	}
 
 	pPtr = settings->FirstChildElement("sensor");
 	for(int i = 0; i < numCameras; i++){
