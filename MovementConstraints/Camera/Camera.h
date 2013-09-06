@@ -9,6 +9,7 @@
 #define CAMERA_H_
 
 //STL
+#include <string>
 #include <vector>
 //OpenCV
 #include <opencv2/opencv.hpp>
@@ -62,6 +63,8 @@ class Camera {
 
 	std::vector<Entry> entries;
 
+	std::vector<std::string> labels;
+
 	//array containing polygon vertices for all image regions
 	std::vector<std::vector<std::vector<cv::Point*> > > groundPolygons;
 
@@ -72,6 +75,8 @@ class Camera {
 	cv::Point3f computePointProjection(cv::Point2f imPoint, int cameraInd);
 
 	void learn(cv::Mat samples, int label);
+
+	cv::Mat selectPolygonPixels(std::vector<cv::Point2i> polygon, const cv::Mat& image);
 
 	void learnFromDir(boost::filesystem::path dir);
 

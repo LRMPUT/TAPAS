@@ -230,12 +230,15 @@ namespace trobot {
 			}
 		}
 #else
-		filesystem::path dirPath("/dev/robots");
 		vector<string> names;
+		/*filesystem::path dirPath("/dev/robots");
 		names.push_back(string("gps"));
 		names.push_back(string("imu"));
 		names.push_back(string("driver"));
-		names.push_back(string("arduino"));
+		names.push_back(string("arduino"));*/
+		filesystem::path dirPath("/dev");
+		names.push_back(string("ttyACM"));
+		names.push_back(string("ttyUSB"));
 		filesystem::directory_iterator endIt;
 		for(filesystem::directory_iterator dirIt(dirPath); dirIt != endIt; dirIt++){
 			for(int i = 0; i < names.size(); i++){

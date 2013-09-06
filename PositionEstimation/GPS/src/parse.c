@@ -204,6 +204,8 @@ int nmea_parse_GPGGA(const char *buff, int buff_sz, nmeaGPGGA *pack)
         return 0;
     }
 
+    //printf("%f, %f\n", pack->lat, pack->lon);
+
     if(0 != _nmea_parse_time(&time_buff[0], (int)strlen(&time_buff[0]), &(pack->utc)))
     {
         nmea_error("GPGGA time parse error!");
