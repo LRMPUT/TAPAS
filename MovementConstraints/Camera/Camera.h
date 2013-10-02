@@ -74,13 +74,23 @@ class Camera {
 
 	cv::Point3f computePointProjection(cv::Point2f imPoint, int cameraInd);
 
-	void learn(cv::Mat samples, int label);
+	void addToLearnDatabase(cv::Mat samples, int label);
+
+	void clearLearnDatabase();
+
+	void learn();
 
 	cv::Mat selectPolygonPixels(std::vector<cv::Point2i> polygon, const cv::Mat& image);
 
 	void learnFromDir(boost::filesystem::path dir);
 
 	cv::Mat classifySlidingWindow(cv::Mat image);
+
+	void GenerateColorHistHSVGpu(
+			const cv::gpu::GpuMat& ImageH,
+			const cv::gpu::GpuMat& ImageS,
+			cv::gpu::GpuMat& result,
+			cv::gpu::GpuMat& buf);
 
 	//Run as separate thread
 	void cameraThread();

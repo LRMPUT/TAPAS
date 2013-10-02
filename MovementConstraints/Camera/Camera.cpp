@@ -7,6 +7,7 @@
 
 //OpenCV
 #include <opencv2/opencv.hpp>
+#include <opencv2/gpu/gpu.hpp>
 //STL
 #include <cmath>
 #include <sstream>
@@ -26,7 +27,11 @@ using namespace std;
 #define LEFT_CAMERA 0
 #define RIGHT_CAMERA 1
 
+#define CHANNELS_USED 2
+#define SAMPLE_PACK 1500
+
 using namespace cv;
+using namespace gpu;
 using namespace std;
 
 Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings) :
@@ -49,6 +54,11 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 		}
 	}
 	computeGroundPolygons();
+	cout << "Available CUDA devices: " << getCudaEnabledDeviceCount() << endl;
+	setDevice(0);
+	DeviceInfo gpuInfo;
+	cout << "Version: " << gpuInfo.majorVersion() << "." << gpuInfo.minorVersion() << endl;
+	cout << "Number of processors: " << gpuInfo.multiProcessorCount() << endl;
 }
 
 Camera::~Camera(){
@@ -132,8 +142,40 @@ cv::Point3f Camera::computePointProjection(cv::Point2f imPoint, int cameraInd){
 	return ret;
 }
 
-void Camera::learn(cv::Mat samples, int label){
+void Camera::addToLearnDatabase(cv::Mat samples, int label){
+	Mat data[] = {samples};
+	int channels[] = {0};
+	int histSize[] = {bins};
+	float range[] = {0, 256};
+	const float* ranges[] = {range};
+	Mat hist(1, bins, CV_32FC1);
+	Entry newEntry;
+	newEntry.label = label;
+	newEntry.descriptor = Mat(1, CHANNELS_USED*bins, CV_32FC1);
 
+	for(int i = 0; i < CHANNELS_USED; i++){
+		channels[0] = i;
+		calcHist(data, 1, channels, Mat(), hist, 1, histSize, ranges);
+		hist.copyTo(newEntry.descriptor.colRange(bins*i, bins*(i + 1) - 1));
+	}
+	normalize(hist, hist, 1, 0, NORM_L1, -1);
+	entries.push_back(newEntry);
+}
+
+void Camera::clearLearnDatabase(){
+	entries.clear();
+}
+
+void Camera::learn(){
+	if(entries.size() > 0){
+		Mat allHist(entries.size(), entries[0].descriptor.cols, CV_32FC1);
+		Mat allLabels(entries.size(), 1, CV_8UC1);
+		for(int i = 0; i < entries.size(); i++){
+			entries[i].descriptor.copyTo(allHist.rowRange(i, i));
+			allLabels.at<unsigned char>(i) = entries[i].label;
+		}
+		svm.train(allHist, allLabels, Mat(), Mat(), svmParams);
+	}
 }
 
 cv::Mat Camera::selectPolygonPixels(std::vector<cv::Point2i> polygon, const cv::Mat& image){
@@ -205,17 +247,161 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 					}
 				}
 
+				//divide samples into smaller packs
 				Mat samples = selectPolygonPixels(poly, image);
-				learn(samples, label);
+				for(int i = 0; i < samples.cols/SAMPLE_PACK; i++){
+					addToLearnDatabase(samples.colRange(i*SAMPLE_PACK, (i + 1)*SAMPLE_PACK - 1), label);
+				}
+				//taking care of remainder samples - if too small, reject
+				int rem = samples.cols % SAMPLE_PACK;
+				if(rem >= SAMPLE_PACK/4){
+					addToLearnDatabase(samples.colRange(samples.cols - rem, samples.cols - 1), label);
+				}
 
 				pObject = pObject->NextSiblingElement("object");
 			}
 		}
 	}
+	learn();
 }
 
 cv::Mat Camera::classifySlidingWindow(cv::Mat image){
+	//wxDateTime StartTime = wxDateTime::UNow();
 
+	const int rows = image.rows;
+	const int cols = image.cols;
+	const int step = classifyGrid;
+
+	GpuMat imageHSV(rows, cols, CV_8UC3);
+	GpuMat imageH(rows, cols, CV_8UC1);
+	GpuMat imageS(rows, cols, CV_8UC1);
+	GpuMat imageV(rows, cols, CV_8UC1);
+	GpuMat out[] = {imageH, imageS, imageV};
+
+	imageHSV.upload(image);
+	cvtColor(imageHSV, imageHSV, CV_BGR2HSV);
+	split(imageHSV, out);
+
+	//wxDateTime UploadTime = wxDateTime::UNow();
+
+	vector<Mat> votes(labels.size());
+
+	for (int i = 0; i < (int)votes.size(); i++)
+	{
+		// Sepatate Mat for each entry
+		votes[i] = Mat(image.rows, image.cols, CV_8U, Scalar(0));
+	}
+
+	GpuMat*** entries = new GpuMat**[rows/step];
+	for(int row = 0; row < rows/step; row++){
+		entries[row] = new GpuMat*[cols/step];
+	}
+	for(int row = 0; row < rows/step; row++){
+		for(int col = 0; col < cols/step; col++){
+			entries[row][col] = new GpuMat(1, 2*bins, CV_32SC1);
+		}
+	}
+
+	cout << "Calculating histograms" << endl;
+	GpuMat buf(1, bins, CV_32SC1);
+	for (int row = step; row <= rows; row += step)
+	{
+		for (int col = step; col <= cols; col += step)
+		{
+			const int MinC = col - step;
+		    const int MaxC = col;
+		    const int MinR = row - step;
+		    const int MaxR = row;
+
+		    //cout << "MinX: " << MinX << " MinY: " << MinY << " MaxX " << MaxX << " MaxY " << MaxY << "\n";
+		    GpuMat RoiH = GpuMat(imageH, Rect(Point(MinC, MinR), Point(MaxC, MaxR)));
+		    GpuMat RoiS = GpuMat(imageS, Rect(Point(MinC, MinR), Point(MaxC, MaxR)));
+
+		    //cout << "Calculating hist for row = " << row << ", col = " << col << endl;
+			GenerateColorHistHSVGpu(RoiH, RoiS, *entries[(row - 1)/step][(col - 1)/step], buf);
+
+		}
+	}
+
+	//wxDateTime HistTime = wxDateTime::UNow();
+
+	cout << "Classifing" << endl;
+
+    Mat histSum(1, 2*bins, CV_32FC1);
+    GpuMat histSumGpu(1, 2*bins, CV_32FC1);
+    buf = GpuMat(1, 2*bins, CV_32FC1);
+	for (int row = classifyGrid; row <= rows; row += step)
+	{
+		for (int col = classifyGrid; col <= cols; col += step)
+		{
+			const int MinC = col - classifyGrid;
+		    const int MaxC = col;
+		    const int MinR = row - classifyGrid;
+		    const int MaxR = row;
+
+		    int idxR = (row - 1)/step;
+		    int idxC = (col - 1)/step;
+		    int subGrids = classifyGrid/step;
+		    histSumGpu = Scalar(0);
+		    for(int subRow = idxR - subGrids + 1; subRow <= idxR; subRow++){
+			    for(int subCol = idxC - subGrids + 1; subCol <= idxC; subCol++){
+			    	add(histSumGpu, *entries[subRow][subCol], histSumGpu);
+			    }
+		    }
+		    normalize(histSum, histSum, 1, 0, NORM_L1, -1, buf);
+		    histSumGpu.download(histSum);
+		    unsigned int predictedLabel = 0;
+		    predictedLabel = svm.predict(histSum);
+		    //cout << WordPredictedLabel << endl;
+		    //EndTimeClass = wxDateTime::UNow();
+
+		    Mat Mask = Mat(rows, cols, CV_8U, Scalar(0));
+		    rectangle(Mask, Point(MinC, MinR), Point(MaxC, MaxR), Scalar(0x1), CV_FILLED);
+		    votes[predictedLabel] +=  Mask;
+		}
+	}
+
+	for(int row = 0; row < rows/step; row++){
+		for(int col = 0; col < cols/step; col++){
+			delete entries[row][col];
+		}
+	}
+	for(int row = 0; row < rows/step; row++){
+		delete[] entries[row];
+	}
+	delete[] entries;
+
+	//wxDateTime ClassTime = wxDateTime::UNow();
+
+	//cout << "Uploading and converting time: " << (UploadTime - StartTime).Format(wxString::FromAscii("%M:%S:%l")).ToAscii().data() << "\n";
+	//cout << "Calculating histograms time: " << (HistTime - UploadTime).Format(wxString::FromAscii("%M:%S:%l")).ToAscii().data() << "\n";
+	//cout << "Classifing time: " << (ClassTime - HistTime).Format(wxString::FromAscii("%M:%S:%l")).ToAscii().data() << "\n";
+
+}
+
+void Camera::GenerateColorHistHSVGpu(
+		const cv::gpu::GpuMat& ImageH,
+		const cv::gpu::GpuMat& ImageS,
+		cv::gpu::GpuMat& result,
+		cv::gpu::GpuMat& buf)
+{
+	GpuMat HistH(1, bins, CV_32SC1);
+	GpuMat HistS(1, bins, CV_32SC1);
+
+	if(bins != 256){
+		throw "Number of bins must be equal to 256";
+	}
+
+	calcHist(ImageH, HistH, buf);
+	calcHist(ImageS, HistS, buf);
+
+	GpuMat partH = result.colRange(0, bins);
+	GpuMat partS = result.colRange(bins, 2*bins);
+
+	HistH.copyTo(partH);
+	HistS.copyTo(partS);
+
+	result.convertTo(result, CV_32F);
 }
 
 //Run as separate thread
