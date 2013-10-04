@@ -10,7 +10,7 @@ using namespace std;
 
 TrobotQt::TrobotQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
 	: cap(0), QMainWindow(parent, flags), remoteCamera(NULL),
-	  robot(settingsFile)
+	  robot(settingsFile), debug(&robot)
 {
 	cout << "TrobotQt::TrobotQt" << endl;
 	if(!cap.isOpened()){ // check if we succeeded
@@ -31,15 +31,15 @@ TrobotQt::TrobotQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
 	cameraTimer.start();
 
 	ui.gpsPortCombo->addItems(portList);
-	qtGps = new QtGps(&ui, &robot);
+	qtGps = new QtGps(&ui, &robot, &debug);
 
 	ui.robotDrivePortCombo->addItems(portList);
-	drive = new QtRobotDrive(&ui, &robot);
+	drive = new QtRobotDrive(&ui, &robot, &debug);
 
 	ui.imuPortCombo->addItems(portList);
-	imuChart = new ImuChart(&ui, &robot);
+	imuChart = new ImuChart(&ui, &robot, &debug);
 
-	recording = new Recording(&ui, &robot);
+	recording = new Recording(&ui, &robot, &debug);
 	cout << "TrobotQt::TrobotQt end" << endl;
 
 }

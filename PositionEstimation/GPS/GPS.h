@@ -18,10 +18,14 @@
 
 #define BUFFER_SIZE 2048
 
+class Debug;
+
 /**
  * GPS Class
  */
 class GPS {
+	friend class Debug;
+
 public:
 	/**
 	 * Initiates all variables. You need to use @see initController() for starting the module

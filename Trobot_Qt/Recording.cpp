@@ -11,7 +11,11 @@
 using namespace std;
 using namespace cv;
 
-Recording::Recording(Ui::TrobotQtClass* iui, Robot* irobot) : ui(iui), robot(irobot){
+Recording::Recording(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug) :
+		ui(iui),
+		robot(irobot),
+		debug(idebug)
+{
 	connect(&hokuyoTimer, SIGNAL(timeout()), this, SLOT(getDataHokuyo()));
 	connect(&encodersTimer, SIGNAL(timeout()), this, SLOT(getDataEncoders()));
 	connect(&gpsTimer, SIGNAL(timeout()), this, SLOT(getDataGps()));
@@ -31,14 +35,14 @@ void Recording::getDataHokuyo(){
 }
 
 void Recording::getDataEncoders(){
-	const Mat encoderData = robot->getEncoderData();
+	const Mat encoderData = debug->getEncoderData();
 	encodersStream << time.elapsed() << " ";
 	encodersStream << encoderData.at<int>(0) << " " << encoderData.at<int>(1) << endl;
 }
 
 void Recording::getDataGps(){
 	//cout << "Recording::gatDataGps()" << endl;
-	const Mat gpsData = robot->getGpsData();
+	const Mat gpsData = debug->getGpsData();
 	//cout << "Data dims = (" << gpsData.rows << ", " << gpsData.cols << ")" << endl;
 	gpsStream<<time.elapsed()<<" ";
 	gpsStream<<gpsData.at<double>(0)<<" "<<gpsData.at<double>(1)<<std::endl;
@@ -46,7 +50,7 @@ void Recording::getDataGps(){
 }
 
 void Recording::getDataImu(){
-	Mat imuData = robot->getImuData();
+	Mat imuData = debug->getImuData();
 
 	imuStream<<time.elapsed()<<" ";
 	for(int val = 0; val < 4; val++){

@@ -13,6 +13,7 @@
 #include<QtCore/QTimer>
 
 #include "../Robot/Robot.h"
+#include "../Debug/Debug.h"
 #include "ui_trobotqt.h"
 
 class QtGps : public QObject {
@@ -20,11 +21,12 @@ class QtGps : public QObject {
 
 	Ui::TrobotQtClass* ui;
 	Robot* robot;
+	Debug* debug;
 
 	QTimer refreshTimer;
 
 public:
-	QtGps(Ui::TrobotQtClass* iui, Robot* irobot);
+	QtGps(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug);
 	virtual ~QtGps();
 
 public slots:

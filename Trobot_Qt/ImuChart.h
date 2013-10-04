@@ -10,6 +10,7 @@
 #include "../Trobot/include/Imu.h"
 #include "../Trobot/include/Address.h"
 #include "../Robot/Robot.h"
+#include "../Debug/Debug.h"
 
 #include <vector>
 
@@ -40,6 +41,7 @@ class ImuChart : public QObject {
 	Chart* chart;
 	//trobot::Imu* imu;
 	Robot* robot;
+	Debug* debug;
 	Ui::TrobotQtClass* ui;
 	QTimer timerRefresh, timerCollectData;
 	int origX, origY;
@@ -56,7 +58,7 @@ class ImuChart : public QObject {
 	void setChartScalesAndOrig();
 	int round(float a);
 public:
-	ImuChart(Ui::TrobotQtClass* iui, Robot* irobot);
+	ImuChart(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug);
 	~ImuChart();
 
 	// Just for dumping

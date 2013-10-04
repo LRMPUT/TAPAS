@@ -54,11 +54,11 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 		}
 	}
 	computeGroundPolygons();
-	cout << "Available CUDA devices: " << getCudaEnabledDeviceCount() << endl;
-	setDevice(0);
-	DeviceInfo gpuInfo;
-	cout << "Version: " << gpuInfo.majorVersion() << "." << gpuInfo.minorVersion() << endl;
-	cout << "Number of processors: " << gpuInfo.multiProcessorCount() << endl;
+	//cout << "Available CUDA devices: " << getCudaEnabledDeviceCount() << endl;
+	//setDevice(0);
+	//DeviceInfo gpuInfo;
+	//cout << "Version: " << gpuInfo.majorVersion() << "." << gpuInfo.minorVersion() << endl;
+	//cout << "Number of processors: " << gpuInfo.multiProcessorCount() << endl;
 }
 
 Camera::~Camera(){

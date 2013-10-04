@@ -10,6 +10,7 @@ find_package(OpenCV REQUIRED)
 find_package(Boost COMPONENTS system filesystem thread REQUIRED)
 link_directories(${URG_LIBRARIES_DIR})
 set(RobotsIntellect_SOURCES
+	Debug/Debug.cpp
 	MechanicalGrabber/MechanicalGrabber.cpp
 	MovementConstraints/Hokuyo/Hokuyo.cpp
 	MovementConstraints/Sharp/Sharp.cpp

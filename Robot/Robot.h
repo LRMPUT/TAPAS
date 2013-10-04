@@ -18,6 +18,7 @@
 #include <boost/filesystem.hpp>
 
 class Robot;
+class Debug;
 
 //RobotsIntellect
 #include "../PositionEstimation/PositionEstimation.h"
@@ -28,6 +29,7 @@ class Robot;
 #define MAP_SIZE	10000/RASTER_SIZE	//[u] 10m
 
 class Robot {
+	friend class Debug;
 
 	// Class containing information about our position estimation from sensors
 	PositionEstimation positionEstimation;
@@ -40,11 +42,6 @@ class Robot {
 public:
 	Robot(boost::filesystem::path settings);
 	virtual ~Robot();
-
-	//----------------------MODES OF OPERATION
-	void switchMode(OperationMode mode);
-
-	void setMotorsVel(float motLeft, float motRight);
 
 	//----------------------MENAGMENT OF GlobalPlanner DEVICES
 	//Robots Drive
@@ -84,29 +81,9 @@ public:
 
 	bool isCameraOpen();
 
-
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
 	//CV_32SC1 2x1: left, right encoder
 	const cv::Mat getEncoderData();
-
-	//CV_32SC1 4x1: x, y, lat, lon position
-	const cv::Mat getGpsData();
-
-	//1 - no fix, 2 - 2D, 3 - 3D
-	int getGpsFixStatus();
-
-	int getGpsSatelitesUsed();
-
-	void setGpsZeroPoint(double lat, double lon);
-
-	//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
-	const cv::Mat getImuData();
-
-	//CV_32SC1 2xHOKUYO_SCANS: x, y points from left to right
-	const cv::Mat getHokuyoData();
-
-	//CV_8UC3 2x640x480: left, right image
-	const std::vector<cv::Mat> getCameraData();
 
 	//----------------------ACCESS TO COMPUTED DATA
 	//CV_32SC1 3x1: x, y, fi

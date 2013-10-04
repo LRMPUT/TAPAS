@@ -14,6 +14,7 @@ class TrobotQt;
 
 #include "ui_trobotqt.h"
 #include "../Robot/Robot.h"
+#include "../Debug/Debug.h"
 #include "CameraWindow.h"
 #include "QtRobotDrive.h"
 #include "ImuChart.h"
@@ -36,6 +37,7 @@ private:
 	QStringList portList;
 	
 	Robot robot;
+	Debug debug;
 
 	cv::VideoCapture cap;
 	cv::Mat frame;
