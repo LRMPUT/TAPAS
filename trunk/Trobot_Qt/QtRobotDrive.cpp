@@ -9,8 +9,12 @@
 
 using namespace std;
 
-QtRobotDrive::QtRobotDrive(Ui::TrobotQtClass* iui, Robot* irobot):
-ui(iui), robot(irobot), driveState(Nothing), speed(800)
+QtRobotDrive::QtRobotDrive(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug):
+		ui(iui),
+		robot(irobot),
+		debug(idebug),
+		driveState(Nothing),
+		speed(800)
 {
 	motorVal[0] = 0;
 	motorVal[1] = 0;
@@ -130,7 +134,7 @@ void QtRobotDrive::motorValChanged(int val){
 #ifdef DRIVE_DBG
 	printf("robot->setMotorsVel(%d, %d)\n", motorVal[LEFT_CHANNEL - 1], motorVal[RIGHT_CHANNEL - 1]);
 #else
-	robot->setMotorsVel(motorVal[LEFT_CHANNEL - 1], motorVal[RIGHT_CHANNEL - 1]);
+	debug->setMotorsVel(motorVal[LEFT_CHANNEL - 1], motorVal[RIGHT_CHANNEL - 1]);
 #endif
 }
 

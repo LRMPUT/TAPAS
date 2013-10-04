@@ -9,9 +9,12 @@
 #define GLOBALPLANNER_H_
 
 #include <opencv2/opencv.hpp>
+//Trobot
 #include "../Trobot/include/RobotDrive.h"
+//Robots Intellect
 
 class Robot;
+class Debug;
 
 enum OperationMode{
 	Manual,
@@ -19,6 +22,8 @@ enum OperationMode{
 };
 
 class GlobalPlanner {
+	friend class Debug;
+
 	//parent class robot
 	Robot* robot;
 

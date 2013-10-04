@@ -17,8 +17,10 @@
 #include <boost/filesystem.hpp>
 //TinyXML
 #include <tinyxml.h>
+//Robots Intellect
 
 class MovementConstraints;
+class Debug;
 
 struct Entry{
 	int label;
@@ -28,6 +30,8 @@ struct Entry{
 };
 
 class Camera {
+	friend class Debug;
+
 	//Parent MovementConstraints class
 	MovementConstraints* movementConstraints;
 

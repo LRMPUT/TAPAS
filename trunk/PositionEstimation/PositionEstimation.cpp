@@ -62,7 +62,8 @@ PositionEstimation::~PositionEstimation() {
 // Update Kalman - updates on GPS
 void PositionEstimation::KalmanUpdate()
 {
-	state = KF->correct( this->getGpsData() );
+	//TO DO Trzeba zmienić, bo zmieniły się funkcje
+	//state = KF->correct( this->getGpsData() );
 	
 	// Optional stuff
 	//cv::Mat imu = this->getImuData();
@@ -94,35 +95,6 @@ void PositionEstimation::KalmanPredict()
 //CV_32SC1 3x1: x, y, fi
 const cv::Mat PositionEstimation::getEstimatedPosition(){
 	return state;
-}
-
-//----------------------EXTERNAL ACCESS TO MEASUREMENTS
-//CV_32FC1 4x1: x, y, lat, lon position
-const cv::Mat PositionEstimation::getGpsData(){
-	Mat ret(4, 1, CV_32FC1);
-	ret.at<double>(0) = (double)gps.getPosX();
-	ret.at<double>(1) = (double)gps.getPosY();
-	ret.at<double>(2) = gps.getLat();
-	ret.at<double>(3) = gps.getLon();
-	//cout << "Position = (" << ret.at<double>(0) << ", " << ret.at<double>(1) << ")" << endl;
-	return ret;
-}
-//1 - no fix, 2 - 2D, 3 - 3D
-int PositionEstimation::getGpsFixStatus(){
-	return gps.getFixStatus();
-}
-
-int PositionEstimation::getGpsSatelitesUsed(){
-	return gps.getSatelitesUsed();
-}
-
-void PositionEstimation::setGpsZeroPoint(double lat, double lon){
-	gps.setZeroXY(lat, lon);
-}
-
-//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
-const cv::Mat PositionEstimation::getImuData(){
-	return imu.getData();
 }
 
 //----------------------MENAGMENT OF PositionEstimation DEVICES

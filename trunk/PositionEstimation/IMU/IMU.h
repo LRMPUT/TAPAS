@@ -10,6 +10,8 @@
 #include <opencv2/opencv.hpp>
 #include "../../Trobot/include/Imu.h"
 
+class Debug;
+
 #define NUM_VALUES 12
 
 struct Quantity {
@@ -23,6 +25,8 @@ struct Quantity {
 };
 
 class IMU {
+	friend class Debug;
+
 	trobot::Imu* imu;
 public:
 	IMU();

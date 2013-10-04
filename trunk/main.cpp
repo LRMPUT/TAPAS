@@ -32,9 +32,9 @@ int main()
 		cv::Mat encoderData, gpsData, imuData;
 		while(1)
 		{
-			encoderData = ourRobot->getEncoderData();
-			gpsData = ourRobot->getGpsData();
-			imuData = ourRobot->getImuData();
+			//encoderData = ourRobot->getEncoderData();
+			//gpsData = ourRobot->getGpsData();
+			//imuData = ourRobot->getImuData();
 
 			// enc data 2x1 - użyj operatora .at<int>()
 			//encoderStream << encoderData[0]<< " "<<encoderData[1] << endl;

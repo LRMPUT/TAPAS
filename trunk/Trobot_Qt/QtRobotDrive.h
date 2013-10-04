@@ -6,6 +6,7 @@
 #include <QtCore/QObject>
 #include <string>
 #include "../Robot/Robot.h"
+#include "../Debug/Debug.h"
 #include "ui_trobotqt.h"
 
 enum Action {
@@ -23,7 +24,7 @@ class QtRobotDrive : public QObject
 	Q_OBJECT
 
 public:
-	QtRobotDrive(Ui::TrobotQtClass* iui, Robot* irobot);
+	QtRobotDrive(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug);
 	~QtRobotDrive();
 	Action getState();
 	bool isOpen();
@@ -36,6 +37,7 @@ private:
 	const int speed;
 	int motorVal[2];
 	Robot* robot;
+	Debug* debug;
 public slots:
 	void goForward();
 	void goBackward();

@@ -19,8 +19,10 @@
 #include "Sharp/Sharp.h"
 
 class Robot;
+class Debug;
 
 class MovementConstraints {
+	friend class Debug;
 
 	// Class to get data from Camera
 	Camera* camera;
@@ -38,16 +40,13 @@ public:
 	MovementConstraints(Robot* irobot, TiXmlElement* settings);
 	virtual ~MovementConstraints();
 
-	//----------------------ACCESS TO COMPUTED DATA
-	//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)
-	const cv::Mat getMovementConstraints();
-
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
 	//CV_32SC1 2xHOKUYO_SCANS: x, y points from left to right
 	const cv::Mat getHokuyoData();
 
-	//CV_8UC3 2x640x480: left, right image
-	const std::vector<cv::Mat> getCameraData();
+	//----------------------ACCESS TO COMPUTED DATA
+	//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)
+	const cv::Mat getMovementConstraints();
 
 	//----------------------MENAGMENT OF MovementConstraints DEVICES
 	//Hokuyo

@@ -25,15 +25,6 @@ Robot::~Robot() {
 
 }
 
-//----------------------MODES OF OPERATION
-void Robot::switchMode(OperationMode mode){
-	globalPlanner.switchMode(mode);
-}
-
-void Robot::setMotorsVel(float motLeft, float motRight){
-	globalPlanner.setMotorsVel(motLeft, motRight);
-}
-
 //----------------------MENAGMENT OF GlobalPlanner DEVICES
 //Robots Drive
 void Robot::openRobotsDrive(std::string port){
@@ -102,44 +93,10 @@ bool Robot::isCameraOpen(){
 	return movementConstraints->isCameraOpen();
 }
 
-
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 //CV_32UC1 2x1: left, right encoder
 const cv::Mat Robot::getEncoderData(){
 	return globalPlanner.getEncoderData();
-}
-
-//CV_32SC1 4x1: x, y, lat, lon position
-const cv::Mat Robot::getGpsData(){
-	return positionEstimation.getGpsData();
-}
-
-//1 - no fix, 2 - 2D, 3 - 3D
-int Robot::getGpsFixStatus(){
-	return positionEstimation.getGpsFixStatus();
-}
-
-int Robot::getGpsSatelitesUsed(){
-	return positionEstimation.getGpsSatelitesUsed();
-}
-
-void Robot::setGpsZeroPoint(double lat, double lon){
-	positionEstimation.setGpsZeroPoint(lat, lon);
-}
-
-//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
-const cv::Mat Robot::getImuData(){
-	return positionEstimation.getImuData();
-}
-
-//CV_32SC1 2xHOKUYO_SCANS: x, y points from left to right
-const cv::Mat Robot::getHokuyoData(){
-	return movementConstraints->getHokuyoData();
-}
-
-//CV_8UC3 2x640x480: left, right image
-const std::vector<cv::Mat> Robot::getCameraData(){
-	return movementConstraints->getCameraData();
 }
 
 //----------------------ACCESS TO COMPUTED DATA

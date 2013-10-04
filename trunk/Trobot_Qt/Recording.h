@@ -12,6 +12,7 @@
 #include <QtCore/QTimer>
 #include <QtCore/QElapsedTimer>
 #include "../Robot/Robot.h"
+#include "../Debug/Debug.h"
 #include "ui_trobotqt.h"
 #include <fstream>
 #include <sys/time.h>
@@ -30,6 +31,7 @@ private:
 	QElapsedTimer time;
 
 	Robot* robot;
+	Debug* debug;
 
 	std::fstream file;
 
@@ -38,7 +40,7 @@ private:
 	// Saving Streams
 	std::ofstream imuStream, gpsStream, encodersStream;
 public:
-	Recording(Ui::TrobotQtClass* iui, Robot* irobot);
+	Recording(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug);
 	~Recording();
 
 private slots:

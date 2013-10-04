@@ -31,7 +31,12 @@ Value values[NUM_VALUES] = {
 	Value(4*trobot::EULER_PSI,			Qt::darkYellow,	"euler yaw",	0.0109863)
 };
 
-ImuChart::ImuChart(Ui::TrobotQtClass* iui, Robot* irobot) : chart(NULL), robot(irobot), ui(iui) {
+ImuChart::ImuChart(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug) :
+		chart(NULL),
+		robot(irobot),
+		debug(idebug),
+		ui(iui)
+{
 	cout << "Constructing ImuChart" << endl;
 	timerRefresh.setInterval(1000/REFRESH_RATE);
 	timerCollectData.setInterval(1000/IMU_DATA_RATE);
@@ -264,7 +269,7 @@ void ImuChart::clear(){
 void ImuChart::collectData(){
 	int ind = 0;
 	vector<vector<float> > newData;
-	Mat data = robot->getImuData();
+	Mat data = debug->getImuData();
 	for(int i = 0; i < NUM_VALUES; i++){
 		if(values[i].checkBox->isChecked() == true){
 			float tmp = data.at<float>(i % 3, i / 3);
