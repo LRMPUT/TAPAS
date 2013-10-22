@@ -13,7 +13,6 @@ int main()
 {
 	Robot *ourRobot  = new Robot("settings.xml");
 
-
 	// Streams to save data
 	ofstream encoderStream, imuStream, gpsStream;
 	encoderStream.open("encoder.data");
