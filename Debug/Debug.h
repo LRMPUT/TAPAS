@@ -43,6 +43,8 @@ public:
 	//CV_8UC3 2x640x480: left, right image
 	const std::vector<cv::Mat> getCameraData();
 
+	void testSegmentation(boost::filesystem::path dir);
+
 	//----------------------ACCESS TO COMPUTED DATA
 	//CV_32SC1 3x1: x, y, fi
 	const cv::Mat getEstimatedPosition();

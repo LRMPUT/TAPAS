@@ -4,9 +4,12 @@
  *  Created on: 04-10-2013
  *      Author: jachu
  */
+
 #include "Debug.h"
 //OpenCV
 #include <opencv2/opencv.hpp>
+//Boost
+#include <boost/filesystem.hpp>
 //RobotsIntellect
 #include "../Robot/Robot.h"
 #include "../MovementConstraints/MovementConstraints.h"
@@ -19,6 +22,7 @@
 
 using namespace cv;
 using namespace std;
+using namespace boost;
 
 Debug::Debug(Robot* irobot) : robot(irobot){
 
@@ -75,6 +79,24 @@ const cv::Mat Debug::getHokuyoData(){
 //CV_8UC3 2x640x480: left, right image
 const std::vector<cv::Mat> Debug::getCameraData(){
 	return robot->movementConstraints->camera->getData();
+}
+
+void Debug::testSegmentation(boost::filesystem::path dir){
+	filesystem::directory_iterator endIt;
+	namedWindow("segmented");
+	namedWindow("original");
+	for(filesystem::directory_iterator dirIt(dir); dirIt != endIt; dirIt++){
+		cout << dirIt->path().string() << endl;
+		if(dirIt->path().filename().string().find(".jpg") != string::npos){
+			cout << "Processing image " << dirIt->path().string() << endl;
+			Mat image = imread(dirIt->path().string());
+			imshow("original", image);
+			robot->movementConstraints->camera->segment(image);
+			waitKey(1000);
+			char tmpChar;
+			cin >> tmpChar;
+		}
+	}
 }
 
 //----------------------ACCESS TO COMPUTED DATA

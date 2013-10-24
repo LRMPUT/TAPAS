@@ -7,6 +7,8 @@
 #include <iostream>
 #include "Robot.h"
 
+using namespace std;
+
 Robot::Robot(boost::filesystem::path settingsFile) : globalPlanner(this), positionEstimation(this) {
 	TiXmlDocument settings(settingsFile.c_str());
 	if(!settings.LoadFile()){

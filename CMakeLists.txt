@@ -15,6 +15,7 @@ set(RobotsIntellect_SOURCES
 	MovementConstraints/Hokuyo/Hokuyo.cpp
 	MovementConstraints/Sharp/Sharp.cpp
 	MovementConstraints/Camera/Camera.cpp
+	MovementConstraints/Camera/UnionFind.cpp
 	MovementConstraints/MovementConstraints.cpp
 	#Planning/PlanningSearching/LocalPlannerSearching.cpp
 	#Planning/PlanningToGold/LocalPlannerToGold.cpp
@@ -43,10 +44,12 @@ set(RobotsIntellect_SOURCES
 	Trobot/source/RoboteqDevice.cpp
 	Trobot/source/SerialPort.cpp
 )
+
 add_executable (RobotsIntellect 
 	${RobotsIntellect_SOURCES}
 	main.cpp
 )
+
 target_link_libraries(RobotsIntellect
 	${OpenCV_LIBS}
 	${Boost_LIBRARIES}
