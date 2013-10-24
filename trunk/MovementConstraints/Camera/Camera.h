@@ -108,6 +108,8 @@ public:
 	Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings);
 	virtual ~Camera();
 
+	cv::Mat segment(cv::Mat image);
+
 	//Returns constraints map and inserts time of data from cameras fetch
 	const cv::Mat getConstraints(int* timestamp);
 

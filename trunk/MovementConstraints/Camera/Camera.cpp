@@ -13,6 +13,7 @@
 #include <sstream>
 //RobotsIntellect
 #include "Camera.h"
+#include "UnionFind.h"
 
 using namespace boost;
 using namespace std;
@@ -30,9 +31,33 @@ using namespace std;
 #define CHANNELS_USED 2
 #define SAMPLE_PACK 1500
 
+#define NO_CUDA
+
 using namespace cv;
 using namespace gpu;
 using namespace std;
+
+Scalar colors[] = {
+		Scalar(0xFF, 0x00, 0x00), //Red
+		Scalar(0xFF, 0xFF, 0xFF),	//White
+		Scalar(0x00, 0xFF, 0xFF), //Cyan
+		Scalar(0xC0, 0xC0, 0xC0), //Silver
+		Scalar(0x00, 0x00, 0xFF), //Blue
+		Scalar(0x80, 0x80, 0x80), //Gray
+		Scalar(0x00, 0x00, 0xA0), //DarkBlue
+		Scalar(0x00, 0x00, 0x00), //Black
+		Scalar(0xAD, 0xD8, 0xE6), //LightBlue
+		Scalar(0xFF, 0xA5, 0x00), //Orange
+		Scalar(0x80, 0x00, 0x80), //Purple
+		Scalar(0xA5, 0x2A, 0x2A), //Brown
+		Scalar(0xFF, 0xFF, 0x00), //Yellow
+		Scalar(0x80, 0x00, 0x00), //Maroon
+		Scalar(0x00, 0xFF, 0x00), //Lime
+		Scalar(0x00, 0x80, 0x00), //Green
+		Scalar(0xFF, 0x00, 0xFF), //Magenta
+		Scalar(0x80, 0x80, 0x00) //Olive
+};
+
 
 Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings) :
 		movementConstraints(imovementConstraints),
@@ -54,11 +79,14 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 		}
 	}
 	computeGroundPolygons();
-	//cout << "Available CUDA devices: " << getCudaEnabledDeviceCount() << endl;
-	//setDevice(0);
-	//DeviceInfo gpuInfo;
-	//cout << "Version: " << gpuInfo.majorVersion() << "." << gpuInfo.minorVersion() << endl;
-	//cout << "Number of processors: " << gpuInfo.multiProcessorCount() << endl;
+
+#ifndef NO_CUDA
+	cout << "Available CUDA devices: " << getCudaEnabledDeviceCount() << endl;
+	setDevice(0);
+	DeviceInfo gpuInfo;
+	cout << "Version: " << gpuInfo.majorVersion() << "." << gpuInfo.minorVersion() << endl;
+	cout << "Number of processors: " << gpuInfo.multiProcessorCount() << endl;
+#endif //NO_CUDA
 }
 
 Camera::~Camera(){
@@ -409,6 +437,92 @@ void Camera::cameraThread(){
 
 }
 
+struct Edge{
+	int i, j, weight;
+	Edge() {}
+	Edge(int ii, int ij, int iweight) : i(ii), j(ij), weight(iweight) {}
+};
+
+bool operator<(const Edge& left, const Edge& right){
+	return left.weight < right.weight;
+}
+
+
+cv::Mat Camera::segment(cv::Mat image){
+	Mat imageH(image.rows, image.cols, CV_8UC1);
+	Mat imageS(image.rows, image.cols, CV_8UC1);
+	Mat imageV(image.rows, image.cols, CV_8UC1);
+	Mat imageChannels[] = {imageH, imageS, imageV};
+	float k = 300;
+	int nrows = image.rows;
+	int ncols = image.cols;
+
+	split(image, imageChannels);
+
+	Mat segments(nrows, ncols, CV_32SC1);
+
+	for(int ch = 0; ch < 1; ch++){
+		vector<Edge> edges;
+		for(int r = 0; r < nrows; r++){
+			for(int c = 0; c < ncols; c++){
+				if(c < ncols - 1){
+					int diff = abs(imageChannels[ch].at<int>(r, c) - imageChannels[ch].at<int>(r, c + 1));
+					edges.push_back(Edge(c + ncols*r, c + 1 + ncols*r, diff));
+				}
+				if(r < nrows - 1){
+					int diff = abs(imageChannels[ch].at<int>(r, c) - imageChannels[ch].at<int>(r + 1, c));
+					edges.push_back(Edge(c + ncols*r, c + ncols*(r + 1), diff));
+				}
+			}
+		}
+		sort(edges.begin(), edges.end()); //possible improvement by bin sorting
+		UnionFind sets(nrows * ncols);
+		vector<int> intDiff;
+		vector<int> sizes;
+		intDiff.assign(nrows * ncols, 0);
+		sizes.assign(nrows * ncols, 1);
+		for(vector<Edge>::iterator it = edges.begin(); it != edges.end(); it++){
+			int iRoot = sets.findSet(it->i);
+			int jRoot = sets.findSet(it->j);
+			if(iRoot != jRoot){
+				if(min(intDiff[iRoot] + (float)k/sizes[iRoot], intDiff[jRoot] + (float)k/sizes[jRoot])
+						>=
+						it->weight)
+				{
+					int iSize = sizes[iRoot];
+					int jSize = sizes[jRoot];
+					int iIntDiff = intDiff[iRoot];
+					int jIntDiff = intDiff[jRoot];
+					sets.unionSets(iRoot, jRoot);
+					int newRoot = sets.findSet(iRoot);
+					sizes[newRoot] = iSize + jSize;
+					intDiff[newRoot] = max(max(iIntDiff, jIntDiff), it->weight);
+				}
+			}
+		}
+
+		map<int, int> colorMap;
+		int ind = 0;
+		for(int r = 0; r < nrows; r++){
+			for(int c = 0; c < ncols; c++){
+				segments.at<int>(r, c) = sets.findSet(c + ncols*r);
+				if(colorMap.count(segments.at<int>(r, c)) == 0){
+					colorMap.insert(pair<int, int>(segments.at<int>(r, c), (ind++) % sizeof(colors)/sizeof(colors[0])));
+				}
+			}
+		}
+		cout << "Found " << colorMap.size() << " segments" << endl;
+		Mat segImage(nrows, ncols, CV_8UC3);
+		for(map<int, int>::iterator it = colorMap.begin(); it != colorMap.end(); it++){
+			Mat mask = (segments == it->first);
+			segImage.setTo(it->second, mask);
+		}
+		imshow("segmented", segImage);
+	}
+
+	return segments;
+}
+
 void Camera::readSettings(TiXmlElement* settings){
 	if(settings->QueryIntAttribute("number", &numCameras) != TIXML_SUCCESS){
 		throw "Bad settings file - wrong number of cameras";
@@ -515,6 +629,9 @@ void Camera::readSettings(TiXmlElement* settings){
 	learningDir = tmp;
 
 	pPtr = settings->FirstChildElement("labels");
+	if(!pPtr){
+		throw "Bad settings file - no labels settings";
+	}
 	TiXmlElement* pLabel = pPtr->FirstChildElement("label");
 	while(pLabel){
 		string text;

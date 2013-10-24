@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<?fileVersion 4.0.0?>
-
-<cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
+<?fileVersion 4.0.0?><cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
 	<storageModule moduleId="org.eclipse.cdt.core.settings">
 		<cconfiguration id="cdt.managedbuild.config.gnu.exe.debug.897285008">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="cdt.managedbuild.config.gnu.exe.debug.897285008" moduleId="org.eclipse.cdt.core.settings" name="Debug">
@@ -20,7 +18,7 @@
 					<folderInfo id="cdt.managedbuild.config.gnu.exe.debug.897285008." name="/" resourcePath="">
 						<toolChain id="cdt.managedbuild.toolchain.gnu.exe.debug.291050312" name="Linux GCC" superClass="cdt.managedbuild.toolchain.gnu.exe.debug">
 							<targetPlatform id="cdt.managedbuild.target.gnu.platform.exe.debug.83618697" name="Debug Platform" superClass="cdt.managedbuild.target.gnu.platform.exe.debug"/>
-							<builder buildPath="${workspace_loc:/RobotsIntellect}/Debug" id="cdt.managedbuild.target.gnu.builder.exe.debug.371162843" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.exe.debug"/>
+							<builder arguments="-j4" buildPath="${workspace_loc:/RobotsIntellect/build}" command="make" id="cdt.managedbuild.target.gnu.builder.exe.debug.371162843" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="cdt.managedbuild.target.gnu.builder.exe.debug"/>
 							<tool id="cdt.managedbuild.tool.gnu.archiver.base.1556392229" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.base"/>
 							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.305032586" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug">
 								<option id="gnu.cpp.compiler.exe.debug.option.optimization.level.2041311024" name="Optimization Level" superClass="gnu.cpp.compiler.exe.debug.option.optimization.level" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
@@ -72,6 +70,7 @@
 									<listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/4.6/include"/>
 									<listOptionValue builtIn="false" value="/usr/include/qt4"/>
 									<listOptionValue builtIn="false" value="/usr/local/include"/>
+									<listOptionValue builtIn="false" value="/home/jachu/lib/tinyxml"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1374331771" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
@@ -182,12 +181,20 @@
 			</target>
 		</buildTargets>
 	</storageModule>
-	<storageModule moduleId="refreshScope" versionNumber="1">
-		<resource resourceType="PROJECT" workspacePath="/RobotsIntellect"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="Release">
+			<resource resourceType="PROJECT" workspacePath="/RobotsIntellect"/>
+		</configuration>
+		<configuration configurationName="Debug">
+			<resource resourceType="PROJECT" workspacePath="/RobotsIntellect"/>
+		</configuration>
 	</storageModule>
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.897285008;cdt.managedbuild.config.gnu.exe.debug.897285008.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.debug.305032586;cdt.managedbuild.tool.gnu.cpp.compiler.input.851628123">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.897285008;cdt.managedbuild.config.gnu.exe.debug.897285008.;cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1123931395;cdt.managedbuild.tool.gnu.c.compiler.input.1211761148">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.95159129;cdt.managedbuild.config.gnu.exe.release.95159129.;cdt.managedbuild.tool.gnu.cpp.compiler.exe.release.1183236761;cdt.managedbuild.tool.gnu.cpp.compiler.input.531262908">
@@ -196,8 +203,6 @@
 		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.release.95159129;cdt.managedbuild.config.gnu.exe.release.95159129.;cdt.managedbuild.tool.gnu.c.compiler.exe.release.667651504;cdt.managedbuild.tool.gnu.c.compiler.input.1621515781">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.exe.debug.897285008;cdt.managedbuild.config.gnu.exe.debug.897285008.;cdt.managedbuild.tool.gnu.c.compiler.exe.debug.1123931395;cdt.managedbuild.tool.gnu.c.compiler.input.1211761148">
-			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
-		</scannerConfigBuildInfo>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 </cproject>
