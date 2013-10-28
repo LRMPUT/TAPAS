@@ -456,22 +456,32 @@ cv::Mat Camera::segment(cv::Mat image){
 	float k = 300;
 	int nrows = image.rows;
 	int ncols = image.cols;
+	/*int nhood[][2] = {{1, -1},
+					{1, 0},
+					{1, 1},
+					{0, 1}};*/
+	int nhood[][2] = {{1, 0},
+					{0, 1}};
 
+	GaussianBlur(image, image, Size(0, 0), 0.8);
 	split(image, imageChannels);
 
-	Mat segments(nrows, ncols, CV_32SC1);
+	vector<Mat> segments;
 
-	for(int ch = 0; ch < 1; ch++){
+	for(int ch = 0; ch < 3; ch++){
+		cout << "Channel " << ch << endl;
+		segments.push_back(Mat(nrows, ncols, CV_32SC1));
 		vector<Edge> edges;
 		for(int r = 0; r < nrows; r++){
 			for(int c = 0; c < ncols; c++){
-				if(c < ncols - 1){
-					int diff = abs(imageChannels[ch].at<int>(r, c) - imageChannels[ch].at<int>(r, c + 1));
-					edges.push_back(Edge(c + ncols*r, c + 1 + ncols*r, diff));
-				}
-				if(r < nrows - 1){
-					int diff = abs(imageChannels[ch].at<int>(r, c) - imageChannels[ch].at<int>(r + 1, c));
-					edges.push_back(Edge(c + ncols*r, c + ncols*(r + 1), diff));
+				for(int nh = 0; nh < sizeof(nhood)/sizeof(nhood[0]); nh++){
+					if((r + nhood[nh][0] < nrows) && (r + nhood[nh][0] >= 0) &&
+							(c + nhood[nh][1] < ncols) && (c + nhood[nh][1] >= 0))
+					{
+						int diff = abs((int)imageChannels[ch].at<unsigned char>(r, c) - (int)imageChannels[ch].at<unsigned char>(r + nhood[nh][0], c + nhood[nh][1]));
+						edges.push_back(Edge(c + ncols*r, c + nhood[nh][1] + ncols*(r + nhood[nh][0]), diff));
+						//cout << "diff = abs(" << (int)imageChannels[ch].at<unsigned char>(r, c) << " - " << (int)imageChannels[ch].at<unsigned char>(r, c + 1) << ") = " << diff << endl;
+					}
 				}
 			}
 		}
@@ -484,11 +494,15 @@ cv::Mat Camera::segment(cv::Mat image){
 		for(vector<Edge>::iterator it = edges.begin(); it != edges.end(); it++){
 			int iRoot = sets.findSet(it->i);
 			int jRoot = sets.findSet(it->j);
+			//cout << "i = " << it->i << ", j = " << it->j << ", weight = " << it->weight << endl;
 			if(iRoot != jRoot){
+				//cout << "intDiff[iRoot] + (float)k/sizes[iRoot] = " << intDiff[iRoot] << " + " << (float)k/sizes[iRoot] << " = " << intDiff[iRoot] + (float)k/sizes[iRoot] << endl;
+				//cout << "intDiff[jRoot] + (float)k/sizes[jRoot] = " << intDiff[jRoot] << " + " << (float)k/sizes[jRoot] << " = " << intDiff[jRoot] + (float)k/sizes[jRoot] << endl;
 				if(min(intDiff[iRoot] + (float)k/sizes[iRoot], intDiff[jRoot] + (float)k/sizes[jRoot])
 						>=
 						it->weight)
 				{
+					//cout << "union" << endl;
 					int iSize = sizes[iRoot];
 					int jSize = sizes[jRoot];
 					int iIntDiff = intDiff[iRoot];
@@ -500,27 +514,65 @@ cv::Mat Camera::segment(cv::Mat image){
 				}
 			}
 		}
-
-		map<int, int> colorMap;
-		int ind = 0;
 		for(int r = 0; r < nrows; r++){
 			for(int c = 0; c < ncols; c++){
-				segments.at<int>(r, c) = sets.findSet(c + ncols*r);
-				if(colorMap.count(segments.at<int>(r, c)) == 0){
-					colorMap.insert(pair<int, int>(segments.at<int>(r, c), (ind++) % sizeof(colors)/sizeof(colors[0])));
+				segments[ch].at<int>(r, c) = sets.findSet(c + ncols*r);
+			}
+		}
+	}
+
+	Mat finSegments(nrows, ncols, CV_32SC1);
+	UnionFind sets(nrows * ncols);
+	vector<Edge> edges;
+	for(int r = 0; r < nrows; r++){
+		for(int c = 0; c < ncols; c++){
+			for(int nh = 0; nh < sizeof(nhood)/sizeof(nhood[0]); nh++){
+				if((r + nhood[nh][0] < nrows) && (r + nhood[nh][0] >= 0) &&
+						(c + nhood[nh][1] < ncols) && (c + nhood[nh][1] >= 0))
+				{
+					edges.push_back(Edge(c + ncols*r, c + nhood[nh][1] + ncols*(r + nhood[nh][0]), 0));
 				}
 			}
 		}
-		cout << "Found " << colorMap.size() << " segments" << endl;
-		Mat segImage(nrows, ncols, CV_8UC3);
-		for(map<int, int>::iterator it = colorMap.begin(); it != colorMap.end(); it++){
-			Mat mask = (segments == it->first);
-			segImage.setTo(it->second, mask);
+	}
+	for(vector<Edge>::iterator it = edges.begin(); it != edges.end(); it++){
+		bool areOneSegment = true;
+		for(int ch = 0; ch < 3; ch++){
+			if(segments[ch].at<int>(it->i / ncols, it->i % ncols) != segments[ch].at<int>(it->j / ncols, it->j % ncols)){
+				areOneSegment = false;
+				break;
+			}
 		}
-		imshow("segmented", segImage);
+		if(areOneSegment){
+			sets.unionSets(it->i, it->j);
+		}
+	}
+	for(int r = 0; r < nrows; r++){
+		for(int c = 0; c < ncols; c++){
+			finSegments.at<int>(r, c) = sets.findSet(c + ncols*r);
+		}
 	}
 
-	return segments;
+	map<int, int> colorMap;
+	int ind = 0;
+	for(int r = 0; r < nrows; r++){
+		for(int c = 0; c < ncols; c++){
+			finSegments.at<int>(r, c) = sets.findSet(c + ncols*r);
+			if(colorMap.count(finSegments.at<int>(r, c)) == 0){
+				colorMap.insert(pair<int, int>(finSegments.at<int>(r, c), (ind++) % sizeof(colors)/sizeof(colors[0])));
+			}
+		}
+	}
+	cout << "Found " << colorMap.size() << " segments" << endl;
+	Mat segImage(nrows, ncols, CV_8UC3);
+	for(map<int, int>::iterator it = colorMap.begin(); it != colorMap.end(); it++){
+		Mat mask = (finSegments == it->first);
+
+		segImage.setTo(colors[it->second], mask);
+	}
+	imshow("segmented", segImage);
+
+	return finSegments;
 }
 
 void Camera::readSettings(TiXmlElement* settings){
