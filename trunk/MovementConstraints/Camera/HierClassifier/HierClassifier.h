@@ -27,7 +27,7 @@ struct Entity{
 		idescriptor.copyTo(descriptor);
 	}
 
-}
+};
 
 class Region{
 	int label;

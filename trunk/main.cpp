@@ -19,7 +19,7 @@ int main()
 		Robot robot("./settings.xml");
 		cout << "Robot created" << endl;
 		Debug debug(&robot);
-		debug.testSegmentation(filesystem::path("../MovementConstraints/Camera/database"));
+		debug.testSegmentation(filesystem::path("../MovementConstraints/Camera/database segmentation"));
 	}
 	catch(char const* error){
 		cout << error << endl;

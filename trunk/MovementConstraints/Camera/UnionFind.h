@@ -13,9 +13,9 @@
 
 
 struct SetNode{
-	int parent, rank;
-	SetNode() : parent(-1), rank(0) {}
-	SetNode(int iparent, int irank) : parent(iparent), rank(irank) {}
+	int parent, rank, nsize;
+	SetNode() : parent(-1), rank(0), nsize(1) {}
+	SetNode(int iparent, int irank, int insize) : parent(iparent), rank(irank), nsize(insize) {}
 };
 
 
@@ -25,7 +25,8 @@ public:
 	UnionFind(int icount);
 	~UnionFind();
 	int findSet(int node);
-	void unionSets(int node1, int node2);
+	int unionSets(int node1, int node2);
+	int size(int node);
 };
 
 
