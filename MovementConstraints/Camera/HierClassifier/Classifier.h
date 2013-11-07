@@ -25,14 +25,14 @@ class Classifier{
 public:
 //---------------MISCELLANEOUS----------------
 
-	virtual Classifier() = 0;
+	Classifier();
 
 	/** \brief Loads settings from XML structure.
 
 	*/
-	virtual Classifier(TiXmlElement* settings) = 0;
+	Classifier(TiXmlElement* settings);
 
-	virtual ~Classifier() = 0;
+	virtual ~Classifier();
 
 	/** \brief Loads settings from XML structure.
 

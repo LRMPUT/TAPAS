@@ -22,22 +22,25 @@
 #include "HierClassifier.h"
 #include "Classifier.h"
 
-using namespace std;
-using namespace cv;
-
 class ClassifierSVM : public Classifier {
-	vector<svm_model> svms;
-	svm_parameter svmsParams;
+	std::vector<svm_model*> svms;
+	std::vector<svm_parameter> svmsParams;
+	std::vector<svm_problem> svmsProblems;
+	svm_parameter svmMainParams;
+	svm_node** labData;
+	std::vector<double*> dataLabels;
+	std::vector<int> numEntitiesLabeled;
+
 	void startup();
 public:
 //---------------MISCELLANEOUS----------------
 
-	virtual ClassifierSVM();
+	ClassifierSVM();
 
 	/** \brief Loads settings from XML structure.
 
 	*/
-	virtual ClassifierSVM(TiXmlElement* settings);
+	ClassifierSVM(TiXmlElement* settings);
 
 	virtual ~ClassifierSVM();
 
@@ -51,7 +54,7 @@ public:
 	virtual void loadCache(boost::filesystem::path file);
 
 //---------------COMPUTING----------------
-	virtual void train(std::vector<Entity> label);
+	virtual void train(std::vector<Entity> entieties);
 
 	virtual cv::Mat classify(cv::Mat features);
 };

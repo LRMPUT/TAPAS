@@ -90,7 +90,6 @@ void Debug::testSegmentation(boost::filesystem::path dir){
 		if(dirIt->path().filename().string().find(".jpg") != string::npos){
 			cout << "Processing image " << dirIt->path().string() << endl;
 			Mat image = imread(dirIt->path().string());
-			imshow("original", image);
 			robot->movementConstraints->camera->segment(image);
 			waitKey(1000);
 			char tmpChar;
