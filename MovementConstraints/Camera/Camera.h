@@ -37,6 +37,8 @@ class Camera {
 
 	int numCameras, numRows, numCols, angleX, angleY, cameraZ;
 
+	std::vector<cv::VideoCapture> cameras;
+
 	bool cacheEnabled;
 
 	int classifyGrid;
@@ -116,7 +118,7 @@ public:
 	//CV_8UC3 2x640x480: left, right image
 	const std::vector<cv::Mat> getData();
 
-	void open();
+	void open(std::vector<std::string> device);
 
 	void close();
 

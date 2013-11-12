@@ -39,6 +39,12 @@ TrobotQt::TrobotQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
 	ui.imuPortCombo->addItems(portList);
 	imuChart = new ImuChart(&ui, &robot, &debug);
 
+	ui.cameraPortCombo->addItems(portList);
+
+	ui.hokuyoPortCombo->addItems(portList);
+
+	ui.sensorsPortCombo->addItems(portList);
+
 	recording = new Recording(&ui, &robot, &debug);
 	cout << "TrobotQt::TrobotQt end" << endl;
 

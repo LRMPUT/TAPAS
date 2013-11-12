@@ -823,17 +823,31 @@ const cv::Mat Camera::getConstraints(int* timestamp){
 const std::vector<cv::Mat> Camera::getData(){
 	//empty matrix
 	vector<Mat> ret;
-	ret.push_back(Mat(numRows, numCols, CV_8UC3));
-	ret.push_back(Mat(numRows, numCols, CV_8UC3));
+	for(int i = 0; i < cameras.size(); i++){
+		cameras[i].grab();
+	}
+	for(int i = 0; i < cameras.size(); i++){
+		Mat tmp;
+		cameras[i].retrive(tmp);
+		ret.push_back(tmp);
+	}
 	return ret;
 }
 
-void Camera::open(){
-
+void Camera::open(std::vector<std::string> device){
+	cameras.resize(device.size());
+	for(int i = 0; i < device.size(); i++){
+		cameras[i].open(device[i]);
+		if(!cameras[i].isOpen){
+			throw "Cannot open camera device";
+		}
+	}
 }
 
 void Camera::close(){
-
+	for(int i = 0; i < cameras.size(); i++){
+		cameras[i].release();
+	}
 }
 
 bool Camera::isOpen(){
