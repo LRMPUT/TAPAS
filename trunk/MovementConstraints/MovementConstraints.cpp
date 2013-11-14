@@ -47,8 +47,8 @@ bool MovementConstraints::isHokuyoOpen(){
 }
 
 //Camera
-void MovementConstraints::openCamera(){
-	camera->open();
+void MovementConstraints::openCamera(std::vector<std::string> device){
+	camera->open(device);
 }
 
 void MovementConstraints::closeCamera(){

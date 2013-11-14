@@ -1,10 +1,14 @@
-#include "CameraWindow.h"
 #include <iostream>
+
+#include "trobotqt.h"
+#include "CameraWindow.h"
 
 using namespace std;
 
-CameraWindow::CameraWindow(TrobotQt* imainWindow, QWidget *parent, Qt::WFlags flags)
-	: QMainWindow(parent, flags), mainWindow(imainWindow)
+CameraWindow::CameraWindow(Robot* irobot, Debug* idebug, QWidget *parent, Qt::WFlags flags)
+	: robot(irobot),
+	  debug(idebug),
+	  QMainWindow(parent, flags)
 {
 	ui.setupUi(this);
 }
@@ -13,7 +17,7 @@ CameraWindow::~CameraWindow(){
 }
 
 void CameraWindow::keyPressEvent(QKeyEvent* event){
-	if(mainWindow->drive->isOpen() && event->isAutoRepeat() == false){
+	/*if(mainWindow->drive->isOpen() && event->isAutoRepeat() == false){
 		if(mainWindow->drive->getState() == Nothing){
 			switch(event->key()){
 				case Qt::Key_W :{
@@ -42,11 +46,11 @@ void CameraWindow::keyPressEvent(QKeyEvent* event){
 				}
 			}
 		}
-	}
+	}*/
 }
 
 void CameraWindow::keyReleaseEvent(QKeyEvent* event){
-	if(mainWindow->drive->isOpen() && event->isAutoRepeat() == false){
+	/*if(mainWindow->drive->isOpen() && event->isAutoRepeat() == false){
 		switch(event->key()){
 			case Qt::Key_W :{
 				if(mainWindow->drive->getState() == Forward){
@@ -81,7 +85,7 @@ void CameraWindow::keyReleaseEvent(QKeyEvent* event){
 				break;
 			}
 		}
-	}
+	}*/
 }
 
 void CameraWindow::setFrame(uchar* data, int width, int height){

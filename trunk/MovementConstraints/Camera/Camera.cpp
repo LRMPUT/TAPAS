@@ -828,7 +828,7 @@ const std::vector<cv::Mat> Camera::getData(){
 	}
 	for(int i = 0; i < cameras.size(); i++){
 		Mat tmp;
-		cameras[i].retrive(tmp);
+		cameras[i].retrieve(tmp);
 		ret.push_back(tmp);
 	}
 	return ret;
@@ -837,17 +837,20 @@ const std::vector<cv::Mat> Camera::getData(){
 void Camera::open(std::vector<std::string> device){
 	cameras.resize(device.size());
 	for(int i = 0; i < device.size(); i++){
-		cameras[i].open(device[i]);
-		if(!cameras[i].isOpen){
+		cout << "Opening device: " << device[i] << endl;
+		cameras[i].open(i);
+		if(!cameras[i].isOpened()){
 			throw "Cannot open camera device";
 		}
 	}
 }
 
 void Camera::close(){
+	cout << "Closing cameras" << endl;
 	for(int i = 0; i < cameras.size(); i++){
 		cameras[i].release();
 	}
+	cameras.clear();
 }
 
 bool Camera::isOpen(){

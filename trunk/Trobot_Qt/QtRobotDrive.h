@@ -51,7 +51,6 @@ public slots:
 	void steeringChanged(int val);
 	void openRobotDrive();
 	void closeRobotDrive();
-	void searchRobotDrive();
 };
 
 #endif //QT_ROBOT_DRIVE

@@ -13,6 +13,12 @@
 #include <QtCore/QTimer>
 //OpenCV
 #include <opencv2/opencv.hpp>
+//RobotsIntellect
+#include "../Robot/Robot.h"
+#include "../Debug/Debug.h"
+//Trobot Qt
+#include "ui_trobotqt.h"
+
 
 class QtHokuyo : public QObject
 {
@@ -22,13 +28,14 @@ class QtHokuyo : public QObject
 	Robot* robot;
 	Debug* debug;
 
+	QPixmap map;
 	QTimer refreshTimer;
 
 public:
 	QtHokuyo(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug);
 	virtual ~QtHokuyo();
 
-	cv::Mat getDistance();
+	cv::Mat getData();
 
 public slots:
 	void refresh();

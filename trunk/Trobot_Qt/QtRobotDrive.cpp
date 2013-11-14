@@ -32,7 +32,6 @@ QtRobotDrive::QtRobotDrive(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug)
 	QObject::connect(ui->robotDriveRightButton, SIGNAL(released()), this, SLOT(stop()));
 	QObject::connect(ui->robotDriveConnectButton, SIGNAL(clicked()), this, SLOT(openRobotDrive()));
 	QObject::connect(ui->robotDriveDisconnectButton, SIGNAL(clicked()), this, SLOT(closeRobotDrive()));
-	QObject::connect(ui->robotDriveSearchButton, SIGNAL(clicked()), this, SLOT(searchRobotDrive()));
 	QObject::connect(ui->robotDriveSteeringScrollBar, SIGNAL(valueChanged(int)), this, SLOT(steeringChanged(int)));
 	QObject::connect(ui->robotDriveThrottleScrollBar, SIGNAL(valueChanged(int)), this, SLOT(throttleChanged(int)));
 	QObject::connect(ui->robotDriveThrottleStopButton, SIGNAL(clicked()), this, SLOT(stop()));
@@ -184,9 +183,3 @@ void QtRobotDrive::closeRobotDrive(){
 	setButtonsEnabled(false);
 	robot->closeRobotsDrive();
 }
-
-
-void QtRobotDrive::searchRobotDrive(){
-
-}
-

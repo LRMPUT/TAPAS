@@ -75,7 +75,7 @@ public:
 	bool isHokuyoOpen();
 
 	//Camera
-	void openCamera();
+	void openCamera(std::vector<std::string> device);
 
 	void closeCamera();
 

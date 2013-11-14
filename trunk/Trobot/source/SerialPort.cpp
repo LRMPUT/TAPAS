@@ -239,6 +239,7 @@ namespace trobot {
 		filesystem::path dirPath("/dev");
 		names.push_back(string("ttyACM"));
 		names.push_back(string("ttyUSB"));
+		names.push_back(string("video"));
 		filesystem::directory_iterator endIt;
 		for(filesystem::directory_iterator dirIt(dirPath); dirIt != endIt; dirIt++){
 			for(int i = 0; i < names.size(); i++){

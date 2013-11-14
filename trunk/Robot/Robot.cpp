@@ -83,8 +83,8 @@ bool Robot::isHokuyoOpen(){
 }
 
 //Camera
-void Robot::openCamera(){
-	movementConstraints->openCamera();
+void Robot::openCamera(std::vector<std::string> device){
+	movementConstraints->openCamera(device);
 }
 
 void Robot::closeCamera(){
