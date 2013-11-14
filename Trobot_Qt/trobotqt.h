@@ -10,8 +10,6 @@
 #include <vector>
 #include <string>
 
-class TrobotQt;
-
 #include "ui_trobotqt.h"
 #include "../Robot/Robot.h"
 #include "../Debug/Debug.h"
@@ -20,6 +18,8 @@ class TrobotQt;
 #include "ImuChart.h"
 #include "Recording.h"
 #include "QtGps.h"
+#include "QtCamera.h"
+#include "QtHokuyo.h"
 
 class TrobotQt : public QMainWindow
 {
@@ -39,22 +39,20 @@ private:
 	Robot robot;
 	Debug debug;
 
-	cv::VideoCapture cap;
-	cv::Mat frame;
-	QTimer cameraTimer;
-	CameraWindow* remoteCamera;
-	
 	QtRobotDrive* drive;
 
 	ImuChart* imuChart;
 
 	QtGps* qtGps;
 
+	QtCamera* qtCamera;
+
+	QtHokuyo* qtHokuyo;
+
 	Recording* recording;
 private slots:
-	void captureFrame();
-	void openCameraWindow();
-	void cameraWindowClosed();
+
+
 };
 
 #endif // TROBOTQT_H

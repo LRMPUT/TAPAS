@@ -13,6 +13,11 @@
 #include <QtCore/QTimer>
 //OpenCV
 #include <opencv2/opencv.hpp>
+//Trobot Qt
+#include "CameraWindow.h"
+#include "../Robot/Robot.h"
+#include "../Debug/Debug.h"
+#include "ui_trobotqt.h"
 
 class QtCamera : public QObject
 {
@@ -22,18 +27,23 @@ class QtCamera : public QObject
 	Robot* robot;
 	Debug* debug;
 
+	CameraWindow* remoteCamera;
+
 	QTimer refreshTimer;
 
 public:
 	QtCamera(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug);
 	virtual ~QtCamera();
 
-	cv::Mat getFrame();
+	std::vector<cv::Mat> getFrame();
 
 public slots:
 	void refresh();
 	void connect();
 	void disconnect();
+
+	void openCameraWindow();
+	void cameraWindowClosed();
 };
 
 
