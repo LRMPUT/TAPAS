@@ -1,6 +1,7 @@
 <Robot>
 	<MovementConstraints>
-		<Camera number="2" rows="640" cols="480" angle_x="450" angle_y="450" camera_z="1">
+		<Camera number="1" rows="640" cols="480">
+		
 			<cache enabled="true" />
 			<svm type="C_SVC">
 				<kernelType value="POLY" />
@@ -14,25 +15,49 @@
 				<label text="grass" id="0"/>
 				<label text="pavement" id="1"/>
 			</labels>
+
 			<sensor id="left">
+				<position_global>
+					1 0 0 0
+					0	1	0	0
+					0	0	1	0
+					0	0	0	1
+				</position_global>
+				<position_laser>
+					1 0 0 0
+					0	1	0	0
+					0	0	1	0
+					0	0	0	1
+				</position_laser>
+				<camera_matrix>
+					646.345999973665580	0	312.531846659870780
+        	0	645.650527914581740	244.961100510703430
+        	0	0	1.0000
+				</camera_matrix>
+				<dist_coeffs>
+					-0.002321429512793 0.042019134230480 -0.000280334014614 0.001284356067402 0.000000000000000 
+				</dist_coeffs>
+			</sensor>
+				<!-- <sensor id="right">
 				<position>
 					1 0 0 0
 					0	1	0	0
 					0	0	1	0
 					0	0	0	1
 				</position>
-			</sensor>
-			<sensor id="right">
-				<position>
-					1 0 0 0
-					0	1	0	0
-					0	0	1	0
-					0	0	0	1
-				</position>
-			</sensor>
-			<ground_plane>
+				<position_laser>
+
+				</position_laser>
+				<camera_matrix>
+
+				</camera_matrix>
+				<dist_fact>
+
+				</dist_fact>
+			</sensor> -->
+			<ground_plane_global>
 				0	0	1 -30
-			</ground_plane>
+			</ground_plane_global>
 		</Camera>
 	</MovementConstraints>
 </Robot>

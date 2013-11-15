@@ -160,8 +160,8 @@ cv::Point3f Camera::computePointProjection(cv::Point2f imPoint, int cameraInd){
 	point.at<float>(1) = imPoint.y * cameraZ * tan(angleY/2);
 	point.at<float>(2) = -cameraZ;
 
-	Mat rot(cameraOrig[cameraInd], Rect(Point(0, 0), Point(3, 3)));
-	Mat trans(cameraOrig[cameraInd], Rect(Point(3, 0), Point(4, 3)));
+	Mat rot(cameraOrigGlobal[cameraInd], Rect(Point(0, 0), Point(3, 3)));
+	Mat trans(cameraOrigGlobal[cameraInd], Rect(Point(3, 0), Point(4, 3)));
 	point = rot * point;
 	Mat planeABC(groundPlane, Rect(Point(0, 0), Point(1, 3)));
 	Mat planeD(groundPlane, Rect(Point(0, 3), Point(1, 4)));
@@ -606,15 +606,6 @@ void Camera::readSettings(TiXmlElement* settings){
 	if(settings->QueryIntAttribute("cols", &numCols) != TIXML_SUCCESS){
 		throw "Bad settings file - wrong number of cols";
 	}
-	if(settings->QueryIntAttribute("angle_x", &angleX) != TIXML_SUCCESS){
-		throw "Bad settings file - wrong angle x";
-	}
-	if(settings->QueryIntAttribute("angle_y", &angleY) != TIXML_SUCCESS){
-		throw "Bad settings file - wrong angle y";
-	}
-	if(settings->QueryIntAttribute("camera_z", &cameraZ) != TIXML_SUCCESS){
-		throw "Bad settings file - wrong camera z";
-	}
 
 	cacheEnabled = true;
 	TiXmlElement* pPtr = settings->FirstChildElement("cache");
@@ -719,6 +710,10 @@ void Camera::readSettings(TiXmlElement* settings){
 	}
 
 	pPtr = settings->FirstChildElement("sensor");
+	cameraOrigGlobal.resize(numCameras);
+	cameraOrigLaser.resize(numCameras);
+	cameraMatrix.resize(numCameras);
+	distCoeffs.resize(numCameras);
 	for(int i = 0; i < numCameras; i++){
 		if(!pPtr){
 			throw "Bad settings file - no sensor settings";
@@ -734,39 +729,39 @@ void Camera::readSettings(TiXmlElement* settings){
 		else{
 			throw "Bad settings file - wrong camera id";
 		}
-		TiXmlElement* posPtr = pPtr->FirstChildElement("position");
-		if(!posPtr){
-			throw "Bad settings file - no position of sensor";
-		}
-		stringstream tmpStr(posPtr->Value());
-		cameraOrig[idx] = Mat(4, 4, CV_32FC1);
-		for(int row = 0; row < 4; row++){
-			for(int col = 0; col < 4; col++){
-				float tmpVal;
-				tmpStr >> tmpVal;
-				cameraOrig[idx].at<float>(row, col) = tmpVal;
-			}
-		}
+
+		cameraOrigGlobal[idx] = readMatrixSettings(pPtr, "position_global", 4, 4);
+		cameraOrigLaser[idx] = readMatrixSettings(pPtr, "position_laser", 4, 4);
+		cameraMatrix[idx] = readMatrixSettings(pPtr, "camera_matrix", 3, 3);
+		distCoeffs[idx] = readMatrixSettings(pPtr, "dist_coeffs", 1, 5);
+
 		pPtr = pPtr->NextSiblingElement("sensor");
 	}
 
-	groundPlane = Mat(4, 1, CV_32FC1);
-	pPtr = settings->FirstChildElement("ground_plane");
-	if(!pPtr){
-		throw "Bad settings file - no ground plane equation";
-	}
-	stringstream tmpStr(pPtr->Value());
-	for(int i = 0; i < 4; i++){
-		float tmpVal;
-		tmpStr >> tmpVal;
-		groundPlane.at<float>(i) = tmpVal;
-	}
+	groundPlane = readMatrixSettings(settings, "ground_plane_global", 4, 1);
 
 	svmParams = CvSVMParams();	//default values
 	svmParams.kernel_type = kernelType;
 	svmParams.svm_type = svmType;
 	svmParams.degree = degree;
 	svmParams.gamma = gamma;
+}
+
+cv::Mat Camera::readMatrixSettings(TiXmlElement* parent, const char* node, int rows, int cols){
+	TiXmlElement* ptr = parent->FirstChildElement(node);
+	if(!ptr){
+		throw (string("Bad settings file - no ") + string(node)).c_str();
+	}
+	stringstream tmpStr(ptr->Value());
+	Mat ret = Mat(rows, cols, CV_32FC1);
+	for(int row = 0; row < rows; row++){
+		for(int col = 0; col < cols; col++){
+			float tmpVal;
+			tmpStr >> tmpVal;
+			ret.at<float>(row, col) = tmpVal;
+		}
+	}
+	return ret;
 }
 
 void Camera::readCache(boost::filesystem::path cacheFile){
