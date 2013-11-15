@@ -5,8 +5,7 @@
  *      Author: smi
  */
 
-#include <urg_c/urg_sensor.h>
-#include <urg_c/urg_utils.h>
+#include <urg_cpp/Urg_driver.h>
 #include <opencv2/opencv.hpp>
 #include "Hokuyo.h"
 
@@ -22,29 +21,35 @@ Hokuyo::~Hokuyo() {
 }
 
 void Hokuyo::openPort(std::string port){
-	urg_open(&hokuyo, URG_SERIAL, port.c_str(), 115200);
-	urg_start_measurement(&hokuyo, URG_DISTANCE, URG_SCAN_INFINITY, 0);
+	hokuyo.open(port.c_str(), qrk::Urg_driver::Default_baudrate, qrk::Urg_driver::Serial);
+
+	//cout << hokuyo.deg2index(-135) << " " << hokuyo.deg2index(135) << endl;
+	cout << hokuyo.set_scanning_parameter(hokuyo.deg2index(-135), hokuyo.deg2index(135)) << endl;
 }
 
 void Hokuyo::closePort(){
-	urg_stop_measurement(&hokuyo);
-	urg_close(&hokuyo);
+	cout << "Closing hokuyo" << endl;
+	//hokuyo.close();
 }
 
 bool Hokuyo::isOpen(){
-	return hokuyo.is_active;
+	return hokuyo.is_open();
 }
 
 //CV_32SC1 2xHOKUYO_SCANS: x, y points from left to right
 const cv::Mat Hokuyo:: getData(){
-	long data[HOKUYO_SCANS];
-	long time;
+	vector<long int> length;
+	vector<unsigned short> intensity;
 	Mat ret(2, HOKUYO_SCANS, CV_32SC1);
-	urg_get_distance(&hokuyo, data, &time);
-	for(int i = 0; i < HOKUYO_SCANS; i++){
-		double angle = urg_index2rad(&hokuyo, i);
-		ret.at<int>(0, i) = data[i]*cos(angle);
-		ret.at<int>(1, i) = data[i]*sin(angle);
+
+	hokuyo.start_measurement(qrk::Urg_driver::Distance, 1, 0);
+	hokuyo.get_distance(length);
+	for(int i = 0; i < length.size(); i++){
+		double angle = hokuyo.index2rad(i);
+		//cout << "Point " << i << " = " << length[i] << endl;
+		//cout << "Point " << i << " = (" << data[i]*cos(angle) << ", " << data[i]*sin(angle) << ")" << endl;
+		ret.at<int>(0, i) = length[i]*cos(angle);
+		ret.at<int>(1, i) = length[i]*sin(angle);
 	}
 	return ret;
 }

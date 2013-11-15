@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 project(RobotsIntellect)
 
 set(urg_LIBRARIES_DIR /usr/local/lib)
-set(urg_LIBRARIES urg_c)
+set(urg_LIBRARIES urg_cpp)
 set(LibSVM_LIBRARIES svm)
 set(TinyXML_LIBRARIES tinyxml)
 
@@ -71,6 +71,7 @@ set(trobotQt_SOURCES
 	Trobot_Qt/QtGps.cpp
 	Trobot_Qt/QtCamera.cpp
 	Trobot_Qt/QtHokuyo.cpp
+	Trobot_Qt/Calibration.cpp
 	Trobot_Qt/trobotqt.cpp)
 set(trobotQt_HEADERS
 	Trobot_Qt/CameraWindow.h
@@ -81,6 +82,7 @@ set(trobotQt_HEADERS
 	Trobot_Qt/QtGps.h
 	Trobot_Qt/QtCamera.h
 	Trobot_Qt/QtHokuyo.h
+	Trobot_Qt/Calibration.h
 	Trobot_Qt/trobotqt.h)
 set(trobotQt_FORMS
 	Trobot_Qt/CameraWindow.ui
