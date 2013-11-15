@@ -838,7 +838,7 @@ void Camera::open(std::vector<std::string> device){
 	cameras.resize(device.size());
 	for(int i = 0; i < device.size(); i++){
 		cout << "Opening device: " << device[i] << endl;
-		cameras[i].open(i);
+		cameras[i].open(0);
 		if(!cameras[i].isOpened()){
 			throw "Cannot open camera device";
 		}

@@ -35,6 +35,8 @@ TrobotQt::TrobotQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
 	ui.hokuyoPortCombo->addItems(portList);
 	qtHokuyo = new QtHokuyo(&ui, &robot, &debug);
 
+	calib = new Calibration(&ui, &debug);
+
 	ui.sensorsPortCombo->addItems(portList);
 
 	recording = new Recording(&ui, &robot, &debug);

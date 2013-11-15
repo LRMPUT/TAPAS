@@ -36,11 +36,11 @@ bool Hokuyo::isOpen(){
 	return hokuyo.is_open();
 }
 
-//CV_32SC1 2xHOKUYO_SCANS: x, y points from left to right
+//CV_32SC1 3xHOKUYO_SCANS: x, y points from left to right
 const cv::Mat Hokuyo:: getData(){
 	vector<long int> length;
 	vector<unsigned short> intensity;
-	Mat ret(2, HOKUYO_SCANS, CV_32SC1);
+	Mat ret(3, HOKUYO_SCANS, CV_32SC1);
 
 	hokuyo.start_measurement(qrk::Urg_driver::Distance, 1, 0);
 	hokuyo.get_distance(length);
@@ -50,6 +50,7 @@ const cv::Mat Hokuyo:: getData(){
 		//cout << "Point " << i << " = (" << data[i]*cos(angle) << ", " << data[i]*sin(angle) << ")" << endl;
 		ret.at<int>(0, i) = length[i]*cos(angle);
 		ret.at<int>(1, i) = length[i]*sin(angle);
+		ret.at<int>(2, i) = length[i];
 	}
 	return ret;
 }

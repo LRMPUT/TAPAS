@@ -20,6 +20,7 @@
 #include "QtGps.h"
 #include "QtCamera.h"
 #include "QtHokuyo.h"
+#include "Calibration.h"
 
 class TrobotQt : public QMainWindow
 {
@@ -48,6 +49,8 @@ private:
 	QtCamera* qtCamera;
 
 	QtHokuyo* qtHokuyo;
+
+	Calibration* calib;
 
 	Recording* recording;
 private slots:

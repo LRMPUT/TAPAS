@@ -38,20 +38,22 @@ std::vector<cv::Mat> QtCamera::getFrame(){
 
 void QtCamera::refresh(){
 	vector<Mat> frames = getFrame();
+	Mat frameDisp;
 
+	cvtColor(frames[0], frameDisp, CV_BGR2RGB);
 
 	if(ui->cameraLabel->isVisible() == true){
 		Mat tmp;
-		cv::resize(frames[0], tmp, cv::Size(ui->cameraLabel->width(), ui->cameraLabel->height()));
+		cv::resize(frameDisp, tmp, cv::Size(ui->cameraLabel->width(), ui->cameraLabel->height()));
 		ui->cameraLabel->setPixmap(QPixmap::fromImage(QImage(tmp.ptr(), tmp.cols, tmp.rows, QImage::Format_RGB888)));
 		ui->cameraLabel->update();
 	}
 	if(remoteCamera->isVisible() == true){
-		remoteCamera->setFrame(frames[0].ptr(), CAMERA_WIDTH, CAMERA_HEIGHT);
+		remoteCamera->setFrame(frameDisp.ptr(), CAMERA_WIDTH, CAMERA_HEIGHT);
 	}
 	if(ui->calibCameraLabel->isVisible() == true){
 		Mat tmp;
-		cv::resize(frames[0], tmp, cv::Size(ui->calibCameraLabel->width(), ui->calibCameraLabel->height()));
+		cv::resize(frameDisp, tmp, cv::Size(ui->calibCameraLabel->width(), ui->calibCameraLabel->height()));
 		ui->calibCameraLabel->setPixmap(QPixmap::fromImage(QImage(tmp.ptr(), tmp.cols, tmp.rows, QImage::Format_RGB888)));
 		ui->calibCameraLabel->update();
 	}
