@@ -27,7 +27,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>7</number>
+     <number>8</number>
     </property>
     <widget class="QWidget" name="cameraTab">
      <attribute name="title">
@@ -1751,6 +1751,32 @@
         </widget>
        </item>
       </layout>
+     </widget>
+     <widget class="QLabel" name="label_29">
+      <property name="geometry">
+       <rect>
+        <x>230</x>
+        <y>340</y>
+        <width>101</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Current index</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="calibIndexLabel">
+      <property name="geometry">
+       <rect>
+        <x>230</x>
+        <y>360</y>
+        <width>66</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>0</string>
+      </property>
      </widget>
     </widget>
    </widget>

@@ -57,7 +57,8 @@ void QtHokuyo::refresh(){
 
 	QVector<QPointF> lines;
 	for(int i = 0; i < data.cols; i++){
-		lines.append(QPointF(data.at<int>(0, i)*scale, data.at<int>(1, i)*scale));
+		//cout << "Point " << i << " = (" << data.at<int>(0, i) << ", " << data.at<int>(1, i) << ")" << endl;
+		lines.append(QPointF(origX + data.at<int>(1, i)*scale, origY + data.at<int>(0, i)*scale));
 	}
 	painter.drawPolyline(lines);
 

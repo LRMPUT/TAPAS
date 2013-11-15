@@ -11,16 +11,16 @@ class Hokuyo;
 
 #include <string>
 #include <opencv2/opencv.hpp>
-#include <urg_c/urg_sensor.h>
+#include <urg_cpp/Urg_driver.h>
 
-#define HOKUYO_SCANS 1440
+#define HOKUYO_SCANS 1081
 
 class Debug;
 
 class Hokuyo {
 	friend class Debug;
 
-	urg_t hokuyo;
+	qrk::Urg_driver hokuyo;
 public:
 	Hokuyo();
 	virtual ~Hokuyo();
