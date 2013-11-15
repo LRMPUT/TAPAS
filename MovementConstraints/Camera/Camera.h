@@ -35,7 +35,7 @@ class Camera {
 	//Parent MovementConstraints class
 	MovementConstraints* movementConstraints;
 
-	int numCameras, numRows, numCols, angleX, angleY, cameraZ;
+	int numCameras, numRows, numCols, cameraZ, angleX, angleY;
 
 	std::vector<cv::VideoCapture> cameras;
 
@@ -48,8 +48,17 @@ class Camera {
 	//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)
 	cv::Mat constraints;
 
-	//CV_32FC1 4x4: camera origin position and orientation
-	cv::Mat cameraOrig[2];
+	//CV_32FC1 4x4: camera origin position and orientation w.r.t. global coordinate system
+	std::vector<cv::Mat> cameraOrigGlobal;
+
+	//CV_32FC1 4x4: camera origin position and orientation w.r.t. laser coordinate system
+	std::vector<cv::Mat> cameraOrigLaser;
+
+	//CV_32FC1 3x3: camera matrix
+	std::vector<cv::Mat> cameraMatrix;
+
+	//CV_32FC1 1x5: distortion coefficients
+	std::vector<cv::Mat> distCoeffs;
 
 	//CV_32FC1 4x1: ground plane equation [A, B, C, D]'
 	cv::Mat groundPlane;
@@ -102,6 +111,8 @@ class Camera {
 	void cameraThread();
 
 	void readSettings(TiXmlElement* settings);
+
+	cv::Mat readMatrixSettings(TiXmlElement* parent, const char* node, int rows, int cols);
 
 	void readCache(boost::filesystem::path cacheFile);
 
