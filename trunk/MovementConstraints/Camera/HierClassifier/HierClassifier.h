@@ -8,6 +8,21 @@
 #ifndef HIERCLASSIFIER_H_
 #define HIERCLASSIFIER_H_
 
+struct Entry{
+	cv::Mat descriptor;
+	int label;
+	Entry() : label(-1) {}
+	Entry(int ilabel, cv::Mat idescriptor) : label(ilabel){
+		idescriptor.copyTo(descriptor);
+	}
+
+};
+
+struct Child{
+	std::vector<int> childs;
+	cv::Mat decisionMatrix;
+};
+
 //STL
 #include <vector>
 #include <fstream>
@@ -17,37 +32,36 @@
 #include <tinyxml.h>
 //Boost
 #include <boost/filesystem.hpp>
+//Hierarchical Classifier
+#include "Classifier.h"
 
-struct Entity{
-	cv::Mat descriptor;
-	int label;
-	std::vector<cv::Point2f> region;
-	Entity() : label(-1) {}
-	Entity(int ilabel, cv::Mat idescriptor) : label(ilabel){
-		idescriptor.copyTo(descriptor);
-	}
-
-};
-
-class Region{
+/*class Region{
 	int label;
 	std::vector<cv::Point2f> polygon;
 	Region() : label(-1) {}
 	Region(int ilabel, std::vector<cv::Point2f> ipolygon) : label(ilabel), polygon(ipolygon) {}
-};
+};*/
 
 class HierClassifier {
+	friend class Debug;
 
+	cv::Mat cameraMatrix;
+
+	std::vector<Classifier*> classifiers;
+	std::vector<std::vector<int> > childs;
+
+	cv::Mat projectPointsTo3D(cv::Mat disparity);
+	cv::Mat projectPointsTo2D(cv::Mat _3dImage);
 public:
 
 //---------------MISCELLANEOUS----------------
 
-	HierClassifier();
+	HierClassifier(cv::Mat icameraMatrix);
 
 	/** \brief Loads settings from XML structure.
 
 	*/
-	HierClassifier(TiXmlElement* settings);	
+	HierClassifier(cv::Mat icameraMatrix, TiXmlElement* settings);
 
 	~HierClassifier();
 
@@ -62,21 +76,25 @@ public:
 
 //---------------COMPUTING----------------
 
-	void train(std::vector<Entity> data);
+	void train(std::vector<Entry> data);
 
 	/**	\brief 
 		@return Matrix of probabilites of belonging to certain class.
 	*/
-	std::vector<cv::Mat> classify(cv::Mat image, cv::Mat terrain);
+	std::vector<cv::Mat> classify(cv::Mat image,
+								  cv::Mat terrain);
 	
 	/** \brief Extracts entities from labeled data.
 
 	*/
-	std::vector<Entity> extractEntities(cv::Mat image,
+	std::vector<Entry> extractEntities(cv::Mat image,
 										cv::Mat terrain,
-										std::vector<Region> regionsOnImage);
+										cv::Mat regionsOnImage);
 
-	std::vector<Region> segmentImage(cv::Mat image);
+	/** \brief Segments image basing on colorspace distance
+	 * 	@return Matrix with labeled regions - each region has uniqe id
+	 */
+	cv::Mat segmentImage(cv::Mat image);
 
 
 };

@@ -8,6 +8,8 @@
 #ifndef CLASSIFIER_H_
 #define CLASSIFIER_H_
 
+class Classifier;
+
 //STL
 #include <vector>
 //OpenCV
@@ -44,9 +46,9 @@ public:
 	virtual void loadCache(boost::filesystem::path file) = 0;
 
 //---------------COMPUTING----------------
-	virtual void train(std::vector<Entity> label) = 0;
+	virtual void train(std::vector<Entry> label) = 0;
 
-	virtual cv::Mat classify(cv::Mat features) = 0;
+	virtual cv::Mat classify(cv::Mat features, cv::Mat prevOutput) = 0;
 };
 
 

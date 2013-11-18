@@ -14,7 +14,6 @@
 #include <algorithm>
 //RobotsIntellect
 #include "Camera.h"
-#include "UnionFind.h"
 
 using namespace boost;
 using namespace std;
@@ -38,38 +37,21 @@ using namespace cv;
 using namespace gpu;
 using namespace std;
 
-Scalar colors[] = {
-		Scalar(0xFF, 0x00, 0x00), //Red
-		Scalar(0xFF, 0xFF, 0xFF),	//White
-		Scalar(0x00, 0xFF, 0xFF), //Cyan
-		Scalar(0xC0, 0xC0, 0xC0), //Silver
-		Scalar(0x00, 0x00, 0xFF), //Blue
-		Scalar(0x80, 0x80, 0x80), //Gray
-		Scalar(0x00, 0x00, 0xA0), //DarkBlue
-		Scalar(0x00, 0x00, 0x00), //Black
-		Scalar(0xAD, 0xD8, 0xE6), //LightBlue
-		Scalar(0xFF, 0xA5, 0x00), //Orange
-		Scalar(0x80, 0x00, 0x80), //Purple
-		Scalar(0xA5, 0x2A, 0x2A), //Brown
-		Scalar(0xFF, 0xFF, 0x00), //Yellow
-		Scalar(0x80, 0x00, 0x00), //Maroon
-		Scalar(0x00, 0xFF, 0x00), //Lime
-		Scalar(0x00, 0x80, 0x00), //Green
-		Scalar(0xFF, 0x00, 0xFF), //Magenta
-		Scalar(0x80, 0x80, 0x00) //Olive
-};
-
 
 Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings) :
-		movementConstraints(imovementConstraints),
-		cameraGrid(40)
+		movementConstraints(imovementConstraints)
 {
 	if(!settings){
 		throw "Bad settings file - entry Camera not found";
 	}
 	readSettings(settings);
 
-	groundPolygons.resize(numCameras);
+	hierClassifiers.resize(cameras.size());
+	for(int i = 0; i < hierClassifiers.size(); i++){
+		hierClassifiers[i] = new HierClassifier(cameraMatrix[i]);
+	}
+
+	/*groundPolygons.resize(numCameras);
 	for(int cam = 0; cam < numCameras; cam++){
 		groundPolygons[cam].resize(numRows/cameraGrid);
 		for(int row = 0; row < numRows/cameraGrid; row++){
@@ -79,7 +61,7 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 			}
 		}
 	}
-	computeGroundPolygons();
+	computeGroundPolygons();*/
 
 #ifndef NO_CUDA
 	cout << "Available CUDA devices: " << getCudaEnabledDeviceCount() << endl;
@@ -91,20 +73,23 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 }
 
 Camera::~Camera(){
-	for(int cam = 0; cam < numCameras; cam++){
+	for(int i = 0; i < hierClassifiers.size(); i++){
+		delete hierClassifiers[i];
+	}
+	/*for(int cam = 0; cam < numCameras; cam++){
 		for(int row = 0; row < numRows/cameraGrid; row++){
 			for(int col = 0; col < numCols/cameraGrid; col++){
 				delete[] groundPolygons[cam][row][col];
 			}
 		}
-	}
+	}*/
 }
 
 void Camera::computeConstraints(std::vector<cv::Mat> image){
 
 }
 
-void Camera::computeGroundPolygons(){
+/*void Camera::computeGroundPolygons(){
 	int rows = numRows/cameraGrid;
 	int cols = numCols/cameraGrid;
 	for(int im = 0; im < numCameras; im++){
@@ -224,7 +209,7 @@ cv::Mat Camera::selectPolygonPixels(std::vector<cv::Point2i> polygon, const cv::
 		}
 	}
 	return ret;
-}
+}*/
 
 void Camera::learnFromDir(boost::filesystem::path dir){
 	filesystem::directory_iterator endIt;
@@ -276,7 +261,7 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 					}
 				}
 
-				//divide samples into smaller packs
+				/*//divide samples into smaller packs
 				Mat samples = selectPolygonPixels(poly, image);
 				for(int i = 0; i < samples.cols/SAMPLE_PACK; i++){
 					addToLearnDatabase(samples.colRange(i*SAMPLE_PACK, (i + 1)*SAMPLE_PACK - 1), label);
@@ -285,16 +270,15 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 				int rem = samples.cols % SAMPLE_PACK;
 				if(rem >= SAMPLE_PACK/4){
 					addToLearnDatabase(samples.colRange(samples.cols - rem, samples.cols - 1), label);
-				}
+				}*/
 
 				pObject = pObject->NextSiblingElement("object");
 			}
 		}
 	}
-	learn();
 }
 
-cv::Mat Camera::classifySlidingWindow(cv::Mat image){
+/*cv::Mat Camera::classifySlidingWindow(cv::Mat image){
 	//wxDateTime StartTime = wxDateTime::UNow();
 
 	const int rows = image.rows;
@@ -431,172 +415,18 @@ void Camera::GenerateColorHistHSVGpu(
 	HistS.copyTo(partS);
 
 	result.convertTo(result, CV_32F);
-}
+}*/
 
 //Run as separate thread
 void Camera::cameraThread(){
 
 }
 
-struct Edge{
-	int i, j;
-	float weight;
-	Edge() {}
-	Edge(int ii, int ij, float iweight) : i(ii), j(ij), weight(iweight) {}
-};
 
-bool operator<(const Edge& left, const Edge& right){
-	return left.weight < right.weight;
-}
-
-
-cv::Mat Camera::segment(cv::Mat image){
-	Mat imageR(image.rows, image.cols, CV_32FC1);
-	Mat imageG(image.rows, image.cols, CV_32FC1);
-	Mat imageB(image.rows, image.cols, CV_32FC1);
-	Mat imageChannels[] = {imageR, imageG, imageB};
-	Mat imageFloat(image.rows, image.cols, CV_32FC3);
-	float k = 200;
-	int minSize = 20;
-	int nchannels = 3;
-	int nrows = image.rows;
-	int ncols = image.cols;
-	int nhood[][2] = {{-1, 1},
-					{1, 0},
-					{1, 1},
-					{0, 1}};
-	/*int nhood[][2] = {{1, 0},
-					{0, 1}};*/
-	//cout << "Size of nhood " << sizeof(nhood)/sizeof(nhood[0]) << endl;
-
-	image.convertTo(imageFloat, CV_32F);
-	GaussianBlur(imageFloat, imageFloat, Size(7, 7), 0.8);
-	split(imageFloat, imageChannels);
-
-	imshow("original", imageFloat/255);
-
-	vector<Mat> segments;
-
-	{
-		//cout << "Channel " << ch << endl;
-		segments.push_back(Mat(nrows, ncols, CV_32SC1));
-		vector<Edge> edges;
-		for(int r = 0; r < nrows; r++){
-			for(int c = 0; c < ncols; c++){
-				for(int nh = 0; nh < sizeof(nhood)/sizeof(nhood[0]); nh++){
-					if((r + nhood[nh][0] < nrows) && (r + nhood[nh][0] >= 0) &&
-							(c + nhood[nh][1] < ncols) && (c + nhood[nh][1] >= 0))
-					{
-						float diffAll = 0;
-						for(int ch = 0; ch < nchannels; ch++){
-							float diff = abs(imageChannels[ch].at<float>(r, c) - imageChannels[ch].at<float>(r + nhood[nh][0], c + nhood[nh][1]));
-							diffAll += diff*diff;
-						}
-						diffAll = sqrt(diffAll);
-						edges.push_back(Edge(c + ncols*r, c + nhood[nh][1] + ncols*(r + nhood[nh][0]), diffAll));
-						//if(edges.back().i == 567768 || edges.back().j == 567768){
-						//	cout << "diff = abs(" << (int)imageChannels[ch].at<unsigned char>(r, c) << " - " << (int)imageChannels[ch].at<unsigned char>(r + nhood[nh][0], c + nhood[nh][1]) << ") = " << diff << endl;
-						//}
-					}
-				}
-			}
-		}
-		stable_sort(edges.begin(), edges.end()); //possible improvement by bin sorting
-		cout << "Largest differece = " << edges[edges.size() - 1].weight <<
-				", between (" << edges[edges.size() - 1].i << ", " << edges[edges.size() - 1].j <<
-				")" << endl;
-		UnionFind sets(nrows * ncols);
-		vector<float> intDiff;
-		intDiff.assign(nrows * ncols, 0);
-		for(vector<Edge>::iterator it = edges.begin(); it != edges.end(); it++){
-			int iRoot = sets.findSet(it->i);
-			int jRoot = sets.findSet(it->j);
-			//cout << "i = " << it->i << ", j = " << it->j << ", weight = " << it->weight << endl;
-			if(iRoot != jRoot){
-				//cout << "intDiff[iRoot] + (float)k/sizes[iRoot] = " << intDiff[iRoot] << " + " << (float)k/sizes[iRoot] << " = " << intDiff[iRoot] + (float)k/sizes[iRoot] << endl;
-				//cout << "intDiff[jRoot] + (float)k/sizes[jRoot] = " << intDiff[jRoot] << " + " << (float)k/sizes[jRoot] << " = " << intDiff[jRoot] + (float)k/sizes[jRoot] << endl;
-				if(min(intDiff[iRoot] + (float)k/sets.size(iRoot), intDiff[jRoot] + (float)k/sets.size(jRoot))
-						>=
-						it->weight)
-				{
-					//cout << "union " << min(intDiff[iRoot] + (float)k/sizes[iRoot], intDiff[jRoot] + (float)k/sizes[jRoot]) << " >= " << it->weight << endl;
-					int newRoot = sets.unionSets(iRoot, jRoot);
-					intDiff[newRoot] = it->weight;
-				}
-			}
-		}
-		for(vector<Edge>::iterator it = edges.begin(); it != edges.end(); it++){
-			int iRoot = sets.findSet(it->i);
-			int jRoot = sets.findSet(it->j);
-			if((iRoot != jRoot) && ((sets.size(iRoot) < minSize) || (sets.size(jRoot) < minSize))){
-				sets.unionSets(iRoot, jRoot);
-			}
-		}
-		set<int> numElements;
-		for(int r = 0; r < nrows; r++){
-			for(int c = 0; c < ncols; c++){
-				segments.back().at<int>(r, c) = sets.findSet(c + ncols*r);
-				numElements.insert(sets.findSet(c + ncols*r));
-			}
-		}
-		cout << "number of elements = " << numElements.size() << endl;
-	}
-
-	Mat finSegments(nrows, ncols, CV_32SC1);
-	UnionFind sets(nrows * ncols);
-	vector<Edge> edges;
-	for(int r = 0; r < nrows; r++){
-		for(int c = 0; c < ncols; c++){
-			for(int nh = 0; nh < sizeof(nhood)/sizeof(nhood[0]); nh++){
-				if((r + nhood[nh][0] < nrows) && (r + nhood[nh][0] >= 0) &&
-						(c + nhood[nh][1] < ncols) && (c + nhood[nh][1] >= 0))
-				{
-					edges.push_back(Edge(c + ncols*r, c + nhood[nh][1] + ncols*(r + nhood[nh][0]), 0));
-				}
-			}
-		}
-	}
-	for(vector<Edge>::iterator it = edges.begin(); it != edges.end(); it++){
-		bool areOneSegment = true;
-		for(int ch = 0; ch < segments.size(); ch++){
-			if(segments[ch].at<int>(it->i / ncols, it->i % ncols) != segments[ch].at<int>(it->j / ncols, it->j % ncols)){
-				areOneSegment = false;
-				break;
-			}
-		}
-		if(areOneSegment){
-			sets.unionSets(it->i, it->j);
-		}
-	}
-	for(int r = 0; r < nrows; r++){
-		for(int c = 0; c < ncols; c++){
-			finSegments.at<int>(r, c) = sets.findSet(c + ncols*r);
-		}
-	}
-
-	map<int, int> colorMap;
-	int ind = 0;
-	for(int r = 0; r < nrows; r++){
-		for(int c = 0; c < ncols; c++){
-			finSegments.at<int>(r, c) = sets.findSet(c + ncols*r);
-			if(colorMap.count(finSegments.at<int>(r, c)) == 0){
-				colorMap.insert(pair<int, int>(finSegments.at<int>(r, c), (ind++) % (sizeof(colors)/sizeof(colors[0]))));
-			}
-		}
-	}
-	cout << "Found " << colorMap.size() << " segments" << endl;
-	Mat segImage(nrows, ncols, CV_8UC3);
-	for(map<int, int>::iterator it = colorMap.begin(); it != colorMap.end(); it++){
-		Mat mask = (finSegments == it->first);
-
-		segImage.setTo(colors[it->second], mask);
-	}
-	imshow("segmented", segImage);
-
-	return finSegments;
-}
 
 void Camera::readSettings(TiXmlElement* settings){
+	string tmp;
+
 	if(settings->QueryIntAttribute("number", &numCameras) != TIXML_SUCCESS){
 		throw "Bad settings file - wrong number of cameras";
 	}
@@ -614,13 +444,12 @@ void Camera::readSettings(TiXmlElement* settings){
 	}
 	pPtr->QueryBoolAttribute("enabled", &cacheEnabled);
 
-	pPtr = settings->FirstChildElement("svm");
+	/*pPtr = settings->FirstChildElement("svm");
 	if(!pPtr){
 		throw "Bad settings file - no svm settings";
 	}
 
 	int svmType;
-	string tmp;
 	pPtr->QueryStringAttribute("type", &tmp);
 	if(tmp == "C_SVC"){
 		svmType = CvSVM::C_SVC;
@@ -683,7 +512,7 @@ void Camera::readSettings(TiXmlElement* settings){
 	if(!pPtr){
 		throw "Bad settings file - no classification settings";
 	}
-	pPtr->QueryIntAttribute("grid", &classifyGrid);
+	pPtr->QueryIntAttribute("grid", &classifyGrid);*/
 
 	pPtr = settings->FirstChildElement("learning");
 	if(!pPtr){
@@ -740,11 +569,11 @@ void Camera::readSettings(TiXmlElement* settings){
 
 	groundPlane = readMatrixSettings(settings, "ground_plane_global", 4, 1);
 
-	svmParams = CvSVMParams();	//default values
+	/*svmParams = CvSVMParams();	//default values
 	svmParams.kernel_type = kernelType;
 	svmParams.svm_type = svmType;
 	svmParams.degree = degree;
-	svmParams.gamma = gamma;
+	svmParams.gamma = gamma;*/
 }
 
 cv::Mat Camera::readMatrixSettings(TiXmlElement* parent, const char* node, int rows, int cols){
@@ -777,10 +606,12 @@ void Camera::readCache(boost::filesystem::path cacheFile){
 	TiXmlElement* pEntry = pDatabase->FirstChildElement("entry");
 	while(pEntry){
 		Entry entry;
-		entry.descriptor = Mat(bins, 1, CV_32FC1);
+		int descLength;
+		pEntry->QueryIntAttribute("desc_length", &descLength);
+		entry.descriptor = Mat(descLength, 1, CV_32FC1);
 		pEntry->QueryIntAttribute("label", &entry.label);
 		stringstream tmpStr(pEntry->GetText());
-		for(int i = 0; i < bins; i++){
+		for(int i = 0; i < descLength; i++){
 			float tmp;
 			tmpStr >> tmp;
 			entry.descriptor.at<float>(i) = tmp;
@@ -801,7 +632,7 @@ void Camera::saveCache(boost::filesystem::path cacheFile){
 		pDatabase->LinkEndChild(pEntry);
 		pEntry->SetAttribute("label", entries[entr].label);
 		stringstream tmpStr;
-		for(int i = 0; i < bins; i++){
+		for(int i = 0; i < entries[entr].descriptor.cols; i++){
 			tmpStr << entries[entr].descriptor.at<float>(i) << " ";
 		}
 		pEntry->SetValue(tmpStr.str());

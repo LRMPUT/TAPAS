@@ -29,7 +29,7 @@ class ClassifierSVM : public Classifier {
 	svm_parameter svmMainParams;
 	svm_node** labData;
 	std::vector<double*> dataLabels;
-	std::vector<int> numEntitiesLabeled;
+	std::vector<int> numEntriesLabeled;
 
 	void startup();
 public:
@@ -54,9 +54,9 @@ public:
 	virtual void loadCache(boost::filesystem::path file);
 
 //---------------COMPUTING----------------
-	virtual void train(std::vector<Entity> entieties);
+	virtual void train(std::vector<Entry> entieties);
 
-	virtual cv::Mat classify(cv::Mat features);
+	virtual cv::Mat classify(cv::Mat features, cv::Mat prevOutput);
 };
 
 

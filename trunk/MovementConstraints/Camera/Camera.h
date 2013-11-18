@@ -18,16 +18,10 @@
 //TinyXML
 #include <tinyxml.h>
 //Robots Intellect
+#include "HierClassifier/HierClassifier.h"
 
 class MovementConstraints;
 class Debug;
-
-struct Entry{
-	int label;
-	cv::Mat descriptor;
-	Entry() {}
-	Entry(int ilabel, cv::Mat idescriptor) : label(ilabel), descriptor(idescriptor){}
-};
 
 class Camera {
 	friend class Debug;
@@ -35,13 +29,13 @@ class Camera {
 	//Parent MovementConstraints class
 	MovementConstraints* movementConstraints;
 
-	int numCameras, numRows, numCols, cameraZ, angleX, angleY;
+	std::vector<HierClassifier*> hierClassifiers;
+
+	int numCameras, numRows, numCols;
 
 	std::vector<cv::VideoCapture> cameras;
 
 	bool cacheEnabled;
-
-	int classifyGrid;
 
 	boost::filesystem::path learningDir;
 
@@ -63,29 +57,26 @@ class Camera {
 	//CV_32FC1 4x1: ground plane equation [A, B, C, D]'
 	cv::Mat groundPlane;
 
-	//Grid of image classification
-	int cameraGrid;
-
 	int currentTimeStamp;
 
 	boost::filesystem::path settingsFile;
 
-	CvSVM svm;
+	/*CvSVM svm;
 
 	CvSVMParams svmParams;
 
-	int bins;
+	int bins;*/
 
 	std::vector<Entry> entries;
 
 	std::vector<std::string> labels;
 
 	//array containing polygon vertices for all image regions
-	std::vector<std::vector<std::vector<cv::Point*> > > groundPolygons;
+	//std::vector<std::vector<std::vector<cv::Point*> > > groundPolygons;
 
 	void computeConstraints(std::vector<cv::Mat> image);
 
-	void computeGroundPolygons();
+	/*void computeGroundPolygons();
 
 	cv::Point3f computePointProjection(cv::Point2f imPoint, int cameraInd);
 
@@ -95,17 +86,17 @@ class Camera {
 
 	void learn();
 
-	cv::Mat selectPolygonPixels(std::vector<cv::Point2i> polygon, const cv::Mat& image);
+	cv::Mat selectPolygonPixels(std::vector<cv::Point2i> polygon, const cv::Mat& image);*/
 
 	void learnFromDir(boost::filesystem::path dir);
 
-	cv::Mat classifySlidingWindow(cv::Mat image);
+	/*cv::Mat classifySlidingWindow(cv::Mat image);
 
 	void GenerateColorHistHSVGpu(
 			const cv::gpu::GpuMat& ImageH,
 			const cv::gpu::GpuMat& ImageS,
 			cv::gpu::GpuMat& result,
-			cv::gpu::GpuMat& buf);
+			cv::gpu::GpuMat& buf);*/
 
 	//Run as separate thread
 	void cameraThread();
@@ -120,8 +111,6 @@ class Camera {
 public:
 	Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings);
 	virtual ~Camera();
-
-	cv::Mat segment(cv::Mat image);
 
 	//Returns constraints map and inserts time of data from cameras fetch
 	const cv::Mat getConstraints(int* timestamp);
