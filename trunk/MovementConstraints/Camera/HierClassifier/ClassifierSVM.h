@@ -30,8 +30,11 @@ class ClassifierSVM : public Classifier {
 	svm_node** labData;
 	std::vector<double*> dataLabels;
 	std::vector<int> numEntriesLabeled;
+	int numEntries;
+	bool cacheEnabled;
 
 	void startup();
+	void clearData();
 public:
 //---------------MISCELLANEOUS----------------
 
@@ -49,9 +52,9 @@ public:
 	*/
 	virtual void loadSettings(TiXmlElement* settings);
 
-	virtual void saveCache(boost::filesystem::path file);
+	virtual void saveCache(boost::filesystem::path filePref);
 
-	virtual void loadCache(boost::filesystem::path file);
+	virtual void loadCache(boost::filesystem::path filePref);
 
 //---------------COMPUTING----------------
 	virtual void train(std::vector<Entry> entieties);

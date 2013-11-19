@@ -16,6 +16,7 @@
 
 using namespace std;
 using namespace cv;
+using namespace boost;
 
 Scalar colors[] = {
 		Scalar(0xFF, 0x00, 0x00), //Red
@@ -39,11 +40,17 @@ Scalar colors[] = {
 };
 
 cv::Mat HierClassifier::projectPointsTo3D(cv::Mat disparity){
-
+	Mat ret;
+	Mat Q = Mat::eye(4, 4, CV_32FC1);
+	cameraMatrix.copyTo(Mat(Q, Rect(0, 0, 3, 3)));
+	reprojectImageTo3D(disparity, ret, Q);
+	return ret;
 }
 
 cv::Mat HierClassifier::projectPointsTo2D(cv::Mat _3dImage){
-
+	Mat ret;
+	projectPoints(_3dImage, ret, (0,0,0), (0,0,0), cameraMatrix, Mat());
+	return ret;
 }
 
 //---------------MISCELLANEOUS----------------
@@ -67,7 +74,21 @@ HierClassifier::~HierClassifier(){
 
 */
 void HierClassifier::loadSettings(TiXmlElement* settings){
+	TiXmlElement* pPtr = settings->FirstChildElement("cache");
+	if(!pPtr){
+		throw "Bad settings file - no cache setting for HierClassifier";
+	}
+	pPtr->QueryBoolAttribute("enabled", &cacheEnabled);
 
+	pPtr = settings->FirstChildElement("ClassifierSVM");
+	if(!pPtr){
+		throw "Bad settings file - no ClassifierSVM setting";
+	}
+	for(int i = 0; i < classifiers.size(); i++){
+		if(classifiers[i]->type() == Classifier::SVM){
+			classifiers[i]->loadSettings(pPtr);
+		}
+	}
 }
 
 void HierClassifier::saveCache(boost::filesystem::path file){

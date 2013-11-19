@@ -21,18 +21,23 @@ class Classifier;
 
 #include "HierClassifier.h"
 
-
 class Classifier{
 
 public:
+	enum ClassifierType{
+		SVM
+	};
+protected:
+	Classifier::ClassifierType classifierType;
+public:
 //---------------MISCELLANEOUS----------------
 
-	Classifier();
+	Classifier(Classifier::ClassifierType iclassifierType);
 
 	/** \brief Loads settings from XML structure.
 
 	*/
-	Classifier(TiXmlElement* settings);
+	Classifier(Classifier::ClassifierType iclassifierType, TiXmlElement* settings);
 
 	virtual ~Classifier();
 
@@ -44,6 +49,8 @@ public:
 	virtual void saveCache(boost::filesystem::path file) = 0;
 
 	virtual void loadCache(boost::filesystem::path file) = 0;
+
+	virtual Classifier::ClassifierType type();
 
 //---------------COMPUTING----------------
 	virtual void train(std::vector<Entry> label) = 0;

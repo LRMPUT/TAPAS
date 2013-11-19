@@ -50,8 +50,11 @@ class HierClassifier {
 	std::vector<Classifier*> classifiers;
 	std::vector<std::vector<int> > childs;
 
-	cv::Mat projectPointsTo3D(cv::Mat disparity);
-	cv::Mat projectPointsTo2D(cv::Mat _3dImage);
+	bool cacheEnabled;
+
+	cv::Mat projectPointsTo3D(	cv::Mat disparity);
+
+	cv::Mat projectPointsTo2D(	cv::Mat _3dImage);
 public:
 
 //---------------MISCELLANEOUS----------------
