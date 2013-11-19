@@ -1,15 +1,18 @@
 <Robot>
 	<MovementConstraints>
 		<Camera number="1" rows="640" cols="480">
-		
 			<cache enabled="true" />
-			<svm type="C_SVC">
-				<kernelType value="POLY" />
-				<bins value="256" />
-				<gamma value="0.5" />
-				<degree value="2" />
-			</svm>
-			<classification grid="40" />
+			<HierClassifier>
+				<cache enabled="true" />
+				<ClassifierSVM>
+					<cache enabled="true" />
+					<svm type="C_SVC">
+						<kernelType value="POLY" />
+						<gamma value="0.5" />
+						<degree value="2" />
+					</svm>
+				</ClassifierSVM>
+			</HierClassifier>
 			<learning dir="../../MovementConstraints/Camera/training_data" />
 			<labels>
 				<label text="grass" id="0"/>

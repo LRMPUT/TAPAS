@@ -440,79 +440,17 @@ void Camera::readSettings(TiXmlElement* settings){
 	cacheEnabled = true;
 	TiXmlElement* pPtr = settings->FirstChildElement("cache");
 	if(!pPtr){
-		throw "Bad settings file - no cache setting";
+		throw "Bad settings file - no cache setting for Camera";
 	}
 	pPtr->QueryBoolAttribute("enabled", &cacheEnabled);
 
-	/*pPtr = settings->FirstChildElement("svm");
+	pPtr = settings->FirstChildElement("HierClassifier");
 	if(!pPtr){
-		throw "Bad settings file - no svm settings";
+		throw "Bad settings file - no HierClassifier settings";
 	}
-
-	int svmType;
-	pPtr->QueryStringAttribute("type", &tmp);
-	if(tmp == "C_SVC"){
-		svmType = CvSVM::C_SVC;
+	for(int i = 0; i < hierClassifiers.size(); i++){
+		hierClassifiers[i]->loadSettings(pPtr);
 	}
-	else if(tmp == "NU_SVC"){
-		svmType = CvSVM::NU_SVC;
-	}
-	else if(tmp == "ONE_CLASS"){
-		svmType = CvSVM::ONE_CLASS;
-	}
-	else{
-		throw "Bad settings file - wrong SVM type";
-	}
-
-	int kernelType;
-	TiXmlElement* svmPtr = pPtr->FirstChildElement("kernelType");
-	if(!svmPtr){
-		throw "Bad settings file - no kernel type";
-	}
-	svmPtr->QueryStringAttribute("value", &tmp);
-	if(tmp == "LINEAR"){
-		kernelType = CvSVM::LINEAR;
-	}
-	else if(tmp == "POLY"){
-		kernelType = CvSVM::POLY;
-	}
-	else if(tmp == "RBF"){
-		kernelType = CvSVM::RBF;
-	}
-	else if(tmp == "SIGMOID"){
-		kernelType = CvSVM::SIGMOID;
-	}
-	else{
-		throw "Bad settings file - wrong kernel type";
-	}
-
-	bins = 256;
-	svmPtr = pPtr->FirstChildElement("bins");
-	if(!svmPtr){
-		throw "Bad settings file - no bins number";
-	}
-	svmPtr->QueryIntAttribute("value", &bins);
-
-	double gamma = 0.5;
-	svmPtr = pPtr->FirstChildElement("gamma");
-	if(!svmPtr){
-		throw "Bad settings file - no gamma value";
-	}
-	svmPtr->QueryDoubleAttribute("value", &gamma);
-
-	double degree = 2;
-	svmPtr = pPtr->FirstChildElement("degree");
-	if(!svmPtr){
-		throw "Bad settings file - no degree value";
-	}
-	svmPtr->QueryDoubleAttribute("value", &degree);
-
-	classifyGrid = 40;
-	pPtr = settings->FirstChildElement("classification");
-	if(!pPtr){
-		throw "Bad settings file - no classification settings";
-	}
-	pPtr->QueryIntAttribute("grid", &classifyGrid);*/
 
 	pPtr = settings->FirstChildElement("learning");
 	if(!pPtr){

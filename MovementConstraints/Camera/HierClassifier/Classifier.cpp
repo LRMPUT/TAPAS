@@ -7,17 +7,25 @@
 
 #include "Classifier.h"
 
-Classifier::Classifier(){
+Classifier::Classifier(Classifier::ClassifierType iclassifierType) :
+	classifierType(iclassifierType)
+{
 
 }
 
 /** \brief Loads settings from XML structure.
 
 */
-Classifier::Classifier(TiXmlElement* settings){
+Classifier::Classifier(Classifier::ClassifierType iclassifierType, TiXmlElement* settings) :
+	classifierType(iclassifierType)
+{
 
 }
 
 Classifier::~Classifier(){
 
+}
+
+Classifier::ClassifierType Classifier::type(){
+	return classifierType;
 }
