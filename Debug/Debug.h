@@ -37,7 +37,7 @@ public:
 	//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
 	const cv::Mat getImuData();
 
-	//CV_32SC1 2xHOKUYO_SCANS: x, y points from left to right
+	//CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right
 	const cv::Mat getHokuyoData();
 
 	//CV_8UC3 2x640x480: left, right image

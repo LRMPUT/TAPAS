@@ -58,7 +58,13 @@ const cv::Mat IMU::getData(){
 	for(int i = 0; i < NUM_VALUES; i++){
 		float tmp = (short)((imu->Register[quantities[i].address / 4]._int >> 8*(quantities[i].address % 4)) & 0xffff);
 		tmp *= quantities[i].factor;
+		//uint32 tmp = (imu->Register[quantities[i].address / 4]._int);
+		//tmp >>= 8*(quantities[i].address % 4);
+		//tmp &= 0xffff;
+
+		//cout << (short)tmp*quantities[i].factor << " ";
 		ret.at<float>(i % 3, i / 3) = tmp;
 	}
+	//cout << endl;
 	return ret;
 }
