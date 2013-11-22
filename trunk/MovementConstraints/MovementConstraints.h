@@ -41,7 +41,7 @@ public:
 	virtual ~MovementConstraints();
 
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
-	//CV_32SC1 2xHOKUYO_SCANS: x, y points from left to right
+	//CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right
 	const cv::Mat getHokuyoData();
 
 	//----------------------ACCESS TO COMPUTED DATA

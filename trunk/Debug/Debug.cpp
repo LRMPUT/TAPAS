@@ -71,7 +71,7 @@ const cv::Mat Debug::getImuData(){
 	return robot->positionEstimation.imu.getData();
 }
 
-//CV_32SC1 2xHOKUYO_SCANS: x, y points from left to right
+//CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right
 const cv::Mat Debug::getHokuyoData(){
 	return robot->movementConstraints->hokuyo.getData();
 }
