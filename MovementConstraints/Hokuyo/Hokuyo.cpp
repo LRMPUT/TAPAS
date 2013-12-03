@@ -21,7 +21,7 @@ Hokuyo::~Hokuyo() {
 }
 
 void Hokuyo::openPort(std::string port){
-	hokuyo.open(port.c_str(), qrk::Urg_driver::Default_baudrate, qrk::Urg_driver::Serial);
+	cout << hokuyo.open(port.c_str(), qrk::Urg_driver::Default_baudrate, qrk::Urg_driver::Serial) << endl;
 
 	//cout << hokuyo.product_type() << endl;
 	//cout << hokuyo.deg2index(-135) << " " << hokuyo.deg2index(135) << endl;

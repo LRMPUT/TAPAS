@@ -10,17 +10,15 @@
 
 struct Entry{
 	cv::Mat descriptor;
-	int label;
+	int label, imageId;
 	Entry() : label(-1) {}
-	Entry(int ilabel, cv::Mat idescriptor) : label(ilabel){
+	Entry(int ilabel, cv::Mat idescriptor, int iimageId = 0) :
+		label(ilabel),
+		imageId(iimageId)
+	{
 		idescriptor.copyTo(descriptor);
 	}
 
-};
-
-struct Child{
-	std::vector<int> childs;
-	cv::Mat decisionMatrix;
 };
 
 //STL
@@ -35,26 +33,37 @@ struct Child{
 //Hierarchical Classifier
 #include "Classifier.h"
 
-/*class Region{
-	int label;
-	std::vector<cv::Point2f> polygon;
-	Region() : label(-1) {}
-	Region(int ilabel, std::vector<cv::Point2f> ipolygon) : label(ilabel), polygon(ipolygon) {}
-};*/
-
 class HierClassifier {
 	friend class Debug;
+
+	struct WeakClassifierInfo{
+		int descBeg, descEnd;	// <descBeg, descEnd)
+		WeakClassifierInfo() {}
+		WeakClassifierInfo(int idescBeg, int idescEnd) :
+			descBeg(idescBeg),
+			descEnd(idescEnd)
+		{}
+	};
+
+	std::vector<WeakClassifierInfo> weakClassInfo;
+
+	std::vector<Classifier*> weakClassifiersSet;
+	int numWeakClassifiers;
+	int numIterations;
 
 	cv::Mat cameraMatrix;
 
 	std::vector<Classifier*> classifiers;
-	std::vector<std::vector<int> > childs;
+	std::vector<double> weights;
+	int numLabels;
 
 	bool cacheEnabled;
 
 	cv::Mat projectPointsTo3D(	cv::Mat disparity);
 
 	cv::Mat projectPointsTo2D(	cv::Mat _3dImage);
+
+
 public:
 
 //---------------MISCELLANEOUS----------------
@@ -79,7 +88,7 @@ public:
 
 //---------------COMPUTING----------------
 
-	void train(std::vector<Entry> data);
+	void train(const std::vector<Entry>& data);
 
 	/**	\brief 
 		@return Matrix of probabilites of belonging to certain class.
@@ -87,10 +96,10 @@ public:
 	std::vector<cv::Mat> classify(cv::Mat image,
 								  cv::Mat terrain);
 	
-	/** \brief Extracts entities from labeled data.
+	/** \brief Extracts entries from labeled data.
 
 	*/
-	std::vector<Entry> extractEntities(cv::Mat image,
+	std::vector<Entry> extractEntries(cv::Mat image,
 										cv::Mat terrain,
 										cv::Mat regionsOnImage);
 

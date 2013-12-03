@@ -41,6 +41,8 @@ public:
 
 	virtual ~Classifier();
 
+	virtual Classifier* copy() = 0;
+
 	/** \brief Loads settings from XML structure.
 
 	*/
@@ -53,9 +55,10 @@ public:
 	virtual Classifier::ClassifierType type();
 
 //---------------COMPUTING----------------
-	virtual void train(std::vector<Entry> label) = 0;
+	virtual void train(	const std::vector<Entry>& entries,
+						const std::vector<double>& dataWeights) = 0;
 
-	virtual cv::Mat classify(cv::Mat features, cv::Mat prevOutput) = 0;
+	virtual cv::Mat classify(cv::Mat features) = 0;
 };
 
 
