@@ -23,14 +23,16 @@
 #include "Classifier.h"
 
 class ClassifierSVM : public Classifier {
-	std::vector<svm_model*> svms;
-	std::vector<svm_parameter> svmsParams;
-	std::vector<svm_problem> svmsProblems;
-	svm_parameter svmMainParams;
+	svm_model* svm;
+	svm_problem svmProblem;
+	svm_parameter svmParams;
 	svm_node** labData;
-	std::vector<double*> dataLabels;
-	std::vector<int> numEntriesLabeled;
+	double* dataLabels;
+	double* weights;
+	int* labels;
 	int numEntries;
+	int numLabels;
+	int descLen;
 	bool cacheEnabled;
 
 	void startup();
@@ -40,10 +42,14 @@ public:
 
 	ClassifierSVM();
 
+	ClassifierSVM(const ClassifierSVM& old);
+
 	/** \brief Loads settings from XML structure.
 
 	*/
 	ClassifierSVM(TiXmlElement* settings);
+
+	virtual ClassifierSVM* copy();
 
 	virtual ~ClassifierSVM();
 
@@ -52,14 +58,17 @@ public:
 	*/
 	virtual void loadSettings(TiXmlElement* settings);
 
-	virtual void saveCache(boost::filesystem::path filePref);
+	virtual void saveCache(boost::filesystem::path file);
 
-	virtual void loadCache(boost::filesystem::path filePref);
+	virtual void loadCache(boost::filesystem::path file);
 
 //---------------COMPUTING----------------
-	virtual void train(std::vector<Entry> entieties);
+	virtual void train(	const std::vector<Entry>& entries,
+						const std::vector<double>& dataWeights);
 
-	virtual cv::Mat classify(cv::Mat features, cv::Mat prevOutput);
+	virtual cv::Mat classify(cv::Mat features);
+
+	void normalizeVect(cv::Mat& vector);
 };
 
 
