@@ -96,6 +96,15 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 	}
 	pPtr->QueryBoolAttribute("enabled", &cacheEnabled);
 
+	pPtr = settings->FirstChildElement("segmentation");
+	if(!pPtr){
+		throw "Bad settings file - no segmentation setting for HierClassifier";
+	}
+	pPtr->QueryFloatAttribute("k", &kSegment);
+	pPtr->QueryIntAttribute("min_size", &minSizeSegment);
+
+	cout << kSegment << ", " << minSizeSegment << endl;
+
 	weakClassifiersSet.resize(numWeakClassifiers);
 	for(int c = 0; c < numWeakClassifiers; c++){
 		weakClassifiersSet[c] = new ClassifierSVM();
@@ -301,11 +310,9 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat image,
 		int sizeV[] = {HIST_SIZE_V};
 		calcHist(&image, 1, channelsHS, Mat(), histogramHS, 2, sizeHS, rangesHS);
 		calcHist(&image, 1, channelsV, Mat(), histogramV, 1, sizeV, rangesV);
-		Mat valuesSep(3, values.cols, CV_8UC1);
-		Mat valuesSepArr[] = {valuesSep.rowRange(0, 0),
-							valuesSep.rowRange(1, 1),
-							valuesSep.rowRange(2, 2)};
 		histogramHS.reshape(0, 1);
+		normalize(histogramHS, histogramHS);
+		normalize(histogramV, histogramV);
 
 		//TODO check this
 		values.reshape(1, 3);
@@ -317,6 +324,8 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat image,
 						CV_COVAR_NORMAL | CV_COVAR_SCALE | CV_COVAR_COLS);
 		covarHSV.reshape(0, 1);
 		meanHSV.reshape(0, 1);
+		normalize(covarHSV, covarHSV);
+		normalize(meanHSV, meanHSV);
 
 		Entry tmp;
 		tmp.imageId = regionsOnImage.at<int>(beg);
@@ -352,11 +361,7 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image){
 	Mat imageB(image.rows, image.cols, CV_32FC1);
 	Mat imageChannels[] = {imageR, imageG, imageB};
 	Mat imageFloat(image.rows, image.cols, CV_32FC3);
-	float k = 200;
-	int minSize = 20;
 	int nchannels = 3;
-	int nrows = image.rows;
-	int ncols = image.cols;
 	int nhood[][2] = {{-1, 1},
 					{1, 0},
 					{1, 1},
@@ -364,10 +369,15 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image){
 	/*int nhood[][2] = {{1, 0},
 					{0, 1}};*/
 	//cout << "Size of nhood " << sizeof(nhood)/sizeof(nhood[0]) << endl;
+	//cout << "rows: " << image.rows << ", cols: " << image.cols << endl;
 
 	image.convertTo(imageFloat, CV_32F);
+	resize(imageFloat, imageFloat, Size(320, 240));
 	GaussianBlur(imageFloat, imageFloat, Size(7, 7), 0.8);
 	split(imageFloat, imageChannels);
+
+	int nrows = imageFloat.rows;
+	int ncols = imageFloat.cols;
 
 	imshow("original", imageFloat/255);
 
@@ -397,10 +407,10 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image){
 				}
 			}
 		}
-		stable_sort(edges.begin(), edges.end()); //possible improvement by bin sorting
-		cout << "Largest differece = " << edges[edges.size() - 1].weight <<
-				", between (" << edges[edges.size() - 1].i << ", " << edges[edges.size() - 1].j <<
-				")" << endl;
+		sort(edges.begin(), edges.end()); //possible improvement by bin sorting
+		//cout << "Largest differece = " << edges[edges.size() - 1].weight <<
+		//		", between (" << edges[edges.size() - 1].i << ", " << edges[edges.size() - 1].j <<
+		//		")" << endl;
 		UnionFind sets(nrows * ncols);
 		vector<float> intDiff;
 		intDiff.assign(nrows * ncols, 0);
@@ -411,7 +421,7 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image){
 			if(iRoot != jRoot){
 				//cout << "intDiff[iRoot] + (float)k/sizes[iRoot] = " << intDiff[iRoot] << " + " << (float)k/sizes[iRoot] << " = " << intDiff[iRoot] + (float)k/sizes[iRoot] << endl;
 				//cout << "intDiff[jRoot] + (float)k/sizes[jRoot] = " << intDiff[jRoot] << " + " << (float)k/sizes[jRoot] << " = " << intDiff[jRoot] + (float)k/sizes[jRoot] << endl;
-				if(min(intDiff[iRoot] + (float)k/sets.size(iRoot), intDiff[jRoot] + (float)k/sets.size(jRoot))
+				if(min(intDiff[iRoot] + (float)kSegment/sets.size(iRoot), intDiff[jRoot] + (float)kSegment/sets.size(jRoot))
 						>=
 						it->weight)
 				{
@@ -424,7 +434,7 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image){
 		for(vector<Edge>::iterator it = edges.begin(); it != edges.end(); it++){
 			int iRoot = sets.findSet(it->i);
 			int jRoot = sets.findSet(it->j);
-			if((iRoot != jRoot) && ((sets.size(iRoot) < minSize) || (sets.size(jRoot) < minSize))){
+			if((iRoot != jRoot) && ((sets.size(iRoot) < minSizeSegment) || (sets.size(jRoot) < minSizeSegment))){
 				sets.unionSets(iRoot, jRoot);
 			}
 		}
@@ -435,7 +445,7 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image){
 				numElements.insert(sets.findSet(c + ncols*r));
 			}
 		}
-		cout << "number of elements = " << numElements.size() << endl;
+		//cout << "number of elements = " << numElements.size() << endl;
 	}
 
 	Mat finSegments(nrows, ncols, CV_32SC1);

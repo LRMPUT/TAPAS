@@ -57,6 +57,9 @@ class HierClassifier {
 	std::vector<double> weights;
 	int numLabels;
 
+	float kSegment;
+	int minSizeSegment;
+
 	bool cacheEnabled;
 
 	cv::Mat projectPointsTo3D(	cv::Mat disparity);

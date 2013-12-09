@@ -4,6 +4,7 @@
 			<cache enabled="true" />
 			<HierClassifier>
 				<cache enabled="true" />
+				<segmentation k="300" min_size="100" />
 				<ClassifierSVM>
 					<cache enabled="true" />
 					<svm type="C_SVC">
