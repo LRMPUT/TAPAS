@@ -4,7 +4,6 @@ project(RobotsIntellect)
 
 set(urg_LIBRARIES_DIR /usr/local/lib)
 set(urg_LIBRARIES urg_cpp)
-set(LibSVM_LIBRARIES svm)
 set(TinyXML_LIBRARIES tinyxml)
 
 find_package(OpenCV REQUIRED)
@@ -15,6 +14,7 @@ set(RobotsIntellect_SOURCES
 	MechanicalGrabber/MechanicalGrabber.cpp
 	MovementConstraints/Hokuyo/Hokuyo.cpp
 	MovementConstraints/Sharp/Sharp.cpp
+	MovementConstraints/Camera/LibSVM-weights/svm.cpp
 	MovementConstraints/Camera/Camera.cpp
 	MovementConstraints/Camera/HierClassifier/UnionFind.cpp
 	MovementConstraints/Camera/HierClassifier/Classifier.cpp
@@ -58,8 +58,7 @@ target_link_libraries(RobotsIntellect
 	${OpenCV_LIBS}
 	${Boost_LIBRARIES}
 	${urg_LIBRARIES}
-	${TinyXML_LIBRARIES}
-	${LibSVM_LIBRARIES})
+	${TinyXML_LIBRARIES})
 
 find_package(Qt4 REQUIRED)
 set(trobotQt_SOURCES
@@ -111,5 +110,4 @@ target_link_libraries(Trobot_Qt/gui
 	${OpenCV_LIBS}
 	${Boost_LIBRARIES}
 	${urg_LIBRARIES}
-	${TinyXML_LIBRARIES}
-	${LibSVM_LIBRARIES})
+	${TinyXML_LIBRARIES})

@@ -16,8 +16,8 @@
 #include <tinyxml.h>
 //Boost
 #include <boost/filesystem.hpp>
-//LibSVM
-#include <libsvm/svm.h>
+//LibSVM-weights
+#include "../LibSVM-weights/svm.h"
 
 #include "HierClassifier.h"
 #include "Classifier.h"
@@ -28,8 +28,8 @@ class ClassifierSVM : public Classifier {
 	svm_parameter svmParams;
 	svm_node** labData;
 	double* dataLabels;
-	double* weights;
-	int* labels;
+	//double* weights;
+	//int* labels;
 	int numEntries;
 	int numLabels;
 	int descLen;

@@ -90,12 +90,11 @@ void Debug::testSegmentation(boost::filesystem::path dir){
 		if(dirIt->path().filename().string().find(".jpg") != string::npos){
 			cout << "Processing image " << dirIt->path().string() << endl;
 			Mat image = imread(dirIt->path().string());
+			cout << robot->movementConstraints->camera->hierClassifiers.size() << endl;
 			if(robot->movementConstraints->camera->hierClassifiers.size() > 0){
 				robot->movementConstraints->camera->hierClassifiers[0]->segmentImage(image);
 			}
-			waitKey(1000);
-			char tmpChar;
-			cin >> tmpChar;
+			waitKey();
 		}
 	}
 }

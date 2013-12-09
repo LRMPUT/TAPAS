@@ -46,11 +46,6 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 	}
 	readSettings(settings);
 
-	hierClassifiers.resize(cameras.size());
-	for(int i = 0; i < hierClassifiers.size(); i++){
-		hierClassifiers[i] = new HierClassifier(cameraMatrix[i]);
-	}
-
 	/*groundPolygons.resize(numCameras);
 	for(int cam = 0; cam < numCameras; cam++){
 		groundPolygons[cam].resize(numRows/cameraGrid);
@@ -190,28 +185,20 @@ void Camera::learn(){
 		}
 		svm.train(allHist, allLabels, Mat(), Mat(), svmParams);
 	}
-}
+}*/
 
-cv::Mat Camera::selectPolygonPixels(std::vector<cv::Point2i> polygon, const cv::Mat& image){
-	Mat mask(image.rows, image.cols, CV_8UC1, Scalar(0));
+int Camera::selectPolygonPixels(std::vector<cv::Point2i> polygon, int regionId, cv::Mat& regionsOnImage){
 	int polyCnt[] = {polygon.size()};
 	const Point2i* points[] = {polygon.data()};
 	//Point2i array
-	fillPoly(mask, points, polyCnt, 1, Scalar(1));
-	int count = countNonZero(mask);
-	Mat ret(count, 1, CV_8UC3);
-	int idx = 0;
-	for(int row = 0; row < image.rows; row++){
-		for(int col = 0; col < image.cols; col++){
-			if(mask.at<int>(row, col) != 0){
-				ret.at<Vec3b>(idx) = image.at<Vec3b>(row, col);
-			}
-		}
-	}
-	return ret;
-}*/
+	fillPoly(regionsOnImage, points, polyCnt, 1, Scalar(regionId));
+	int count = regionsOnImage.rows * regionsOnImage.cols - countNonZero(regionsOnImage - Scalar(regionId));
+
+	return count;
+}
 
 void Camera::learnFromDir(boost::filesystem::path dir){
+	vector<Entry> dataset;
 	filesystem::directory_iterator endIt;
 	for(filesystem::directory_iterator dirIt(dir); dirIt != endIt; dirIt++){
 		if(dirIt->path().filename().string().find(".xml") != string::npos){
@@ -231,6 +218,12 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 			if(image.data == NULL){
 				throw "Bad image file";
 			}
+			Mat manualRegionsOnImage(image.rows, image.cols, CV_32SC1, Scalar(0));
+			int manualRegionsCount = 0;
+
+			Mat autoRegionsOnImage = hierClassifiers.front()->segmentImage(image);
+			map<int, int> mapRegionIdToLabel;
+
 			TiXmlElement* pObject = pAnnotation->FirstChildElement("object");
 			while(pObject){
 
@@ -261,18 +254,87 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 					}
 				}
 
-				/*//divide samples into smaller packs
-				Mat samples = selectPolygonPixels(poly, image);
-				for(int i = 0; i < samples.cols/SAMPLE_PACK; i++){
-					addToLearnDatabase(samples.colRange(i*SAMPLE_PACK, (i + 1)*SAMPLE_PACK - 1), label);
-				}
-				//taking care of remainder samples - if too small, reject
-				int rem = samples.cols % SAMPLE_PACK;
-				if(rem >= SAMPLE_PACK/4){
-					addToLearnDatabase(samples.colRange(samples.cols - rem, samples.cols - 1), label);
-				}*/
+				mapRegionIdToLabel[++manualRegionsCount] = label;
+				selectPolygonPixels(poly, manualRegionsCount, manualRegionsOnImage);
 
 				pObject = pObject->NextSiblingElement("object");
+			}
+			vector<Entry> newData = hierClassifiers.front()->extractEntries(image, Mat(), manualRegionsOnImage);
+			for(int e = 0; e < newData.size(); e++){
+				newData[e].label = mapRegionIdToLabel[newData[e].imageId];
+				dataset.push_back(newData[e]);
+			}
+		}
+	}
+	hierClassifiers.front()->train(dataset);
+}
+
+void Camera::classifyFromDir(boost::filesystem::path dir){
+	for(int l = 0; l < labels.size(); l++){
+		namedWindow(labels[l]);
+	}
+
+	filesystem::directory_iterator endIt;
+	for(filesystem::directory_iterator dirIt(dir); dirIt != endIt; dirIt++){
+		if(dirIt->path().filename().string().find(".xml") != string::npos){
+			TiXmlDocument data(dirIt->path().string());
+			if(!data.LoadFile()){
+				throw "Bad data file";
+			}
+			TiXmlElement* pAnnotation = data.FirstChildElement("annotation");
+			if(!pAnnotation){
+				throw "Bad data file - no annotation entry";
+			}
+			TiXmlElement* pFile = pAnnotation->FirstChildElement("filename");
+			if(!pFile){
+				throw "Bad data file - no filename entry";
+			}
+			Mat image = imread(dir.string() + pFile->GetText());
+			if(image.data == NULL){
+				throw "Bad image file";
+			}
+			Mat manualRegionsOnImage(image.rows, image.cols, CV_32SC1, Scalar(0));
+			int manualRegionsCount = 0;
+			map<int, int> mapRegionIdToLabel;
+
+			TiXmlElement* pObject = pAnnotation->FirstChildElement("object");
+			while(pObject){
+
+				TiXmlElement* pPolygon = pObject->FirstChildElement("polygon");
+				if(!pPolygon){
+					throw "Bad data file - no polygon inside object";
+				}
+				vector<Point2i> poly;
+
+				TiXmlElement* pPt = pPolygon->FirstChildElement("pt");
+				while(pPt){
+					int x = atoi(pPt->FirstChildElement("x")->GetText());
+					int y = atoi(pPt->FirstChildElement("y")->GetText());
+					poly.push_back(Point2i(x, y));
+					pPt = pPt->NextSiblingElement("pt");
+				}
+
+				TiXmlElement* pAttributes = pObject->FirstChildElement("attributes");
+				if(!pAttributes){
+					throw "Bad data file - no object attributes";
+				}
+				string labelText = pAttributes->GetText();
+				int label = 0;
+				for(int i = 0; i < labels.size(); i++){
+					if(labelText == labels[i]){
+						label = i;
+						break;
+					}
+				}
+
+				mapRegionIdToLabel[++manualRegionsCount] = label;
+				selectPolygonPixels(poly, manualRegionsCount, manualRegionsOnImage);
+
+				pObject = pObject->NextSiblingElement("object");
+			}
+			vector<Mat> classificationResult = hierClassifiers.front()->classify(image, Mat());
+			for(int l = 0; l < labels.size(); l++){
+				imshow(labels[l], classificationResult[l]);
 			}
 		}
 	}
@@ -444,14 +506,6 @@ void Camera::readSettings(TiXmlElement* settings){
 	}
 	pPtr->QueryBoolAttribute("enabled", &cacheEnabled);
 
-	pPtr = settings->FirstChildElement("HierClassifier");
-	if(!pPtr){
-		throw "Bad settings file - no HierClassifier settings";
-	}
-	for(int i = 0; i < hierClassifiers.size(); i++){
-		hierClassifiers[i]->loadSettings(pPtr);
-	}
-
 	pPtr = settings->FirstChildElement("learning");
 	if(!pPtr){
 		throw "Bad settings file - no learning settings";
@@ -481,6 +535,7 @@ void Camera::readSettings(TiXmlElement* settings){
 	cameraOrigLaser.resize(numCameras);
 	cameraMatrix.resize(numCameras);
 	distCoeffs.resize(numCameras);
+	hierClassifiers.resize(numCameras);
 	for(int i = 0; i < numCameras; i++){
 		if(!pPtr){
 			throw "Bad settings file - no sensor settings";
@@ -502,7 +557,18 @@ void Camera::readSettings(TiXmlElement* settings){
 		cameraMatrix[idx] = readMatrixSettings(pPtr, "camera_matrix", 3, 3);
 		distCoeffs[idx] = readMatrixSettings(pPtr, "dist_coeffs", 1, 5);
 
+
+		hierClassifiers[i] = new HierClassifier(cameraMatrix[i]);
+
 		pPtr = pPtr->NextSiblingElement("sensor");
+	}
+
+	pPtr = settings->FirstChildElement("HierClassifier");
+	if(!pPtr){
+		throw "Bad settings file - no HierClassifier settings";
+	}
+	for(int i = 0; i < hierClassifiers.size(); i++){
+		hierClassifiers[i]->loadSettings(pPtr);
 	}
 
 	groundPlane = readMatrixSettings(settings, "ground_plane_global", 4, 1);

@@ -36,8 +36,9 @@ void ClassifierSVM::clearData(){
 
 	delete[] dataLabels;
 
-	delete[] weights;
-	delete[] labels;
+	delete[] svmProblem.W;
+	/*delete[] weights;
+	delete[] labels;*/
 
 	svm_free_and_destroy_model(&svm);
 
@@ -53,6 +54,9 @@ ClassifierSVM::ClassifierSVM() :
 ClassifierSVM::ClassifierSVM(const ClassifierSVM& old) :
 	Classifier(Classifier::SVM)
 {
+	if(old.numEntries == 0){
+		throw "Cannot copy ClassifierSVM loaded from cache";
+	}
 	clearData();
 
 	numEntries = old.numEntries;
@@ -70,15 +74,17 @@ ClassifierSVM::ClassifierSVM(const ClassifierSVM& old) :
 	svmProblem.l = old.svmProblem.l;
 	svmProblem.y = dataLabels;
 	svmProblem.x = labData;
+	svmProblem.W = new double[numEntries];
+	memcpy(svmProblem.W, old.svmProblem.W, numEntries * sizeof(double));
 
 	dataLabels = new double[numEntries];
 	memcpy(dataLabels, old.dataLabels, numEntries * sizeof(double));
 
-	weights = new double[numLabels];
+	/*weights = new double[numLabels];
 	memcpy(weights, old.weights, numLabels * sizeof(double));
 
 	labels = new int[numLabels];
-	memcpy(labels, old.labels, numLabels * sizeof(int));
+	memcpy(labels, old.labels, numLabels * sizeof(int));*/
 
 	svm = svm_train(&svmProblem, &svmParams);
 }
@@ -190,6 +196,11 @@ void ClassifierSVM::train(	const std::vector<Entry>& entries,
 {
 	//map<int, int> mapLabels;
 	clearData();
+	svmProblem.l = numLabels;
+	svmProblem.y = dataLabels;
+	svmProblem.x = labData;
+	svmProblem.W = new double[numEntries];
+
 	descLen = entries.front().descriptor.cols;
 	numEntries = entries.size();
 	labData = new svm_node*[numEntries];
@@ -208,10 +219,11 @@ void ClassifierSVM::train(	const std::vector<Entry>& entries,
 		labData[e][descLen] = tmp;
 		dataLabels[e] = entries[e].label;
 		numLabels = max(numLabels, entries[e].label);
+		svmProblem.W[e] = dataWeights[e];
 	}
 	numLabels++;
 
-	weights = new double[numLabels];
+	/*weights = new double[numLabels];
 	labels = new int[numLabels];
 	for(int l = 0; l < numLabels; l++){
 		weights[l] = 0;
@@ -219,14 +231,12 @@ void ClassifierSVM::train(	const std::vector<Entry>& entries,
 	}
 	for(int e = 0; e < entries.size(); e++){
 		weights[entries[e].label] += dataWeights[e];
-	}
+	}*/
 
 	svmParams.nr_weight = numLabels;
-	svmParams.weight_label = labels;
-	svmParams.weight = weights;
-	svmProblem.l = numLabels;
-	svmProblem.y = dataLabels;
-	svmProblem.x = labData;
+	/*svmParams.weight_label = labels;
+	svmParams.weight = weights;*/
+
 	if(svm_check_parameter(&svmProblem, &svmParams) != NULL){
 		throw "Bad svm params";
 	}

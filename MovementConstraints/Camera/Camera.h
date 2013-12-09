@@ -61,12 +61,6 @@ class Camera {
 
 	boost::filesystem::path settingsFile;
 
-	/*CvSVM svm;
-
-	CvSVMParams svmParams;
-
-	int bins;*/
-
 	std::vector<Entry> entries;
 
 	std::vector<std::string> labels;
@@ -84,11 +78,15 @@ class Camera {
 
 	void clearLearnDatabase();
 
-	void learn();
+	void learn();*/
 
-	cv::Mat selectPolygonPixels(std::vector<cv::Point2i> polygon, const cv::Mat& image);*/
+	int selectPolygonPixels(std::vector<cv::Point2i> polygon,
+							int regionId,
+							cv::Mat& regionsOnImage);
 
 	void learnFromDir(boost::filesystem::path dir);
+
+	void classifyFromDir(boost::filesystem::path dir);
 
 	/*cv::Mat classifySlidingWindow(cv::Mat image);
 
