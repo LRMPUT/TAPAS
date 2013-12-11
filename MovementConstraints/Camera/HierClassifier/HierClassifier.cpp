@@ -103,27 +103,28 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 	pPtr->QueryFloatAttribute("k", &kSegment);
 	pPtr->QueryIntAttribute("min_size", &minSizeSegment);
 
-	cout << kSegment << ", " << minSizeSegment << endl;
+	numWeakClassifiers = 3;
+	weakClassInfo.push_back(WeakClassifierInfo(0, 256));	//histogram HS
+	weakClassInfo.push_back(WeakClassifierInfo(256, 272));	//histogram V
+	weakClassInfo.push_back(WeakClassifierInfo(272, 284));	//statistics HSV
+	//weakClassInfo.push_back(WeakClassifierInfo());	//statistics height
+	//weakClassInfo.push_back(WeakClassifierInfo());	//statistics intensity
+	//weakClassInfo.push_back(WeakClassifierInfo());	//geometric properties
+
+	numIterations = 30;
 
 	weakClassifiersSet.resize(numWeakClassifiers);
 	for(int c = 0; c < numWeakClassifiers; c++){
 		weakClassifiersSet[c] = new ClassifierSVM();
 	}
 
-	weakClassInfo.push_back(WeakClassifierInfo());	//histogram HS
-	weakClassInfo.push_back(WeakClassifierInfo());	//histogram V
-	weakClassInfo.push_back(WeakClassifierInfo());	//statistics HSV
-	weakClassInfo.push_back(WeakClassifierInfo());	//statistics height
-	weakClassInfo.push_back(WeakClassifierInfo());	//statistics intensity
-	weakClassInfo.push_back(WeakClassifierInfo());	//geometric properties
-
 	pPtr = settings->FirstChildElement("ClassifierSVM");
 	if(!pPtr){
 		throw "Bad settings file - no ClassifierSVM setting";
 	}
-	for(int i = 0; i < classifiers.size(); i++){
-		if(classifiers[i]->type() == Classifier::SVM){
-			classifiers[i]->loadSettings(pPtr);
+	for(int i = 0; i < weakClassifiersSet.size(); i++){
+		if(weakClassifiersSet[i]->type() == Classifier::SVM){
+			weakClassifiersSet[i]->loadSettings(pPtr);
 		}
 	}
 }
@@ -146,10 +147,13 @@ void HierClassifier::loadCache(boost::filesystem::path file){
  * 		5.		compute weight for that classifier
  * 		6.		update dataWeights
  */
-void HierClassifier::train(const std::vector<Entry>& data){
+void HierClassifier::train(const std::vector<Entry>& data, int inumLabels){
+	cout << "HierClassifier::train, numIterations = " << numIterations << endl;
+
+	numLabels = inumLabels;
 	//initializing weights
 	vector<double> dataWeights;
-	dataWeights.assign(numLabels, (double)1/data.size());
+	dataWeights.assign(data.size(), (double)1/data.size());
 
 	//constructing dataset for each classifier without copying data
 	vector<vector<Entry> > dataClassifiers;
@@ -168,9 +172,11 @@ void HierClassifier::train(const std::vector<Entry>& data){
 
 	//main loop
 	for(int t = 0; t < numIterations; t++){
+		cout << "Iteration " << t << endl;
 		int maxIndex = 0;
 		double maxVal = 0;
 		for(int c = 0; c < numWeakClassifiers; c++){
+			cout << "Training classifier " << c << endl;
 			//training
 			weakClassifiersSet[c]->train(dataClassifiers[c], dataWeights);
 
@@ -196,9 +202,11 @@ void HierClassifier::train(const std::vector<Entry>& data){
 		double alpha = 0.5*log((1 + maxVal)/(1 - maxVal));
 		weights.push_back(alpha);
 
+		cout << "Adding classifier " << maxIndex << ", alpha = " << alpha << endl;
 		//adding classifier
 		classifiers.push_back(weakClassifiersSet[maxIndex]->copy());
 
+		cout << "recomputing dataWeights" << endl;
 		//recomputing dataWeights
 		double sum = 0;
 		for(int e = 0; e < dataClassifiers[maxIndex].size(); e++){
@@ -216,6 +224,7 @@ void HierClassifier::train(const std::vector<Entry>& data){
 		for(int e = 0; e < dataWeights.size(); e++){
 			dataWeights[e] /= sum;
 		}
+		//waitKey();
 	}
 }
 
@@ -289,12 +298,10 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat image,
 	while(end < pixels.size()){
 		Mat values, histogramHS, histogramV, statisticsHSV;
 		int beg = end;
-		if(end == 0){
+		while(pixels[beg].imageId == pixels[end].imageId){
 			end++;
 		}
-		while(pixels[end - 1].imageId == pixels[end].imageId){
-			end++;
-		}
+		//cout << "segment id = " << pixels[beg].imageId << ", beg = " << beg << ", end = " << end << endl;
 		values = Mat(1, end - beg, CV_8UC3);
 		for(int p = beg; p < end; p++){
 			values.at<Vec3b>(p - beg) = image.at<Vec3b>(pixels[p].r, pixels[p].c);
@@ -310,25 +317,29 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat image,
 		int sizeV[] = {HIST_SIZE_V};
 		calcHist(&image, 1, channelsHS, Mat(), histogramHS, 2, sizeHS, rangesHS);
 		calcHist(&image, 1, channelsV, Mat(), histogramV, 1, sizeV, rangesV);
-		histogramHS.reshape(0, 1);
+		histogramHS = histogramHS.reshape(0, 1);
+		histogramV = histogramV.reshape(0, 1);
 		normalize(histogramHS, histogramHS);
 		normalize(histogramV, histogramV);
+		//cout << "V size = " << histogramV.size() << ", HS size = " << histogramHS.size() << endl;
 
-		//TODO check this
-		values.reshape(1, 3);
+
+		values = values.reshape(1, 3);
+		//cout << "values size = " << values.size() << endl;
 		Mat covarHSV;
 		Mat meanHSV;
 		calcCovarMatrix(values,
 						covarHSV,
 						meanHSV,
 						CV_COVAR_NORMAL | CV_COVAR_SCALE | CV_COVAR_COLS);
-		covarHSV.reshape(0, 1);
-		meanHSV.reshape(0, 1);
+		//cout << "Calculated covar matrix" << endl;
+		covarHSV = covarHSV.reshape(0, 1);
+		meanHSV = meanHSV.reshape(0, 1);
 		normalize(covarHSV, covarHSV);
 		normalize(meanHSV, meanHSV);
 
 		Entry tmp;
-		tmp.imageId = regionsOnImage.at<int>(beg);
+		tmp.imageId = pixels[beg].imageId;
 		tmp.descriptor = Mat(1, HIST_SIZE_H*HIST_SIZE_S + HIST_SIZE_V + COVAR_SIZE + MEAN_SIZE, CV_32FC1);
 		int begCol = 0;
 		histogramHS.copyTo(tmp.descriptor.colRange(begCol, begCol + HIST_SIZE_H*HIST_SIZE_S));
@@ -372,14 +383,12 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image){
 	//cout << "rows: " << image.rows << ", cols: " << image.cols << endl;
 
 	image.convertTo(imageFloat, CV_32F);
-	resize(imageFloat, imageFloat, Size(320, 240));
+	//resize(imageFloat, imageFloat, Size(320, 240));
 	GaussianBlur(imageFloat, imageFloat, Size(7, 7), 0.8);
 	split(imageFloat, imageChannels);
 
 	int nrows = imageFloat.rows;
 	int ncols = imageFloat.cols;
-
-	imshow("original", imageFloat/255);
 
 	vector<Mat> segments;
 
@@ -480,25 +489,30 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image){
 		}
 	}
 
+	return finSegments;
+}
+
+Mat HierClassifier::colorSegments(const Mat segments){
+	int nrows = segments.rows;
+	int ncols = segments.cols;
+	Mat ret(nrows, ncols, CV_8UC3);
+
 	map<int, int> colorMap;
 	int ind = 0;
 	for(int r = 0; r < nrows; r++){
 		for(int c = 0; c < ncols; c++){
-			finSegments.at<int>(r, c) = sets.findSet(c + ncols*r);
-			if(colorMap.count(finSegments.at<int>(r, c)) == 0){
-				colorMap.insert(pair<int, int>(finSegments.at<int>(r, c), (ind++) % (sizeof(colors)/sizeof(colors[0]))));
+			if(colorMap.count(segments.at<int>(r, c)) == 0){
+				colorMap.insert(pair<int, int>(segments.at<int>(r, c), (ind++) % (sizeof(colors)/sizeof(colors[0]))));
 			}
 		}
 	}
-	cout << "Found " << colorMap.size() << " segments" << endl;
-	Mat segImage(nrows, ncols, CV_8UC3);
+
 	for(map<int, int>::iterator it = colorMap.begin(); it != colorMap.end(); it++){
-		Mat mask = (finSegments == it->first);
+		Mat mask = (segments == it->first);
 
-		segImage.setTo(colors[it->second], mask);
+		ret.setTo(colors[it->second], mask);
 	}
-	imshow("segmented", segImage);
 
-	return finSegments;
+	return ret;
 }
 

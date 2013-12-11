@@ -90,13 +90,23 @@ void Debug::testSegmentation(boost::filesystem::path dir){
 		if(dirIt->path().filename().string().find(".jpg") != string::npos){
 			cout << "Processing image " << dirIt->path().string() << endl;
 			Mat image = imread(dirIt->path().string());
-			cout << robot->movementConstraints->camera->hierClassifiers.size() << endl;
 			if(robot->movementConstraints->camera->hierClassifiers.size() > 0){
-				robot->movementConstraints->camera->hierClassifiers[0]->segmentImage(image);
+				Mat segments = robot->movementConstraints->camera->hierClassifiers[0]->segmentImage(image);
+				Mat colored = robot->movementConstraints->camera->hierClassifiers[0]->colorSegments(segments);
+				imshow("original", image);
+				imshow("segmented", colored);
 			}
 			waitKey();
 		}
 	}
+}
+
+void Debug::testTraining(boost::filesystem::path dir){
+	robot->movementConstraints->camera->learnFromDir(dir);
+}
+
+void Debug::testClassification(boost::filesystem::path dir){
+
 }
 
 //----------------------ACCESS TO COMPUTED DATA
