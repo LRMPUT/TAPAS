@@ -45,6 +45,10 @@ public:
 
 	void testSegmentation(boost::filesystem::path dir);
 
+	void testTraining(boost::filesystem::path dir);
+
+	void testClassification(boost::filesystem::path dir);
+
 	//----------------------ACCESS TO COMPUTED DATA
 	//CV_32SC1 3x1: x, y, fi
 	const cv::Mat getEstimatedPosition();

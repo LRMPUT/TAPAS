@@ -89,9 +89,11 @@ public:
 
 	void loadCache(boost::filesystem::path file);
 
+	cv::Mat colorSegments(const cv::Mat segments);
+
 //---------------COMPUTING----------------
 
-	void train(const std::vector<Entry>& data);
+	void train(const std::vector<Entry>& data, int inumLabels);
 
 	/**	\brief 
 		@return Matrix of probabilites of belonging to certain class.

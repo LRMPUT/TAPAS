@@ -22,24 +22,35 @@ using namespace boost;
 void ClassifierSVM::startup(){
 	numEntries = 0;
 
+	labData = 0;
+	dataLabels = 0;
+	svmProblem.W = 0;
+	svm = 0;
+
 	svmParams.svm_type = C_SVC;
+	svmParams.C = 1;
 	svmParams.cache_size = 32;
 	svmParams.eps = 0.001;
 	svmParams.probability = 1;
 }
 
 void ClassifierSVM::clearData(){
+	//cout << "numEntries = " << numEntries << endl;
 	for(int i = 0; i < numEntries; i++){
 		delete[] labData[i];
 	}
+	//cout << "Deleteing labData" << endl;
 	delete[] labData;
 
+	//cout << "Deleteing dataLabels" << endl;
 	delete[] dataLabels;
 
+	//cout << "Deleteing svmProblem.W" << endl;
 	delete[] svmProblem.W;
 	/*delete[] weights;
 	delete[] labels;*/
 
+	//cout << "Destroying svm" << endl;
 	svm_free_and_destroy_model(&svm);
 
 	startup();
@@ -54,10 +65,8 @@ ClassifierSVM::ClassifierSVM() :
 ClassifierSVM::ClassifierSVM(const ClassifierSVM& old) :
 	Classifier(Classifier::SVM)
 {
-	if(old.numEntries == 0){
-		throw "Cannot copy ClassifierSVM loaded from cache";
-	}
-	clearData();
+	cout << "Copy constructing ClassifierSVM" << endl;
+	//startup();
 
 	numEntries = old.numEntries;
 	numLabels = old.numLabels;
@@ -65,11 +74,18 @@ ClassifierSVM::ClassifierSVM(const ClassifierSVM& old) :
 	cacheEnabled = old.cacheEnabled;
 	svmParams = old.svmParams;
 
+	//cout << "numEntries = " << numEntries
+	//		<< ", numLabels = " << numLabels
+	//		<< ", descLen = " << descLen << endl;
+
 	labData = new svm_node*[numEntries];
 	for(int e = 0; e < numEntries; e++){
-		labData[e] = new svm_node[descLen];
+		labData[e] = new svm_node[descLen + 1];
 		memcpy(labData[e], old.labData[e], (descLen + 1) * sizeof(svm_node));
 	}
+
+	dataLabels = new double[numEntries];
+	memcpy(dataLabels, old.dataLabels, numEntries * sizeof(double));
 
 	svmProblem.l = old.svmProblem.l;
 	svmProblem.y = dataLabels;
@@ -77,16 +93,32 @@ ClassifierSVM::ClassifierSVM(const ClassifierSVM& old) :
 	svmProblem.W = new double[numEntries];
 	memcpy(svmProblem.W, old.svmProblem.W, numEntries * sizeof(double));
 
-	dataLabels = new double[numEntries];
-	memcpy(dataLabels, old.dataLabels, numEntries * sizeof(double));
-
 	/*weights = new double[numLabels];
 	memcpy(weights, old.weights, numLabels * sizeof(double));
 
 	labels = new int[numLabels];
 	memcpy(labels, old.labels, numLabels * sizeof(int));*/
 
+	cout << "svmProblem.l = " << svmProblem.l << endl;
+	cout << "svmProblem.y = {";
+	for(int e = 0; e < numEntries; e++){
+		cout << svmProblem.y[e] << ", ";
+	}
+	cout << "}" << endl;
+	for(int e = 0; e < numEntries; e++){
+		cout << "svmProblem.x[" << e << "] = {";
+		for(int d = 0; d < descLen + 1; d++){
+			cout << svmProblem.x[e][d].index << "(" << svmProblem.x[e][d].value << "), ";
+		}
+		cout << endl;
+	}
+	cout << "}" << endl;
+
+	//cout << "svm_train" << endl;
+	cout << svm_check_parameter(&svmProblem, &svmParams) << endl;
 	svm = svm_train(&svmProblem, &svmParams);
+
+	cout << "End copy constructing ClassifierSVM" << endl;
 }
 
 /** \brief Loads settings from XML structure.
@@ -194,18 +226,16 @@ void ClassifierSVM::loadCache(boost::filesystem::path file){
 void ClassifierSVM::train(	const std::vector<Entry>& entries,
 							const std::vector<double>& dataWeights)
 {
+	cout << "ClassifierSVM::train()" << endl;
 	//map<int, int> mapLabels;
 	clearData();
-	svmProblem.l = numLabels;
-	svmProblem.y = dataLabels;
-	svmProblem.x = labData;
-	svmProblem.W = new double[numEntries];
 
 	descLen = entries.front().descriptor.cols;
 	numEntries = entries.size();
 	labData = new svm_node*[numEntries];
 	dataLabels = new double[numEntries];
 	numLabels = 0;
+	svmProblem.W = new double[numEntries];
 	for(int e = 0; e < numEntries; e++){
 		labData[e] = new svm_node[descLen + 1];
 		for(int i = 0; i < descLen; i++){
@@ -233,15 +263,19 @@ void ClassifierSVM::train(	const std::vector<Entry>& entries,
 		weights[entries[e].label] += dataWeights[e];
 	}*/
 
-	svmParams.nr_weight = numLabels;
+	svmParams.nr_weight = 0;
 	/*svmParams.weight_label = labels;
 	svmParams.weight = weights;*/
+	svmProblem.l = numEntries;
+	svmProblem.y = dataLabels;
+	svmProblem.x = labData;
 
 	if(svm_check_parameter(&svmProblem, &svmParams) != NULL){
+		//cout << svm_check_parameter(&svmProblem, &svmParams) << endl;
 		throw "Bad svm params";
 	}
 	svm = svm_train(&svmProblem, &svmParams);
-
+	cout << "End ClassifierSVM::train()" << endl;
 }
 
 cv::Mat ClassifierSVM::classify(cv::Mat features){

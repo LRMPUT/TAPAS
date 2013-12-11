@@ -198,10 +198,13 @@ int Camera::selectPolygonPixels(std::vector<cv::Point2i> polygon, int regionId, 
 }
 
 void Camera::learnFromDir(boost::filesystem::path dir){
+	namedWindow("manual segments");
+	namedWindow("original");
 	vector<Entry> dataset;
 	filesystem::directory_iterator endIt;
 	for(filesystem::directory_iterator dirIt(dir); dirIt != endIt; dirIt++){
 		if(dirIt->path().filename().string().find(".xml") != string::npos){
+			cout << "Reading XML file: " << dirIt->path().string() << endl;
 			TiXmlDocument data(dirIt->path().string());
 			if(!data.LoadFile()){
 				throw "Bad data file";
@@ -214,7 +217,8 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 			if(!pFile){
 				throw "Bad data file - no filename entry";
 			}
-			Mat image = imread(dir.string() + pFile->GetText());
+
+			Mat image = imread(dir.string() + string("/") + pFile->GetText());
 			if(image.data == NULL){
 				throw "Bad image file";
 			}
@@ -255,10 +259,16 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 				}
 
 				mapRegionIdToLabel[++manualRegionsCount] = label;
+				//cout << "Selecting polygon pixels for label " << labels[label] <<  endl;
 				selectPolygonPixels(poly, manualRegionsCount, manualRegionsOnImage);
+				//cout << "End selecting" << endl;
 
 				pObject = pObject->NextSiblingElement("object");
 			}
+			imshow("original", image);
+			imshow("manual segments", hierClassifiers.front()->colorSegments(manualRegionsOnImage));
+			//waitKey();
+
 			vector<Entry> newData = hierClassifiers.front()->extractEntries(image, Mat(), manualRegionsOnImage);
 			for(int e = 0; e < newData.size(); e++){
 				newData[e].label = mapRegionIdToLabel[newData[e].imageId];
@@ -266,7 +276,7 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 			}
 		}
 	}
-	hierClassifiers.front()->train(dataset);
+	hierClassifiers.front()->train(dataset, labels.size());
 }
 
 void Camera::classifyFromDir(boost::filesystem::path dir){
