@@ -45,7 +45,7 @@ static void print_string_stdout(const char *s)
 	fflush(stdout);
 }
 static void (*svm_print_string) (const char *) = &print_string_stdout;
-#if 1
+#if 0
 static void info(const char *fmt,...)
 {
 	char buf[BUFSIZ];
@@ -2224,7 +2224,6 @@ svm_model *svm_train(const svm_problem *prob, const svm_parameter *param)
 	}
 	else
 	{
-		info("Classifing");
 		// classification
 		int l = prob->l;
 		int nr_class;
@@ -2284,7 +2283,6 @@ svm_model *svm_train(const svm_problem *prob, const svm_parameter *param)
 		for(i=0;i<nr_class;i++)
 			for(int j=i+1;j<nr_class;j++)
 			{
-				std::cout << "i = " << i << ", j = " << j << std::endl;
 
 				svm_problem sub_prob;
 				int si = start[i], sj = start[j];
