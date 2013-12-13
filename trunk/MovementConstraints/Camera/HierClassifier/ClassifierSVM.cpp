@@ -6,6 +6,7 @@
  */
 
 #include <cstring>
+#include <cstdio>
 
 //Boost
 #include <boost/format.hpp>
@@ -99,7 +100,7 @@ ClassifierSVM::ClassifierSVM(const ClassifierSVM& old) :
 	labels = new int[numLabels];
 	memcpy(labels, old.labels, numLabels * sizeof(int));*/
 
-	cout << "svmProblem.l = " << svmProblem.l << endl;
+	/*cout << "svmProblem.l = " << svmProblem.l << endl;
 	cout << "svmProblem.y = {";
 	for(int e = 0; e < numEntries; e++){
 		cout << svmProblem.y[e] << ", ";
@@ -112,12 +113,14 @@ ClassifierSVM::ClassifierSVM(const ClassifierSVM& old) :
 		}
 		cout << endl;
 	}
-	cout << "}" << endl;
+	cout << "}" << endl;*/
 
-	//cout << "svm_train" << endl;
-	cout << svm_check_parameter(&svmProblem, &svmParams) << endl;
+	//waitKey();
+	if(svm_check_parameter(&svmProblem, &svmParams) != 0){
+		cout << svm_check_parameter(&svmProblem, &svmParams) << endl;
+		throw "Bad svm params during ClassifierSVM copy constructing";
+	}
 	svm = svm_train(&svmProblem, &svmParams);
-
 	cout << "End copy constructing ClassifierSVM" << endl;
 }
 
@@ -292,6 +295,9 @@ cv::Mat ClassifierSVM::classify(cv::Mat features){
 	tmp.index = -1;
 	data[features.cols] = tmp;
 
+	if(svm_check_probability_model(svm) == 0){
+		throw "Bad probability model";
+	}
 	svm_predict_probability(svm, data, prob_est);
 	for(int l = 0; l < numLabels; l++){
 		ret.at<float>(svm->label[l]) = prob_est[l];

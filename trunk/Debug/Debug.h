@@ -47,7 +47,7 @@ public:
 
 	void testTraining(boost::filesystem::path dir);
 
-	void testClassification(boost::filesystem::path dir);
+	void testClassification(boost::filesystem::path dirTrain, boost::filesystem::path dirClassify);
 
 	//----------------------ACCESS TO COMPUTED DATA
 	//CV_32SC1 3x1: x, y, fi

@@ -15,8 +15,8 @@
 #include "UnionFind.h"
 #include "ClassifierSVM.h"
 
-#define HIST_SIZE_H 16
-#define HIST_SIZE_S 16
+#define HIST_SIZE_H 4
+#define HIST_SIZE_S 4
 #define HIST_SIZE_V 16
 #define COVAR_SIZE 9
 #define MEAN_SIZE 3
@@ -104,14 +104,17 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 	pPtr->QueryIntAttribute("min_size", &minSizeSegment);
 
 	numWeakClassifiers = 3;
-	weakClassInfo.push_back(WeakClassifierInfo(0, 256));	//histogram HS
-	weakClassInfo.push_back(WeakClassifierInfo(256, 272));	//histogram V
-	weakClassInfo.push_back(WeakClassifierInfo(272, 284));	//statistics HSV
+	int begCol = 0;
+	weakClassInfo.push_back(WeakClassifierInfo(begCol, begCol + HIST_SIZE_H*HIST_SIZE_S));	//histogram HS
+	begCol += HIST_SIZE_H*HIST_SIZE_S;
+	weakClassInfo.push_back(WeakClassifierInfo(begCol, begCol + HIST_SIZE_V));	//histogram V
+	begCol += HIST_SIZE_V;
+	weakClassInfo.push_back(WeakClassifierInfo(begCol, begCol + COVAR_SIZE + MEAN_SIZE));	//statistics HSV
 	//weakClassInfo.push_back(WeakClassifierInfo());	//statistics height
 	//weakClassInfo.push_back(WeakClassifierInfo());	//statistics intensity
 	//weakClassInfo.push_back(WeakClassifierInfo());	//geometric properties
 
-	numIterations = 30;
+	numIterations = 10;
 
 	weakClassifiersSet.resize(numWeakClassifiers);
 	for(int c = 0; c < numWeakClassifiers; c++){
@@ -183,13 +186,16 @@ void HierClassifier::train(const std::vector<Entry>& data, int inumLabels){
 			//evaluating
 			double score = 0;
 			for(int e = 0; e < dataClassifiers[c].size(); e++){
+				cout << "Entry " << e << ", weight " << dataWeights[e] << ": ";
 				Mat probEst = weakClassifiersSet[c]->classify(dataClassifiers[c][e].descriptor);
 				probEst *= 2;
 				probEst -= 1;
 				for(int l = 0; l < numLabels; l++){
 					int ind = (l == dataClassifiers[c][e].label ? 1 : -1);
+					cout << ind << " (" << probEst.at<float>(l) << "), ";
 					score += dataWeights[e]*probEst.at<float>(l)*ind/numLabels;
 				}
+				cout << endl;
 			}
 			if(score > maxVal){
 				maxVal = score;
@@ -219,7 +225,7 @@ void HierClassifier::train(const std::vector<Entry>& data, int inumLabels){
 				score += probEst.at<float>(l)*ind;
 			}
 			dataWeights[e] *= exp(-alpha*score);
-			sum += exp(-alpha*score);
+			sum += dataWeights[e];
 		}
 		for(int e = 0; e < dataWeights.size(); e++){
 			dataWeights[e] /= sum;
@@ -277,15 +283,17 @@ bool operator<(const Pixel& left, const Pixel& right){
 /** \brief Extracts entries from labeled data.
 
 */
-std::vector<Entry> HierClassifier::extractEntries(	cv::Mat image,
+std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 													cv::Mat terrain,
 													cv::Mat regionsOnImage)
 {
+	Mat imageHSV;
+	cvtColor(imageBGR, imageHSV, CV_BGR2HSV);
 	vector<Pixel> pixels;
-	pixels.resize(image.rows * image.cols);
-	for(int r = 0; r < image.rows; r++){
-		for(int c = 0; c < image.cols; c++){
-			pixels[r * image.cols + c] = Pixel(r, c, regionsOnImage.at<int>(r, c));
+	pixels.resize(imageHSV.rows * imageHSV.cols);
+	for(int r = 0; r < imageHSV.rows; r++){
+		for(int c = 0; c < imageHSV.cols; c++){
+			pixels[r * imageHSV.cols + c] = Pixel(r, c, regionsOnImage.at<int>(r, c));
 		}
 	}
 	sort(pixels.begin(), pixels.end());
@@ -304,19 +312,19 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat image,
 		//cout << "segment id = " << pixels[beg].imageId << ", beg = " << beg << ", end = " << end << endl;
 		values = Mat(1, end - beg, CV_8UC3);
 		for(int p = beg; p < end; p++){
-			values.at<Vec3b>(p - beg) = image.at<Vec3b>(pixels[p].r, pixels[p].c);
+			values.at<Vec3b>(p - beg) = imageHSV.at<Vec3b>(pixels[p].r, pixels[p].c);
 		}
 		int channelsHS[] = {0, 1};
 		float rangeH[] = {0, 256};
-		float rangeS[] = {0, 180};
+		float rangeS[] = {0, 360};
 		const float* rangesHS[] = {rangeH, rangeS};
 		int sizeHS[] = {HIST_SIZE_H, HIST_SIZE_S};
 		int channelsV[] = {2};
 		float rangeV[] = {0, 256};
 		const float* rangesV[] = {rangeV};
 		int sizeV[] = {HIST_SIZE_V};
-		calcHist(&image, 1, channelsHS, Mat(), histogramHS, 2, sizeHS, rangesHS);
-		calcHist(&image, 1, channelsV, Mat(), histogramV, 1, sizeV, rangesV);
+		calcHist(&values, 1, channelsHS, Mat(), histogramHS, 2, sizeHS, rangesHS);
+		calcHist(&values, 1, channelsV, Mat(), histogramV, 1, sizeV, rangesV);
 		histogramHS = histogramHS.reshape(0, 1);
 		histogramV = histogramV.reshape(0, 1);
 		normalize(histogramHS, histogramHS);
@@ -338,6 +346,11 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat image,
 		normalize(covarHSV, covarHSV);
 		normalize(meanHSV, meanHSV);
 
+		//cout << "Entry " << ret.size() << endl;
+		//cout << "histHS = " << histogramHS << endl;
+		//cout << "histV = " << histogramV << endl;
+		//cout << "covarHSV = " << covarHSV << endl;
+		//cout << "meanHSV = " << meanHSV << endl;
 		Entry tmp;
 		tmp.imageId = pixels[beg].imageId;
 		tmp.descriptor = Mat(1, HIST_SIZE_H*HIST_SIZE_S + HIST_SIZE_V + COVAR_SIZE + MEAN_SIZE, CV_32FC1);
