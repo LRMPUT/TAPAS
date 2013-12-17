@@ -93,7 +93,7 @@
 #define _VAR 6
 
 #define _SR 7
-#define _CR 8
+//#define _CR 8
 #define _CBR 9
 #define _BS 10
 #define _BSR 11
