@@ -12,6 +12,10 @@ class Encoders {
 public:
 	Encoders();
 	virtual ~Encoders();
+
+
+	int getLeftEncoder();
+	int getRightEncoder();
 };
 
 #endif /* ENCODERS_H_ */

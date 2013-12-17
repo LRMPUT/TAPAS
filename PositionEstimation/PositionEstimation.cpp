@@ -8,20 +8,20 @@
 #include <opencv2/opencv.hpp>
 #include <string>
 #include "PositionEstimation.h"
+#include <thread>
 
 using namespace cv;
 using namespace std;
 
 PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot) {
 
+	std::thread estimation(&PositionEstimation::run, this);
+
 	KF = new KalmanFilter();
-	KF->init(6,2,3);
-
-	float dt = 0.1; // Right now hard-coded -> cannot be like that    
-
+	KF->init(2,2,2);
 
 	/* KALMAN:
-	 * - we track 6 values -> x, y, phi, vx, vy, omega_phi
+	 * - we track 2 values -> global position
 	 *
 	 * - to predict we can use values from encoders
 	 * - to correct we can use information from the GPS
@@ -29,28 +29,16 @@ PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot) {
 	 */
 
 	KF->transitionMatrix =
-			*(Mat_<double>(6, 6) << 1, 0, 0, dt, 0, 0,
-									0, 1, 0, 0, dt, 1,
-									0, 0, 1, 0, 0, dt,
-									0, 0, 0, 1, 0, 0,
-									0, 0, 0, 0, 1, 0,
-									0, 0 ,0, 0, 0, 1);
+			*(Mat_<double>(2, 2) << 1, 0,
+									0, 1);
 
 	KF->controlMatrix =
-			*(Mat_<double>(6, 3) << 1, 0, 0,
-									0, 1, 0,
-									0, 0, 1,
-									0, 0, 0,
-									0, 0, 0,
-									0, 0 ,0);
+			*(Mat_<double>(2, 2) << 1, 0,
+									0, 1);
 
 	KF->measurementMatrix =
-			*(Mat_<double>(6, 2) << 1, 0,
-									0, 1,
-									0, 0,
-									0, 0,
-									0, 0,
-									0, 0);
+			*(Mat_<double>(2, 2) << 1, 0,
+									0, 1);
 
 }
 
@@ -59,36 +47,54 @@ PositionEstimation::~PositionEstimation() {
 	closeImu();
 }
 
+void PositionEstimation::run() {
+
+
+}
+
 // Update Kalman - updates on GPS
 void PositionEstimation::KalmanUpdate()
 {
-	//TO DO Trzeba zmienić, bo zmieniły się funkcje
-	//state = KF->correct( this->getGpsData() );
-	
-	// Optional stuff
-	//cv::Mat imu = this->getImuData();
-	// Change measurementMatrix
-	// 
-	// Add magneto
+	// Get the GPS data if GPS is available
+	if ( this->robot->isGpsOpen() )
+	{
+		Mat gps_data = Mat(2,1, CV_32FC1);
+		gps_data.at<float>(0,0) = this->gps.getPosX();
+		gps_data.at<float>(1,0) = this->gps.getPosY();
+	}
 }
 
 // Encoders - predict
 void PositionEstimation::KalmanPredict()
 {
-	// TODO:
-	// - move encoder TICK somewhere up
-	// - what is wheel base
-	int TICK_PER_ROUND = 1000;
-	int WHEEL_BASE = 100;
-	double PI = 3.1415265;
-	int wheel_radius = 10;
+	double theta = 0.0;
 
-	cv::Mat pred = this->robot->getEncoderData();
-	pred.at<float>(0) *= pred.at<float>(0) / TICK_PER_ROUND * 2 * PI * wheel_radius;
-	pred.at<float>(1) *= pred.at<float>(1) / TICK_PER_ROUND * 2 * PI * wheel_radius;
-	pred.at<float>(2) = ( pred.at<float>(1) - pred.at<float>(0) ) / TICK_PER_ROUND * 2 * PI * wheel_radius / ( 2 * PI * WHEEL_BASE ) * 360;
+	// Getting the encoder ticks
+	float left_enc = float( this->encoders.getLeftEncoder() ) / ENCODER_TICK_PER_REV * WHEEL_DIAMETER * M_PI;
+	float right_enc = float ( this->encoders.getRightEncoder() ) / ENCODER_TICK_PER_REV * WHEEL_DIAMETER * M_PI;
 
-	state = KF->predict(pred);
+	// if there is IMU, we use IMU to estimate theta !:)
+	if (this->isImuOpen())
+	{
+		// Getting the angle theta of the IMU
+		cv::Mat imu = this->imu.getData();
+
+		//acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
+		theta = imu.at<float>(0,3);
+	}
+	// No IMU :(
+	else
+	{
+		double prev_theta = (left_enc - right_enc) / WHEEL_BASE;
+	}
+
+
+	double distance_covered = (left_enc + right_enc)/2;
+	cv::Mat prediction = cv::Mat(2,1, CV_32FC1);
+	prediction.at<float>(0) = distance_covered * sin(theta);
+	prediction.at<float>(1) = distance_covered * cos(theta);
+
+	state = KF->predict(prediction);
 }
 
 //----------------------ACCESS TO COMPUTED DATA

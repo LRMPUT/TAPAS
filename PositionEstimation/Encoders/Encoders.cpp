@@ -16,3 +16,12 @@ Encoders::~Encoders() {
 	// TODO Auto-generated destructor stub
 }
 
+int Encoders::getLeftEncoder()
+{
+	return 0;
+}
+
+int Encoders::getRightEncoder()
+{
+	return 0;
+}
