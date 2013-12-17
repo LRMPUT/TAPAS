@@ -13,6 +13,7 @@
 #include "Encoders/Encoders.h"
 #include "GPS/GPS.h"
 #include "IMU/IMU.h"
+#include <thread>
 
 
 class Robot;
@@ -22,8 +23,8 @@ class PositionEstimation {
 	friend class Debug;
 
 private:
-	// Encoders - moved to GlobalPlanner
-	//Encoders encoders;
+	// unique pointer to the PositionEstimation thread
+	std::unique_ptr<std::thread> pe_thread;
 
 	// Kalman filter to gather position information
 	cv::Mat state;
@@ -35,12 +36,24 @@ private:
 	// IMU
 	IMU imu;
 
+	// Encoders
+	Encoders encoders;
+
 	//Parent class Robot
 	Robot* robot;
+
+	const int ENCODER_TICK_PER_REV = 48 * 75;
+	const double WHEEL_DIAMETER = 0.12;
+	const double WHEEL_BASE = 0.24;
+
+
 
 public:
 	PositionEstimation(Robot* irobot);
 	virtual ~PositionEstimation();
+
+	// The cycle of the position estimation thread
+	void run();
 
 	// Update Kalman - updates on GPS
 	void KalmanUpdate();
