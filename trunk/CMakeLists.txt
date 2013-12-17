@@ -4,6 +4,8 @@ set(CMAKE_BUILD_TYPE "Debug")
 
 project(RobotsIntellect)
 
+SET(CMAKE_CXX_FLAGS "-std=c++0x")
+
 set(urg_LIBRARIES_DIR /usr/local/lib)
 set(urg_LIBRARIES urg_cpp)
 set(TinyXML_LIBRARIES tinyxml)
