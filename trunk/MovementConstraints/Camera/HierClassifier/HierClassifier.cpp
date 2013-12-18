@@ -18,8 +18,10 @@
 #define HIST_SIZE_H 4
 #define HIST_SIZE_S 4
 #define HIST_SIZE_V 16
-#define COVAR_SIZE 9
-#define MEAN_SIZE 3
+#define COVAR_HSV_SIZE 9
+#define MEAN_HSV_SIZE 3
+#define COVAR_LASER_SIZE 4
+#define MEAN_LASER_SIZE 2
 
 using namespace std;
 using namespace cv;
@@ -56,7 +58,7 @@ cv::Mat HierClassifier::projectPointsTo3D(cv::Mat disparity){
 
 cv::Mat HierClassifier::projectPointsTo2D(cv::Mat _3dImage){
 	Mat ret;
-	projectPoints(_3dImage, ret, (0,0,0), (0,0,0), cameraMatrix, Mat());
+	projectPoints(_3dImage, (0,0,0), (0,0,0), cameraMatrix, Mat(), ret);
 	return ret;
 }
 
@@ -109,9 +111,10 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 	begCol += HIST_SIZE_H*HIST_SIZE_S;
 	weakClassInfo.push_back(WeakClassifierInfo(begCol, begCol + HIST_SIZE_V));	//histogram V
 	begCol += HIST_SIZE_V;
-	weakClassInfo.push_back(WeakClassifierInfo(begCol, begCol + COVAR_SIZE + MEAN_SIZE));	//statistics HSV
-	//weakClassInfo.push_back(WeakClassifierInfo());	//statistics height
-	//weakClassInfo.push_back(WeakClassifierInfo());	//statistics intensity
+	weakClassInfo.push_back(WeakClassifierInfo(begCol, begCol + COVAR_HSV_SIZE + MEAN_HSV_SIZE));	//statistics HSV
+	begCol += COVAR_HSV_SIZE + MEAN_HSV_SIZE;
+	weakClassInfo.push_back(WeakClassifierInfo(begCol, begCol + COVAR_LASER_SIZE + MEAN_LASER_SIZE));	//statistics laser
+	begCol += COVAR_HSV_SIZE + MEAN_HSV_SIZE;
 	//weakClassInfo.push_back(WeakClassifierInfo());	//geometric properties
 
 	numIterations = 10;
@@ -297,23 +300,51 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		}
 	}
 	sort(pixels.begin(), pixels.end());
+
+	Mat terrainPointsImage(terrain.cols, 2, CV_32FC1);
+	Mat tmpTerrain = terrain.rowRange(0, 3).t();
+	Mat tvec(1, 3, CV_32FC1, Scalar(0));
+	Mat rvec(1, 3, CV_32FC1, Scalar(0));
+	projectPoints(tmpTerrain, tvec, rvec, cameraMatrix, Mat(), terrainPointsImage);
+	terrainPointsImage = terrainPointsImage.t();
+	cout << terrainPointsImage.colRange(1, 100) << endl;
+	vector<pair<int, int> > terrainRegion;
+	for(int p = 0; p < terrain.cols; p++){
+		int imageRow = round(terrainPointsImage.at<float>(0, p));
+		int imageCol = round(terrainPointsImage.at<float>(1, p));
+		if(imageRow >= 0 && imageRow < imageBGR.rows &&
+			imageCol >= 0 && imageCol < imageBGR.cols)
+		{
+			int region = regionsOnImage.at<int>(imageRow, imageCol);
+			terrainRegion.push_back(pair<int, int>(region, p));
+		}
+	}
+	sort(terrainRegion.begin(), terrainRegion.end());
+
 	vector<Entry> ret;
-	//vector<Mat> values;
-	//vector<Mat> histogramsHS;
-	//vector<Mat> histogramsV;
-	//vector<Mat> statisticsHSV;
-	int end = 0;
-	while(end < pixels.size()){
-		Mat values, histogramHS, histogramV, statisticsHSV;
-		int beg = end;
-		while(pixels[beg].imageId == pixels[end].imageId){
-			end++;
+	int endIm = 0;
+	int endTer = 0;
+	while(endIm < pixels.size()){
+		Mat values, valuesTer, histogramHS, histogramV, statisticsHSV, stisticsLaser;
+		int begIm = endIm;
+		while(pixels[begIm].imageId == pixels[endIm].imageId){
+			endIm++;
 		}
 		//cout << "segment id = " << pixels[beg].imageId << ", beg = " << beg << ", end = " << end << endl;
-		values = Mat(1, end - beg, CV_8UC3);
-		for(int p = beg; p < end; p++){
-			values.at<Vec3b>(p - beg) = imageHSV.at<Vec3b>(pixels[p].r, pixels[p].c);
+		values = Mat(1, endIm - begIm, CV_8UC3);
+		for(int p = begIm; p < endIm; p++){
+			values.at<Vec3b>(p - begIm) = imageHSV.at<Vec3b>(pixels[p].r, pixels[p].c);
 		}
+
+		int begTer = endTer;
+		while(terrainRegion[begTer].first == terrainRegion[endTer].first){
+			endTer++;
+		}
+		valuesTer = Mat(terrain.rows, endTer - begTer, CV_32FC1);
+		for(int p = begTer; p < endTer; p++){
+			terrain.colRange(terrainRegion[p].second, terrainRegion[p].second + 1).copyTo(valuesTer.colRange(p - begTer, p - begTer + 1));
+		}
+
 		int channelsHS[] = {0, 1};
 		float rangeH[] = {0, 256};
 		float rangeS[] = {0, 360};
@@ -346,22 +377,44 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		normalize(covarHSV, covarHSV);
 		normalize(meanHSV, meanHSV);
 
+		Mat covarLaser, meanLaser;
+		calcCovarMatrix(valuesTer.rowRange(3, 5),
+						covarLaser,
+						meanLaser,
+						CV_COVAR_NORMAL | CV_COVAR_SCALE | CV_COVAR_COLS);
+		covarLaser = covarLaser.reshape(0, 1);
+		meanLaser = meanLaser.reshape(0, 1);
+		normalize(covarLaser, covarLaser);
+		normalize(meanLaser, meanLaser);
+
 		//cout << "Entry " << ret.size() << endl;
 		//cout << "histHS = " << histogramHS << endl;
 		//cout << "histV = " << histogramV << endl;
 		//cout << "covarHSV = " << covarHSV << endl;
 		//cout << "meanHSV = " << meanHSV << endl;
 		Entry tmp;
-		tmp.imageId = pixels[beg].imageId;
-		tmp.descriptor = Mat(1, HIST_SIZE_H*HIST_SIZE_S + HIST_SIZE_V + COVAR_SIZE + MEAN_SIZE, CV_32FC1);
+		tmp.imageId = pixels[begIm].imageId;
+		tmp.descriptor = Mat(1, HIST_SIZE_H*HIST_SIZE_S +
+							HIST_SIZE_V +
+							COVAR_HSV_SIZE +
+							MEAN_HSV_SIZE +
+							COVAR_LASER_SIZE +
+							MEAN_LASER_SIZE,
+							CV_32FC1);
 		int begCol = 0;
 		histogramHS.copyTo(tmp.descriptor.colRange(begCol, begCol + HIST_SIZE_H*HIST_SIZE_S));
 		begCol += HIST_SIZE_H*HIST_SIZE_S;
 		histogramV.copyTo(tmp.descriptor.colRange(begCol, begCol + HIST_SIZE_V));
 		begCol += HIST_SIZE_V;
-		covarHSV.copyTo(tmp.descriptor.colRange(begCol, begCol + COVAR_SIZE));
-		begCol += COVAR_SIZE;
-		meanHSV.copyTo(tmp.descriptor.colRange(begCol, begCol + MEAN_SIZE));
+		covarHSV.copyTo(tmp.descriptor.colRange(begCol, begCol + COVAR_HSV_SIZE));
+		begCol += COVAR_HSV_SIZE;
+		meanHSV.copyTo(tmp.descriptor.colRange(begCol, begCol + MEAN_HSV_SIZE));
+		begCol += MEAN_HSV_SIZE;
+		covarLaser.copyTo(tmp.descriptor.colRange(begCol, begCol + COVAR_LASER_SIZE));
+		begCol += COVAR_LASER_SIZE;
+		meanLaser.copyTo(tmp.descriptor.colRange(begCol, begCol + MEAN_LASER_SIZE));
+		begCol += MEAN_LASER_SIZE;
+
 		ret.push_back(tmp);
 	}
 	return ret;

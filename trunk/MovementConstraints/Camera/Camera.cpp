@@ -222,6 +222,28 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 			if(image.data == NULL){
 				throw "Bad image file";
 			}
+
+			//loading map
+			int imageNum;
+			sscanf(pFile->GetText(), "camera%d.jpg", &imageNum);
+			Mat terrain;
+			char terrainFilename[200];
+			sprintf(terrainFilename, "%smap%03d.log", (dir.string() + string("/")).c_str(), imageNum);
+			ifstream terrainFile(terrainFilename);
+			if(terrainFile.is_open() == false){
+				throw "No map file";
+			}
+			double tmp;
+			while(!terrainFile.eof()){
+				Mat terrainPoint(1, 5, CV_32FC1);	//x, y, z, distance, intensity
+				for(int i = 0; i < 5; i++){
+					terrainFile >> tmp;
+					terrainPoint.at<float>(0, i) = tmp;
+				}
+				terrain.push_back(terrainPoint);
+			}
+			terrain = terrain.t();
+
 			Mat manualRegionsOnImage(image.rows, image.cols, CV_32SC1, Scalar(0));
 			int manualRegionsCount = 0;
 
@@ -269,7 +291,7 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 			imshow("manual segments", hierClassifiers.front()->colorSegments(manualRegionsOnImage));
 			//waitKey();
 
-			vector<Entry> newData = hierClassifiers.front()->extractEntries(image, Mat(), manualRegionsOnImage);
+			vector<Entry> newData = hierClassifiers.front()->extractEntries(image, terrain, manualRegionsOnImage);
 			for(int e = 0; e < newData.size(); e++){
 				newData[e].label = mapRegionIdToLabel[newData[e].imageId];
 				dataset.push_back(newData[e]);
