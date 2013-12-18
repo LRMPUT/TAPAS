@@ -33,6 +33,7 @@
 									<listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/4.6/include"/>
 									<listOptionValue builtIn="false" value="/usr/include/qt4"/>
 									<listOptionValue builtIn="false" value="/usr/local/include"/>
+									<listOptionValue builtIn="false" value="/usr/include/c++/4.6/bits"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.851628123" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -49,6 +50,7 @@
 									<listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/4.6/include"/>
 									<listOptionValue builtIn="false" value="/usr/include/qt4"/>
 									<listOptionValue builtIn="false" value="/usr/local/include"/>
+									<listOptionValue builtIn="false" value="/usr/include/c++/4.6/bits"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1211761148" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
@@ -70,7 +72,7 @@
 									<listOptionValue builtIn="false" value="/usr/lib/gcc/x86_64-linux-gnu/4.6/include"/>
 									<listOptionValue builtIn="false" value="/usr/include/qt4"/>
 									<listOptionValue builtIn="false" value="/usr/local/include"/>
-									<listOptionValue builtIn="false" value="/home/jachu/lib/tinyxml"/>
+									<listOptionValue builtIn="false" value="/usr/include/c++/4.6/bits"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1374331771" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
@@ -114,6 +116,7 @@
 									<listOptionValue builtIn="false" value="/usr/include/qt4"/>
 									<listOptionValue builtIn="false" value="/usr/local/include/opencv"/>
 									<listOptionValue builtIn="false" value="/usr/local/include/urg_c"/>
+									<listOptionValue builtIn="false" value="/usr/include/c++/4.6/bits"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.531262908" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -132,6 +135,7 @@
 									<listOptionValue builtIn="false" value="/usr/include/qt4"/>
 									<listOptionValue builtIn="false" value="/usr/local/include/opencv"/>
 									<listOptionValue builtIn="false" value="/usr/local/include/urg_c"/>
+									<listOptionValue builtIn="false" value="/usr/include/c++/4.6/bits"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1621515781" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
@@ -155,6 +159,7 @@
 									<listOptionValue builtIn="false" value="/usr/include/qt4"/>
 									<listOptionValue builtIn="false" value="/usr/local/include/opencv"/>
 									<listOptionValue builtIn="false" value="/usr/local/include/urg_c"/>
+									<listOptionValue builtIn="false" value="/usr/include/c++/4.6/bits"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.640053617" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
