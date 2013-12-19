@@ -24,7 +24,8 @@ class PositionEstimation {
 
 private:
 	// unique pointer to the PositionEstimation thread
-	std::unique_ptr<std::thread> pe_thread;
+	std::thread estimationThread;
+	bool runThread;
 
 	// Kalman filter to gather position information
 	cv::Mat state;
@@ -54,6 +55,9 @@ public:
 
 	// The cycle of the position estimation thread
 	void run();
+
+	// Stopping the position estimation thread
+	void stopThread();
 
 	// Update Kalman - updates on GPS
 	void KalmanUpdate();
