@@ -590,7 +590,7 @@ void Camera::readSettings(TiXmlElement* settings){
 		distCoeffs[idx] = readMatrixSettings(pPtr, "dist_coeffs", 1, 5);
 
 
-		hierClassifiers[i] = new HierClassifier(cameraMatrix[i]);
+		hierClassifiers[idx] = new HierClassifier(cameraMatrix[idx]);
 
 		pPtr = pPtr->NextSiblingElement("sensor");
 	}
@@ -617,7 +617,8 @@ cv::Mat Camera::readMatrixSettings(TiXmlElement* parent, const char* node, int r
 	if(!ptr){
 		throw (string("Bad settings file - no ") + string(node)).c_str();
 	}
-	stringstream tmpStr(ptr->Value());
+	//cout << "node: " << node << ", value: " << ptr->GetText() << endl;
+	stringstream tmpStr(ptr->GetText());
 	Mat ret = Mat(rows, cols, CV_32FC1);
 	for(int row = 0; row < rows; row++){
 		for(int col = 0; col < cols; col++){
@@ -671,6 +672,7 @@ void Camera::saveCache(boost::filesystem::path cacheFile){
 		for(int i = 0; i < entries[entr].descriptor.cols; i++){
 			tmpStr << entries[entr].descriptor.at<float>(i) << " ";
 		}
+		//TODO correct using TiXmlText
 		pEntry->SetValue(tmpStr.str());
 	}
 	doc.SaveFile(cacheFile.c_str());

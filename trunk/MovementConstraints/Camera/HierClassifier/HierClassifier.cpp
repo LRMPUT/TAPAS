@@ -65,7 +65,8 @@ cv::Mat HierClassifier::projectPointsTo2D(cv::Mat _3dImage){
 //---------------MISCELLANEOUS----------------
 
 HierClassifier::HierClassifier(cv::Mat icameraMatrix) :
-	cacheEnabled(false)
+	cacheEnabled(false),
+	cameraMatrix(icameraMatrix)
 {
 
 }
@@ -74,7 +75,8 @@ HierClassifier::HierClassifier(cv::Mat icameraMatrix) :
 
 */
 HierClassifier::HierClassifier(cv::Mat icameraMatrix, TiXmlElement* settings) :
-	cacheEnabled(false)
+	cacheEnabled(false),
+	cameraMatrix(icameraMatrix)
 {
 	loadSettings(settings);
 }
@@ -105,7 +107,7 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 	pPtr->QueryFloatAttribute("k", &kSegment);
 	pPtr->QueryIntAttribute("min_size", &minSizeSegment);
 
-	numWeakClassifiers = 3;
+	numWeakClassifiers = 4;
 	int begCol = 0;
 	weakClassInfo.push_back(WeakClassifierInfo(begCol, begCol + HIST_SIZE_H*HIST_SIZE_S));	//histogram HS
 	begCol += HIST_SIZE_H*HIST_SIZE_S;
@@ -189,16 +191,16 @@ void HierClassifier::train(const std::vector<Entry>& data, int inumLabels){
 			//evaluating
 			double score = 0;
 			for(int e = 0; e < dataClassifiers[c].size(); e++){
-				cout << "Entry " << e << ", weight " << dataWeights[e] << ": ";
+				//cout << "Entry " << e << ", weight " << dataWeights[e] << ": ";
 				Mat probEst = weakClassifiersSet[c]->classify(dataClassifiers[c][e].descriptor);
 				probEst *= 2;
 				probEst -= 1;
 				for(int l = 0; l < numLabels; l++){
 					int ind = (l == dataClassifiers[c][e].label ? 1 : -1);
-					cout << ind << " (" << probEst.at<float>(l) << "), ";
+					//cout << ind << " (" << probEst.at<float>(l) << "), ";
 					score += dataWeights[e]*probEst.at<float>(l)*ind/numLabels;
 				}
-				cout << endl;
+				//cout << endl;
 			}
 			if(score > maxVal){
 				maxVal = score;
@@ -290,6 +292,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 													cv::Mat terrain,
 													cv::Mat regionsOnImage)
 {
+	namedWindow("imageBGR");
 	Mat imageHSV;
 	cvtColor(imageBGR, imageHSV, CV_BGR2HSV);
 	vector<Pixel> pixels;
@@ -305,13 +308,20 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 	Mat tmpTerrain = terrain.rowRange(0, 3).t();
 	Mat tvec(1, 3, CV_32FC1, Scalar(0));
 	Mat rvec(1, 3, CV_32FC1, Scalar(0));
+	Mat distCoeffs(1, 5, CV_32FC1, Scalar(0));
 	projectPoints(tmpTerrain, tvec, rvec, cameraMatrix, Mat(), terrainPointsImage);
-	terrainPointsImage = terrainPointsImage.t();
-	cout << terrainPointsImage.colRange(1, 100) << endl;
+	//terrainPointsImage = terrainPointsImage.t();
+	terrainPointsImage = terrainPointsImage.reshape(1).t();
+	//cout << tmpTerrain.rowRange(1, 10) << endl;
+	//cout << terrainPointsImage.rowRange(1, 10) << endl;
+	//cout << cameraMatrix << endl;
 	vector<pair<int, int> > terrainRegion;
 	for(int p = 0; p < terrain.cols; p++){
-		int imageRow = round(terrainPointsImage.at<float>(0, p));
-		int imageCol = round(terrainPointsImage.at<float>(1, p));
+		int imageRow = round(terrainPointsImage.at<float>(1, p));
+		int imageCol = round(terrainPointsImage.at<float>(0, p));
+		if(p < 10){
+			cout << "point (" << imageCol << ", " << imageRow << ")" << endl;
+		}
 		if(imageRow >= 0 && imageRow < imageBGR.rows &&
 			imageCol >= 0 && imageCol < imageBGR.cols)
 		{
@@ -329,6 +339,9 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		int begIm = endIm;
 		while(pixels[begIm].imageId == pixels[endIm].imageId){
 			endIm++;
+			if(endIm == pixels.size()){
+				break;
+			}
 		}
 		//cout << "segment id = " << pixels[beg].imageId << ", beg = " << beg << ", end = " << end << endl;
 		values = Mat(1, endIm - begIm, CV_8UC3);
@@ -337,12 +350,42 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		}
 
 		int begTer = endTer;
-		while(terrainRegion[begTer].first == terrainRegion[endTer].first){
-			endTer++;
+		if(begTer < terrainRegion.size()){
+			while(terrainRegion[begTer].first != pixels[begIm].imageId){
+				begTer++;
+				if(begTer >= terrainRegion.size()){
+					break;
+				}
+			}
 		}
-		valuesTer = Mat(terrain.rows, endTer - begTer, CV_32FC1);
-		for(int p = begTer; p < endTer; p++){
-			terrain.colRange(terrainRegion[p].second, terrainRegion[p].second + 1).copyTo(valuesTer.colRange(p - begTer, p - begTer + 1));
+		endTer = begTer;
+		if(endTer < terrainRegion.size()){
+			while(terrainRegion[begTer].first == terrainRegion[endTer].first){
+				endTer++;
+				if(endTer >= terrainRegion.size()){
+					break;
+				}
+			}
+		}
+		if(endTer - begTer > 0){
+			valuesTer = Mat(terrain.rows, endTer - begTer, CV_32FC1);
+			Mat tmpImageBGR(imageBGR);
+			for(int p = begTer; p < endTer; p++){
+				//cout << terrainRegion[p].second << endl;
+				terrain.colRange(terrainRegion[p].second, terrainRegion[p].second + 1).copyTo(valuesTer.colRange(p - begTer, p - begTer + 1));
+				//cout << "terrainRegion[p].second = " << terrainRegion[p].second << endl;
+				int imageRow = round(terrainPointsImage.at<float>(1 ,terrainRegion[p].second));
+				int imageCol = round(terrainPointsImage.at<float>(0, terrainRegion[p].second));
+				//cout << "Point: " << imageRow << ", " << imageCol << endl;
+				tmpImageBGR.at<Vec3b>(imageRow, imageCol) = Vec3b(0x00, 0x00, 0xff);
+			}
+			cout << "ImageId = " << pixels[begIm].imageId << endl;
+			imshow("imageBGR", imageBGR);
+			waitKey();
+		}
+		else{
+			cout << "Warning - no terrain values for imageId " << pixels[begIm].imageId << endl;
+			valuesTer = Mat(terrain.rows, 1, CV_32FC1, Scalar(0));
 		}
 
 		int channelsHS[] = {0, 1};
@@ -374,8 +417,8 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		//cout << "Calculated covar matrix" << endl;
 		covarHSV = covarHSV.reshape(0, 1);
 		meanHSV = meanHSV.reshape(0, 1);
-		normalize(covarHSV, covarHSV);
-		normalize(meanHSV, meanHSV);
+		//normalize(covarHSV, covarHSV);
+		//normalize(meanHSV, meanHSV);
 
 		Mat covarLaser, meanLaser;
 		calcCovarMatrix(valuesTer.rowRange(3, 5),
@@ -384,8 +427,9 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 						CV_COVAR_NORMAL | CV_COVAR_SCALE | CV_COVAR_COLS);
 		covarLaser = covarLaser.reshape(0, 1);
 		meanLaser = meanLaser.reshape(0, 1);
-		normalize(covarLaser, covarLaser);
-		normalize(meanLaser, meanLaser);
+		//normalize(covarLaser, covarLaser);
+		//normalize(meanLaser, meanLaser);
+		//cout << covarLaser << endl << meanLaser << endl;
 
 		//cout << "Entry " << ret.size() << endl;
 		//cout << "histHS = " << histogramHS << endl;
