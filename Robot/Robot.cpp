@@ -24,7 +24,7 @@ Robot::Robot(boost::filesystem::path settingsFile) : globalPlanner(this), positi
 }
 
 Robot::~Robot() {
-
+	positionEstimation.stopThread();
 }
 
 //----------------------MENAGMENT OF GlobalPlanner DEVICES

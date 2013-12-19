@@ -15,7 +15,8 @@ using namespace std;
 
 PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot) {
 
-	std::thread estimation(&PositionEstimation::run, this);
+	runThread = true;
+	estimationThread = std::thread(&PositionEstimation::run, this);
 
 	KF = new KalmanFilter();
 	KF->init(2,2,2);
@@ -49,7 +50,15 @@ PositionEstimation::~PositionEstimation() {
 
 void PositionEstimation::run() {
 
+	while(runThread)
+	{
+		cout<< " 1 " << endl;
+	}
+}
 
+void PositionEstimation::stopThread() {
+	runThread = false;
+	estimationThread.join();
 }
 
 // Update Kalman - updates on GPS
