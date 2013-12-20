@@ -9,6 +9,7 @@
 #include <string>
 #include "PositionEstimation.h"
 #include <thread>
+#include <chrono>
 
 using namespace cv;
 using namespace std;
@@ -52,7 +53,8 @@ void PositionEstimation::run() {
 
 	while(runThread)
 	{
-		cout<< " 1 " << endl;
+	    std::chrono::milliseconds duration( 2000 );
+	    std::this_thread::sleep_for( duration);
 	}
 }
 
