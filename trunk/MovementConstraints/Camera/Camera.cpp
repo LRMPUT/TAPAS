@@ -293,8 +293,10 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 
 			vector<Entry> newData = hierClassifiers.front()->extractEntries(image, terrain, manualRegionsOnImage);
 			for(int e = 0; e < newData.size(); e++){
-				newData[e].label = mapRegionIdToLabel[newData[e].imageId];
-				dataset.push_back(newData[e]);
+				if(mapRegionIdToLabel.count(newData[e].imageId) > 0){
+					newData[e].label = mapRegionIdToLabel[newData[e].imageId];
+					dataset.push_back(newData[e]);
+				}
 			}
 		}
 	}
@@ -302,6 +304,7 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 }
 
 void Camera::classifyFromDir(boost::filesystem::path dir){
+	cout << "Classifying" << endl;
 	for(int l = 0; l < labels.size(); l++){
 		namedWindow(labels[l]);
 	}
@@ -321,10 +324,32 @@ void Camera::classifyFromDir(boost::filesystem::path dir){
 			if(!pFile){
 				throw "Bad data file - no filename entry";
 			}
-			Mat image = imread(dir.string() + pFile->GetText());
+			Mat image = imread(dir.string() + string("/") + pFile->GetText());
 			if(image.data == NULL){
 				throw "Bad image file";
 			}
+
+			//loading map
+			int imageNum;
+			sscanf(pFile->GetText(), "camera%d.jpg", &imageNum);
+			Mat terrain;
+			char terrainFilename[200];
+			sprintf(terrainFilename, "%smap%03d.log", (dir.string() + string("/")).c_str(), imageNum);
+			ifstream terrainFile(terrainFilename);
+			if(terrainFile.is_open() == false){
+				throw "No map file";
+			}
+			double tmp;
+			while(!terrainFile.eof()){
+				Mat terrainPoint(1, 5, CV_32FC1);	//x, y, z, distance, intensity
+				for(int i = 0; i < 5; i++){
+					terrainFile >> tmp;
+					terrainPoint.at<float>(0, i) = tmp;
+				}
+				terrain.push_back(terrainPoint);
+			}
+			terrain = terrain.t();
+
 			Mat manualRegionsOnImage(image.rows, image.cols, CV_32SC1, Scalar(0));
 			int manualRegionsCount = 0;
 			map<int, int> mapRegionIdToLabel;
@@ -364,12 +389,14 @@ void Camera::classifyFromDir(boost::filesystem::path dir){
 
 				pObject = pObject->NextSiblingElement("object");
 			}
-			vector<Mat> classificationResult = hierClassifiers.front()->classify(image, Mat());
+			vector<Mat> classificationResult = hierClassifiers.front()->classify(image, terrain);
 			for(int l = 0; l < labels.size(); l++){
 				imshow(labels[l], classificationResult[l]);
 			}
+			waitKey();
 		}
 	}
+	cout << "End classifying" << endl;
 }
 
 /*cv::Mat Camera::classifySlidingWindow(cv::Mat image){

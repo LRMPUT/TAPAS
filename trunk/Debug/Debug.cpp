@@ -107,7 +107,7 @@ void Debug::testTraining(boost::filesystem::path dir){
 
 void Debug::testClassification(boost::filesystem::path dirTrain, boost::filesystem::path dirClassify){
 	robot->movementConstraints->camera->learnFromDir(dirTrain);
-
+	robot->movementConstraints->camera->classifyFromDir(dirClassify);
 }
 
 //----------------------ACCESS TO COMPUTED DATA

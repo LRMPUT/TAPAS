@@ -319,9 +319,6 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 	for(int p = 0; p < terrain.cols; p++){
 		int imageRow = round(terrainPointsImage.at<float>(1, p));
 		int imageCol = round(terrainPointsImage.at<float>(0, p));
-		if(p < 10){
-			cout << "point (" << imageCol << ", " << imageRow << ")" << endl;
-		}
 		if(imageRow >= 0 && imageRow < imageBGR.rows &&
 			imageCol >= 0 && imageCol < imageBGR.cols)
 		{
@@ -374,14 +371,14 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 				//cout << terrainRegion[p].second << endl;
 				terrain.colRange(terrainRegion[p].second, terrainRegion[p].second + 1).copyTo(valuesTer.colRange(p - begTer, p - begTer + 1));
 				//cout << "terrainRegion[p].second = " << terrainRegion[p].second << endl;
-				int imageRow = round(terrainPointsImage.at<float>(1 ,terrainRegion[p].second));
-				int imageCol = round(terrainPointsImage.at<float>(0, terrainRegion[p].second));
+				//int imageRow = round(terrainPointsImage.at<float>(1 ,terrainRegion[p].second));
+				//int imageCol = round(terrainPointsImage.at<float>(0, terrainRegion[p].second));
 				//cout << "Point: " << imageRow << ", " << imageCol << endl;
-				tmpImageBGR.at<Vec3b>(imageRow, imageCol) = Vec3b(0x00, 0x00, 0xff);
+				//tmpImageBGR.at<Vec3b>(imageRow, imageCol) = Vec3b(0x00, 0x00, 0xff);
 			}
-			cout << "ImageId = " << pixels[begIm].imageId << endl;
-			imshow("imageBGR", imageBGR);
-			waitKey();
+			//cout << "ImageId = " << pixels[begIm].imageId << endl;
+			//imshow("imageBGR", imageBGR);
+			//waitKey();
 		}
 		else{
 			cout << "Warning - no terrain values for imageId " << pixels[begIm].imageId << endl;

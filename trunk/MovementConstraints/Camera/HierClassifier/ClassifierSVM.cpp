@@ -20,6 +20,8 @@ using namespace cv;
 using namespace std;
 using namespace boost;
 
+#define INF (10e9)
+
 void ClassifierSVM::startup(){
 	numEntries = 0;
 
@@ -50,6 +52,9 @@ void ClassifierSVM::clearData(){
 	delete[] svmProblem.W;
 	/*delete[] weights;
 	delete[] labels;*/
+
+	delete[] scalesSub;
+	delete[] scalesDiv;
 
 	//cout << "Destroying svm" << endl;
 	svm_free_and_destroy_model(&svm);
@@ -93,6 +98,11 @@ ClassifierSVM::ClassifierSVM(const ClassifierSVM& old) :
 	svmProblem.x = labData;
 	svmProblem.W = new double[numEntries];
 	memcpy(svmProblem.W, old.svmProblem.W, numEntries * sizeof(double));
+
+	scalesSub = new double[descLen];
+	memcpy(scalesSub, old.scalesSub, descLen * sizeof(double));
+	scalesDiv = new double[descLen];
+	memcpy(scalesDiv, old.scalesDiv, descLen * sizeof(double));
 
 	/*weights = new double[numLabels];
 	memcpy(weights, old.weights, numLabels * sizeof(double));
@@ -235,6 +245,15 @@ void ClassifierSVM::train(	const std::vector<Entry>& entries,
 
 	descLen = entries.front().descriptor.cols;
 	numEntries = entries.size();
+	scalesSub = new double[descLen];
+	scalesDiv = new double[descLen];
+	double* maxVal = new double[descLen];
+	double* minVal = new double[descLen];
+	for(int i = 0; i < descLen; i++){
+		maxVal[i] = -INF;
+		minVal[i] = INF;
+	}
+
 	labData = new svm_node*[numEntries];
 	dataLabels = new double[numEntries];
 	numLabels = 0;
@@ -245,6 +264,8 @@ void ClassifierSVM::train(	const std::vector<Entry>& entries,
 			svm_node tmp;
 			tmp.index = i;
 			tmp.value = entries[e].descriptor.at<float>(i);
+			maxVal[i] = max(maxVal[i], tmp.value);
+			minVal[i] = min(minVal[i], tmp.value);
 			labData[e][i] = tmp;
 		}
 		svm_node tmp;
@@ -255,6 +276,21 @@ void ClassifierSVM::train(	const std::vector<Entry>& entries,
 		svmProblem.W[e] = dataWeights[e];
 	}
 	numLabels++;
+
+
+	for(int i = 0; i < descLen; i++){
+		scalesSub[i] = minVal[i];
+		scalesDiv[i] = maxVal[i] - minVal[i];
+	}
+	delete[] minVal;
+	delete[] maxVal;
+
+	for(int e = 0; e < numEntries; e++){
+		for(int i = 0; i < descLen; i++){
+			labData[e][i].value -= scalesSub[i];
+			labData[e][i].value /= scalesDiv[i];
+		}
+	}
 
 	/*weights = new double[numLabels];
 	labels = new int[numLabels];
@@ -288,7 +324,7 @@ cv::Mat ClassifierSVM::classify(cv::Mat features){
 	for(int i = 0; i < features.cols; i++){
 		svm_node tmp;
 		tmp.index = i;
-		tmp.value = features.at<float>(i);
+		tmp.value = (features.at<float>(i) - scalesSub[i])/scalesDiv[i];
 		data[i] = tmp;
 	}
 	svm_node tmp;
