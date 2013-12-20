@@ -9,18 +9,14 @@
 #include <string>
 #include "PositionEstimation.h"
 #include <thread>
-#include <chrono>
+#include <sys/time.h>
+#include <stdio.h>
+#include <unistd.h>
 
 using namespace cv;
 using namespace std;
 
 PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot) {
-
-	runThread = true;
-	estimationThread = std::thread(&PositionEstimation::run, this);
-
-	KF = new KalmanFilter();
-	KF->init(2,2,2);
 
 	/* KALMAN:
 	 * - we track 2 values -> global position
@@ -29,6 +25,8 @@ PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot) {
 	 * - to correct we can use information from the GPS
 	 *
 	 */
+	KF = new KalmanFilter();
+	KF->init(2,2,2);
 
 	KF->transitionMatrix =
 			*(Mat_<double>(2, 2) << 1, 0,
@@ -42,19 +40,40 @@ PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot) {
 			*(Mat_<double>(2, 2) << 1, 0,
 									0, 1);
 
+	runThread = true;
+	estimationThread = std::thread(&PositionEstimation::run, this);
 }
 
 PositionEstimation::~PositionEstimation() {
 	closeGps();
 	closeImu();
+	delete KF;
 }
 
 void PositionEstimation::run() {
 
-	while(runThread)
-	{
-	    std::chrono::milliseconds duration( 2000 );
-	    std::this_thread::sleep_for( duration);
+	struct timeval start, end;
+	while (runThread) {
+		gettimeofday(&start, NULL);
+
+		KalmanPredict();
+		KalmanUpdate();
+
+		// Thread sleep, so that the position is not updated too often
+		// Right now 1 ms as Robot Drive has it's own sleep
+		std::chrono::milliseconds duration(2);
+		std::this_thread::sleep_for(duration);
+
+		gettimeofday(&end, NULL);
+
+		long seconds = end.tv_sec - start.tv_sec;
+		long useconds = end.tv_usec - start.tv_usec;
+		long mtime = ((seconds) * 1000 + useconds / 1000.0) + 0.5;
+
+		if (mtime == 0)
+			mtime = 1;
+		cout << "Position estimation thread framerate: " << 1000.0 / mtime
+				<< endl;
 	}
 }
 
@@ -80,32 +99,34 @@ void PositionEstimation::KalmanPredict()
 {
 	double theta = 0.0;
 
-	// Getting the encoder ticks
-	float left_enc = float( this->encoders.getLeftEncoder() ) / ENCODER_TICK_PER_REV * WHEEL_DIAMETER * M_PI;
-	float right_enc = float ( this->encoders.getRightEncoder() ) / ENCODER_TICK_PER_REV * WHEEL_DIAMETER * M_PI;
+	if (this->robot->isRobotsDriveOpen()) {
+		cv::Mat enc = this->robot->getEncoderData();
+		// Getting the encoder ticks
+		float left_enc = enc.at<float>(0, 0)
+				/ ENCODER_TICK_PER_REV* WHEEL_DIAMETER * M_PI;
+		float right_enc = enc.at<float>(1, 0)
+				/ ENCODER_TICK_PER_REV* WHEEL_DIAMETER * M_PI;
 
-	// if there is IMU, we use IMU to estimate theta !:)
-	if (this->isImuOpen())
-	{
-		// Getting the angle theta of the IMU
-		cv::Mat imu = this->imu.getData();
+		// if there is IMU, we use IMU to estimate theta !:)
+		if (this->isImuOpen()) {
+			// Getting the angle theta of the IMU
+			cv::Mat imu = this->imu.getData();
 
-		//acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
-		theta = imu.at<float>(0,3);
+			//acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
+			theta = imu.at<float>(0, 3);
+		}
+		// No IMU :(
+		else {
+			double prev_theta = (left_enc - right_enc) / WHEEL_BASE;
+		}
+
+		double distance_covered = (left_enc + right_enc) / 2;
+		cv::Mat prediction = cv::Mat(2, 1, CV_32FC1);
+		prediction.at<float>(0) = distance_covered * sin(theta);
+		prediction.at<float>(1) = distance_covered * cos(theta);
+
+		state = KF->predict(prediction);
 	}
-	// No IMU :(
-	else
-	{
-		double prev_theta = (left_enc - right_enc) / WHEEL_BASE;
-	}
-
-
-	double distance_covered = (left_enc + right_enc)/2;
-	cv::Mat prediction = cv::Mat(2,1, CV_32FC1);
-	prediction.at<float>(0) = distance_covered * sin(theta);
-	prediction.at<float>(1) = distance_covered * cos(theta);
-
-	state = KF->predict(prediction);
 }
 
 //----------------------ACCESS TO COMPUTED DATA
