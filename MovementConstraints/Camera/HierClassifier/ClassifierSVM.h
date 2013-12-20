@@ -28,6 +28,9 @@ class ClassifierSVM : public Classifier {
 	svm_parameter svmParams;
 	svm_node** labData;
 	double* dataLabels;
+	double* scalesSub;
+	double* scalesDiv;
+
 	//double* weights;
 	//int* labels;
 	int numEntries;
