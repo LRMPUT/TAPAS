@@ -19,8 +19,16 @@ int main()
 		Robot robot("./settings.xml");
 		cout << "Robot created" << endl;
 		Debug debug(&robot);
-		debug.testClassification(filesystem::path("../MovementConstraints/Camera/database/train"),
-								filesystem::path("../MovementConstraints/Camera/database/classify"));
+		//debug.testClassification(filesystem::path("../MovementConstraints/Camera/database/train"),
+		//						filesystem::path("../MovementConstraints/Camera/database/classify"));
+
+		int a;
+		while(1)
+		{
+
+
+		}
+
 	}
 	catch(char const* error){
 		cout << error << endl;
