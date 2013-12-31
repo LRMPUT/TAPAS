@@ -43,9 +43,9 @@ private:
 	//Parent class Robot
 	Robot* robot;
 
-	const int ENCODER_TICK_PER_REV = 48 * 75;
-	const double WHEEL_DIAMETER = 0.12;
-	const double WHEEL_BASE = 0.24;
+	int ENCODER_TICK_PER_REV ;
+	double WHEEL_DIAMETER ;
+	double WHEEL_BASE ;
 
 
 
@@ -59,11 +59,17 @@ public:
 	// Stopping the position estimation thread
 	void stopThread();
 
+	// Initializing the filter
+	void kalmanSetup();
+
 	// Update Kalman - updates on GPS
 	void KalmanUpdate();
 
 	// Encoders - predict
 	void KalmanPredict();
+
+	// Zeroes the current position estimate
+	void setZeroPosition();
 
 	//----------------------ACCESS TO COMPUTED DATA
 	//CV_32SC1 3x1: x, y, fi
