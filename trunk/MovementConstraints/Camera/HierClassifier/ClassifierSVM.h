@@ -40,6 +40,8 @@ class ClassifierSVM : public Classifier {
 
 	void startup();
 	void clearData();
+	void prepareProblem(const std::vector<Entry>& entries,
+						const std::vector<double>& dataWeights);
 public:
 //---------------MISCELLANEOUS----------------
 
@@ -71,7 +73,9 @@ public:
 
 	virtual cv::Mat classify(cv::Mat features);
 
-	void normalizeVect(cv::Mat& vector);
+	//void normalizeVect(cv::Mat& vector);
+
+	virtual void crossValidate(const std::vector<Entry>& entries);
 };
 
 

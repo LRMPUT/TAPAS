@@ -37,6 +37,8 @@ class Camera {
 
 	bool cacheEnabled;
 
+	bool crossValidate;
+
 	boost::filesystem::path learningDir;
 
 	//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)

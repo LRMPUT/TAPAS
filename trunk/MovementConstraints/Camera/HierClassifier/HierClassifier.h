@@ -54,6 +54,7 @@ class HierClassifier {
 	cv::Mat cameraMatrix;
 
 	std::vector<Classifier*> classifiers;
+	std::vector<WeakClassifierInfo> classifiersInfo;
 	std::vector<double> weights;
 	int numLabels;
 
@@ -65,7 +66,6 @@ class HierClassifier {
 	cv::Mat projectPointsTo3D(	cv::Mat disparity);
 
 	cv::Mat projectPointsTo2D(	cv::Mat _3dImage);
-
 
 public:
 
@@ -88,6 +88,8 @@ public:
 	void saveCache(boost::filesystem::path file);
 
 	void loadCache(boost::filesystem::path file);
+
+	std::map<int, int> assignManualId(cv::Mat autoSegments, cv::Mat manualSegments);
 
 	cv::Mat colorSegments(const cv::Mat segments);
 
@@ -113,7 +115,7 @@ public:
 	 */
 	cv::Mat segmentImage(cv::Mat image);
 
-
+	void crossValidateSVMs(const std::vector<Entry>& entries);
 };
 
 

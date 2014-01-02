@@ -62,6 +62,82 @@ void ClassifierSVM::clearData(){
 	startup();
 }
 
+
+void ClassifierSVM::prepareProblem(const std::vector<Entry>& entries,
+									const std::vector<double>& dataWeights)
+{
+	descLen = entries.front().descriptor.cols;
+	numEntries = entries.size();
+	scalesSub = new double[descLen];
+	scalesDiv = new double[descLen];
+	double* maxVal = new double[descLen];
+	double* minVal = new double[descLen];
+	for(int i = 0; i < descLen; i++){
+		maxVal[i] = -INF;
+		minVal[i] = INF;
+	}
+
+	labData = new svm_node*[numEntries];
+	dataLabels = new double[numEntries];
+	numLabels = 0;
+	svmProblem.W = new double[numEntries];
+	for(int e = 0; e < numEntries; e++){
+		labData[e] = new svm_node[descLen + 1];
+		for(int i = 0; i < descLen; i++){
+			svm_node tmp;
+			tmp.index = i;
+			tmp.value = entries[e].descriptor.at<float>(i);
+			maxVal[i] = max(maxVal[i], tmp.value);
+			minVal[i] = min(minVal[i], tmp.value);
+			labData[e][i] = tmp;
+		}
+		svm_node tmp;
+		tmp.index = -1;
+		labData[e][descLen] = tmp;
+		dataLabels[e] = entries[e].label;
+		numLabels = max(numLabels, entries[e].label);
+		svmProblem.W[e] = dataWeights[e];
+	}
+	numLabels++;
+
+
+	for(int i = 0; i < descLen; i++){
+		scalesSub[i] = minVal[i];
+		scalesDiv[i] = maxVal[i] - minVal[i];
+	}
+	delete[] minVal;
+	delete[] maxVal;
+
+	for(int e = 0; e < numEntries; e++){
+		for(int i = 0; i < descLen; i++){
+			labData[e][i].value -= scalesSub[i];
+			labData[e][i].value /= scalesDiv[i];
+		}
+	}
+
+	/*weights = new double[numLabels];
+	labels = new int[numLabels];
+	for(int l = 0; l < numLabels; l++){
+		weights[l] = 0;
+		labels[l] = l;
+	}
+	for(int e = 0; e < entries.size(); e++){
+		weights[entries[e].label] += dataWeights[e];
+	}*/
+
+	svmParams.nr_weight = 0;
+	/*svmParams.weight_label = labels;
+	svmParams.weight = weights;*/
+	svmProblem.l = numEntries;
+	svmProblem.y = dataLabels;
+	svmProblem.x = labData;
+
+	if(svm_check_parameter(&svmProblem, &svmParams) != NULL){
+		//cout << svm_check_parameter(&svmProblem, &svmParams) << endl;
+		throw "Bad svm params";
+	}
+}
+
 ClassifierSVM::ClassifierSVM() :
 	Classifier(Classifier::SVM)
 {
@@ -243,76 +319,8 @@ void ClassifierSVM::train(	const std::vector<Entry>& entries,
 	//map<int, int> mapLabels;
 	clearData();
 
-	descLen = entries.front().descriptor.cols;
-	numEntries = entries.size();
-	scalesSub = new double[descLen];
-	scalesDiv = new double[descLen];
-	double* maxVal = new double[descLen];
-	double* minVal = new double[descLen];
-	for(int i = 0; i < descLen; i++){
-		maxVal[i] = -INF;
-		minVal[i] = INF;
-	}
+	prepareProblem(entries, dataWeights);
 
-	labData = new svm_node*[numEntries];
-	dataLabels = new double[numEntries];
-	numLabels = 0;
-	svmProblem.W = new double[numEntries];
-	for(int e = 0; e < numEntries; e++){
-		labData[e] = new svm_node[descLen + 1];
-		for(int i = 0; i < descLen; i++){
-			svm_node tmp;
-			tmp.index = i;
-			tmp.value = entries[e].descriptor.at<float>(i);
-			maxVal[i] = max(maxVal[i], tmp.value);
-			minVal[i] = min(minVal[i], tmp.value);
-			labData[e][i] = tmp;
-		}
-		svm_node tmp;
-		tmp.index = -1;
-		labData[e][descLen] = tmp;
-		dataLabels[e] = entries[e].label;
-		numLabels = max(numLabels, entries[e].label);
-		svmProblem.W[e] = dataWeights[e];
-	}
-	numLabels++;
-
-
-	for(int i = 0; i < descLen; i++){
-		scalesSub[i] = minVal[i];
-		scalesDiv[i] = maxVal[i] - minVal[i];
-	}
-	delete[] minVal;
-	delete[] maxVal;
-
-	for(int e = 0; e < numEntries; e++){
-		for(int i = 0; i < descLen; i++){
-			labData[e][i].value -= scalesSub[i];
-			labData[e][i].value /= scalesDiv[i];
-		}
-	}
-
-	/*weights = new double[numLabels];
-	labels = new int[numLabels];
-	for(int l = 0; l < numLabels; l++){
-		weights[l] = 0;
-		labels[l] = l;
-	}
-	for(int e = 0; e < entries.size(); e++){
-		weights[entries[e].label] += dataWeights[e];
-	}*/
-
-	svmParams.nr_weight = 0;
-	/*svmParams.weight_label = labels;
-	svmParams.weight = weights;*/
-	svmProblem.l = numEntries;
-	svmProblem.y = dataLabels;
-	svmProblem.x = labData;
-
-	if(svm_check_parameter(&svmProblem, &svmParams) != NULL){
-		//cout << svm_check_parameter(&svmProblem, &svmParams) << endl;
-		throw "Bad svm params";
-	}
 	svm = svm_train(&svmProblem, &svmParams);
 	cout << "End ClassifierSVM::train()" << endl;
 }
@@ -342,4 +350,32 @@ cv::Mat ClassifierSVM::classify(cv::Mat features){
 	delete[] data;
 	delete[] prob_est;
 	return ret;
+}
+
+void ClassifierSVM::crossValidate(const std::vector<Entry>& entries){
+	float gridCMin = pow(2, -5), gridCMax = pow(2, 15), gridCStep = 3;
+	float gridGMin = pow(2, -15), gridGMax = pow(2, 3), gridGStep = 3;
+	prepareProblem(entries, vector<double>(entries.size(), (double)1/entries.size()));
+	double* results = new double[entries.size()];
+	double bestC, bestG, bestScore = -1;
+	for(double paramC = gridCMin; paramC <= gridCMax; paramC *= gridCStep){
+		for(double paramG = gridGMin; paramG <= gridGMax; paramG *= gridGStep){
+			cout << "Validating params: C = " << paramC << ", gamma = " << paramG << endl;
+			svmParams.C = paramC;
+			svmParams.gamma = paramG;
+			svm_cross_validation(&svmProblem, &svmParams, 5, results);
+			double score = 0;
+			for(int e = 0; e < entries.size(); e++){
+				//cout << results[e] << ", " << entries[e].label << endl;
+				score += (abs(results[e] - entries[e].label) > 0.01 ? 0 : 1);
+			}
+			cout << "Score = " << score << " out of " << entries.size() << endl;
+			if(score > bestScore){
+				bestScore = score;
+				bestC = paramC;
+				bestG = paramG;
+			}
+		}
+	}
+	cout << "Best parameters: C = " << bestC << ", gamma = " << bestG << endl;
 }
