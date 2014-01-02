@@ -198,8 +198,8 @@ int Camera::selectPolygonPixels(std::vector<cv::Point2i> polygon, int regionId, 
 }
 
 void Camera::learnFromDir(boost::filesystem::path dir){
-	namedWindow("manual segments");
-	namedWindow("original");
+	//namedWindow("segments");
+	//namedWindow("original");
 	vector<Entry> dataset;
 	filesystem::directory_iterator endIt;
 	for(filesystem::directory_iterator dirIt(dir); dirIt != endIt; dirIt++){
@@ -287,18 +287,24 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 
 				pObject = pObject->NextSiblingElement("object");
 			}
-			imshow("original", image);
-			imshow("manual segments", hierClassifiers.front()->colorSegments(manualRegionsOnImage));
+
+			map<int, int> assignedImageId = hierClassifiers.front()->assignManualId(autoRegionsOnImage, manualRegionsOnImage);
+			//imshow("original", image);
+			//imshow("segments", hierClassifiers.front()->colorSegments(autoRegionsOnImage));
 			//waitKey();
 
-			vector<Entry> newData = hierClassifiers.front()->extractEntries(image, terrain, manualRegionsOnImage);
+			vector<Entry> newData = hierClassifiers.front()->extractEntries(image, terrain, autoRegionsOnImage);
 			for(int e = 0; e < newData.size(); e++){
-				if(mapRegionIdToLabel.count(newData[e].imageId) > 0){
-					newData[e].label = mapRegionIdToLabel[newData[e].imageId];
+				if(mapRegionIdToLabel.count(assignedImageId[newData[e].imageId]) > 0){
+					newData[e].label = mapRegionIdToLabel[assignedImageId[newData[e].imageId]];
 					dataset.push_back(newData[e]);
 				}
 			}
 		}
+	}
+
+	if(crossValidate){
+		hierClassifiers.front()->crossValidateSVMs(dataset);
 	}
 	hierClassifiers.front()->train(dataset, labels.size());
 }
@@ -308,6 +314,8 @@ void Camera::classifyFromDir(boost::filesystem::path dir){
 	for(int l = 0; l < labels.size(); l++){
 		namedWindow(labels[l]);
 	}
+	namedWindow("segments");
+	namedWindow("original");
 
 	filesystem::directory_iterator endIt;
 	for(filesystem::directory_iterator dirIt(dir); dirIt != endIt; dirIt++){
@@ -389,8 +397,13 @@ void Camera::classifyFromDir(boost::filesystem::path dir){
 
 				pObject = pObject->NextSiblingElement("object");
 			}
+			imshow("original", image);
+			imshow("segments", hierClassifiers.front()->colorSegments(hierClassifiers.front()->segmentImage(image)));
 			vector<Mat> classificationResult = hierClassifiers.front()->classify(image, terrain);
 			for(int l = 0; l < labels.size(); l++){
+				double minVal, maxVal;
+				minMaxIdx(classificationResult[l], &minVal, &maxVal);
+				cout << labels[l] << ", min = " << minVal << ", max = " << maxVal << endl;
 				imshow(labels[l], classificationResult[l]);
 			}
 			waitKey();
@@ -564,6 +577,8 @@ void Camera::readSettings(TiXmlElement* settings){
 		throw "Bad settings file - no cache setting for Camera";
 	}
 	pPtr->QueryBoolAttribute("enabled", &cacheEnabled);
+
+	crossValidate = true;
 
 	pPtr = settings->FirstChildElement("learning");
 	if(!pPtr){

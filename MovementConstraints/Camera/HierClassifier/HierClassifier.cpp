@@ -15,9 +15,9 @@
 #include "UnionFind.h"
 #include "ClassifierSVM.h"
 
-#define HIST_SIZE_H 4
-#define HIST_SIZE_S 4
-#define HIST_SIZE_V 16
+#define HIST_SIZE_H 16
+#define HIST_SIZE_S 16
+#define HIST_SIZE_V 4
 #define COVAR_HSV_SIZE 9
 #define MEAN_HSV_SIZE 3
 #define COVAR_LASER_SIZE 4
@@ -29,7 +29,7 @@ using namespace boost;
 
 Scalar colors[] = {
 		Scalar(0xFF, 0x00, 0x00), //Red
-		Scalar(0xFF, 0xFF, 0xFF),	//White
+		Scalar(0xFF, 0xFF, 0xFF), //White
 		Scalar(0x00, 0xFF, 0xFF), //Cyan
 		Scalar(0xC0, 0xC0, 0xC0), //Silver
 		Scalar(0x00, 0x00, 0xFF), //Blue
@@ -49,6 +49,7 @@ Scalar colors[] = {
 };
 
 cv::Mat HierClassifier::projectPointsTo3D(cv::Mat disparity){
+	//TODO correct
 	Mat ret;
 	Mat Q = Mat::eye(4, 4, CV_32FC1);
 	cameraMatrix.copyTo(Mat(Q, Rect(0, 0, 3, 3)));
@@ -150,13 +151,15 @@ void HierClassifier::loadCache(boost::filesystem::path file){
 /** Trains classifier. Outline of algorithm:
  * 		1. Initialize dataWeights = 1/data.size()
  * 		2. for t = 0 : numIterations
- * 		3.		trains classifiers
+ * 		3.		train classifiers
  * 		4.		choose best classsifier
  * 		5.		compute weight for that classifier
  * 		6.		update dataWeights
  */
 void HierClassifier::train(const std::vector<Entry>& data, int inumLabels){
 	cout << "HierClassifier::train, numIterations = " << numIterations << endl;
+
+	//TODO clear data
 
 	numLabels = inumLabels;
 	//initializing weights
@@ -178,11 +181,12 @@ void HierClassifier::train(const std::vector<Entry>& data, int inumLabels){
 		}
 	}
 
+	float sumClassifierWeights = 0;
 	//main loop
 	for(int t = 0; t < numIterations; t++){
 		cout << "Iteration " << t << endl;
 		int maxIndex = 0;
-		double maxVal = 0;
+		double maxVal = -1;
 		for(int c = 0; c < numWeakClassifiers; c++){
 			cout << "Training classifier " << c << endl;
 			//training
@@ -202,6 +206,7 @@ void HierClassifier::train(const std::vector<Entry>& data, int inumLabels){
 				}
 				//cout << endl;
 			}
+			cout << "Classifier " << c << ", score " << score << endl;
 			if(score > maxVal){
 				maxVal = score;
 				maxIndex = c;
@@ -212,10 +217,12 @@ void HierClassifier::train(const std::vector<Entry>& data, int inumLabels){
 		//TODO compute accurate value of alpha
 		double alpha = 0.5*log((1 + maxVal)/(1 - maxVal));
 		weights.push_back(alpha);
+		sumClassifierWeights += alpha;
 
 		cout << "Adding classifier " << maxIndex << ", alpha = " << alpha << endl;
 		//adding classifier
 		classifiers.push_back(weakClassifiersSet[maxIndex]->copy());
+		classifiersInfo.push_back(weakClassInfo[maxIndex]);
 
 		cout << "recomputing dataWeights" << endl;
 		//recomputing dataWeights
@@ -225,10 +232,13 @@ void HierClassifier::train(const std::vector<Entry>& data, int inumLabels){
 			probEst *= 2;
 			probEst -= 1;
 			double score = 0;
+			//cout << "Entry " << e << " ";
 			for(int l = 0; l < numLabels; l++){
 				int ind = (l == dataClassifiers[maxIndex][e].label ? 1 : -1);
-				score += probEst.at<float>(l)*ind;
+				score += probEst.at<float>(l)*ind/numLabels;
+				//cout << (probEst.at<float>(l)+1)/2 << " (" << ind << "), ";
 			}
+			//cout << endl;
 			dataWeights[e] *= exp(-alpha*score);
 			sum += dataWeights[e];
 		}
@@ -236,6 +246,9 @@ void HierClassifier::train(const std::vector<Entry>& data, int inumLabels){
 			dataWeights[e] /= sum;
 		}
 		//waitKey();
+	}
+	for(int c = 0; c < weights.size(); c++){
+		weights[c] /= sumClassifierWeights;
 	}
 }
 
@@ -251,10 +264,14 @@ std::vector<cv::Mat> HierClassifier::classify(cv::Mat image,
 	for(int e = 0; e < entries.size(); e++){
 		imageIdToEntry[entries[e].imageId] = e;
 	}
-	Mat result(entries.size(), numLabels, CV_32FC1);
+	Mat result(entries.size(), numLabels, CV_32FC1, Scalar(0));
 	for(int c = 0; c < classifiers.size(); c++){
 		for(int e = 0; e < entries.size(); e++){
-			result.row(e) = result.row(e) + weights[c]*classifiers[c]->classify(entries[e].descriptor);
+			Mat desc = entries[e].descriptor.colRange(
+													classifiersInfo[c].descBeg,
+													classifiersInfo[c].descEnd);
+			//cout << "result, entry " << e << ", " << weights[c]*classifiers[c]->classify(desc) << endl;
+			result.row(e) = result.row(e) + weights[c]*classifiers[c]->classify(desc);
 		}
 	}
 	vector<Mat> ret;
@@ -292,7 +309,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 													cv::Mat terrain,
 													cv::Mat regionsOnImage)
 {
-	namedWindow("imageBGR");
+	//namedWindow("imageBGR");
 	Mat imageHSV;
 	cvtColor(imageBGR, imageHSV, CV_BGR2HSV);
 	vector<Pixel> pixels;
@@ -623,3 +640,50 @@ Mat HierClassifier::colorSegments(const Mat segments){
 	return ret;
 }
 
+std::map<int, int> HierClassifier::assignManualId(cv::Mat autoSegments, cv::Mat manualSegments){
+	std::map<int, int> ret;
+	map<int, int> autoImageIdToIdx, manualImageIdToIdx;
+	int numAutoSegments = 0;
+	int numManualSegments = 0;
+	for(int r = 0; r < autoSegments.rows; r++){
+		for(int c = 0; c < autoSegments.cols; c++){
+			if(autoImageIdToIdx.count(autoSegments.at<int>(r, c)) == 0){
+				autoImageIdToIdx[autoSegments.at<int>(r, c)] = numAutoSegments++;
+			}
+			if(manualImageIdToIdx.count(manualSegments.at<int>(r, c)) == 0){
+				manualImageIdToIdx[manualSegments.at<int>(r, c)] = numManualSegments++;
+			}
+		}
+	}
+	vector<vector<int> > score(numAutoSegments, vector<int>(numManualSegments, 0));
+	for(int r = 0; r < autoSegments.rows; r++){
+		for(int c = 0; c < autoSegments.cols; c++){
+			int autoIdx = autoImageIdToIdx[autoSegments.at<int>(r, c)];
+			int manualIdx = manualImageIdToIdx[manualSegments.at<int>(r, c)];
+			score[autoIdx][manualIdx]++;
+		}
+	}
+	vector<int> maxScore(numAutoSegments, -1);
+	vector<int> maxScoreIdx(numAutoSegments, 0);
+	for(int a = 0; a < numAutoSegments; a++){
+		for(map<int, int>::iterator itM = manualImageIdToIdx.begin(); itM != manualImageIdToIdx.end(); ++itM){
+			if(maxScore[a] < score[a][itM->second]){
+				maxScore[a] = score[a][itM->second];
+				maxScoreIdx[a] = itM->first;
+			}
+		}
+	}
+	for(map<int, int>::iterator itA = autoImageIdToIdx.begin(); itA != autoImageIdToIdx.end(); ++itA){
+		ret[itA->first] = maxScoreIdx[itA->second];
+	}
+	return ret;
+}
+
+void HierClassifier::crossValidateSVMs(const std::vector<Entry>& entries){
+	for(int c = 0; c < weakClassifiersSet.size(); c++){
+		if(weakClassifiersSet[c]->type() == Classifier::SVM){
+			cout << "Cross validating classifier " << c << endl;
+			weakClassifiersSet[c]->crossValidate(entries);
+		}
+	}
+}

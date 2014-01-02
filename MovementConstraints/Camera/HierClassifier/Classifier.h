@@ -59,6 +59,8 @@ public:
 						const std::vector<double>& dataWeights) = 0;
 
 	virtual cv::Mat classify(cv::Mat features) = 0;
+
+	virtual void crossValidate(const std::vector<Entry>& entries) = 0;
 };
 
 
