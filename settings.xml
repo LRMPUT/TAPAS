@@ -8,7 +8,7 @@
 				<ClassifierSVM>
 					<cache enabled="true" />
 					<svm type="C_SVC">
-						<kernelType value="POLY" />
+						<kernelType value="RBF" />
 						<gamma value="0.5" />
 						<degree value="2" />
 					</svm>
@@ -17,7 +17,9 @@
 			<learning dir="../../MovementConstraints/Camera/training_data" />
 			<labels>
 				<label text="grass" id="0"/>
-				<label text="pavement" id="1"/>
+				<label text="wood" id="1"/>
+				<label text="ceramic" id="2"/>
+				<label text="asphalt" id="3"/>
 			</labels>
 
 			<sensor id="left">
