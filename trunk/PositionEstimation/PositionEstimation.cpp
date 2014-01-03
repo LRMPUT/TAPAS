@@ -31,7 +31,7 @@ PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot) {
 	kalmanSetup();
 
 	runThread = true;
-	estimationThread = std::thread(&PositionEstimation::run, this);
+	//estimationThread = std::thread(&PositionEstimation::run, this);
 }
 
 PositionEstimation::~PositionEstimation() {

@@ -63,9 +63,11 @@ void ClassifierSVM::clearData(){
 }
 
 
-void ClassifierSVM::prepareProblem(const std::vector<Entry>& entries,
-									const std::vector<double>& dataWeights)
+void ClassifierSVM::prepareProblem(	const std::vector<Entry>& entries,
+									const std::vector<double>& productWeights)
 {
+	clearData();
+
 	descLen = entries.front().descriptor.cols;
 	numEntries = entries.size();
 	scalesSub = new double[descLen];
@@ -96,7 +98,10 @@ void ClassifierSVM::prepareProblem(const std::vector<Entry>& entries,
 		labData[e][descLen] = tmp;
 		dataLabels[e] = entries[e].label;
 		numLabels = max(numLabels, entries[e].label);
-		svmProblem.W[e] = dataWeights[e];
+		svmProblem.W[e] = entries[e].weight;
+		if(!productWeights.empty()){
+			svmProblem.W[e] *= productWeights[e];
+		}
 	}
 	numLabels++;
 
@@ -313,13 +318,11 @@ void ClassifierSVM::loadCache(boost::filesystem::path file){
 
 //---------------COMPUTING----------------
 void ClassifierSVM::train(	const std::vector<Entry>& entries,
-							const std::vector<double>& dataWeights)
+							const std::vector<double>& productWeights)
 {
 	cout << "ClassifierSVM::train()" << endl;
 	//map<int, int> mapLabels;
-	clearData();
-
-	prepareProblem(entries, dataWeights);
+	prepareProblem(entries, productWeights);
 
 	svm = svm_train(&svmProblem, &svmParams);
 	cout << "End ClassifierSVM::train()" << endl;
@@ -352,10 +355,11 @@ cv::Mat ClassifierSVM::classify(cv::Mat features){
 	return ret;
 }
 
-void ClassifierSVM::crossValidate(const std::vector<Entry>& entries){
+void ClassifierSVM::crossValidate(const std::vector<Entry>& entries)
+{
 	float gridCMin = pow(2, -5), gridCMax = pow(2, 15), gridCStep = 3;
 	float gridGMin = pow(2, -15), gridGMax = pow(2, 3), gridGStep = 3;
-	prepareProblem(entries, vector<double>(entries.size(), (double)1/entries.size()));
+	prepareProblem(entries);
 	double* results = new double[entries.size()];
 	double bestC, bestG, bestScore = -1;
 	for(double paramC = gridCMin; paramC <= gridCMax; paramC *= gridCStep){
@@ -366,8 +370,8 @@ void ClassifierSVM::crossValidate(const std::vector<Entry>& entries){
 			svm_cross_validation(&svmProblem, &svmParams, 5, results);
 			double score = 0;
 			for(int e = 0; e < entries.size(); e++){
-				//cout << results[e] << ", " << entries[e].label << endl;
-				score += (abs(results[e] - entries[e].label) > 0.01 ? 0 : 1);
+				cout << results[e] << ", " << entries[e].label << ", weight = " << svmProblem.W[e] <<  endl;
+				score += (abs(results[e] - entries[e].label) > 0.01 ? 0 : 1)*entries[e].weight;
 			}
 			cout << "Score = " << score << " out of " << entries.size() << endl;
 			if(score > bestScore){
@@ -377,5 +381,6 @@ void ClassifierSVM::crossValidate(const std::vector<Entry>& entries){
 			}
 		}
 	}
+	delete[] results;
 	cout << "Best parameters: C = " << bestC << ", gamma = " << bestG << endl;
 }

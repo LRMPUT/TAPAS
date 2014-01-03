@@ -11,9 +11,11 @@
 struct Entry{
 	cv::Mat descriptor;
 	int label, imageId;
+	double weight;
 	Entry() : label(-1) {}
-	Entry(int ilabel, cv::Mat idescriptor, int iimageId = 0) :
+	Entry(int ilabel, cv::Mat idescriptor, double iweight, int iimageId = 0) :
 		label(ilabel),
+		weight(iweight),
 		imageId(iimageId)
 	{
 		idescriptor.copyTo(descriptor);
@@ -95,7 +97,8 @@ public:
 
 //---------------COMPUTING----------------
 
-	void train(const std::vector<Entry>& data, int inumLabels);
+	void train(const std::vector<Entry>& data,
+				int inumLabels);
 
 	/**	\brief 
 		@return Matrix of probabilites of belonging to certain class.

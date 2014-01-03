@@ -201,6 +201,7 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 	//namedWindow("segments");
 	//namedWindow("original");
 	vector<Entry> dataset;
+	vector<double> weights;
 	filesystem::directory_iterator endIt;
 	for(filesystem::directory_iterator dirIt(dir); dirIt != endIt; dirIt++){
 		if(dirIt->path().filename().string().find(".xml") != string::npos){
@@ -293,14 +294,31 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 			//imshow("segments", hierClassifiers.front()->colorSegments(autoRegionsOnImage));
 			//waitKey();
 
-			vector<Entry> newData = hierClassifiers.front()->extractEntries(image, terrain, autoRegionsOnImage);
+			vector<Entry> newData = hierClassifiers.front()->extractEntries(image, terrain, manualRegionsOnImage);
 			for(int e = 0; e < newData.size(); e++){
-				if(mapRegionIdToLabel.count(assignedImageId[newData[e].imageId]) > 0){
-					newData[e].label = mapRegionIdToLabel[assignedImageId[newData[e].imageId]];
+				if(mapRegionIdToLabel.count(newData[e].imageId) > 0){
+					newData[e].label = mapRegionIdToLabel[newData[e].imageId];
 					dataset.push_back(newData[e]);
 				}
 			}
 		}
+	}
+
+	map<int, double> sizeOfLabels;
+	for(int e = 0; e < dataset.size(); e++){
+		sizeOfLabels[dataset[e].label] += dataset[e].weight;
+	}
+	for(int e = 0; e < dataset.size(); e++){
+		dataset[e].weight /= sizeOfLabels[dataset[e].label]*sizeOfLabels.size();
+		//dataset[e].weight = (dataset[e].label == 1 ? 1 : 100);
+	}
+
+	sizeOfLabels.clear();
+	for(int e = 0; e < dataset.size(); e++){
+		sizeOfLabels[dataset[e].label] += dataset[e].weight;
+	}
+	for(map<int, double>::iterator it = sizeOfLabels.begin(); it != sizeOfLabels.end(); ++it){
+		cout << "label " << it->first << ", weight = " << it->second << endl;
 	}
 
 	if(crossValidate){

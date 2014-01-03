@@ -41,7 +41,7 @@ class ClassifierSVM : public Classifier {
 	void startup();
 	void clearData();
 	void prepareProblem(const std::vector<Entry>& entries,
-						const std::vector<double>& dataWeights);
+						const std::vector<double>& productWeights = std::vector<double>());
 public:
 //---------------MISCELLANEOUS----------------
 
@@ -68,8 +68,8 @@ public:
 	virtual void loadCache(boost::filesystem::path file);
 
 //---------------COMPUTING----------------
-	virtual void train(	const std::vector<Entry>& entries,
-						const std::vector<double>& dataWeights);
+	virtual void train(const std::vector<Entry>& entries,
+					   const std::vector<double>& productWeights = std::vector<double>());
 
 	virtual cv::Mat classify(cv::Mat features);
 
