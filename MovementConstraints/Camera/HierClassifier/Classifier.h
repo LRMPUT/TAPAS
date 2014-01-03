@@ -56,7 +56,7 @@ public:
 
 //---------------COMPUTING----------------
 	virtual void train(	const std::vector<Entry>& entries,
-						const std::vector<double>& dataWeights) = 0;
+						const std::vector<double>& productWeights = std::vector<double>()) = 0;
 
 	virtual cv::Mat classify(cv::Mat features) = 0;
 

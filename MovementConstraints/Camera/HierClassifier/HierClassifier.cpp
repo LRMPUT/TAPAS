@@ -156,15 +156,16 @@ void HierClassifier::loadCache(boost::filesystem::path file){
  * 		5.		compute weight for that classifier
  * 		6.		update dataWeights
  */
-void HierClassifier::train(const std::vector<Entry>& data, int inumLabels){
+void HierClassifier::train(const std::vector<Entry>& data,
+		int inumLabels)
+{
 	cout << "HierClassifier::train, numIterations = " << numIterations << endl;
 
 	//TODO clear data
 
 	numLabels = inumLabels;
 	//initializing weights
-	vector<double> dataWeights;
-	dataWeights.assign(data.size(), (double)1/data.size());
+	vector<double> dataWeights(data.size(), (double)1);
 
 	//constructing dataset for each classifier without copying data
 	vector<vector<Entry> > dataClassifiers;
@@ -177,6 +178,7 @@ void HierClassifier::train(const std::vector<Entry>& data, int inumLabels){
 													weakClassInfo[c].descBeg,
 													weakClassInfo[c].descEnd);
 			tmp.label = data[e].label;
+			tmp.weight = data[e].weight;
 			dataClassifiers[c][e] = tmp;
 		}
 	}
@@ -187,9 +189,14 @@ void HierClassifier::train(const std::vector<Entry>& data, int inumLabels){
 		cout << "Iteration " << t << endl;
 		int maxIndex = 0;
 		double maxVal = -1;
+		//vector<double> productWeights(dataWeights);
+		//for(int w = 0; w < productWeights; w++){
+		//	productWeights[w] *= data[w].weight;
+		//}
 		for(int c = 0; c < numWeakClassifiers; c++){
 			cout << "Training classifier " << c << endl;
 			//training
+			//TODO dataWeights*entryWeights
 			weakClassifiersSet[c]->train(dataClassifiers[c], dataWeights);
 
 			//evaluating
@@ -202,7 +209,8 @@ void HierClassifier::train(const std::vector<Entry>& data, int inumLabels){
 				for(int l = 0; l < numLabels; l++){
 					int ind = (l == dataClassifiers[c][e].label ? 1 : -1);
 					//cout << ind << " (" << probEst.at<float>(l) << "), ";
-					score += dataWeights[e]*probEst.at<float>(l)*ind/numLabels;
+					//TODO dataWeights*entrysWeights
+					score += data[e].weight*dataWeights[e]*probEst.at<float>(l)*ind/numLabels;
 				}
 				//cout << endl;
 			}
@@ -235,12 +243,14 @@ void HierClassifier::train(const std::vector<Entry>& data, int inumLabels){
 			//cout << "Entry " << e << " ";
 			for(int l = 0; l < numLabels; l++){
 				int ind = (l == dataClassifiers[maxIndex][e].label ? 1 : -1);
-				score += probEst.at<float>(l)*ind/numLabels;
+				//TODO entrysWeights
+				score += data[e].weight*probEst.at<float>(l)*ind/numLabels;
 				//cout << (probEst.at<float>(l)+1)/2 << " (" << ind << "), ";
 			}
 			//cout << endl;
 			dataWeights[e] *= exp(-alpha*score);
-			sum += dataWeights[e];
+			//TODO dataWeights*entrysWeights
+			sum += dataWeights[e]*data[e].weight;
 		}
 		for(int e = 0; e < dataWeights.size(); e++){
 			dataWeights[e] /= sum;
@@ -452,6 +462,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		//cout << "meanHSV = " << meanHSV << endl;
 		Entry tmp;
 		tmp.imageId = pixels[begIm].imageId;
+		tmp.weight = (endIm - begIm) + (endTer - begTer);
 		tmp.descriptor = Mat(1, HIST_SIZE_H*HIST_SIZE_S +
 							HIST_SIZE_V +
 							COVAR_HSV_SIZE +
@@ -679,7 +690,8 @@ std::map<int, int> HierClassifier::assignManualId(cv::Mat autoSegments, cv::Mat 
 	return ret;
 }
 
-void HierClassifier::crossValidateSVMs(const std::vector<Entry>& entries){
+void HierClassifier::crossValidateSVMs(const std::vector<Entry>& entries)
+{
 	for(int c = 0; c < weakClassifiersSet.size(); c++){
 		if(weakClassifiersSet[c]->type() == Classifier::SVM){
 			cout << "Cross validating classifier " << c << endl;
