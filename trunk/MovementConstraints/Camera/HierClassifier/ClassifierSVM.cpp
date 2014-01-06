@@ -29,9 +29,10 @@ void ClassifierSVM::startup(){
 	dataLabels = 0;
 	svmProblem.W = 0;
 	svm = 0;
+	scalesDiv = 0;
+	scalesSub = 0;
 
 	svmParams.svm_type = C_SVC;
-	svmParams.C = 1;
 	svmParams.cache_size = 32;
 	svmParams.eps = 0.001;
 	svmParams.probability = 1;
@@ -116,29 +117,19 @@ void ClassifierSVM::prepareProblem(	const std::vector<Entry>& entries,
 	for(int e = 0; e < numEntries; e++){
 		for(int i = 0; i < descLen; i++){
 			labData[e][i].value -= scalesSub[i];
-			labData[e][i].value /= scalesDiv[i];
+			if(scalesDiv[i] != 0){
+				labData[e][i].value /= scalesDiv[i];
+			}
 		}
 	}
 
-	/*weights = new double[numLabels];
-	labels = new int[numLabels];
-	for(int l = 0; l < numLabels; l++){
-		weights[l] = 0;
-		labels[l] = l;
-	}
-	for(int e = 0; e < entries.size(); e++){
-		weights[entries[e].label] += dataWeights[e];
-	}*/
 
 	svmParams.nr_weight = 0;
-	/*svmParams.weight_label = labels;
-	svmParams.weight = weights;*/
 	svmProblem.l = numEntries;
 	svmProblem.y = dataLabels;
 	svmProblem.x = labData;
 
 	if(svm_check_parameter(&svmProblem, &svmParams) != NULL){
-		//cout << svm_check_parameter(&svmProblem, &svmParams) << endl;
 		throw "Bad svm params";
 	}
 }
@@ -146,6 +137,7 @@ void ClassifierSVM::prepareProblem(	const std::vector<Entry>& entries,
 ClassifierSVM::ClassifierSVM() :
 	Classifier(Classifier::SVM)
 {
+	svmParams.C = 1;
 	startup();
 }
 
@@ -321,10 +313,11 @@ void ClassifierSVM::train(	const std::vector<Entry>& entries,
 							const std::vector<double>& productWeights)
 {
 	cout << "ClassifierSVM::train()" << endl;
-	//map<int, int> mapLabels;
+
 	prepareProblem(entries, productWeights);
 
 	svm = svm_train(&svmProblem, &svmParams);
+
 	cout << "End ClassifierSVM::train()" << endl;
 }
 
@@ -335,7 +328,10 @@ cv::Mat ClassifierSVM::classify(cv::Mat features){
 	for(int i = 0; i < features.cols; i++){
 		svm_node tmp;
 		tmp.index = i;
-		tmp.value = (features.at<float>(i) - scalesSub[i])/scalesDiv[i];
+		tmp.value = (features.at<float>(i) - scalesSub[i]);
+		if(scalesDiv[i] != 0){
+			tmp.value /= scalesDiv[i];
+		}
 		data[i] = tmp;
 	}
 	svm_node tmp;
@@ -357,23 +353,23 @@ cv::Mat ClassifierSVM::classify(cv::Mat features){
 
 void ClassifierSVM::crossValidate(const std::vector<Entry>& entries)
 {
-	float gridCMin = pow(2, -5), gridCMax = pow(2, 15), gridCStep = 3;
-	float gridGMin = pow(2, -15), gridGMax = pow(2, 3), gridGStep = 3;
+	double gridCMin = pow(2, -5), gridCMax = pow(2, 15), gridCStep = 3;
+	double gridGMin = pow(2, -15), gridGMax = pow(2, 3), gridGStep = 3;
 	prepareProblem(entries);
 	double* results = new double[entries.size()];
 	double bestC, bestG, bestScore = -1;
 	for(double paramC = gridCMin; paramC <= gridCMax; paramC *= gridCStep){
 		for(double paramG = gridGMin; paramG <= gridGMax; paramG *= gridGStep){
-			cout << "Validating params: C = " << paramC << ", gamma = " << paramG << endl;
+			//cout << "Validating params: C = " << paramC << ", gamma = " << paramG << endl;
 			svmParams.C = paramC;
 			svmParams.gamma = paramG;
 			svm_cross_validation(&svmProblem, &svmParams, 5, results);
 			double score = 0;
 			for(int e = 0; e < entries.size(); e++){
-				cout << results[e] << ", " << entries[e].label << ", weight = " << svmProblem.W[e] <<  endl;
+				//cout << results[e] << ", " << entries[e].label << ", weight = " << svmProblem.W[e] <<  endl;
 				score += (abs(results[e] - entries[e].label) > 0.01 ? 0 : 1)*entries[e].weight;
 			}
-			cout << "Score = " << score << " out of " << entries.size() << endl;
+			//cout << "Score = " << score << endl;
 			if(score > bestScore){
 				bestScore = score;
 				bestC = paramC;
@@ -381,6 +377,10 @@ void ClassifierSVM::crossValidate(const std::vector<Entry>& entries)
 			}
 		}
 	}
+
+	svmParams.C = bestC;
+	svmParams.gamma = bestG;
+	cout << "Best parameters: C = " << bestC << ", gamma = " << bestG << ", bestScore = " << bestScore << endl;
+
 	delete[] results;
-	cout << "Best parameters: C = " << bestC << ", gamma = " << bestG << endl;
 }

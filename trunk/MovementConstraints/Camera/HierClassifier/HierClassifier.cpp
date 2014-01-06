@@ -15,8 +15,8 @@
 #include "UnionFind.h"
 #include "ClassifierSVM.h"
 
-#define HIST_SIZE_H 16
-#define HIST_SIZE_S 16
+#define HIST_SIZE_H 4
+#define HIST_SIZE_S 4
 #define HIST_SIZE_V 4
 #define COVAR_HSV_SIZE 9
 #define MEAN_HSV_SIZE 3
@@ -61,6 +61,35 @@ cv::Mat HierClassifier::projectPointsTo2D(cv::Mat _3dImage){
 	Mat ret;
 	projectPoints(_3dImage, (0,0,0), (0,0,0), cameraMatrix, Mat(), ret);
 	return ret;
+}
+
+void HierClassifier::prepareData(const std::vector<Entry>& data){
+	cout << "Prepare data" << endl;
+	//constructing dataset for each classifier without copying data
+	dataClassifiers.resize(numWeakClassifiers);
+	for(int c = 0; c < numWeakClassifiers; c++){
+		dataClassifiers[c].resize(data.size());
+		for(int e = 0; e < data.size(); e++){
+			Entry tmp;
+			tmp.descriptor = data[e].descriptor.colRange(
+													weakClassInfo[c].descBeg,
+													weakClassInfo[c].descEnd);
+			tmp.label = data[e].label;
+			tmp.weight = data[e].weight;
+			dataClassifiers[c][e] = tmp;
+		}
+	}
+}
+
+void HierClassifier::clearData(){
+	dataClassifiers.clear();
+	for(int c = 0; c < classifiers.size(); c++){
+		delete classifiers[c];
+	}
+	classifiers.clear();
+	classifiersInfo.clear();
+	weights.clear();
+	numLabels = 0;
 }
 
 //---------------MISCELLANEOUS----------------
@@ -117,7 +146,7 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 	weakClassInfo.push_back(WeakClassifierInfo(begCol, begCol + COVAR_HSV_SIZE + MEAN_HSV_SIZE));	//statistics HSV
 	begCol += COVAR_HSV_SIZE + MEAN_HSV_SIZE;
 	weakClassInfo.push_back(WeakClassifierInfo(begCol, begCol + COVAR_LASER_SIZE + MEAN_LASER_SIZE));	//statistics laser
-	begCol += COVAR_HSV_SIZE + MEAN_HSV_SIZE;
+	begCol += COVAR_LASER_SIZE + MEAN_LASER_SIZE;
 	//weakClassInfo.push_back(WeakClassifierInfo());	//geometric properties
 
 	numIterations = 10;
@@ -161,27 +190,12 @@ void HierClassifier::train(const std::vector<Entry>& data,
 {
 	cout << "HierClassifier::train, numIterations = " << numIterations << endl;
 
-	//TODO clear data
+	clearData();
+	prepareData(data);
 
 	numLabels = inumLabels;
 	//initializing weights
 	vector<double> dataWeights(data.size(), (double)1);
-
-	//constructing dataset for each classifier without copying data
-	vector<vector<Entry> > dataClassifiers;
-	dataClassifiers.resize(numWeakClassifiers);
-	for(int c = 0; c < numWeakClassifiers; c++){
-		dataClassifiers[c].resize(data.size());
-		for(int e = 0; e < data.size(); e++){
-			Entry tmp;
-			tmp.descriptor = data[e].descriptor.colRange(
-													weakClassInfo[c].descBeg,
-													weakClassInfo[c].descEnd);
-			tmp.label = data[e].label;
-			tmp.weight = data[e].weight;
-			dataClassifiers[c][e] = tmp;
-		}
-	}
 
 	float sumClassifierWeights = 0;
 	//main loop
@@ -260,6 +274,7 @@ void HierClassifier::train(const std::vector<Entry>& data,
 	for(int c = 0; c < weights.size(); c++){
 		weights[c] /= sumClassifierWeights;
 	}
+	dataClassifiers.clear();
 }
 
 /**	\brief
@@ -692,10 +707,13 @@ std::map<int, int> HierClassifier::assignManualId(cv::Mat autoSegments, cv::Mat 
 
 void HierClassifier::crossValidateSVMs(const std::vector<Entry>& entries)
 {
+	clearData();
+	prepareData(entries);
 	for(int c = 0; c < weakClassifiersSet.size(); c++){
 		if(weakClassifiersSet[c]->type() == Classifier::SVM){
 			cout << "Cross validating classifier " << c << endl;
-			weakClassifiersSet[c]->crossValidate(entries);
+			weakClassifiersSet[c]->crossValidate(dataClassifiers[c]);
 		}
 	}
+	dataClassifiers.clear();
 }

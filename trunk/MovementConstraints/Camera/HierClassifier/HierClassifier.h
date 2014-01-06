@@ -50,6 +50,7 @@ class HierClassifier {
 	std::vector<WeakClassifierInfo> weakClassInfo;
 
 	std::vector<Classifier*> weakClassifiersSet;
+	std::vector<std::vector<Entry> > dataClassifiers;
 	int numWeakClassifiers;
 	int numIterations;
 
@@ -68,6 +69,9 @@ class HierClassifier {
 	cv::Mat projectPointsTo3D(	cv::Mat disparity);
 
 	cv::Mat projectPointsTo2D(	cv::Mat _3dImage);
+
+	void prepareData(const std::vector<Entry>& data);
+	void clearData();
 
 public:
 
