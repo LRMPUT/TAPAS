@@ -289,15 +289,15 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 				pObject = pObject->NextSiblingElement("object");
 			}
 
-			map<int, int> assignedImageId = hierClassifiers.front()->assignManualId(autoRegionsOnImage, manualRegionsOnImage);
+			map<int, int> assignedManualId = hierClassifiers.front()->assignManualId(autoRegionsOnImage, manualRegionsOnImage);
 			//imshow("original", image);
 			//imshow("segments", hierClassifiers.front()->colorSegments(autoRegionsOnImage));
 			//waitKey();
 
-			vector<Entry> newData = hierClassifiers.front()->extractEntries(image, terrain, manualRegionsOnImage);
+			vector<Entry> newData = hierClassifiers.front()->extractEntries(image, terrain, autoRegionsOnImage);
 			for(int e = 0; e < newData.size(); e++){
-				if(mapRegionIdToLabel.count(newData[e].imageId) > 0){
-					newData[e].label = mapRegionIdToLabel[newData[e].imageId];
+				if(mapRegionIdToLabel.count(assignedManualId[newData[e].imageId]) > 0){
+					newData[e].label = mapRegionIdToLabel[assignedManualId[newData[e].imageId]];
 					dataset.push_back(newData[e]);
 				}
 			}
