@@ -334,6 +334,7 @@ void Camera::classifyFromDir(boost::filesystem::path dir){
 	}
 	namedWindow("segments");
 	namedWindow("original");
+	namedWindow("colored");
 
 	filesystem::directory_iterator endIt;
 	for(filesystem::directory_iterator dirIt(dir); dirIt != endIt; dirIt++){
@@ -424,6 +425,31 @@ void Camera::classifyFromDir(boost::filesystem::path dir){
 				cout << labels[l] << ", min = " << minVal << ", max = " << maxVal << endl;
 				imshow(labels[l], classificationResult[l]);
 			}
+			vector<Scalar> colors;
+			colors.push_back(Scalar(0, 255, 0));	//grass - green
+			colors.push_back(Scalar(0, 0, 255));	//wood - red
+			colors.push_back(Scalar(0, 255, 255));	//yellow - ceramic
+			colors.push_back(Scalar(255, 0, 0));	//blue - asphalt
+			Mat coloredOriginal(image.rows, image.cols, CV_8UC3);
+			Mat bestLabels(image.rows, image.cols, CV_32SC1, Scalar(0));
+			Mat bestScore(image.rows, image.cols, CV_32FC1, Scalar(-1));
+			for(int l = 0; l < labels.size(); l++){
+				Mat cmp;
+				compare(bestScore, classificationResult[l], cmp, CMP_LE);
+				bestLabels.setTo(l, cmp);
+				bestScore = max(bestScore, classificationResult[l]);
+			}
+			for(int l = 0; l < labels.size(); l++){
+				coloredOriginal.setTo(colors[l], bestLabels == l);
+			}
+			//TODO select missclassified entries
+			set<int> missclassified;
+			for(int r = 0; r < image.rows; r++){
+				for(int c = 0; c < image.cols; c++){
+					//if(bestLabels.at<int>(r, c) != mapRegionIdToLabel[
+				}
+			}
+			imshow("colored", coloredOriginal * 0.25 + image * 0.75);
 			waitKey();
 		}
 	}
