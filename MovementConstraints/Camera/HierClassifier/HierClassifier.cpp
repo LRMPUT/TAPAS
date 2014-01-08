@@ -137,8 +137,95 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 	pPtr->QueryFloatAttribute("k", &kSegment);
 	pPtr->QueryIntAttribute("min_size", &minSizeSegment);
 
-	numWeakClassifiers = 4;
-	int begCol = 0;
+	pPtr = settings->FirstChildElement("descriptor");
+	if(!pPtr){
+		throw "Bad settings file - no descriptor setting for HierClassifier";
+	}
+	std::vector<int> descLen;
+	TiXmlElement* dPtr = pPtr->FirstChildElement();
+	while(dPtr){
+		if(dPtr->Value() == string("hist_HS")){
+			dPtr->QueryIntAttribute("len_H", &histHLen);
+			dPtr->QueryIntAttribute("len_S", &histSLen);
+			if(descLen.size() < 1){
+				descLen.resize(1);
+			}
+			descLen[0] = histHLen*histSLen;
+		}
+		else if(dPtr->Value() == string("hist_V")){
+			dPtr->QueryIntAttribute("len", &histVLen);
+			if(descLen.size() < 2){
+				descLen.resize(2);
+			}
+			descLen[1] = histVLen;
+		}
+		else if(dPtr->Value() == string("covar_HSV")){
+			dPtr->QueryIntAttribute("len", &covarHSVLen);
+			if(descLen.size() < 3){
+				descLen.resize(3);
+			}
+			descLen[2] = covarHSVLen;
+		}
+		else if(dPtr->Value() == string("mean_HSV")){
+			dPtr->QueryIntAttribute("len", &meanHSVLen);
+			if(descLen.size() < 4){
+				descLen.resize(4);
+			}
+			descLen[3] = meanHSVLen;
+		}
+		else if(dPtr->Value() == string("covar_laser")){
+			dPtr->QueryIntAttribute("len", &covarLaserLen);
+			if(descLen.size() < 5){
+				descLen.resize(5);
+			}
+			descLen[4] = covarLaserLen;
+		}
+		else if(dPtr->Value() == string("mean_laser")){
+			dPtr->QueryIntAttribute("len", &meanLaserLen);
+			if(descLen.size() < 6){
+				descLen.resize(6);
+			}
+			descLen[5] = meanLaserLen;
+		}
+		else{
+			throw "Bad settings file - no such descriptor";
+		}
+		dPtr = dPtr->NextSiblingElement();
+	}
+
+	descBeg.assign(descLen.size(), 0);
+	for(int d = 1; d < descLen.size(); d++){
+		descBeg[d] = descBeg[d - 1] + descLen[d - 1];
+	}
+	descBeg.push_back(descBeg.back() + descLen.back());
+
+	for(int c = 0; c < weakClassifiersSet.size(); c++){
+		delete weakClassifiersSet[c];
+	}
+	weakClassifiersSet.clear();
+	weakClassInfo.clear();
+
+	numWeakClassifiers = 0;
+	TiXmlElement* cPtr = settings->FirstChildElement("Classifier");
+	while(cPtr){
+		string type;
+		cPtr->QueryStringAttribute("type", &type);
+		if(type == "SVM"){
+			weakClassifiersSet.push_back(new ClassifierSVM(cPtr));
+			TiXmlElement* iPtr = cPtr->FirstChildElement("info");
+			if(!iPtr){
+				throw "Bad settings file - no info setting for Classifier type = SVM";
+			}
+			int dBeg, dEnd;
+			iPtr->QueryIntAttribute("desc_beg", &dBeg);
+			iPtr->QueryIntAttribute("desc_end", &dEnd);
+			weakClassInfo.push_back(WeakClassifierInfo(descBeg[dBeg], descBeg[dEnd]));
+		}
+		numWeakClassifiers++;
+		cPtr = cPtr->NextSiblingElement("Classifier");
+	}
+
+	/*int begCol = 0;
 	weakClassInfo.push_back(WeakClassifierInfo(begCol, begCol + HIST_SIZE_H*HIST_SIZE_S));	//histogram HS
 	begCol += HIST_SIZE_H*HIST_SIZE_S;
 	weakClassInfo.push_back(WeakClassifierInfo(begCol, begCol + HIST_SIZE_V));	//histogram V
@@ -147,11 +234,11 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 	begCol += COVAR_HSV_SIZE + MEAN_HSV_SIZE;
 	weakClassInfo.push_back(WeakClassifierInfo(begCol, begCol + COVAR_LASER_SIZE + MEAN_LASER_SIZE));	//statistics laser
 	begCol += COVAR_LASER_SIZE + MEAN_LASER_SIZE;
-	//weakClassInfo.push_back(WeakClassifierInfo());	//geometric properties
+	//weakClassInfo.push_back(WeakClassifierInfo());	//geometric properties*/
 
 	numIterations = 10;
 
-	weakClassifiersSet.resize(numWeakClassifiers);
+	/*weakClassifiersSet.resize(numWeakClassifiers);
 	for(int c = 0; c < numWeakClassifiers; c++){
 		weakClassifiersSet[c] = new ClassifierSVM();
 	}
@@ -164,7 +251,7 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 		if(weakClassifiersSet[i]->type() == Classifier::SVM){
 			weakClassifiersSet[i]->loadSettings(pPtr);
 		}
-	}
+	}*/
 }
 
 void HierClassifier::saveCache(boost::filesystem::path file){
