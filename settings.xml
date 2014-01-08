@@ -5,14 +5,54 @@
 			<HierClassifier>
 				<cache enabled="true" />
 				<segmentation k="300" min_size="100" />
-				<ClassifierSVM>
+				<descriptor>
+					<hist_HS len_H="4" len_S="4" />
+					<hist_V len="4" />
+					<covar_HSV len="9" />
+					<mean_HSV len="3" />
+					<covar_laser len="4" />
+					<mean_laser len="2" />
+				</descriptor>
+				<Classifier type="SVM">
 					<cache enabled="true" />
 					<svm type="C_SVC">
 						<kernelType value="RBF" />
-						<gamma value="0.5" />
+						<gamma value="1.80203" />
 						<degree value="2" />
+						<C value="16607.5" />
 					</svm>
-				</ClassifierSVM>
+					<info desc_beg="0" desc_end="1" />
+				</Classifier>
+				<Classifier type="SVM">
+					<cache enabled="true" />
+					<svm type="C_SVC">
+						<kernelType value="RBF" />
+						<gamma value="5.4061" />
+						<degree value="2" />
+						<C value="5535.84" />
+					</svm>
+					<info desc_beg="1" desc_end="2" />
+				</Classifier>
+				<Classifier type="SVM">
+					<cache enabled="true" />
+					<svm type="C_SVC">
+						<kernelType value="RBF" />
+						<gamma value="0.0667419" />
+						<degree value="2" />
+						<C value="615.094" />
+					</svm>
+					<info desc_beg="2" desc_end="4" />
+				</Classifier>
+				<Classifier type="SVM">
+					<cache enabled="true" />
+					<svm type="C_SVC">
+						<kernelType value="RBF" />
+						<gamma value="5.4061" />
+						<degree value="2" />
+						<C value="1845.28" />
+					</svm>
+					<info desc_beg="4" desc_end="6" />
+				</Classifier>
 			</HierClassifier>
 			<learning dir="../../MovementConstraints/Camera/training_data" />
 			<labels>
