@@ -15,13 +15,13 @@
 #include "UnionFind.h"
 #include "ClassifierSVM.h"
 
-#define HIST_SIZE_H 4
+/*#define HIST_SIZE_H 4
 #define HIST_SIZE_S 4
 #define HIST_SIZE_V 4
 #define COVAR_HSV_SIZE 9
 #define MEAN_HSV_SIZE 3
 #define COVAR_LASER_SIZE 4
-#define MEAN_LASER_SIZE 2
+#define MEAN_LASER_SIZE 2*/
 
 using namespace std;
 using namespace cv;
@@ -71,6 +71,7 @@ void HierClassifier::prepareData(const std::vector<Entry>& data){
 		dataClassifiers[c].resize(data.size());
 		for(int e = 0; e < data.size(); e++){
 			Entry tmp;
+			//cout << "Col range: " << weakClassInfo[c].descBeg << ", " << weakClassInfo[c].descEnd << endl;
 			tmp.descriptor = data[e].descriptor.colRange(
 													weakClassInfo[c].descBeg,
 													weakClassInfo[c].descEnd);
@@ -79,6 +80,7 @@ void HierClassifier::prepareData(const std::vector<Entry>& data){
 			dataClassifiers[c][e] = tmp;
 		}
 	}
+	cout << "Prepared " << data.size() << " entries" << endl;
 }
 
 void HierClassifier::clearData(){
@@ -225,33 +227,7 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 		cPtr = cPtr->NextSiblingElement("Classifier");
 	}
 
-	/*int begCol = 0;
-	weakClassInfo.push_back(WeakClassifierInfo(begCol, begCol + HIST_SIZE_H*HIST_SIZE_S));	//histogram HS
-	begCol += HIST_SIZE_H*HIST_SIZE_S;
-	weakClassInfo.push_back(WeakClassifierInfo(begCol, begCol + HIST_SIZE_V));	//histogram V
-	begCol += HIST_SIZE_V;
-	weakClassInfo.push_back(WeakClassifierInfo(begCol, begCol + COVAR_HSV_SIZE + MEAN_HSV_SIZE));	//statistics HSV
-	begCol += COVAR_HSV_SIZE + MEAN_HSV_SIZE;
-	weakClassInfo.push_back(WeakClassifierInfo(begCol, begCol + COVAR_LASER_SIZE + MEAN_LASER_SIZE));	//statistics laser
-	begCol += COVAR_LASER_SIZE + MEAN_LASER_SIZE;
-	//weakClassInfo.push_back(WeakClassifierInfo());	//geometric properties*/
-
-	numIterations = 10;
-
-	/*weakClassifiersSet.resize(numWeakClassifiers);
-	for(int c = 0; c < numWeakClassifiers; c++){
-		weakClassifiersSet[c] = new ClassifierSVM();
-	}
-
-	pPtr = settings->FirstChildElement("ClassifierSVM");
-	if(!pPtr){
-		throw "Bad settings file - no ClassifierSVM setting";
-	}
-	for(int i = 0; i < weakClassifiersSet.size(); i++){
-		if(weakClassifiersSet[i]->type() == Classifier::SVM){
-			weakClassifiersSet[i]->loadSettings(pPtr);
-		}
-	}*/
+	numIterations = 12;
 }
 
 void HierClassifier::saveCache(boost::filesystem::path file){
@@ -290,14 +266,10 @@ void HierClassifier::train(const std::vector<Entry>& data,
 		cout << "Iteration " << t << endl;
 		int maxIndex = 0;
 		double maxVal = -1;
-		//vector<double> productWeights(dataWeights);
-		//for(int w = 0; w < productWeights; w++){
-		//	productWeights[w] *= data[w].weight;
-		//}
-		for(int c = 0; c < numWeakClassifiers; c++){
+		for(int c = t % numWeakClassifiers; c < (t % numWeakClassifiers) + 1; c++){
 			cout << "Training classifier " << c << endl;
 			//training
-			//TODO dataWeights*entryWeights
+			//dataWeights*entryWeights
 			weakClassifiersSet[c]->train(dataClassifiers[c], dataWeights);
 
 			//evaluating
@@ -310,7 +282,7 @@ void HierClassifier::train(const std::vector<Entry>& data,
 				for(int l = 0; l < numLabels; l++){
 					int ind = (l == dataClassifiers[c][e].label ? 1 : -1);
 					//cout << ind << " (" << probEst.at<float>(l) << "), ";
-					//TODO dataWeights*entrysWeights
+					//dataWeights*entrysWeights
 					score += data[e].weight*dataWeights[e]*probEst.at<float>(l)*ind/numLabels;
 				}
 				//cout << endl;
@@ -323,7 +295,7 @@ void HierClassifier::train(const std::vector<Entry>& data,
 		}
 
 		//computing weight for best classifer
-		//TODO compute accurate value of alpha
+		//compute accurate value of alpha
 		double alpha = 0.5*log((1 + maxVal)/(1 - maxVal));
 		weights.push_back(alpha);
 		sumClassifierWeights += alpha;
@@ -344,19 +316,22 @@ void HierClassifier::train(const std::vector<Entry>& data,
 			//cout << "Entry " << e << " ";
 			for(int l = 0; l < numLabels; l++){
 				int ind = (l == dataClassifiers[maxIndex][e].label ? 1 : -1);
-				//TODO entrysWeights
+				//entrysWeights
 				score += data[e].weight*probEst.at<float>(l)*ind/numLabels;
 				//cout << (probEst.at<float>(l)+1)/2 << " (" << ind << "), ";
 			}
 			//cout << endl;
 			dataWeights[e] *= exp(-alpha*score);
-			//TODO dataWeights*entrysWeights
+			//dataWeights*entrysWeights
 			sum += dataWeights[e]*data[e].weight;
 		}
+		double var = 0;
+		double mean = sum / dataWeights.size();
 		for(int e = 0; e < dataWeights.size(); e++){
+			var += pow(dataWeights[e] - mean, 2);
 			dataWeights[e] /= sum;
 		}
-		//waitKey();
+		cout << "Variance = " << var / dataWeights.size() << endl;
 	}
 	for(int c = 0; c < weights.size(); c++){
 		weights[c] /= sumClassifierWeights;
@@ -372,6 +347,12 @@ std::vector<cv::Mat> HierClassifier::classify(cv::Mat image,
 {
 	Mat regionsOnImage = segmentImage(image);
 	vector<Entry> entries = extractEntries(image, terrain, regionsOnImage);
+
+	ofstream log("descriptors");
+	for(int e = 0; e < entries.size(); e++){
+		log << entries[e].descriptor << endl;
+	}
+
 	map<int, int> imageIdToEntry;
 	for(int e = 0; e < entries.size(); e++){
 		imageIdToEntry[entries[e].imageId] = e;
@@ -518,11 +499,11 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		float rangeH[] = {0, 256};
 		float rangeS[] = {0, 360};
 		const float* rangesHS[] = {rangeH, rangeS};
-		int sizeHS[] = {HIST_SIZE_H, HIST_SIZE_S};
+		int sizeHS[] = {histHLen, histSLen};
 		int channelsV[] = {2};
 		float rangeV[] = {0, 256};
 		const float* rangesV[] = {rangeV};
-		int sizeV[] = {HIST_SIZE_V};
+		int sizeV[] = {histVLen};
 		calcHist(&values, 1, channelsHS, Mat(), histogramHS, 2, sizeHS, rangesHS);
 		calcHist(&values, 1, channelsV, Mat(), histogramV, 1, sizeV, rangesV);
 		histogramHS = histogramHS.reshape(0, 1);
@@ -565,26 +546,26 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		Entry tmp;
 		tmp.imageId = pixels[begIm].imageId;
 		tmp.weight = (endIm - begIm) + (endTer - begTer);
-		tmp.descriptor = Mat(1, HIST_SIZE_H*HIST_SIZE_S +
-							HIST_SIZE_V +
-							COVAR_HSV_SIZE +
-							MEAN_HSV_SIZE +
-							COVAR_LASER_SIZE +
-							MEAN_LASER_SIZE,
+		tmp.descriptor = Mat(1, histHLen*histSLen +
+							histVLen +
+							covarHSVLen +
+							meanHSVLen +
+							covarLaserLen +
+							meanLaserLen,
 							CV_32FC1);
 		int begCol = 0;
-		histogramHS.copyTo(tmp.descriptor.colRange(begCol, begCol + HIST_SIZE_H*HIST_SIZE_S));
-		begCol += HIST_SIZE_H*HIST_SIZE_S;
-		histogramV.copyTo(tmp.descriptor.colRange(begCol, begCol + HIST_SIZE_V));
-		begCol += HIST_SIZE_V;
-		covarHSV.copyTo(tmp.descriptor.colRange(begCol, begCol + COVAR_HSV_SIZE));
-		begCol += COVAR_HSV_SIZE;
-		meanHSV.copyTo(tmp.descriptor.colRange(begCol, begCol + MEAN_HSV_SIZE));
-		begCol += MEAN_HSV_SIZE;
-		covarLaser.copyTo(tmp.descriptor.colRange(begCol, begCol + COVAR_LASER_SIZE));
-		begCol += COVAR_LASER_SIZE;
-		meanLaser.copyTo(tmp.descriptor.colRange(begCol, begCol + MEAN_LASER_SIZE));
-		begCol += MEAN_LASER_SIZE;
+		histogramHS.copyTo(tmp.descriptor.colRange(begCol, begCol + histHLen*histSLen));
+		begCol += histHLen*histSLen;
+		histogramV.copyTo(tmp.descriptor.colRange(begCol, begCol + histVLen));
+		begCol += histVLen;
+		covarHSV.copyTo(tmp.descriptor.colRange(begCol, begCol + covarHSVLen));
+		begCol += covarHSVLen;
+		meanHSV.copyTo(tmp.descriptor.colRange(begCol, begCol + meanHSVLen));
+		begCol += meanHSVLen;
+		covarLaser.copyTo(tmp.descriptor.colRange(begCol, begCol + covarLaserLen));
+		begCol += covarLaserLen;
+		meanLaser.copyTo(tmp.descriptor.colRange(begCol, begCol + meanLaserLen));
+		begCol += meanLaserLen;
 
 		ret.push_back(tmp);
 	}
