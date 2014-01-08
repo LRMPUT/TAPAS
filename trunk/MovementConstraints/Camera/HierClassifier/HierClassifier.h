@@ -54,6 +54,9 @@ class HierClassifier {
 	int numWeakClassifiers;
 	int numIterations;
 
+	int histHLen, histSLen, histVLen, covarHSVLen, meanHSVLen, covarLaserLen, meanLaserLen;
+	std::vector<int> descBeg;
+
 	cv::Mat cameraMatrix;
 
 	std::vector<Classifier*> classifiers;

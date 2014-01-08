@@ -294,10 +294,18 @@ void ClassifierSVM::loadSettings(TiXmlElement* settings){
 	}
 	svmPtr->QueryDoubleAttribute("value", &degree);
 
+	double C = 1;
+	svmPtr = pPtr->FirstChildElement("C");
+	if(!svmPtr){
+		throw "Bad settings file - no C value";
+	}
+	svmPtr->QueryDoubleAttribute("value", &C);
+
 	svmParams.svm_type = svmType;
 	svmParams.kernel_type = kernelType;
 	svmParams.gamma = gamma;
 	svmParams.degree = degree;
+	svmParams.C = C;
 }
 
 void ClassifierSVM::saveCache(boost::filesystem::path file){

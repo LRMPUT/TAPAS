@@ -322,7 +322,7 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 	}
 
 	if(crossValidate){
-		hierClassifiers.front()->crossValidateSVMs(dataset);
+		//hierClassifiers.front()->crossValidateSVMs(dataset);
 	}
 	hierClassifiers.front()->train(dataset, labels.size());
 }
