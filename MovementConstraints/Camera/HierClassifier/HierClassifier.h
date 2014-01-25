@@ -54,7 +54,8 @@ class HierClassifier {
 	int numWeakClassifiers;
 	int numIterations;
 
-	int histHLen, histSLen, histVLen, covarHSVLen, meanHSVLen, covarLaserLen, meanLaserLen;
+	int histHLen, histSLen, histVLen, covarHSVLen, meanHSVLen;
+	int covarLaserLen, meanLaserLen, kurtLaserLen, histDLen, histILen;
 	std::vector<int> descBeg;
 
 	cv::Mat cameraMatrix;
@@ -111,7 +112,8 @@ public:
 		@return Matrix of probabilites of belonging to certain class.
 	*/
 	std::vector<cv::Mat> classify(cv::Mat image,
-								  cv::Mat terrain);
+								  cv::Mat terrain,
+								  cv::Mat segmentation = cv::Mat());
 	
 	/** \brief Extracts entries from labeled data.
 
@@ -123,7 +125,7 @@ public:
 	/** \brief Segments image basing on colorspace distance
 	 * 	@return Matrix with labeled regions - each region has uniqe id
 	 */
-	cv::Mat segmentImage(cv::Mat image);
+	cv::Mat segmentImage(cv::Mat image, int kCurSegment = -1);
 
 	void crossValidateSVMs(const std::vector<Entry>& entries);
 };

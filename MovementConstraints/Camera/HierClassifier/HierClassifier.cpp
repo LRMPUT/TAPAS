@@ -189,6 +189,21 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 			}
 			descLen[5] = meanLaserLen;
 		}
+		else if(dPtr->Value() == string("kurt_laser")){
+			dPtr->QueryIntAttribute("len", &kurtLaserLen);
+			if(descLen.size() < 7){
+				descLen.resize(7);
+			}
+			descLen[6] = kurtLaserLen;
+		}
+		else if(dPtr->Value() == string("hist_DI")){
+			dPtr->QueryIntAttribute("len_D", &histDLen);
+			dPtr->QueryIntAttribute("len_I", &histILen);
+			if(descLen.size() < 8){
+				descLen.resize(8);
+			}
+			descLen[7] = histDLen*histILen;
+		}
 		else{
 			throw "Bad settings file - no such descriptor";
 		}
@@ -267,6 +282,7 @@ void HierClassifier::train(const std::vector<Entry>& data,
 		int maxIndex = 0;
 		double maxVal = -1;
 		for(int c = t % numWeakClassifiers; c < (t % numWeakClassifiers) + 1; c++){
+		//for(int c = 0; c < numWeakClassifiers; c++){
 			cout << "Training classifier " << c << endl;
 			//training
 			//dataWeights*entryWeights
@@ -283,7 +299,7 @@ void HierClassifier::train(const std::vector<Entry>& data,
 					int ind = (l == dataClassifiers[c][e].label ? 1 : -1);
 					//cout << ind << " (" << probEst.at<float>(l) << "), ";
 					//dataWeights*entrysWeights
-					score += data[e].weight*dataWeights[e]*probEst.at<float>(l)*ind/numLabels;
+					score += dataClassifiers[maxIndex][e].weight*dataWeights[e]*probEst.at<float>(l)*ind/numLabels;
 				}
 				//cout << endl;
 			}
@@ -308,6 +324,7 @@ void HierClassifier::train(const std::vector<Entry>& data,
 		cout << "recomputing dataWeights" << endl;
 		//recomputing dataWeights
 		double sum = 0;
+		double sumVar = 0;
 		for(int e = 0; e < dataClassifiers[maxIndex].size(); e++){
 			Mat probEst = classifiers.back()->classify(dataClassifiers[maxIndex][e].descriptor);
 			probEst *= 2;
@@ -317,16 +334,22 @@ void HierClassifier::train(const std::vector<Entry>& data,
 			for(int l = 0; l < numLabels; l++){
 				int ind = (l == dataClassifiers[maxIndex][e].label ? 1 : -1);
 				//entrysWeights
-				score += data[e].weight*probEst.at<float>(l)*ind/numLabels;
+				score += probEst.at<float>(l)*ind/numLabels;
 				//cout << (probEst.at<float>(l)+1)/2 << " (" << ind << "), ";
 			}
+			score *= dataClassifiers[maxIndex].size() * dataClassifiers[maxIndex][e].weight;
 			//cout << endl;
+			if(data[e].label == 2){
+				cout << "Entry " << e << " ";
+				cout << "score = " << score << endl;
+			}
 			dataWeights[e] *= exp(-alpha*score);
 			//dataWeights*entrysWeights
-			sum += dataWeights[e]*data[e].weight;
+			sum += dataWeights[e]*dataClassifiers[maxIndex][e].weight;
+			sumVar += dataWeights[e];
 		}
 		double var = 0;
-		double mean = sum / dataWeights.size();
+		double mean = sumVar / dataWeights.size();
 		for(int e = 0; e < dataWeights.size(); e++){
 			var += pow(dataWeights[e] - mean, 2);
 			dataWeights[e] /= sum;
@@ -343,9 +366,16 @@ void HierClassifier::train(const std::vector<Entry>& data,
 	@return Matrix of probabilites of belonging to certain class.
 */
 std::vector<cv::Mat> HierClassifier::classify(cv::Mat image,
-							  	  	  	  	  cv::Mat terrain)
+							  	  	  	  	  cv::Mat terrain,
+							  	  	  	  	  cv::Mat segmentation)
 {
-	Mat regionsOnImage = segmentImage(image);
+	Mat regionsOnImage;
+	if(segmentation.empty()){
+		regionsOnImage = segmentImage(image);
+	}
+	else{
+		regionsOnImage = segmentation;
+	}
 	vector<Entry> entries = extractEntries(image, terrain, regionsOnImage);
 
 	ofstream log("descriptors");
@@ -496,8 +526,8 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		}
 
 		int channelsHS[] = {0, 1};
-		float rangeH[] = {0, 256};
-		float rangeS[] = {0, 360};
+		float rangeH[] = {0, 60};
+		float rangeS[] = {0, 256};
 		const float* rangesHS[] = {rangeH, rangeS};
 		int sizeHS[] = {histHLen, histSLen};
 		int channelsV[] = {2};
@@ -520,7 +550,8 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		calcCovarMatrix(values,
 						covarHSV,
 						meanHSV,
-						CV_COVAR_NORMAL | CV_COVAR_SCALE | CV_COVAR_COLS);
+						CV_COVAR_NORMAL | CV_COVAR_SCALE | CV_COVAR_COLS,
+						CV_32F);
 		//cout << "Calculated covar matrix" << endl;
 		covarHSV = covarHSV.reshape(0, 1);
 		meanHSV = meanHSV.reshape(0, 1);
@@ -531,7 +562,8 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		calcCovarMatrix(valuesTer.rowRange(3, 5),
 						covarLaser,
 						meanLaser,
-						CV_COVAR_NORMAL | CV_COVAR_SCALE | CV_COVAR_COLS);
+						CV_COVAR_NORMAL | CV_COVAR_SCALE | CV_COVAR_COLS,
+						CV_32F);
 		covarLaser = covarLaser.reshape(0, 1);
 		meanLaser = meanLaser.reshape(0, 1);
 		//normalize(covarLaser, covarLaser);
@@ -543,6 +575,41 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		//cout << "histV = " << histogramV << endl;
 		//cout << "covarHSV = " << covarHSV << endl;
 		//cout << "meanHSV = " << meanHSV << endl;
+
+		Mat kurtLaser(1, 2, CV_32FC1);
+		Mat tmpVal;
+		valuesTer.rowRange(3, 5).copyTo(tmpVal);
+		//cout << "tmpVal = " << tmpVal << endl;
+		//cout << "mean(0) = " << meanLaser.at<float>(0) << ", mean(1) = " << meanLaser.at<float>(1) << endl;
+		//cout << "stdDev^4(0) = " << pow(covarLaser.at<float>(0), 2) << ", stdDev^4(3) = " << pow(covarLaser.at<float>(3), 2) << endl;
+		tmpVal.rowRange(0, 1) -= meanLaser.at<float>(0);
+		tmpVal.rowRange(1, 2) -= meanLaser.at<float>(1);
+
+		pow(tmpVal, 4, tmpVal);
+		kurtLaser.at<float>(0) = sum(tmpVal.rowRange(0, 1))(0);
+		if(tmpVal.cols * pow(covarLaser.at<float>(0), 2) != 0){
+			kurtLaser.at<float>(0) = kurtLaser.at<float>(0) / (tmpVal.cols * pow(covarLaser.at<float>(0), 2)) - 3;
+		}
+		kurtLaser.at<float>(1) = sum(tmpVal.rowRange(1, 2))(0);
+		if(tmpVal.cols * pow(covarLaser.at<float>(3), 2) != 0){
+			kurtLaser.at<float>(1) = kurtLaser.at<float>(1) / (tmpVal.cols * pow(covarLaser.at<float>(3), 2)) - 3;
+		}
+
+		Mat histogramDI;
+		int channelsDI[] = {0, 1};
+		float rangeD[] = {2000, 3000};
+		float rangeI[] = {800, 2500};
+		const float* rangesDI[] = {rangeD, rangeI};
+		int sizeDI[] = {histDLen, histILen};
+		Mat valHistD = valuesTer.rowRange(3, 4);
+		Mat valHistI = valuesTer.rowRange(4, 5);
+		Mat valuesHistDI[] = {valHistD, valHistI};
+		calcHist(valuesHistDI, 2, channelsDI, Mat(), histogramDI, 2, sizeDI, rangesDI);
+		histogramDI = histogramDI.reshape(0, 1);
+		normalize(histogramDI, histogramDI);
+
+
+
 		Entry tmp;
 		tmp.imageId = pixels[begIm].imageId;
 		tmp.weight = (endIm - begIm) + (endTer - begTer);
@@ -551,8 +618,11 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 							covarHSVLen +
 							meanHSVLen +
 							covarLaserLen +
-							meanLaserLen,
+							meanLaserLen +
+							kurtLaserLen +
+							histDLen*histILen,
 							CV_32FC1);
+
 		int begCol = 0;
 		histogramHS.copyTo(tmp.descriptor.colRange(begCol, begCol + histHLen*histSLen));
 		begCol += histHLen*histSLen;
@@ -566,6 +636,10 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		begCol += covarLaserLen;
 		meanLaser.copyTo(tmp.descriptor.colRange(begCol, begCol + meanLaserLen));
 		begCol += meanLaserLen;
+		kurtLaser.copyTo(tmp.descriptor.colRange(begCol, begCol + kurtLaserLen));
+		begCol += kurtLaserLen;
+		histogramDI.copyTo(tmp.descriptor.colRange(begCol, begCol + histDLen*histILen));
+		begCol += histDLen*histILen;
 
 		ret.push_back(tmp);
 	}
@@ -584,7 +658,7 @@ bool operator<(const Edge& left, const Edge& right){
 }
 
 
-cv::Mat HierClassifier::segmentImage(cv::Mat image){
+cv::Mat HierClassifier::segmentImage(cv::Mat image, int kCurSegment){
 	Mat imageR(image.rows, image.cols, CV_32FC1);
 	Mat imageG(image.rows, image.cols, CV_32FC1);
 	Mat imageB(image.rows, image.cols, CV_32FC1);
@@ -599,7 +673,9 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image){
 					{0, 1}};*/
 	//cout << "Size of nhood " << sizeof(nhood)/sizeof(nhood[0]) << endl;
 	//cout << "rows: " << image.rows << ", cols: " << image.cols << endl;
-
+	if(kCurSegment == -1){
+		kCurSegment = kSegment;
+	}
 	image.convertTo(imageFloat, CV_32F);
 	//resize(imageFloat, imageFloat, Size(320, 240));
 	GaussianBlur(imageFloat, imageFloat, Size(7, 7), 0.8);
@@ -648,7 +724,7 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image){
 			if(iRoot != jRoot){
 				//cout << "intDiff[iRoot] + (float)k/sizes[iRoot] = " << intDiff[iRoot] << " + " << (float)k/sizes[iRoot] << " = " << intDiff[iRoot] + (float)k/sizes[iRoot] << endl;
 				//cout << "intDiff[jRoot] + (float)k/sizes[jRoot] = " << intDiff[jRoot] << " + " << (float)k/sizes[jRoot] << " = " << intDiff[jRoot] + (float)k/sizes[jRoot] << endl;
-				if(min(intDiff[iRoot] + (float)kSegment/sets.size(iRoot), intDiff[jRoot] + (float)kSegment/sets.size(jRoot))
+				if(min(intDiff[iRoot] + (float)kCurSegment/sets.size(iRoot), intDiff[jRoot] + (float)kCurSegment/sets.size(jRoot))
 						>=
 						it->weight)
 				{
