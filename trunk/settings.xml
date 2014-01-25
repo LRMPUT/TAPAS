@@ -4,14 +4,16 @@
 			<cache enabled="true" />
 			<HierClassifier>
 				<cache enabled="true" />
-				<segmentation k="300" min_size="100" />
+				<segmentation k="20" min_size="200" />
 				<descriptor>
 					<hist_HS len_H="4" len_S="4" />
-					<hist_V len="4" />
+					<hist_V len="8" />
 					<covar_HSV len="9" />
 					<mean_HSV len="3" />
 					<covar_laser len="4" />
 					<mean_laser len="2" />
+					<kurt_laser len="2" />
+					<hist_DI len_D="5" len_I="5" />
 				</descriptor>
 				<Classifier type="SVM">
 					<cache enabled="true" />
@@ -51,7 +53,17 @@
 						<degree value="2" />
 						<C value="1845.28" />
 					</svm>
-					<info desc_beg="4" desc_end="6" />
+					<info desc_beg="4" desc_end="7" />
+				</Classifier>
+				<Classifier type="SVM">
+					<cache enabled="true" />
+					<svm type="C_SVC">
+						<kernelType value="RBF" />
+						<gamma value="5.4061" />
+						<degree value="2" />
+						<C value="1845.28" />
+					</svm>
+					<info desc_beg="7" desc_end="8" />
 				</Classifier>
 			</HierClassifier>
 			<learning dir="../../MovementConstraints/Camera/training_data" />

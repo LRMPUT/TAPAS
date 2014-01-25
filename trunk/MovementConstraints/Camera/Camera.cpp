@@ -416,9 +416,12 @@ void Camera::classifyFromDir(boost::filesystem::path dir){
 
 				pObject = pObject->NextSiblingElement("object");
 			}
+			Mat autoSegmented = hierClassifiers.front()->segmentImage(image, 200);
+			map<int, int> assignedManualId = hierClassifiers.front()->assignManualId(autoSegmented, manualRegionsOnImage);
 			imshow("original", image);
-			imshow("segments", hierClassifiers.front()->colorSegments(hierClassifiers.front()->segmentImage(image)));
-			vector<Mat> classificationResult = hierClassifiers.front()->classify(image, terrain);
+			imshow("segments", hierClassifiers.front()->colorSegments(autoSegmented));
+
+			vector<Mat> classificationResult = hierClassifiers.front()->classify(image, terrain, autoSegmented);
 			for(int l = 0; l < labels.size(); l++){
 				double minVal, maxVal;
 				minMaxIdx(classificationResult[l], &minVal, &maxVal);
@@ -442,14 +445,27 @@ void Camera::classifyFromDir(boost::filesystem::path dir){
 			for(int l = 0; l < labels.size(); l++){
 				coloredOriginal.setTo(colors[l], bestLabels == l);
 			}
-			//TODO select missclassified entries
+			imshow("colored", coloredOriginal * 0.25 + image * 0.75);
+
 			set<int> missclassified;
 			for(int r = 0; r < image.rows; r++){
 				for(int c = 0; c < image.cols; c++){
-					//if(bestLabels.at<int>(r, c) != mapRegionIdToLabel[
+					if(mapRegionIdToLabel.count(assignedManualId[autoSegmented.at<int>(r, c)]) > 0){
+						if(bestLabels.at<int>(r, c) != mapRegionIdToLabel[assignedManualId[autoSegmented.at<int>(r, c)]]){
+							missclassified.insert(autoSegmented.at<int>(r, c));
+						}
+					}
 				}
 			}
-			imshow("colored", coloredOriginal * 0.25 + image * 0.75);
+			cout << "missclassified.size() = " << missclassified.size() << endl;
+			vector<Entry> entries = hierClassifiers.front()->extractEntries(image, terrain, autoSegmented);
+			for(int e = 0; e < entries.size(); e++){
+				if(missclassified.count(entries[e].imageId) > 0){
+					cout << "Entry " << e << ", label = " << mapRegionIdToLabel[assignedManualId[entries[e].imageId]] << endl;
+					cout << "Descriptor: " << entries[e].descriptor << endl;
+				}
+			}
+
 			waitKey();
 		}
 	}
