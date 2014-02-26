@@ -23,6 +23,9 @@
 class MovementConstraints;
 class Debug;
 
+/** \brief Klasa zarządzająca klasyfikatorami i kamerami, przystosowana do obsługi
+ * 			wielu kamer jednocześnie.
+ */
 class Camera {
 	friend class Debug;
 
@@ -37,6 +40,9 @@ class Camera {
 
 	bool cacheEnabled;
 
+	/** \brief Flaga informująca o tym czy dokonywać cross validation.
+	 *
+	 */
 	bool crossValidate;
 
 	boost::filesystem::path learningDir;
@@ -50,14 +56,16 @@ class Camera {
 	//CV_32FC1 4x4: camera origin position and orientation w.r.t. laser coordinate system
 	std::vector<cv::Mat> cameraOrigLaser;
 
-	//CV_32FC1 3x3: camera matrix
+	/** CV_32FC1 3x3: camera matrix */
 	std::vector<cv::Mat> cameraMatrix;
 
-	//CV_32FC1 1x5: distortion coefficients
+	/** CV_32FC1 1x5: distortion coefficients. */
 	std::vector<cv::Mat> distCoeffs;
 
 	//CV_32FC1 4x1: ground plane equation [A, B, C, D]'
 	cv::Mat groundPlane;
+
+	std::vector<std::vector<std::vector<std::vector<cv::Point2f> > > > imagePolygons;
 
 	int currentTimeStamp;
 
@@ -72,22 +80,43 @@ class Camera {
 
 	void computeConstraints(std::vector<cv::Mat> image);
 
-	/*void computeGroundPolygons();
+	void computeImagePolygons();
 
-	cv::Point3f computePointProjection(cv::Point2f imPoint, int cameraInd);
+	std::vector<cv::Point2f> computePointProjection(const std::vector<cv::Point3f>& imPoint,
+													int cameraInd);
 
-	void addToLearnDatabase(cv::Mat samples, int label);
+	std::vector<cv::Point3f> computePointReprojection(	const std::vector<cv::Point2f>& imPoint,
+														int cameraInd);
+
+	/*void addToLearnDatabase(cv::Mat samples, int label);
 
 	void clearLearnDatabase();
 
 	void learn();*/
 
+	/** \brief Funkcja rysująca na obrazie wielobok i wypełniająca go wartością regionId.
+	 *
+	 */
 	int selectPolygonPixels(std::vector<cv::Point2i> polygon,
 							int regionId,
 							cv::Mat& regionsOnImage);
 
+	/** \brief Funkcja rysująca na obrazie wielobok i wypełniająca go wartością regionId.
+	 *
+	 */
+	int selectPolygonPixels(std::vector<cv::Point2f> polygon,
+							int regionId,
+							cv::Mat& regionsOnImage);
+
+
+	/** \brief Funkcja ucząca klasyfikator danymi z katalogu.
+	 *
+	 */
 	void learnFromDir(boost::filesystem::path dir);
 
+	/** \brief Funkcja klasyfikująca dane z katalogu.
+	 *
+	 */
 	void classifyFromDir(boost::filesystem::path dir);
 
 	/*cv::Mat classifySlidingWindow(cv::Mat image);

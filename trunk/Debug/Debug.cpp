@@ -105,10 +105,31 @@ void Debug::testTraining(boost::filesystem::path dir){
 	robot->movementConstraints->camera->learnFromDir(dir);
 }
 
-void Debug::testClassification(boost::filesystem::path dirTrain, boost::filesystem::path dirClassify){
+void Debug::testClassification(	boost::filesystem::path dirTrain,
+								boost::filesystem::path dirTest)
+{
 	robot->movementConstraints->camera->learnFromDir(dirTrain);
-	robot->movementConstraints->camera->classifyFromDir(dirClassify);
+	robot->movementConstraints->camera->classifyFromDir(dirTest);
 }
+
+void Debug::testConstraints(boost::filesystem::path dirTrain,
+							boost::filesystem::path dirTest)
+{
+	robot->movementConstraints->camera->learnFromDir(dirTrain);
+	filesystem::directory_iterator endIt;
+	for(filesystem::directory_iterator dirIt(dirTrain); dirIt != endIt; dirIt++){
+		if(dirIt->path().filename().string().find(".jpg") != string::npos){
+			Mat image = imread(dirIt->path().string());
+			if(image.data == NULL){
+				throw "Bad image file";
+			}
+			vector<Mat> data(1, image);
+			robot->movementConstraints->camera->computeConstraints(data);
+			waitKey();
+		}
+	}
+}
+
 
 //----------------------ACCESS TO COMPUTED DATA
 //CV_32SC1 3x1: x, y, fi

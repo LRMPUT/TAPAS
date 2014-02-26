@@ -13,9 +13,6 @@ Classifier::Classifier(Classifier::ClassifierType iclassifierType) :
 
 }
 
-/** \brief Loads settings from XML structure.
-
-*/
 Classifier::Classifier(Classifier::ClassifierType iclassifierType, TiXmlElement* settings) :
 	classifierType(iclassifierType)
 {

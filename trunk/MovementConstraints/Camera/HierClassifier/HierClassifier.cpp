@@ -10,6 +10,7 @@
 //STL
 #include <cmath>
 #include <algorithm>
+#include <chrono>
 //RobotsIntellect
 #include "HierClassifier.h"
 #include "UnionFind.h"
@@ -48,7 +49,7 @@ Scalar colors[] = {
 		Scalar(0x80, 0x80, 0x00) //Olive
 };
 
-cv::Mat HierClassifier::projectPointsTo3D(cv::Mat disparity){
+/*cv::Mat HierClassifier::projectPointsTo3D(cv::Mat disparity){
 	//TODO correct
 	Mat ret;
 	Mat Q = Mat::eye(4, 4, CV_32FC1);
@@ -61,7 +62,7 @@ cv::Mat HierClassifier::projectPointsTo2D(cv::Mat _3dImage){
 	Mat ret;
 	projectPoints(_3dImage, (0,0,0), (0,0,0), cameraMatrix, Mat(), ret);
 	return ret;
-}
+}*/
 
 void HierClassifier::prepareData(const std::vector<Entry>& data){
 	cout << "Prepare data" << endl;
@@ -103,9 +104,6 @@ HierClassifier::HierClassifier(cv::Mat icameraMatrix) :
 
 }
 
-/** \brief Loads settings from XML structure.
-
-*/
 HierClassifier::HierClassifier(cv::Mat icameraMatrix, TiXmlElement* settings) :
 	cacheEnabled(false),
 	cameraMatrix(icameraMatrix)
@@ -122,9 +120,7 @@ HierClassifier::~HierClassifier(){
 	}
 }
 
-/** \brief Loads settings from XML structure.
 
-*/
 void HierClassifier::loadSettings(TiXmlElement* settings){
 	TiXmlElement* pPtr = settings->FirstChildElement("cache");
 	if(!pPtr){
@@ -242,7 +238,7 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 		cPtr = cPtr->NextSiblingElement("Classifier");
 	}
 
-	numIterations = 12;
+	numIterations = 15;
 }
 
 void HierClassifier::saveCache(boost::filesystem::path file){
@@ -255,14 +251,6 @@ void HierClassifier::loadCache(boost::filesystem::path file){
 
 //---------------COMPUTING----------------
 
-/** Trains classifier. Outline of algorithm:
- * 		1. Initialize dataWeights = 1/data.size()
- * 		2. for t = 0 : numIterations
- * 		3.		train classifiers
- * 		4.		choose best classsifier
- * 		5.		compute weight for that classifier
- * 		6.		update dataWeights
- */
 void HierClassifier::train(const std::vector<Entry>& data,
 		int inumLabels)
 {
@@ -339,10 +327,6 @@ void HierClassifier::train(const std::vector<Entry>& data,
 			}
 			score *= dataClassifiers[maxIndex].size() * dataClassifiers[maxIndex][e].weight;
 			//cout << endl;
-			if(data[e].label == 2){
-				cout << "Entry " << e << " ";
-				cout << "score = " << score << endl;
-			}
 			dataWeights[e] *= exp(-alpha*score);
 			//dataWeights*entrysWeights
 			sum += dataWeights[e]*dataClassifiers[maxIndex][e].weight;
@@ -362,13 +346,13 @@ void HierClassifier::train(const std::vector<Entry>& data,
 	dataClassifiers.clear();
 }
 
-/**	\brief
-	@return Matrix of probabilites of belonging to certain class.
-*/
+
 std::vector<cv::Mat> HierClassifier::classify(cv::Mat image,
 							  	  	  	  	  cv::Mat terrain,
 							  	  	  	  	  cv::Mat segmentation)
 {
+
+
 	Mat regionsOnImage;
 	if(segmentation.empty()){
 		regionsOnImage = segmentImage(image);
@@ -377,6 +361,10 @@ std::vector<cv::Mat> HierClassifier::classify(cv::Mat image,
 		regionsOnImage = segmentation;
 	}
 	vector<Entry> entries = extractEntries(image, terrain, regionsOnImage);
+
+	using namespace std::chrono;
+	high_resolution_clock::time_point start = high_resolution_clock::now();
+	high_resolution_clock::time_point end;
 
 	ofstream log("descriptors");
 	for(int e = 0; e < entries.size(); e++){
@@ -409,6 +397,16 @@ std::vector<cv::Mat> HierClassifier::classify(cv::Mat image,
 			}
 		}
 	}
+
+	end = high_resolution_clock::now();
+	static duration<double> compTime = duration<double>::zero();
+	static int times = 0;
+
+	compTime += duration_cast<duration<double> >(end - start);
+	times++;
+	cout << "Classify Times: " << times << endl;
+	cout << "Classify Average computing time: " << compTime.count()/times << endl;
+
 	return ret;
 }
 
@@ -425,13 +423,13 @@ bool operator<(const Pixel& left, const Pixel& right){
 	return (left.imageId < right.imageId);
 }
 
-/** \brief Extracts entries from labeled data.
-
-*/
 std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 													cv::Mat terrain,
 													cv::Mat regionsOnImage)
 {
+	using namespace std::chrono;
+	high_resolution_clock::time_point start = high_resolution_clock::now();
+
 	//namedWindow("imageBGR");
 	Mat imageHSV;
 	cvtColor(imageBGR, imageHSV, CV_BGR2HSV);
@@ -467,6 +465,9 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		}
 	}
 	sort(terrainRegion.begin(), terrainRegion.end());
+
+
+	high_resolution_clock::time_point endSorting = high_resolution_clock::now();
 
 	vector<Entry> ret;
 	int endIm = 0;
@@ -521,7 +522,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 			//waitKey();
 		}
 		else{
-			cout << "Warning - no terrain values for imageId " << pixels[begIm].imageId << endl;
+			//cout << "Warning - no terrain values for imageId " << pixels[begIm].imageId << endl;
 			valuesTer = Mat(terrain.rows, 1, CV_32FC1, Scalar(0));
 		}
 
@@ -643,6 +644,22 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 
 		ret.push_back(tmp);
 	}
+
+	static duration<double> sortingTime = duration<double>::zero();
+	static duration<double> compTime = duration<double>::zero();
+	static duration<double> wholeTime = duration<double>::zero();
+	static int times = 0;
+
+	high_resolution_clock::time_point endComp = high_resolution_clock::now();
+	sortingTime += duration_cast<duration<double> >(endSorting - start);
+	compTime += duration_cast<duration<double> >(endComp - endSorting);
+	wholeTime += duration_cast<duration<double> >(endComp - start);
+	times++;
+	cout << "Times: " << times << endl;
+	cout << "Extract Average sorting time: " << sortingTime.count()/times << endl;
+	cout << "Extract Average computing time: " << compTime.count()/times << endl;
+	cout << "Extract Average whole time: " << wholeTime.count()/times << endl;
+
 	return ret;
 }
 
@@ -659,6 +676,13 @@ bool operator<(const Edge& left, const Edge& right){
 
 
 cv::Mat HierClassifier::segmentImage(cv::Mat image, int kCurSegment){
+
+	using namespace std::chrono;
+	high_resolution_clock::time_point start = high_resolution_clock::now();
+	high_resolution_clock::time_point endSorting;
+	high_resolution_clock::time_point endComp;
+	high_resolution_clock::time_point endMerging;
+
 	Mat imageR(image.rows, image.cols, CV_32FC1);
 	Mat imageG(image.rows, image.cols, CV_32FC1);
 	Mat imageB(image.rows, image.cols, CV_32FC1);
@@ -686,34 +710,39 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image, int kCurSegment){
 
 	vector<Mat> segments;
 
-	{
-		//cout << "Channel " << ch << endl;
-		segments.push_back(Mat(nrows, ncols, CV_32SC1));
-		vector<Edge> edges;
-		for(int r = 0; r < nrows; r++){
-			for(int c = 0; c < ncols; c++){
-				for(int nh = 0; nh < sizeof(nhood)/sizeof(nhood[0]); nh++){
-					if((r + nhood[nh][0] < nrows) && (r + nhood[nh][0] >= 0) &&
-							(c + nhood[nh][1] < ncols) && (c + nhood[nh][1] >= 0))
-					{
-						float diffAll = 0;
-						for(int ch = 0; ch < nchannels; ch++){
-							float diff = abs(imageChannels[ch].at<float>(r, c) - imageChannels[ch].at<float>(r + nhood[nh][0], c + nhood[nh][1]));
-							diffAll += diff*diff;
-						}
-						diffAll = sqrt(diffAll);
-						edges.push_back(Edge(c + ncols*r, c + nhood[nh][1] + ncols*(r + nhood[nh][0]), diffAll));
-						//if(edges.back().i == 567768 || edges.back().j == 567768){
-						//	cout << "diff = abs(" << (int)imageChannels[ch].at<unsigned char>(r, c) << " - " << (int)imageChannels[ch].at<unsigned char>(r + nhood[nh][0], c + nhood[nh][1]) << ") = " << diff << endl;
-						//}
+	vector<Edge> edges;
+	for(int r = 0; r < nrows; r++){
+		for(int c = 0; c < ncols; c++){
+			for(int nh = 0; nh < sizeof(nhood)/sizeof(nhood[0]); nh++){
+				if((r + nhood[nh][0] < nrows) && (r + nhood[nh][0] >= 0) &&
+						(c + nhood[nh][1] < ncols) && (c + nhood[nh][1] >= 0))
+				{
+					float diffAll = 0;
+					for(int ch = 0; ch < nchannels; ch++){
+						float diff = abs(imageChannels[ch].at<float>(r, c) - imageChannels[ch].at<float>(r + nhood[nh][0], c + nhood[nh][1]));
+						diffAll += diff*diff;
 					}
+					diffAll = sqrt(diffAll);
+					edges.push_back(Edge(c + ncols*r, c + nhood[nh][1] + ncols*(r + nhood[nh][0]), diffAll));
+					//if(edges.back().i == 567768 || edges.back().j == 567768){
+					//	cout << "diff = abs(" << (int)imageChannels[ch].at<unsigned char>(r, c) << " - " << (int)imageChannels[ch].at<unsigned char>(r + nhood[nh][0], c + nhood[nh][1]) << ") = " << diff << endl;
+					//}
 				}
 			}
 		}
-		sort(edges.begin(), edges.end()); //possible improvement by bin sorting
+	}
+	sort(edges.begin(), edges.end()); //possible improvement by bin sorting
+
+	endSorting = high_resolution_clock::now();
+
+	{
+		//cout << "Channel " << ch << endl;
+		segments.push_back(Mat(nrows, ncols, CV_32SC1));
+
 		//cout << "Largest differece = " << edges[edges.size() - 1].weight <<
 		//		", between (" << edges[edges.size() - 1].i << ", " << edges[edges.size() - 1].j <<
 		//		")" << endl;
+
 		UnionFind sets(nrows * ncols);
 		vector<float> intDiff;
 		intDiff.assign(nrows * ncols, 0);
@@ -751,20 +780,11 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image, int kCurSegment){
 		//cout << "number of elements = " << numElements.size() << endl;
 	}
 
+	endComp = high_resolution_clock::now();
+
 	Mat finSegments(nrows, ncols, CV_32SC1);
 	UnionFind sets(nrows * ncols);
-	vector<Edge> edges;
-	for(int r = 0; r < nrows; r++){
-		for(int c = 0; c < ncols; c++){
-			for(int nh = 0; nh < sizeof(nhood)/sizeof(nhood[0]); nh++){
-				if((r + nhood[nh][0] < nrows) && (r + nhood[nh][0] >= 0) &&
-						(c + nhood[nh][1] < ncols) && (c + nhood[nh][1] >= 0))
-				{
-					edges.push_back(Edge(c + ncols*r, c + nhood[nh][1] + ncols*(r + nhood[nh][0]), 0));
-				}
-			}
-		}
-	}
+
 	for(vector<Edge>::iterator it = edges.begin(); it != edges.end(); it++){
 		bool areOneSegment = true;
 		for(int ch = 0; ch < segments.size(); ch++){
@@ -782,6 +802,26 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image, int kCurSegment){
 			finSegments.at<int>(r, c) = sets.findSet(c + ncols*r);
 		}
 	}
+
+	endMerging = high_resolution_clock::now();
+
+	static duration<double> sortingTime = duration<double>::zero();
+	static duration<double> compTime = duration<double>::zero();
+	static duration<double> mergingTime = duration<double>::zero();
+	static duration<double> wholeTime = duration<double>::zero();
+	static int times = 0;
+
+	sortingTime += duration_cast<duration<double> >(endSorting - start);
+	compTime += duration_cast<duration<double> >(endComp - endSorting);
+	mergingTime += duration_cast<duration<double> >(endMerging - endComp);
+	wholeTime += duration_cast<duration<double> >(endMerging - start);
+	times++;
+	cout << "Segment Times: " << times << endl;
+	cout << "Segment Average sorting time: " << sortingTime.count()/times << endl;
+	cout << "Segment Average computing time: " << compTime.count()/times << endl;
+	cout << "Segment Average merging time: " << mergingTime.count()/times << endl;
+	cout << "Segment Average whole time: " << wholeTime.count()/times << endl;
+
 
 	return finSegments;
 }
@@ -853,7 +893,7 @@ void HierClassifier::crossValidateSVMs(const std::vector<Entry>& entries)
 {
 	clearData();
 	prepareData(entries);
-	for(int c = 0; c < weakClassifiersSet.size(); c++){
+	for(int c = 1; c < weakClassifiersSet.size(); c++){
 		if(weakClassifiersSet[c]->type() == Classifier::SVM){
 			cout << "Cross validating classifier " << c << endl;
 			weakClassifiersSet[c]->crossValidate(dataClassifiers[c]);

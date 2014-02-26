@@ -24,7 +24,14 @@ using namespace std;
 #define CAMERAS_COUNT 2
 #define ROWS 480
 #define COLS 640*/
+
 #define POLY_VERT 4
+#define X_STEP 100
+#define Y_STEP 100
+#define X_RES 50
+#define Y_RES 50
+#define PLANE_Z -100
+#define DRIVABLE_LABEL 3
 #define LEFT_CAMERA 0
 #define RIGHT_CAMERA 1
 
@@ -46,17 +53,7 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 	}
 	readSettings(settings);
 
-	/*groundPolygons.resize(numCameras);
-	for(int cam = 0; cam < numCameras; cam++){
-		groundPolygons[cam].resize(numRows/cameraGrid);
-		for(int row = 0; row < numRows/cameraGrid; row++){
-			groundPolygons[cam][row].resize(numCols/cameraGrid);
-			for(int col = 0; col < numCols/cameraGrid; col++){
-				groundPolygons[cam][row][col] = new Point[POLY_VERT];
-			}
-		}
-	}
-	computeGroundPolygons();*/
+	computeImagePolygons();
 
 #ifndef NO_CUDA
 	cout << "Available CUDA devices: " << getCudaEnabledDeviceCount() << endl;
@@ -71,87 +68,110 @@ Camera::~Camera(){
 	for(int i = 0; i < hierClassifiers.size(); i++){
 		delete hierClassifiers[i];
 	}
-	/*for(int cam = 0; cam < numCameras; cam++){
-		for(int row = 0; row < numRows/cameraGrid; row++){
-			for(int col = 0; col < numCols/cameraGrid; col++){
-				delete[] groundPolygons[cam][row][col];
-			}
-		}
-	}*/
 }
 
 void Camera::computeConstraints(std::vector<cv::Mat> image){
-
-}
-
-/*void Camera::computeGroundPolygons(){
-	int rows = numRows/cameraGrid;
-	int cols = numCols/cameraGrid;
-	for(int im = 0; im < numCameras; im++){
-		Mat cornersX(rows + 1, cols + 1, CV_32SC1);
-		Mat cornersY(rows + 1, cols + 1, CV_32SC1);
-		for(int nrow = 0; nrow < rows; nrow++){
-			for(int ncol = 0; ncol < cols; ncol++){
-				//computing top left corners
-				Point3f point = computePointProjection(	Point2f((float)(ncol - cols/2) / (cols/2),
-																-(float)(nrow - rows/2) / (rows/2)),
-														im);
-				cornersX.at<int>(nrow, ncol) = point.x;
-				cornersY.at<int>(nrow, ncol) = point.y;
-			}
-		}
-		for(int ncol = 0; ncol < cols; ncol++){
-			//computing bottom left corners
-			Point3f point = computePointProjection(	Point2f((float)(ncol - cols/2) / (cols/2),
-															-1),
-													im);
-			cornersX.at<int>(rows, ncol) = point.x;
-			cornersY.at<int>(rows, ncol) = point.y;
-		}
-		for(int nrow = 0; nrow < rows; nrow++){
-			//computing top right corners
-			Point3f point = computePointProjection(	Point2f(1,
-															-(float)(nrow - rows/2) / (rows/2)),
-													im);
-			cornersX.at<int>(nrow, cols) = point.x;
-			cornersY.at<int>(nrow, cols) = point.y;
-		}
-		//computing bottom right corner
-		Point3f point = computePointProjection(	Point2f(1,
-														-1),
-												im);
-		cornersX.at<int>(rows, cols) = point.x;
-		cornersY.at<int>(rows, cols) = point.y;
-		//Polygons on the ground for each image region
-		for(int nrow = 0; nrow < rows; nrow++){
-			for(int ncol = 0; ncol < cols; ncol++){
-				groundPolygons[im][nrow][ncol][0] = Point(cornersX.at<int>(nrow, ncol), cornersY.at<int>(nrow, ncol));
-				groundPolygons[im][nrow][ncol][1] = Point(cornersX.at<int>(nrow, ncol+1), cornersY.at<int>(nrow, ncol+1));
-				groundPolygons[im][nrow][ncol][2] = Point(cornersX.at<int>(nrow+1, ncol+1), cornersY.at<int>(nrow+1, ncol+1));
-				groundPolygons[im][nrow][ncol][3] = Point(cornersX.at<int>(nrow+1, ncol), cornersY.at<int>(nrow+1, ncol));
+	constraints = Mat(X_RES, Y_RES, CV_32FC1);
+	for(int c = 0; c < image.size(); c++){
+		vector<Mat> classRes = hierClassifiers[c]->classify(image[c], Mat());
+		for(int xInd = 0; xInd < X_RES; xInd++){
+			for(int yInd = 0; yInd < Y_RES; yInd++){
+				Mat mask(image[c].rows, image[c].cols, CV_8UC1, Scalar(0));
+				selectPolygonPixels(imagePolygons[c][xInd][yInd], 1, mask);
+				float probDriv = 0;
+				for(int l = 0; l < classRes.size(); l++){
+					if(l == DRIVABLE_LABEL){
+						Mat tmp(classRes[l].rows, classRes[l].rows, CV_32FC1, Scalar(0));
+						classRes[l].copyTo(tmp, mask);
+						probDriv += sum(tmp)[0];
+					}
+				}
+				constraints.at<float>(xInd, yInd) = probDriv;
 			}
 		}
 	}
 }
 
-cv::Point3f Camera::computePointProjection(cv::Point2f imPoint, int cameraInd){
-	Mat point(3, 1, CV_32FC1);
-	point.at<float>(0) = imPoint.x * cameraZ * tan(angleX/2);
-	point.at<float>(1) = imPoint.y * cameraZ * tan(angleY/2);
-	point.at<float>(2) = -cameraZ;
+void Camera::computeImagePolygons(){
+	cout << "Computing image polygons" << endl;
+	//namedWindow("test");
+	imagePolygons.clear();
+	imagePolygons.assign(numCameras,
+						vector<vector<vector<Point2f> > >(X_RES,
+							vector<vector<Point2f> >(Y_RES,
+									vector<Point2f>())));
+	for(int c = 0; c < numCameras; c++){
+		Mat rotVec;
+		Rodrigues(Mat(cameraOrigGlobal[c].inv(DECOMP_SVD), Rect(0, 0, 3, 3)), rotVec);
+		Mat transVec(cameraOrigGlobal[c].inv(DECOMP_SVD), Rect(3, 0, 1, 3));
 
-	Mat rot(cameraOrigGlobal[cameraInd], Rect(Point(0, 0), Point(3, 3)));
-	Mat trans(cameraOrigGlobal[cameraInd], Rect(Point(3, 0), Point(4, 3)));
-	point = rot * point;
-	Mat planeABC(groundPlane, Rect(Point(0, 0), Point(1, 3)));
-	Mat planeD(groundPlane, Rect(Point(0, 3), Point(1, 4)));
-	Mat a = (-planeABC.t() * trans - planeD) / (planeABC.t() * point);
-	point = trans + point * a;
-	Point3f ret(point.at<float>(0), point.at<float>(1), point.at<float>(2));
+		//cout << "cameraOrigGlobal[c].inv(DECOMP_SVD) = " << cameraOrigGlobal[c].inv(DECOMP_SVD) << endl;
+		//cout << "rotVec = " << rotVec << endl;
+		//cout << "transVec = " << transVec << endl;
+
+		//from front left corner
+		float xStart = X_RES*X_STEP;
+		float xStep = -X_STEP;
+		float yStart = Y_RES*Y_STEP/2;
+		float yStep = -Y_STEP;
+		for(int xInd = 0; xInd < X_RES; xInd++){
+			for(int yInd = 0; yInd < Y_RES; yInd++){
+				vector<Point3f> points;
+				int ind[][2] = {{0, 0},
+								{1, 0},
+								{1, 1},
+								{0, 1}};
+				for(int i = 0; i < 4; i++){
+					points.push_back(Point3f(	xStart + (xInd + ind[i][0])*xStep,
+												yStart + (yInd + ind[i][1])*yStep,
+												PLANE_Z));
+				}
+				//cout << "Polygon glob: " << endl;
+				//for(int v = 0; v < points.size(); v++){
+				//	cout << points[v] << endl;
+				//}
+				vector<Point2f> ret;
+				projectPoints(	points,
+								rotVec,
+								transVec,
+								cameraMatrix[c],
+								distCoeffs[c],
+								ret);
+				Mat test(480, 640, CV_8UC1, Scalar(0));
+				//cout << "Polygon image: " << endl;
+				//for(int v = 0; v < ret.size(); v++){
+				//	cout << ret[v] << endl;
+				//}
+				selectPolygonPixels(ret, 1, test);
+				//imshow("test", hierClassifiers.front()->colorSegments(test));
+				//waitKey();
+				imagePolygons[c][xInd][yInd]= ret;
+			}
+		}
+	}
+	cout << "End computing image polygons" << endl;
+}
+
+std::vector<cv::Point2f> Camera::computePointProjection(const std::vector<cv::Point3f>& spPoints,
+														int cameraInd)
+{
+	vector<Point2f> ret;
+	projectPoints(	spPoints,
+					Matx<float, 3, 1>(0, 0, 0),
+					Matx<float, 3, 1>(0, 0, 0),
+					cameraMatrix[cameraInd],
+					distCoeffs[cameraInd],
+					ret);
 	return ret;
 }
 
-void Camera::addToLearnDatabase(cv::Mat samples, int label){
+std::vector<cv::Point3f> Camera::computePointReprojection(	const std::vector<cv::Point2f>& imPoints,
+															int cameraInd)
+{
+
+}
+
+/*void Camera::addToLearnDatabase(cv::Mat samples, int label){
 	Mat data[] = {samples};
 	int channels[] = {0};
 	int histSize[] = {bins};
@@ -195,6 +215,14 @@ int Camera::selectPolygonPixels(std::vector<cv::Point2i> polygon, int regionId, 
 	int count = regionsOnImage.rows * regionsOnImage.cols - countNonZero(regionsOnImage - Scalar(regionId));
 
 	return count;
+}
+
+int Camera::selectPolygonPixels(std::vector<cv::Point2f> polygon, int regionId, cv::Mat& regionsOnImage){
+	vector<Point2i> tmp;
+	for(int v = 0; v < polygon.size(); v++){
+		tmp.push_back(Point2i(cvRound(polygon[v].x), cvRound(polygon[v].y)));
+	}
+	return selectPolygonPixels(tmp, regionId, regionsOnImage);
 }
 
 void Camera::learnFromDir(boost::filesystem::path dir){
@@ -322,8 +350,9 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 	}
 
 	if(crossValidate){
-		//hierClassifiers.front()->crossValidateSVMs(dataset);
+		hierClassifiers.front()->crossValidateSVMs(dataset);
 	}
+	waitKey();
 	hierClassifiers.front()->train(dataset, labels.size());
 }
 
@@ -335,6 +364,9 @@ void Camera::classifyFromDir(boost::filesystem::path dir){
 	namedWindow("segments");
 	namedWindow("original");
 	namedWindow("colored");
+
+	vector<vector<int> > classResultsPix(labels.size(), vector<int>(labels.size(), 0));
+	vector<vector<int> > classResultsSeg(labels.size(), vector<int>(labels.size(), 0));
 
 	filesystem::directory_iterator endIt;
 	for(filesystem::directory_iterator dirIt(dir); dirIt != endIt; dirIt++){
@@ -421,6 +453,9 @@ void Camera::classifyFromDir(boost::filesystem::path dir){
 			imshow("original", image);
 			imshow("segments", hierClassifiers.front()->colorSegments(autoSegmented));
 
+			vector<vector<int> > curClassResultsPix(labels.size(), vector<int>(labels.size(), 0));
+			vector<vector<int> > curClassResultsSeg(labels.size(), vector<int>(labels.size(), 0));
+
 			vector<Mat> classificationResult = hierClassifiers.front()->classify(image, terrain, autoSegmented);
 			for(int l = 0; l < labels.size(); l++){
 				double minVal, maxVal;
@@ -447,28 +482,71 @@ void Camera::classifyFromDir(boost::filesystem::path dir){
 			}
 			imshow("colored", coloredOriginal * 0.25 + image * 0.75);
 
-			set<int> missclassified;
+			set<int> counted;
 			for(int r = 0; r < image.rows; r++){
 				for(int c = 0; c < image.cols; c++){
+					int pred = bestLabels.at<int>(r, c);
 					if(mapRegionIdToLabel.count(assignedManualId[autoSegmented.at<int>(r, c)]) > 0){
-						if(bestLabels.at<int>(r, c) != mapRegionIdToLabel[assignedManualId[autoSegmented.at<int>(r, c)]]){
-							missclassified.insert(autoSegmented.at<int>(r, c));
+						if(counted.count(autoSegmented.at<int>(r, c)) == 0){
+							int groundTrue = mapRegionIdToLabel[assignedManualId[autoSegmented.at<int>(r, c)]];
+							curClassResultsSeg[groundTrue][pred]++;
+							counted.insert(autoSegmented.at<int>(r, c));
 						}
+					}
+					if(mapRegionIdToLabel.count(manualRegionsOnImage.at<int>(r, c)) > 0){
+						int groundTrue = mapRegionIdToLabel[manualRegionsOnImage.at<int>(r, c)];
+						curClassResultsPix[groundTrue][pred]++;
 					}
 				}
 			}
-			cout << "missclassified.size() = " << missclassified.size() << endl;
-			vector<Entry> entries = hierClassifiers.front()->extractEntries(image, terrain, autoSegmented);
-			for(int e = 0; e < entries.size(); e++){
-				if(missclassified.count(entries[e].imageId) > 0){
-					cout << "Entry " << e << ", label = " << mapRegionIdToLabel[assignedManualId[entries[e].imageId]] << endl;
-					cout << "Descriptor: " << entries[e].descriptor << endl;
+
+			for(int t = 0; t < labels.size(); t++){
+				for(int p = 0; p < labels.size(); p++){
+					classResultsPix[t][p] += curClassResultsPix[t][p];
+					classResultsSeg[t][p] += curClassResultsSeg[t][p];
 				}
+			}
+
+			cout << "Current frame pixel results: " << endl;
+			for(int t = 0; t < labels.size(); t++){
+				cout << "true = " << t << ": ";
+				for(int p = 0; p < labels.size(); p++){
+					cout << curClassResultsPix[t][p] << ", ";
+				}
+				cout << endl;
+			}
+
+			cout << "Current frame segment results: " << endl;
+			for(int t = 0; t < labels.size(); t++){
+				cout << "true = " << t << ": ";
+				for(int p = 0; p < labels.size(); p++){
+					cout << curClassResultsSeg[t][p] << ", ";
+				}
+				cout << endl;
 			}
 
 			waitKey();
 		}
 	}
+
+	cout << "General pixel results: " << endl;
+	for(int t = 0; t < labels.size(); t++){
+		cout << "true = " << t << ": ";
+		for(int p = 0; p < labels.size(); p++){
+			cout << classResultsPix[t][p] << ", ";
+		}
+		cout << endl;
+	}
+
+	cout << "General segment results: " << endl;
+	for(int t = 0; t < labels.size(); t++){
+		cout << "true = " << t << ": ";
+		for(int p = 0; p < labels.size(); p++){
+			cout << classResultsSeg[t][p] << ", ";
+		}
+		cout << endl;
+	}
+
 	cout << "End classifying" << endl;
 }
 
@@ -638,7 +716,7 @@ void Camera::readSettings(TiXmlElement* settings){
 	}
 	pPtr->QueryBoolAttribute("enabled", &cacheEnabled);
 
-	crossValidate = true;
+	crossValidate = false;
 
 	pPtr = settings->FirstChildElement("learning");
 	if(!pPtr){
