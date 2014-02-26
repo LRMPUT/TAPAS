@@ -19,7 +19,7 @@ int main()
 		Robot robot("./settings.xml");
 		cout << "Robot created" << endl;
 		Debug debug(&robot);
-		debug.testClassification(filesystem::path("../MovementConstraints/Camera/database/train"),
+		debug.testConstraints(filesystem::path("../MovementConstraints/Camera/database/train"),
 								filesystem::path("../MovementConstraints/Camera/database/classify"));
 
 		int a;

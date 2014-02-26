@@ -207,9 +207,6 @@ ClassifierSVM::ClassifierSVM(const ClassifierSVM& old) :
 	cout << "End copy constructing ClassifierSVM" << endl;
 }
 
-/** \brief Loads settings from XML structure.
-
-*/
 ClassifierSVM::ClassifierSVM(TiXmlElement* settings) :
 	Classifier(Classifier::SVM, settings)
 {
@@ -225,9 +222,6 @@ ClassifierSVM* ClassifierSVM::copy(){
 	return new ClassifierSVM(*this);
 }
 
-/** \brief Loads settings from XML structure.
-
-*/
 void ClassifierSVM::loadSettings(TiXmlElement* settings){
 	string tmp;
 

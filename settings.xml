@@ -4,7 +4,7 @@
 			<cache enabled="true" />
 			<HierClassifier>
 				<cache enabled="true" />
-				<segmentation k="20" min_size="200" />
+				<segmentation k="50" min_size="200" />
 				<descriptor>
 					<hist_HS len_H="4" len_S="4" />
 					<hist_V len="8" />
@@ -19,9 +19,9 @@
 					<cache enabled="true" />
 					<svm type="C_SVC">
 						<kernelType value="RBF" />
-						<gamma value="1.80203" />
+						<gamma value="5.4061" />
 						<degree value="2" />
-						<C value="16607.5" />
+						<C value="5535.84" />
 					</svm>
 					<info desc_beg="0" desc_end="1" />
 				</Classifier>
@@ -39,19 +39,19 @@
 					<cache enabled="true" />
 					<svm type="C_SVC">
 						<kernelType value="RBF" />
-						<gamma value="0.0667419" />
+						<gamma value="5.4061" />
 						<degree value="2" />
-						<C value="615.094" />
+						<C value="16607.5" />
 					</svm>
 					<info desc_beg="2" desc_end="4" />
 				</Classifier>
-				<Classifier type="SVM">
+				<!--<Classifier type="SVM">
 					<cache enabled="true" />
 					<svm type="C_SVC">
 						<kernelType value="RBF" />
 						<gamma value="5.4061" />
 						<degree value="2" />
-						<C value="1845.28" />
+						<C value="16607.5" />
 					</svm>
 					<info desc_beg="4" desc_end="7" />
 				</Classifier>
@@ -59,12 +59,22 @@
 					<cache enabled="true" />
 					<svm type="C_SVC">
 						<kernelType value="RBF" />
-						<gamma value="5.4061" />
+						<gamma value="1.80203" />
 						<degree value="2" />
-						<C value="1845.28" />
+						<C value="16607.5" />
 					</svm>
 					<info desc_beg="7" desc_end="8" />
-				</Classifier>
+				</Classifier>-->
+				<!--<Classifier type="SVM">
+					<cache enabled="true" />
+					<svm type="C_SVC">
+						<kernelType value="RBF" />
+						<gamma value="0.200226" />
+						<degree value="2" />
+						<C value="16607.5" />
+					</svm>
+					<info desc_beg="0" desc_end="8" />
+				</Classifier>-->
 			</HierClassifier>
 			<learning dir="../../MovementConstraints/Camera/training_data" />
 			<labels>
@@ -76,10 +86,10 @@
 
 			<sensor id="left">
 				<position_global>
-					1 0 0 0
-					0	1	0	0
-					0	0	1	0
-					0	0	0	1
+				 -0.0017   -0.5849    0.8111         0
+				 -0.9998   -0.0077   -0.0077         0
+					0.0108   -0.8110   -0.5847  730.0000
+						   0         0         0    1.0000
 				</position_global>
 				<position_laser>
 					1 0 0 0

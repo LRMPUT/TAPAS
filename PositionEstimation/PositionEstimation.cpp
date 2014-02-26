@@ -31,7 +31,7 @@ PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot) {
 	kalmanSetup();
 
 	runThread = true;
-	//estimationThread = std::thread(&PositionEstimation::run, this);
+	estimationThread = std::thread(&PositionEstimation::run, this);
 }
 
 PositionEstimation::~PositionEstimation() {
@@ -62,9 +62,9 @@ void PositionEstimation::run() {
 
 		if (mtime == 0)
 			mtime = 1;
-		cout << "PE:: x: " << state.at<float>(0) << " y: " << state.at<float>(1)
-				<< " z: " << state.at<float>(2) << endl;
-		cout << "PE:: framerate: " << 1000.0 / mtime << endl;
+		//cout << "PE:: x: " << state.at<float>(0) << " y: " << state.at<float>(1)
+		//		<< " z: " << state.at<float>(2) << endl;
+		//cout << "PE:: framerate: " << 1000.0 / mtime << endl;
 	}
 }
 
