@@ -101,12 +101,12 @@ public:
 	/** \brief Funkcja zapisująca cache do pliku.
 	 *
 	 */
-	virtual void saveCache(boost::filesystem::path file);
+	virtual void saveCache(TiXmlElement* settings, boost::filesystem::path file);
 
 	/** \brief Funkcja ładująca cache do pliku.
 	 *
 	 */
-	virtual void loadCache(boost::filesystem::path file);
+	virtual void loadCache(TiXmlElement* settings, boost::filesystem::path file);
 
 //---------------COMPUTING----------------
 

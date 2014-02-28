@@ -69,7 +69,7 @@ class Camera {
 
 	int currentTimeStamp;
 
-	boost::filesystem::path settingsFile;
+	//boost::filesystem::path settingsFile;
 
 	std::vector<Entry> entries;
 

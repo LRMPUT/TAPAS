@@ -394,8 +394,11 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 	if(crossValidate){
 		hierClassifiers.front()->crossValidateSVMs(dataset);
 	}
-	waitKey();
 	hierClassifiers.front()->train(dataset, labels.size());
+
+	if(cacheEnabled){
+		saveCache("cameraCache");
+	}
 }
 
 void Camera::classifyFromDir(boost::filesystem::path dir){
@@ -853,7 +856,7 @@ cv::Mat Camera::readMatrixSettings(TiXmlElement* parent, const char* node, int r
 }
 
 void Camera::readCache(boost::filesystem::path cacheFile){
-	entries.clear();
+	/*entries.clear();
 	TiXmlDocument doc(cacheFile.c_str());
 	if(!doc.LoadFile()){
 		throw "Could not load cache file";
@@ -877,11 +880,11 @@ void Camera::readCache(boost::filesystem::path cacheFile){
 		}
 		entries.push_back(entry);
 		pEntry = pEntry->NextSiblingElement("entry");
-	}
+	}*/
 }
 
 void Camera::saveCache(boost::filesystem::path cacheFile){
-	TiXmlDocument doc;
+	/*TiXmlDocument doc;
 	TiXmlDeclaration* decl = new TiXmlDeclaration("1.0", "UTF-8", "");
 	doc.LinkEndChild(decl);
 	TiXmlElement* pDatabase = new TiXmlElement("database");
@@ -897,7 +900,12 @@ void Camera::saveCache(boost::filesystem::path cacheFile){
 		//TODO correct using TiXmlText
 		pEntry->SetValue(tmpStr.str());
 	}
-	doc.SaveFile(cacheFile.c_str());
+	doc.SaveFile(cacheFile.c_str());*/
+	for(int c = 0; c < numCameras; c++){
+		char buffer[10];
+		sprintf(buffer, "%02d.xml", c);
+		hierClassifiers[c]->saveCache(cacheFile.string() + buffer);
+	}
 }
 
 //Returns constraints map and inserts time of data from cameras fetch

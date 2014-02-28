@@ -63,35 +63,49 @@ class HierClassifier {
 
 	/** Informacje o wektorach cech dla zbioru dostępnych słabych klasyfikatorów. */
 	std::vector<WeakClassifierInfo> weakClassInfo;
+
 	/** Zbiór dostępnych słabych klasyfikatorów. */
 	std::vector<Classifier*> weakClassifiersSet;
+
 	/** Dane dla słabych klasyfikatorów. */
 	std::vector<std::vector<Entry> > dataClassifiers;
+
 	/** Liczba dostępnych słabych klasyfikatorów. */
 	int numWeakClassifiers;
+
 	/** Liczba iteracji algorytmu Adaboost. */
 	int numIterations;
+
 	/** Rozmiary poszczególnych składowych wektora cech. */
 	int histHLen, histSLen, histVLen, covarHSVLen, meanHSVLen;
 	int covarLaserLen, meanLaserLen, kurtLaserLen, histDLen, histILen;
+
 	/** Wektor z położeniami początków poszczególnych składowych wektora cech. */
 	std::vector<int> descBeg;
+
 	/** Macierz 3x3 kamery z danymi o ogniskowych i punktach centralnych. */
 	cv::Mat cameraMatrix;
+
 	/** Zbiór wybranych słabych klasyfikatorów. */
 	std::vector<Classifier*> classifiers;
+
 	/** Informacje o wektorach cech dla wybranych słabych klasyfikatorów. */
 	std::vector<WeakClassifierInfo> classifiersInfo;
+
 	/** Wagi dla wybranych słabych klasyfikatorów. */
 	std::vector<double> weights;
+
 	/** Liczba wykorzystywanych etykiet. Etykiety są numerowane kolejnymi
 	 * 	liczbami całkowitymi, zaczynając od 0.
 	 */
 	int numLabels;
+
 	/** Parametr k segmentacji obrazu. */
 	float kSegment;
+
 	/** Paramentr minimalnego segmentu dla segmentacji obrazu. */
 	int minSizeSegment;
+
 	/** Flaga informująca czy wczytywać i zapisywać cache. */
 	bool cacheEnabled;
 
@@ -103,6 +117,7 @@ class HierClassifier {
 	 *
 	 */
 	void prepareData(const std::vector<Entry>& data);
+
 	/** \brief Funkcja usuwająca dane dla klasyfikatorów i usuwająca wybrane
 	 * 			klasyfikatory.
 	 */
