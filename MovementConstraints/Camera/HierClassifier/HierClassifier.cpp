@@ -442,32 +442,34 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 	}
 	sort(pixels.begin(), pixels.end());
 
-	Mat terrainPointsImage(terrain.cols, 2, CV_32FC1);
-	Mat tmpTerrain = terrain.rowRange(0, 3).t();
-	Mat tvec(1, 3, CV_32FC1, Scalar(0));
-	Mat rvec(1, 3, CV_32FC1, Scalar(0));
-	Mat distCoeffs(1, 5, CV_32FC1, Scalar(0));
-	projectPoints(tmpTerrain, tvec, rvec, cameraMatrix, Mat(), terrainPointsImage);
-	//terrainPointsImage = terrainPointsImage.t();
-	terrainPointsImage = terrainPointsImage.reshape(1).t();
-	//cout << tmpTerrain.rowRange(1, 10) << endl;
-	//cout << terrainPointsImage.rowRange(1, 10) << endl;
-	//cout << cameraMatrix << endl;
 	vector<pair<int, int> > terrainRegion;
-	for(int p = 0; p < terrain.cols; p++){
-		int imageRow = round(terrainPointsImage.at<float>(1, p));
-		int imageCol = round(terrainPointsImage.at<float>(0, p));
-		if(imageRow >= 0 && imageRow < imageBGR.rows &&
-			imageCol >= 0 && imageCol < imageBGR.cols)
-		{
-			int region = regionsOnImage.at<int>(imageRow, imageCol);
-			terrainRegion.push_back(pair<int, int>(region, p));
+	if(!terrain.empty()){
+		Mat terrainPointsImage(terrain.cols, 2, CV_32FC1);
+		Mat tmpTerrain = terrain.rowRange(0, 3).t();
+		Mat tvec(1, 3, CV_32FC1, Scalar(0));
+		Mat rvec(1, 3, CV_32FC1, Scalar(0));
+		Mat distCoeffs(1, 5, CV_32FC1, Scalar(0));
+		projectPoints(tmpTerrain, tvec, rvec, cameraMatrix, Mat(), terrainPointsImage);
+		//terrainPointsImage = terrainPointsImage.t();
+		terrainPointsImage = terrainPointsImage.reshape(1).t();
+		//cout << tmpTerrain.rowRange(1, 10) << endl;
+		//cout << terrainPointsImage.rowRange(1, 10) << endl;
+		//cout << cameraMatrix << endl;
+		for(int p = 0; p < terrain.cols; p++){
+			int imageRow = round(terrainPointsImage.at<float>(1, p));
+			int imageCol = round(terrainPointsImage.at<float>(0, p));
+			if(imageRow >= 0 && imageRow < imageBGR.rows &&
+				imageCol >= 0 && imageCol < imageBGR.cols)
+			{
+				int region = regionsOnImage.at<int>(imageRow, imageCol);
+				terrainRegion.push_back(pair<int, int>(region, p));
+			}
 		}
+		sort(terrainRegion.begin(), terrainRegion.end());
 	}
-	sort(terrainRegion.begin(), terrainRegion.end());
-
 
 	high_resolution_clock::time_point endSorting = high_resolution_clock::now();
+	cout << "End sorting terrain" << endl;
 
 	vector<Entry> ret;
 	int endIm = 0;
@@ -523,7 +525,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		}
 		else{
 			//cout << "Warning - no terrain values for imageId " << pixels[begIm].imageId << endl;
-			valuesTer = Mat(terrain.rows, 1, CV_32FC1, Scalar(0));
+			valuesTer = Mat(5, 1, CV_32FC1, Scalar(0));
 		}
 
 		int channelsHS[] = {0, 1};
