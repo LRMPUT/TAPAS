@@ -71,14 +71,21 @@ Camera::~Camera(){
 }
 
 void Camera::computeConstraints(std::vector<cv::Mat> image){
-	constraints = Mat(X_RES, Y_RES, CV_32FC1);
+	cout << "Computing constraints" << endl;
+	constraints = Mat(X_RES, Y_RES, CV_32FC1, Scalar(0));
+	Mat constrNorm(X_RES, Y_RES, CV_32FC1, Scalar(0));
+	namedWindow("original");
+	namedWindow("prob asphalt");
+	namedWindow("constraints");
 	for(int c = 0; c < image.size(); c++){
-		vector<Mat> classRes = hierClassifiers[c]->classify(image[c], Mat());
+		vector<Mat> classRes = hierClassifiers[c]->classify(image[c]);
+		Mat regions(image[c].rows, image[c].cols, CV_32SC1, Scalar(-1));
 		for(int xInd = 0; xInd < X_RES; xInd++){
 			for(int yInd = 0; yInd < Y_RES; yInd++){
-				Mat mask(image[c].rows, image[c].cols, CV_8UC1, Scalar(0));
-				selectPolygonPixels(imagePolygons[c][xInd][yInd], 1, mask);
-				float probDriv = 0;
+				selectPolygonPixels(imagePolygons[c][xInd][yInd],
+									xInd*X_RES + yInd,
+									regions);
+				/*float probDriv = 0;
 				for(int l = 0; l < classRes.size(); l++){
 					if(l == DRIVABLE_LABEL){
 						Mat tmp(classRes[l].rows, classRes[l].rows, CV_32FC1, Scalar(0));
@@ -86,9 +93,43 @@ void Camera::computeConstraints(std::vector<cv::Mat> image){
 						probDriv += sum(tmp)[0];
 					}
 				}
-				constraints.at<float>(xInd, yInd) = probDriv;
+				constraints.at<float>(xInd, yInd) = probDriv;*/
 			}
 		}
+		//cout << "adding probabilities" << endl;
+		for(int row = 0; row < image[c].rows; row++){
+			for(int col = 0; col < image[c].cols; col++){
+				if(regions.at<int>(row, col) != -1){
+					int xInd = regions.at<int>(row, col) / X_RES;
+					int yInd = regions.at<int>(row, col) % X_RES;
+					//cout << "adding " << classRes[DRIVABLE_LABEL].at<float>(row, col) << endl;
+					constraints.at<float>(yInd, xInd) += classRes[DRIVABLE_LABEL].at<float>(row, col);
+					constrNorm.at<float>(yInd, xInd) += 1;
+				}
+			}
+		}
+		cout << "normalizing constraints" << endl;
+		for(int xInd = 0; xInd < X_RES; xInd++){
+			for(int yInd = 0; yInd < Y_RES; yInd++){
+				if(constrNorm.at<float>(yInd, xInd) != 0){
+					constraints.at<float>(yInd, xInd) /= constrNorm.at<float>(yInd, xInd);
+				}
+			}
+		}
+
+		cout << "building test image" << endl;
+		Mat test(image[c].rows, image[c].cols, CV_32FC1);
+		for(int xInd = 0; xInd < X_RES; xInd++){
+			for(int yInd = 0; yInd < Y_RES; yInd++){
+				selectPolygonPixels(imagePolygons[c][xInd][yInd],
+									constraints.at<float>(yInd, xInd),
+									test);
+			}
+		}
+		imshow("original", image[c]);
+		imshow("prob asphalt", classRes[DRIVABLE_LABEL]);
+		imshow("constraints", test);
+		waitKey();
 	}
 }
 
@@ -137,12 +178,12 @@ void Camera::computeImagePolygons(){
 								cameraMatrix[c],
 								distCoeffs[c],
 								ret);
-				Mat test(480, 640, CV_8UC1, Scalar(0));
+				//Mat test(480, 640, CV_8UC1, Scalar(0));
 				//cout << "Polygon image: " << endl;
 				//for(int v = 0; v < ret.size(); v++){
 				//	cout << ret[v] << endl;
 				//}
-				selectPolygonPixels(ret, 1, test);
+				//selectPolygonPixels(ret, 1, test);
 				//imshow("test", hierClassifiers.front()->colorSegments(test));
 				//waitKey();
 				imagePolygons[c][xInd][yInd]= ret;
@@ -207,7 +248,7 @@ void Camera::learn(){
 	}
 }*/
 
-int Camera::selectPolygonPixels(std::vector<cv::Point2i> polygon, int regionId, cv::Mat& regionsOnImage){
+int Camera::selectPolygonPixels(std::vector<cv::Point2i> polygon, float regionId, cv::Mat& regionsOnImage){
 	int polyCnt[] = {polygon.size()};
 	const Point2i* points[] = {polygon.data()};
 	//Point2i array
@@ -217,13 +258,14 @@ int Camera::selectPolygonPixels(std::vector<cv::Point2i> polygon, int regionId, 
 	return count;
 }
 
-int Camera::selectPolygonPixels(std::vector<cv::Point2f> polygon, int regionId, cv::Mat& regionsOnImage){
+int Camera::selectPolygonPixels(std::vector<cv::Point2f> polygon, float regionId, cv::Mat& regionsOnImage){
 	vector<Point2i> tmp;
 	for(int v = 0; v < polygon.size(); v++){
 		tmp.push_back(Point2i(cvRound(polygon[v].x), cvRound(polygon[v].y)));
 	}
 	return selectPolygonPixels(tmp, regionId, regionsOnImage);
 }
+
 
 void Camera::learnFromDir(boost::filesystem::path dir){
 	//namedWindow("segments");

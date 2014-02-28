@@ -98,14 +98,14 @@ class Camera {
 	 *
 	 */
 	int selectPolygonPixels(std::vector<cv::Point2i> polygon,
-							int regionId,
+							float regionId,
 							cv::Mat& regionsOnImage);
 
 	/** \brief Funkcja rysująca na obrazie wielobok i wypełniająca go wartością regionId.
 	 *
 	 */
 	int selectPolygonPixels(std::vector<cv::Point2f> polygon,
-							int regionId,
+							float regionId,
 							cv::Mat& regionsOnImage);
 
 

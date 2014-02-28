@@ -167,7 +167,7 @@ public:
 	 *	@return Macierze o rozmiarach obrazu z prawdopodobieństwami dla wszystkich etykiet.
 	*/
 	std::vector<cv::Mat> classify(cv::Mat image,
-								  cv::Mat terrain,
+								  cv::Mat terrain = cv::Mat(),
 								  cv::Mat segmentation = cv::Mat());
 	
 	/** \brief Funkcja ekstrahująca wektor cech.
