@@ -302,12 +302,38 @@ void ClassifierSVM::loadSettings(TiXmlElement* settings){
 	svmParams.C = C;
 }
 
-void ClassifierSVM::saveCache(boost::filesystem::path file){
+void ClassifierSVM::saveCache(TiXmlElement* settings, boost::filesystem::path file){
 	svm_save_model(file.c_str(), svm);
+
+	TiXmlElement* pScales = new TiXmlElement("scales");
+	settings->LinkEndChild(pScales);
+	pScales->SetAttribute("desc_len", descLen);
+	for(int d = 0; d < descLen; d++){
+		TiXmlElement* pValue = new TiXmlElement("value");
+		pScales->LinkEndChild(pValue);
+		pValue->SetDoubleAttribute("sub", scalesSub[d]);
+		pValue->SetDoubleAttribute("div", scalesDiv[d]);
+	}
+
+	TiXmlElement* pLabels = new TiXmlElement("labels");
+	settings->LinkEndChild(pLabels);
+	pLabels->SetAttribute("num", numLabels);
 }
 
-void ClassifierSVM::loadCache(boost::filesystem::path file){
+void ClassifierSVM::loadCache(TiXmlElement* settings, boost::filesystem::path file){
 	svm = svm_load_model(file.c_str());
+
+	//TODO load numLabels, scales, etc.
+	TiXmlElement* pScales = settings->FirstChildElement("scales");
+	if(!pScales){
+		throw "Bad cache file - no scales";
+	}
+
+
+	TiXmlElement* pLabels = settings->FirstChildElement("labels");
+	if(!pLabels){
+		throw "Bad cache file - no labels";
+	}
 }
 
 //---------------COMPUTING----------------

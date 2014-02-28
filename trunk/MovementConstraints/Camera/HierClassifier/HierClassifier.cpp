@@ -242,11 +242,53 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 }
 
 void HierClassifier::saveCache(boost::filesystem::path file){
+	TiXmlDocument doc;
+	TiXmlDeclaration* decl = new TiXmlDeclaration("1.0", "UTF-8", "");
+	doc.LinkEndChild(decl);
+	TiXmlElement* pWeakClassifiers = new TiXmlElement("weak_classifiers");
+	doc.LinkEndChild(pWeakClassifiers);
+	for(int c = 0; c < classifiers.size(); c++){
+		TiXmlElement* pClassifier = new TiXmlElement("classifier");
+		pWeakClassifiers->LinkEndChild(pClassifier);
+		char buffer[10];
+		sprintf(buffer, ".%02d.cache", c);
+		pClassifier->SetAttribute("cache_file", file.string() + string(buffer));
+		pClassifier->SetDoubleAttribute("weight", weights[c]);
+		pClassifier->SetAttribute("desc_beg", classifiersInfo[c].descBeg);
+		pClassifier->SetAttribute("desc_end", classifiersInfo[c].descEnd);
 
+		classifiers[c]->saveCache(pClassifier, file.string() + string(buffer));
+	}
+	doc.SaveFile(file.c_str());
 }
 
 void HierClassifier::loadCache(boost::filesystem::path file){
+	TiXmlDocument doc(file.c_str());
+	if(!doc.LoadFile()){
+		throw "Could not load cache file";
+	}
+	TiXmlElement* pWeakClassifiers = doc.FirstChildElement("weak_classifiers");
+	if(!pWeakClassifiers){
+		throw "Bad cache file - no weak_classifiers";
+	}
+	int numClassifiers;
+	pWeakClassifiers->QueryIntAttribute("num", &numClassifiers);
+	TiXmlElement* pClassifier = pWeakClassifiers->FirstChildElement("classifier");
+	while(pClassifier){
+		string cacheFile;
+		double weight;
+		WeakClassifierInfo info;
+		pClassifier->QueryStringAttribute("cache_file", &cacheFile);
+		pClassifier->QueryDoubleAttribute("weight", &weight);
+		pClassifier->QueryIntAttribute("desc_beg", &(info.descBeg));
+		pClassifier->QueryIntAttribute("desc_end", &(info.descEnd));
+		weights.push_back(weight);
+		classifiersInfo.push_back(info);
+		classifiers.push_back(new ClassifierSVM());
+		classifiers.back()->loadCache(pClassifier, cacheFile);
 
+		pClassifier = pClassifier->NextSiblingElement("classifier");
+	}
 }
 
 //---------------COMPUTING----------------
@@ -366,10 +408,10 @@ std::vector<cv::Mat> HierClassifier::classify(cv::Mat image,
 	high_resolution_clock::time_point start = high_resolution_clock::now();
 	high_resolution_clock::time_point end;
 
-	ofstream log("descriptors");
-	for(int e = 0; e < entries.size(); e++){
-		log << entries[e].descriptor << endl;
-	}
+	//ofstream log("descriptors");
+	//for(int e = 0; e < entries.size(); e++){
+	//	log << entries[e].descriptor << endl;
+	//}
 
 	map<int, int> imageIdToEntry;
 	for(int e = 0; e < entries.size(); e++){
