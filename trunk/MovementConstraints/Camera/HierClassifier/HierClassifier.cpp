@@ -247,6 +247,7 @@ void HierClassifier::saveCache(boost::filesystem::path file){
 	doc.LinkEndChild(decl);
 	TiXmlElement* pWeakClassifiers = new TiXmlElement("weak_classifiers");
 	doc.LinkEndChild(pWeakClassifiers);
+	pWeakClassifiers->SetAttribute("num_labels", numLabels);
 	for(int c = 0; c < classifiers.size(); c++){
 		TiXmlElement* pClassifier = new TiXmlElement("classifier");
 		pWeakClassifiers->LinkEndChild(pClassifier);
@@ -263,6 +264,7 @@ void HierClassifier::saveCache(boost::filesystem::path file){
 }
 
 void HierClassifier::loadCache(boost::filesystem::path file){
+	cout << "Loading cache from file " << file.string() << endl;
 	TiXmlDocument doc(file.c_str());
 	if(!doc.LoadFile()){
 		throw "Could not load cache file";
@@ -273,6 +275,7 @@ void HierClassifier::loadCache(boost::filesystem::path file){
 	}
 	int numClassifiers;
 	pWeakClassifiers->QueryIntAttribute("num", &numClassifiers);
+	pWeakClassifiers->QueryIntAttribute("num_labels", &numLabels);
 	TiXmlElement* pClassifier = pWeakClassifiers->FirstChildElement("classifier");
 	while(pClassifier){
 		string cacheFile;
@@ -419,6 +422,7 @@ std::vector<cv::Mat> HierClassifier::classify(cv::Mat image,
 	}
 	Mat result(entries.size(), numLabels, CV_32FC1, Scalar(0));
 	for(int c = 0; c < classifiers.size(); c++){
+		//cout << "Classifing using classifier " << c << endl;
 		for(int e = 0; e < entries.size(); e++){
 			Mat desc = entries[e].descriptor.colRange(
 													classifiersInfo[c].descBeg,

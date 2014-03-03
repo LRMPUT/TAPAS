@@ -311,6 +311,7 @@ void ClassifierSVM::saveCache(TiXmlElement* settings, boost::filesystem::path fi
 	for(int d = 0; d < descLen; d++){
 		TiXmlElement* pValue = new TiXmlElement("value");
 		pScales->LinkEndChild(pValue);
+		pValue->SetAttribute("idx", d);
 		pValue->SetDoubleAttribute("sub", scalesSub[d]);
 		pValue->SetDoubleAttribute("div", scalesDiv[d]);
 	}
@@ -321,19 +322,35 @@ void ClassifierSVM::saveCache(TiXmlElement* settings, boost::filesystem::path fi
 }
 
 void ClassifierSVM::loadCache(TiXmlElement* settings, boost::filesystem::path file){
+	clearData();
+
 	svm = svm_load_model(file.c_str());
 
-	//TODO load numLabels, scales, etc.
 	TiXmlElement* pScales = settings->FirstChildElement("scales");
 	if(!pScales){
 		throw "Bad cache file - no scales";
 	}
+	pScales->QueryIntAttribute("desc_len", &descLen);
+	scalesSub = new double[descLen];
+	scalesDiv = new double[descLen];
+	TiXmlElement* pValue = pScales->FirstChildElement("value");
+	while(pValue){
+		int d = -1;
+		pValue->QueryIntAttribute("idx", &d);
+		if(d == -1){
+			throw "Bad cache file - no idx for value";
+		}
+		pValue->QueryDoubleAttribute("sub", &scalesSub[d]);
+		pValue->QueryDoubleAttribute("div", &scalesDiv[d]);
 
+		pValue = pValue->NextSiblingElement();
+	}
 
 	TiXmlElement* pLabels = settings->FirstChildElement("labels");
 	if(!pLabels){
 		throw "Bad cache file - no labels";
 	}
+	pLabels->QueryIntAttribute("num", &numLabels);
 }
 
 //---------------COMPUTING----------------

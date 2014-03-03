@@ -79,6 +79,7 @@ void Camera::computeConstraints(std::vector<cv::Mat> image){
 	namedWindow("constraints");
 	for(int c = 0; c < image.size(); c++){
 		vector<Mat> classRes = hierClassifiers[c]->classify(image[c]);
+		//cout << "Drawing polygons" << endl;
 		Mat regions(image[c].rows, image[c].cols, CV_32SC1, Scalar(-1));
 		for(int xInd = 0; xInd < X_RES; xInd++){
 			for(int yInd = 0; yInd < Y_RES; yInd++){
@@ -96,7 +97,7 @@ void Camera::computeConstraints(std::vector<cv::Mat> image){
 				constraints.at<float>(xInd, yInd) = probDriv;*/
 			}
 		}
-		//cout << "adding probabilities" << endl;
+		//cout << "adding probabilities, classRes.size() = " << classRes.size() << endl;
 		for(int row = 0; row < image[c].rows; row++){
 			for(int col = 0; col < image[c].cols; col++){
 				if(regions.at<int>(row, col) != -1){
@@ -108,7 +109,7 @@ void Camera::computeConstraints(std::vector<cv::Mat> image){
 				}
 			}
 		}
-		cout << "normalizing constraints" << endl;
+		//cout << "normalizing constraints" << endl;
 		for(int xInd = 0; xInd < X_RES; xInd++){
 			for(int yInd = 0; yInd < Y_RES; yInd++){
 				if(constrNorm.at<float>(yInd, xInd) != 0){
@@ -117,7 +118,7 @@ void Camera::computeConstraints(std::vector<cv::Mat> image){
 			}
 		}
 
-		cout << "building test image" << endl;
+		//cout << "building test image" << endl;
 		Mat test(image[c].rows, image[c].cols, CV_32FC1);
 		for(int xInd = 0; xInd < X_RES; xInd++){
 			for(int yInd = 0; yInd < Y_RES; yInd++){
@@ -881,6 +882,11 @@ void Camera::readCache(boost::filesystem::path cacheFile){
 		entries.push_back(entry);
 		pEntry = pEntry->NextSiblingElement("entry");
 	}*/
+	for(int c = 0; c < numCameras; c++){
+		char buffer[10];
+		sprintf(buffer, "%02d.xml", c);
+		hierClassifiers[c]->loadCache(cacheFile.string() + buffer);
+	}
 }
 
 void Camera::saveCache(boost::filesystem::path cacheFile){
