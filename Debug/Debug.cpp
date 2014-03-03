@@ -115,7 +115,8 @@ void Debug::testClassification(	boost::filesystem::path dirTrain,
 void Debug::testConstraints(boost::filesystem::path dirTrain,
 							boost::filesystem::path dirTest)
 {
-	robot->movementConstraints->camera->learnFromDir(dirTrain);
+	//robot->movementConstraints->camera->learnFromDir(dirTrain);
+	robot->movementConstraints->camera->readCache("cameraCache");
 	filesystem::directory_iterator endIt;
 	for(filesystem::directory_iterator dirIt(dirTrain); dirIt != endIt; dirIt++){
 		if(dirIt->path().filename().string().find(".jpg") != string::npos){
