@@ -231,16 +231,16 @@ namespace trobot {
 		}
 #else
 		vector<string> names;
-		/*filesystem::path dirPath("/dev/robots");
+		filesystem::path dirPath("/dev/robots");
 		names.push_back(string("gps"));
 		names.push_back(string("imu"));
 		names.push_back(string("driver"));
 		names.push_back(string("arduino"));
-		names.push_back(string("hokuyo"));*/
-		filesystem::path dirPath("/dev");
+		names.push_back(string("hokuyo"));
+		/*filesystem::path dirPath("/dev");
 		names.push_back(string("ttyACM"));
 		names.push_back(string("ttyUSB"));
-		names.push_back(string("video"));
+		names.push_back(string("video"));*/
 		filesystem::directory_iterator endIt;
 		for(filesystem::directory_iterator dirIt(dirPath); dirIt != endIt; dirIt++){
 			for(int i = 0; i < names.size(); i++){

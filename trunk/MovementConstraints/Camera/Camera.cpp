@@ -250,7 +250,7 @@ void Camera::learn(){
 }*/
 
 int Camera::selectPolygonPixels(std::vector<cv::Point2i> polygon, float regionId, cv::Mat& regionsOnImage){
-	int polyCnt[] = {polygon.size()};
+	int polyCnt[] = {(int)polygon.size()};
 	const Point2i* points[] = {polygon.data()};
 	//Point2i array
 	fillPoly(regionsOnImage, points, polyCnt, 1, Scalar(regionId));

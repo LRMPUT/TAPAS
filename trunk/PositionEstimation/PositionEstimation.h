@@ -48,7 +48,6 @@ private:
 	double WHEEL_BASE ;
 
 
-
 public:
 	PositionEstimation(Robot* irobot);
 	virtual ~PositionEstimation();

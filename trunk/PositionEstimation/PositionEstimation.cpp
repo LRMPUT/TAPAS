@@ -30,7 +30,7 @@ PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot) {
 	 */
 	kalmanSetup();
 
-	runThread = true;
+	runThread = false;
 	estimationThread = std::thread(&PositionEstimation::run, this);
 }
 
@@ -96,7 +96,7 @@ void PositionEstimation::kalmanSetup() {
 void PositionEstimation::KalmanUpdate()
 {
 	// Get the GPS data if GPS is available
-	if ( this->robot->isGpsOpen() )
+	if ( gps.getFixStatus() > 1 )
 	{
 		Mat gps_data = Mat(2,1, CV_32FC1);
 		gps_data.at<float>(0,0) = this->gps.getPosX();
@@ -118,7 +118,7 @@ void PositionEstimation::KalmanUpdate()
 void PositionEstimation::KalmanPredict()
 {
 	// If the encoders are working
-	if (this->robot->isRobotsDriveOpen()) {
+	if (isEncodersOpen()) {
 		cv::Mat enc = this->robot->getEncoderData();
 
 		// Getting the encoder ticks
