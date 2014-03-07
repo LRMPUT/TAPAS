@@ -68,6 +68,19 @@ bool Robot::isImuOpen(){
 	return positionEstimation.isImuOpen();
 }
 
+//Encoders
+void Robot::openEncoders(std::string port){
+	positionEstimation.openEncoders(port);
+}
+
+void Robot::closeEncoders(){
+	positionEstimation.closeEncoders();
+}
+
+bool Robot::isEncodersOpen(){
+	return positionEstimation.isEncodersOpen();
+}
+
 //----------------------MENAGMENT OF MovementConstraints DEVICES
 //Hokuyo
 void Robot::openHokuyo(std::string port){
@@ -98,7 +111,7 @@ bool Robot::isCameraOpen(){
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 //CV_32UC1 2x1: left, right encoder
 const cv::Mat Robot::getEncoderData(){
-	return globalPlanner.getEncoderData();
+	return positionEstimation.getEncoderData();
 }
 
 //----------------------ACCESS TO COMPUTED DATA

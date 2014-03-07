@@ -52,14 +52,3 @@ void GlobalPlanner::closeRobotsDrive(){
 bool GlobalPlanner::isRobotsDriveOpen(){
 	return (robotDrive != NULL);
 }
-
-//----------------------EXTERNAL ACCESS TO MEASUREMENTS
-//CV_32SC1 2x1: left, right encoder
-cv::Mat GlobalPlanner::getEncoderData(){
-	Mat ret(2, 1, CV_32SC1);
-	int enc[2];
-	robotDrive->getEncoder(&enc[0], &enc[1]);
-	ret.at<int32_t>(0) = enc[LEFT_CHANNEL - 1];
-	ret.at<int32_t>(1) = enc[RIGHT_CHANNEL - 1];
-	return ret;
-}

@@ -47,10 +47,6 @@ public:
 	void closeRobotsDrive();
 
 	bool isRobotsDriveOpen();
-
-	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
-	//CV_32SC1 2x1: left, right encoder
-	cv::Mat getEncoderData();
 };
 
 #include "../Robot/Robot.h"
