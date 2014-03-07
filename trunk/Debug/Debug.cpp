@@ -40,7 +40,7 @@ void Debug::setMotorsVel(float motLeft, float motRight){
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 //CV_32SC1 2x1: left, right encoder
 const cv::Mat Debug::getEncoderData(){
-	return robot->globalPlanner.getEncoderData();
+	return robot->positionEstimation.getEncoderData();
 }
 
 //CV_32SC1 4x1: x, y, lat, lon position
@@ -131,6 +131,17 @@ void Debug::testConstraints(boost::filesystem::path dirTrain,
 	}
 }
 
+void Debug::testEncoders(){
+	robot->openEncoders("/dev/ttyUSB0");
+	while(true){
+
+		cout << robot->getEncoderData() << endl;
+		char a = waitKey(500);
+		if(a == 'q'){
+			break;
+		}
+	}
+}
 
 //----------------------ACCESS TO COMPUTED DATA
 //CV_32SC1 3x1: x, y, fi

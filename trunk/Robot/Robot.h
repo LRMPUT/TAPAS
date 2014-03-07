@@ -66,6 +66,13 @@ public:
 
 	bool isImuOpen();
 
+	//Encoders
+	void openEncoders(std::string port);
+
+	void closeEncoders();
+
+	bool isEncodersOpen();
+
 	//----------------------MENAGMENT OF MovementConstraints DEVICES
 	//Hokuyo
 	void openHokuyo(std::string port);

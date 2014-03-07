@@ -71,6 +71,10 @@ public:
 	// Zeroes the current position estimate
 	void setZeroPosition();
 
+	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
+	//CV_32SC1 2x1: left, right encoder
+	cv::Mat getEncoderData();
+
 	//----------------------ACCESS TO COMPUTED DATA
 	//CV_32SC1 3x1: x, y, fi
 	const cv::Mat getEstimatedPosition();
@@ -89,6 +93,13 @@ public:
 	void closeImu();
 
 	bool isImuOpen();
+
+	//Encoders
+	void openEncoders(std::string port);
+
+	void closeEncoders();
+
+	bool isEncodersOpen();
 };
 
 #include "../Robot/Robot.h"

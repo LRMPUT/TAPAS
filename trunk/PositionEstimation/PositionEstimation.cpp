@@ -172,6 +172,12 @@ void PositionEstimation::setZeroPosition() {
 	KF->statePost = KF->statePre = Mat::zeros(2,1, CV_32F);
 }
 
+//----------------------EXTERNAL ACCESS TO MEASUREMENTS
+//CV_32SC1 2x1: left, right encoder
+cv::Mat PositionEstimation::getEncoderData(){
+	return encoders.getEncoders();
+}
+
 //----------------------ACCESS TO COMPUTED DATA
 //CV_32SC1 3x1: x, y, fi
 const cv::Mat PositionEstimation::getEstimatedPosition(){
@@ -203,4 +209,17 @@ void PositionEstimation::closeImu(){
 
 bool PositionEstimation::isImuOpen(){
 	return imu.isPortOpen();
+}
+
+//Encoders
+void PositionEstimation::openEncoders(std::string port){
+	encoders.openPort(port, 115200);
+}
+
+void PositionEstimation::closeEncoders(){
+	encoders.closePort();
+}
+
+bool PositionEstimation::isEncodersOpen(){
+	return encoders.isPortOpen();
 }
