@@ -43,13 +43,13 @@ void QtGps::disconnect(){
 
 void QtGps::refresh(){
 	const Mat tmp = debug->getGpsData();
-	ui->gpsXLabel->setText(QString("%1").arg(tmp.at<double>(0)));
-	ui->gpsYLabel->setText(QString("%1").arg(tmp.at<double>(1)));
+	ui->gpsXLabel->setText(QString("%1").arg(tmp.at<float>(0)));
+	ui->gpsYLabel->setText(QString("%1").arg(tmp.at<float>(1)));
 	ui->gpsFixLabel->setText(QString("%1").arg(debug->getGpsFixStatus()));
 	ui->gpsSatelitesLabel->setText(QString("%1").arg(debug->getGpsSatelitesUsed()));
 }
 
 void QtGps::setZeroPoint(){
 	const Mat tmp = debug->getGpsData();
-	debug->setGpsZeroPoint(tmp.at<double>(2), tmp.at<double>(3));
+	debug->setGpsZeroPoint(tmp.at<float>(2), tmp.at<float>(3));
 }

@@ -45,7 +45,7 @@ void Recording::getDataGps(){
 	const Mat gpsData = debug->getGpsData();
 	//cout << "Data dims = (" << gpsData.rows << ", " << gpsData.cols << ")" << endl;
 	gpsStream<<time.elapsed()<<" ";
-	gpsStream<<gpsData.at<double>(0)<<" "<<gpsData.at<double>(1)<<std::endl;
+	gpsStream<<gpsData.at<float>(0)<<" "<<gpsData.at<float>(1)<<std::endl;
 	//cout << "end Recording::getDataGps()" << endl;
 }
 

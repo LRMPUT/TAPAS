@@ -22,7 +22,7 @@ using namespace cv;
 Calibration::Calibration(Ui::TrobotQtClass* iui, Debug* idebug) :
 	ui(iui),
 	debug(idebug),
-	index(0)
+	index(1)
 {
 	QObject::connect(ui->calibGetDataButton, SIGNAL(clicked()), this, SLOT(getData()));
 	QObject::connect(ui->calibResetButton, SIGNAL(clicked()), this, SLOT(reset()));
@@ -35,17 +35,18 @@ Calibration::~Calibration(){
 void Calibration::getData(){
 	Mat hokuyoData = debug->getHokuyoData();
 	vector<Mat> cameraData = debug->getCameraData();
-	const QString hokuyoFile("hokuyo");
+	const QString hokuyoFile("data/hokuyo");
 	const QString hokuyoExt(".log");
-	const QString cameraFile("camera");
+	const QString cameraFile("data/camera");
 	const QString cameraExt(".jpg");
-	const QString imuFile("imu");
+	const QString imuFile("data/imu");
 	const QString imuExt(".log");
-	/*ofstream hokuyoOut((hokuyoFile + QString("%1").arg(index, 3, 10, QChar('0')) + hokuyoExt).toAscii().data());
+
+	ofstream hokuyoOut((hokuyoFile + QString("%1").arg(index, 3, 10, QChar('0')) + hokuyoExt).toAscii().data());
 	for(int i = 0; i < hokuyoData.cols; i++){
-		hokuyoOut << hokuyoData.at<int>(2, i) << endl;
+		hokuyoOut << hokuyoData.at<int>(2, i) << " " << hokuyoData.at<int>(3, i) << endl;
 	}
-	hokuyoOut.close();*/
+	hokuyoOut.close();
 
 	imwrite((cameraFile + QString("%1").arg(index, 3, 10, QChar('0')) + cameraExt).toAscii().data(), cameraData[0]);
 
@@ -56,7 +57,7 @@ void Calibration::getData(){
 			imuOut << data.at<float>(j, 0) << " ";
 		}
 		imuOut << endl;
-		usleep(10000);
+		usleep(100000);
 	}
 	imuOut.close();
 	index++;
@@ -64,6 +65,6 @@ void Calibration::getData(){
 }
 
 void Calibration::reset(){
-	index = 0;
+	index = 1;
 	ui->calibIndexLabel->setText(QString("%1").arg(index, 3, 10, QChar('0')));
 }
