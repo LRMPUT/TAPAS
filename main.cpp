@@ -16,7 +16,7 @@ using namespace boost;
 int main()
 {
 	try{
-		Robot robot("./settings.xml");
+		Robot robot("../settings.xml");
 		cout << "Robot created" << endl;
 		Debug debug(&robot);
 		//debug.testConstraints(filesystem::path("../MovementConstraints/Camera/database/train"),
