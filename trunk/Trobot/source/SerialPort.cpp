@@ -237,6 +237,7 @@ namespace trobot {
 		names.push_back(string("driver"));
 		names.push_back(string("arduino"));
 		names.push_back(string("hokuyo"));
+		names.push_back(string("encoders"));
 		/*filesystem::path dirPath("/dev");
 		names.push_back(string("ttyACM"));
 		names.push_back(string("ttyUSB"));
@@ -286,7 +287,7 @@ namespace trobot {
 		int length = text.length();
 		if(length > buff_size)
 			return -1;
-		for(int i = buff_size - length; i >= 0; i--) {
+		for(int i = 0; i < buff_size - length + 1; i++) {
 			bool testOk = true;
 			for(int j = 0; j < length; j++) {
 				if(buffer[ i + j ] != text[ j ]) {

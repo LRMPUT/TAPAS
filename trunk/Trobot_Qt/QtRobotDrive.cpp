@@ -174,12 +174,14 @@ bool QtRobotDrive::isOpen(){
 
 void QtRobotDrive::openRobotDrive(){
 	if(ui->robotDrivePortCombo->count() != 0){
-		robot->openRobotsDrive(string(ui->robotDrivePortCombo->currentText().toAscii().data()));
+		//TODO move somewhere else
+		robot->openEncoders(string(ui->robotDrivePortCombo->currentText().toAscii().data()));
+		cout << robot->isEncodersOpen() << endl;
 		setButtonsEnabled(true);
 	}
 }
 
 void QtRobotDrive::closeRobotDrive(){
 	setButtonsEnabled(false);
-	robot->closeRobotsDrive();
+	robot->closeEncoders();
 }

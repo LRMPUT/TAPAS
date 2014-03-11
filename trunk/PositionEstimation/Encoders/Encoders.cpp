@@ -43,24 +43,43 @@ cv::Mat Encoders::getEncoders(){
 	Mat ret(2, 1, CV_32SC1);
 	serialPort.startReadCount();
 	serialPort.write("req");
-	for(int i = 0; i < 50; i++){
-		if(serialPort.getReadCount() >= 22){
-			break;
+	static boost::circular_buffer<char> data(50);
+	int left, right;
+	bool readEncoders = false;
+	while(!readEncoders){
+		boost::circular_buffer<char> newData = serialPort.getDataRead();
+		//cout << "newData:" << endl;
+		for(int i = 0; i < newData.size(); i++){
+			//cout << newData[i];
+			data.push_back(newData[i]);
+		}
+		//cout << endl;
+		/*cout << "data:" << endl;
+		for(int i = 0; i < data.size(); i++){
+			cout << data[i];
+		}
+		cout << endl;*/
+		int posBeg = searchBufferR(data, "E ");
+		int posEnd = searchBufferR(data, "_");
+		//cout << "posBeg = " << posBeg << ", posEnd = " << posEnd << endl;
+		static const int bufferLen = 40;
+		char buffer[bufferLen];
+		if(posBeg >= 0){
+			for(int i = 0; i < posBeg; i++){
+				data.pop_front();
+			}
+			if(posBeg < posEnd && posEnd >= 0){
+				for(int i = posBeg; i < posEnd; i++){
+					buffer[i - posBeg] = data.front();
+					data.pop_front();
+				}
+				buffer[posEnd - posBeg] = 0;
+				sscanf(buffer, "E %d %d", &left, &right);
+				readEncoders = true;
+			}
 		}
 		usleep(1000);
 	}
-	boost::circular_buffer<char> data = serialPort.getDataRead();
-	int pos = searchBufferR(data, "E ");
-	static const int bufferLen = 40;
-	char buffer[bufferLen];
-	if(pos >= 0){
-		for(int i = pos; i < min((int)data.size(), bufferLen - 1); i++){
-			buffer[i - pos] = data[i];
-		}
-		buffer[min((int)data.size(), bufferLen -1)] = 0;
-	}
-	int left, right;
-	sscanf(buffer, "E %d %d", &left, &right);
 	ret.at<int>(0) = left;
 	ret.at<int>(1) = right;
 	return ret;

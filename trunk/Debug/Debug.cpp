@@ -132,7 +132,7 @@ void Debug::testConstraints(boost::filesystem::path dirTrain,
 }
 
 void Debug::testEncoders(){
-	robot->openEncoders("/dev/ttyUSB0");
+	robot->openEncoders("/dev/robots/encoders");
 	while(true){
 
 		cout << robot->getEncoderData() << endl;

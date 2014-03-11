@@ -88,8 +88,8 @@ void Recording::startRec(){
 		hokuyoTimer.start();
 	}
 	if(ui->includeEncodersCheckBox->isChecked() == true){
-		if(!robot->isRobotsDriveOpen()){
-			ui->recStatusLabel->setText("Robot's drive error");
+		if(!robot->isEncodersOpen()){
+			ui->recStatusLabel->setText("Encoders error");
 			return;
 		}
 		encodersStream.open("encoders.data");
