@@ -34,7 +34,7 @@ public:
 
 	void setGpsZeroPoint(double lat, double lon);
 
-	//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
+	//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
 	const cv::Mat getImuData();
 
 	//CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right
