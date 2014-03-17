@@ -66,7 +66,7 @@ void Debug::setGpsZeroPoint(double lat, double lon){
 	robot->positionEstimation.gps.setZeroXY(lat, lon);
 }
 
-//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
+//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
 const cv::Mat Debug::getImuData(){
 	return robot->positionEstimation.imu.getData();
 }

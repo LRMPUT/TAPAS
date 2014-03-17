@@ -26,7 +26,7 @@ Quantity quantities[NUM_VALUES] = {
 	Quantity(4*trobot::MAG_PROC_Z + 2,		0.000305176),
 	Quantity(4*trobot::EULER_PHI_THETA + 2,0.0109863),
 	Quantity(4*trobot::EULER_PHI_THETA,	0.0109863),
-	Quantity(4*trobot::EULER_PSI,			0.0109863)
+	Quantity(4*trobot::EULER_PSI + 2,			0.0109863)
 };
 
 IMU::IMU() : imu(NULL) {
@@ -52,7 +52,7 @@ bool IMU::isPortOpen(){
 	return (imu != NULL);
 }
 
-//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
+//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
 const cv::Mat IMU::getData(){
 	Mat ret(3, 4, CV_32FC1);
 	for(int i = 0; i < NUM_VALUES; i++){
