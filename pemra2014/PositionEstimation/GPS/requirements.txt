@@ -1,0 +1,6 @@
+GPS Class requires:
+
+1) NMEA library, included in directories ./nmea and ./src
+2) Boost Library installed, specifically boost_thread. Header files are not enough.
+3) Name of port to which the GPS module is connected. Drivers are already included in Ubuntu,
+running modprobe might be required.
