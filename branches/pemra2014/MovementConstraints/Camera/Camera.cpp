@@ -213,41 +213,9 @@ std::vector<cv::Point3f> Camera::computePointReprojection(	const std::vector<cv:
 
 }
 
-/*void Camera::addToLearnDatabase(cv::Mat samples, int label){
-	Mat data[] = {samples};
-	int channels[] = {0};
-	int histSize[] = {bins};
-	float range[] = {0, 256};
-	const float* ranges[] = {range};
-	Mat hist(1, bins, CV_32FC1);
-	Entry newEntry;
-	newEntry.label = label;
-	newEntry.descriptor = Mat(1, CHANNELS_USED*bins, CV_32FC1);
+cv::Mat Camera::compOrient(cv::Mat imuData){
 
-	for(int i = 0; i < CHANNELS_USED; i++){
-		channels[0] = i;
-		calcHist(data, 1, channels, Mat(), hist, 1, histSize, ranges);
-		hist.copyTo(newEntry.descriptor.colRange(bins*i, bins*(i + 1) - 1));
-	}
-	normalize(hist, hist, 1, 0, NORM_L1, -1);
-	entries.push_back(newEntry);
 }
-
-void Camera::clearLearnDatabase(){
-	entries.clear();
-}
-
-void Camera::learn(){
-	if(entries.size() > 0){
-		Mat allHist(entries.size(), entries[0].descriptor.cols, CV_32FC1);
-		Mat allLabels(entries.size(), 1, CV_8UC1);
-		for(int i = 0; i < entries.size(); i++){
-			entries[i].descriptor.copyTo(allHist.rowRange(i, i));
-			allLabels.at<unsigned char>(i) = entries[i].label;
-		}
-		svm.train(allHist, allLabels, Mat(), Mat(), svmParams);
-	}
-}*/
 
 int Camera::selectPolygonPixels(std::vector<cv::Point2i> polygon, float regionId, cv::Mat& regionsOnImage){
 	int polyCnt[] = {(int)polygon.size()};

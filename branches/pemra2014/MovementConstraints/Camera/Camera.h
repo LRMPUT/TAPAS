@@ -88,11 +88,7 @@ class Camera {
 	std::vector<cv::Point3f> computePointReprojection(	const std::vector<cv::Point2f>& imPoint,
 														int cameraInd);
 
-	/*void addToLearnDatabase(cv::Mat samples, int label);
-
-	void clearLearnDatabase();
-
-	void learn();*/
+	cv::Mat compOrient(cv::Mat imuData);
 
 	/** \brief Funkcja rysująca na obrazie wielobok i wypełniająca go wartością regionId.
 	 *
