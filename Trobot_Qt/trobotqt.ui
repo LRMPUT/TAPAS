@@ -27,7 +27,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>8</number>
+     <number>7</number>
     </property>
     <widget class="QWidget" name="cameraTab">
      <attribute name="title">
@@ -1458,6 +1458,55 @@
          </item>
          <item>
           <widget class="QCheckBox" name="robotDriveAutoCheckBox">
+           <property name="text">
+            <string>Auto</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="verticalLayout_12">
+         <item>
+          <widget class="QLabel" name="label_30">
+           <property name="text">
+            <string>Encoders</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="encodersConnectButton">
+           <property name="text">
+            <string>Connect</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="encodersDisconnectButton">
+           <property name="text">
+            <string>Disconnect</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_33">
+           <property name="text">
+            <string>Device:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="encodersPortCombo"/>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_34">
+           <property name="text">
+            <string>Status</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="encodersAutoCheckBox">
            <property name="text">
             <string>Auto</string>
            </property>
