@@ -40,14 +40,19 @@ bool Encoders::isPortOpen(){
 
 //CV_32SC1 2x1: left, right encoder
 cv::Mat Encoders::getEncoders(){
+	//cout << "Encoders::getEncoders" << endl;
 	Mat ret(2, 1, CV_32SC1);
 	serialPort.startReadCount();
 	serialPort.write("req");
+	//cout << "Data sent" << endl;
 	static boost::circular_buffer<char> data(50);
 	int left, right;
 	bool readEncoders = false;
-	while(!readEncoders){
+	int count = 0;
+	static const int countLimit = 50;
+	while(!readEncoders && count < countLimit){
 		boost::circular_buffer<char> newData = serialPort.getDataRead();
+		//cout << "Data received" << endl;
 		//cout << "newData:" << endl;
 		for(int i = 0; i < newData.size(); i++){
 			//cout << newData[i];
@@ -79,6 +84,12 @@ cv::Mat Encoders::getEncoders(){
 			}
 		}
 		usleep(1000);
+		count++;
+	}
+	if(count == countLimit){
+		ret.at<int>(0) = -1;
+		ret.at<int>(1) = -1;
+		//throw "No encoders data received";
 	}
 	ret.at<int>(0) = left;
 	ret.at<int>(1) = right;

@@ -20,6 +20,7 @@
 #include "QtGps.h"
 #include "QtCamera.h"
 #include "QtHokuyo.h"
+#include "QtEncoders.h"
 #include "Calibration.h"
 
 class TrobotQt : public QMainWindow
@@ -41,6 +42,8 @@ private:
 	Debug debug;
 
 	QtRobotDrive* drive;
+
+	QtEncoders* encoders;
 
 	ImuChart* imuChart;
 
