@@ -26,6 +26,9 @@ TrobotQt::TrobotQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
 	ui.robotDrivePortCombo->addItems(portList);
 	drive = new QtRobotDrive(&ui, &robot, &debug);
 
+	ui.encodersPortCombo->addItems(portList);
+	encoders = new QtEncoders(&ui, &robot, &debug);
+
 	ui.imuPortCombo->addItems(portList);
 	imuChart = new ImuChart(&ui, &robot, &debug);
 

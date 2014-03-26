@@ -49,7 +49,7 @@ void QtHokuyo::refresh(){
 	painter.setPen(Qt::blue);
 
 	float scale;
-	const int range = 3000;
+	const int range = 4000;
 	scale = (float)min(ui->calibLaserLabel->width(), ui->calibLaserLabel->height()) / (2 * range);
 
 	int origX = ui->calibLaserLabel->width()/2;
@@ -69,7 +69,7 @@ void QtHokuyo::refresh(){
 
 void QtHokuyo::connect(){
 	if(ui->hokuyoPortCombo->count() != 0){
-		robot->openHokuyo(ui->gpsPortCombo->currentText().toAscii().data());
+		robot->openHokuyo(ui->hokuyoPortCombo->currentText().toAscii().data());
 		refreshTimer.start();
 	}
 }

@@ -82,6 +82,7 @@ void Recording::startRec(){
 	if(ui->includeHokuyoCheckBox->isChecked() == true){
 		if(!robot->isHokuyoOpen()){
 			ui->recStatusLabel->setText("Hokuyo not active");
+			stopRec();
 			return;
 		}
 		hokuyoTimer.setInterval(max((int)(1000/ui->saRateHokuyoLineEdit->text().toFloat()), 1));
@@ -90,6 +91,7 @@ void Recording::startRec(){
 	if(ui->includeEncodersCheckBox->isChecked() == true){
 		if(!robot->isEncodersOpen()){
 			ui->recStatusLabel->setText("Encoders error");
+			stopRec();
 			return;
 		}
 		encodersStream.open("encoders.data");
@@ -97,10 +99,9 @@ void Recording::startRec(){
 		encodersTimer.start();
 	}
 	if(ui->includeGpsCheckBox->isChecked() == true){
-		// How to find which one ?
-		//robot->openGps("/dev/tty0");
 		if(!robot->isGpsOpen()){
 			ui->recStatusLabel->setText("GPS error");
+			stopRec();
 			return;
 		}
 		gpsStream.open("gps.data");
@@ -110,6 +111,7 @@ void Recording::startRec(){
 	if(ui->includeImuCheckBox->isChecked() == true){
 		if(!robot->isImuOpen()){
 			ui->recStatusLabel->setText("IMU error");
+			stopRec();
 			return;
 		}
 

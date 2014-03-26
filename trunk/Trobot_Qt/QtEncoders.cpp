@@ -28,7 +28,8 @@ bool QtEncoders::isOpen(){
 
 void QtEncoders::openEncoders(){
 	if(ui->encodersPortCombo->count() != 0){
-		robot->openEncoders(string(ui->robotDrivePortCombo->currentText().toAscii().data()));
+		cout << "Opening encoders on port: " << ui->encodersPortCombo->currentText().toAscii().data() << endl;
+		robot->openEncoders(string(ui->encodersPortCombo->currentText().toAscii().data()));
 	}
 }
 
