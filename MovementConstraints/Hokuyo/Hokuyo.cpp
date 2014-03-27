@@ -43,17 +43,24 @@ const cv::Mat Hokuyo:: getData(){
 	vector<unsigned short> intensity;
 	Mat ret(4, HOKUYO_SCANS, CV_32SC1);
 
-	hokuyo.start_measurement(qrk::Urg_driver::Distance_intensity, 2, 0);	//1 measurement doesn't work with Distance_intensity
+	//1 measurement doesn't work with Distance_intensity
+	hokuyo.start_measurement(qrk::Urg_driver::Distance_intensity, 2, 0);
+	hokuyo.get_distance_intensity(distance, intensity);
 	hokuyo.get_distance_intensity(distance, intensity);
 	//cout << "distance.size() = " << distance.size() << ", intensity.size() = " << intensity.size() << endl;
+	//int count = 0;
 	for(int i = 0; i < distance.size(); i++){
 		double angle = hokuyo.index2rad(i);
 		//cout << "Point " << i << " = " << distance[i] << ", " << intensity[i] << endl;
 		//cout << "Point " << i << " = (" << data[i]*cos(angle) << ", " << data[i]*sin(angle) << ")" << endl;
+		//if(distance[i] == 0){
+		//	count++;
+		//}
 		ret.at<int>(0, i) = distance[i]*cos(angle);
 		ret.at<int>(1, i) = distance[i]*sin(angle);
 		ret.at<int>(2, i) = distance[i];
 		ret.at<int>(3, i) = intensity[i];
 	}
+	//cout << "Number of zeros: " << count << endl;
 	return ret;
 }

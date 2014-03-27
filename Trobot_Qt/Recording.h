@@ -27,7 +27,7 @@ private:
 	QTimer encodersTimer;
 	QTimer gpsTimer;
 	QTimer imuTimer;
-	//QTimer camerasTimer;
+	QTimer cameraTimer;
 	QElapsedTimer time;
 
 	Robot* robot;
@@ -38,7 +38,7 @@ private:
 	Ui::TrobotQtClass* ui;
 
 	// Saving Streams
-	std::ofstream imuStream, gpsStream, encodersStream;
+	std::ofstream imuStream, gpsStream, encodersStream, hokuyoStream, cameraStream;
 public:
 	Recording(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug);
 	~Recording();
