@@ -42,15 +42,15 @@ void Calibration::getData(){
 	const QString imuFile("data/imu");
 	const QString imuExt(".log");
 
-	ofstream hokuyoOut((hokuyoFile + QString("%1").arg(index, 3, 10, QChar('0')) + hokuyoExt).toAscii().data());
+	/*ofstream hokuyoOut((hokuyoFile + QString("%1").arg(index, 3, 10, QChar('0')) + hokuyoExt).toAscii().data());
 	for(int i = 0; i < hokuyoData.cols; i++){
 		hokuyoOut << hokuyoData.at<int>(2, i) << endl; // " " << hokuyoData.at<int>(3, i) << endl;
 	}
-	hokuyoOut.close();
+	hokuyoOut.close();*/
 
 	imwrite((cameraFile + QString("%1").arg(index, 3, 10, QChar('0')) + cameraExt).toAscii().data(), cameraData[0]);
 
-	/*ofstream imuOut((imuFile + QString("%1").arg(index, 3, 10, QChar('0')) + imuExt).toAscii().data());
+	ofstream imuOut((imuFile + QString("%1").arg(index, 3, 10, QChar('0')) + imuExt).toAscii().data());
 	for(int i = 0; i < 10; i++){
 		Mat data = debug->getImuData();
 		for(int j = 0; j < 3; j++){
@@ -59,7 +59,7 @@ void Calibration::getData(){
 		imuOut << endl;
 		usleep(100000);
 	}
-	imuOut.close();*/
+	imuOut.close();
 	index++;
 	ui->calibIndexLabel->setText(QString("%1").arg(index, 3, 10, QChar('0')));
 }
