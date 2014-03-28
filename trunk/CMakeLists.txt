@@ -28,6 +28,7 @@ set(RobotsIntellect_SOURCES
 	#Planning/PlanningSearching/LocalPlannerSearching.cpp
 	#Planning/PlanningToGold/LocalPlannerToGold.cpp
 	#Planning/PlanningWithGold/LocalPlannerWithGold.cpp
+	Planning/RobotDrivers/robotDrivers.cpp
 	Planning/GlobalPlanner.cpp
 	PositionEstimation/Encoders/Encoders.cpp
 	PositionEstimation/GPS/src/context.c

@@ -29,8 +29,8 @@ Robot::~Robot() {
 
 //----------------------MENAGMENT OF GlobalPlanner DEVICES
 //Robots Drive
-void Robot::openRobotsDrive(std::string port){
-	globalPlanner.openRobotsDrive(port);
+void Robot::openRobotsDrive(std::string port1, std::string port2){
+	globalPlanner.openRobotsDrive(port1, port2);
 }
 
 void Robot::closeRobotsDrive(){

@@ -143,6 +143,21 @@ void Debug::testEncoders(){
 	}
 }
 
+void Debug::testDrivers(){
+	robot->openRobotsDrive("/dev/robots/driver1", "/dev/robots/driver2");
+
+	while(true){
+
+		robot->globalPlanner.setMotorsVel(1000, 1000);
+		char a = waitKey(500);
+		if(a == 'q'){
+			break;
+		}
+		robot->globalPlanner.setMotorsVel(0, 0);
+		}
+	}
+
+
 //----------------------ACCESS TO COMPUTED DATA
 //CV_32SC1 3x1: x, y, fi
 const cv::Mat Debug::getEstimatedPosition(){

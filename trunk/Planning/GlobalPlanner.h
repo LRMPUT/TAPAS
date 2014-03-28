@@ -11,6 +11,7 @@
 #include <opencv2/opencv.hpp>
 //Trobot
 #include "../Trobot/include/RobotDrive.h"
+#include "RobotDrivers/robotDrivers.h"
 //Robots Intellect
 
 class Robot;
@@ -30,6 +31,9 @@ class GlobalPlanner {
 	//Driver
 	trobot::RobotDrive* robotDrive;
 
+	Drivers* robotDrive1;
+	Drivers* robotDrive2;
+
 	OperationMode currentMode;
 public:
 	GlobalPlanner(Robot* irobot);
@@ -42,7 +46,7 @@ public:
 
 	//----------------------MENAGMENT OF GlobalPlanner DEVICES
 	//Robots Drive
-	void openRobotsDrive(std::string port);
+	void openRobotsDrive(std::string port1, std::string port2);
 
 	void closeRobotsDrive();
 

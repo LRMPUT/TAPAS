@@ -45,7 +45,7 @@ public:
 
 	//----------------------MENAGMENT OF GlobalPlanner DEVICES
 	//Robots Drive
-	void openRobotsDrive(std::string port);
+	void openRobotsDrive(std::string port1, std::string port2);
 
 	void closeRobotsDrive();
 
