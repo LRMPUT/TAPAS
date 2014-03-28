@@ -52,6 +52,8 @@ public:
 	void testConstraints(boost::filesystem::path dirTrain, boost::filesystem::path dirTest);
 
 	void testEncoders();
+
+	void testDrivers();
 	//----------------------ACCESS TO COMPUTED DATA
 	//CV_32SC1 3x1: x, y, fi
 	const cv::Mat getEstimatedPosition();
