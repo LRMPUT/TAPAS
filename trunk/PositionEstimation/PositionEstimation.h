@@ -25,6 +25,7 @@ class PositionEstimation {
 private:
 	// unique pointer to the PositionEstimation thread
 	std::thread estimationThread;
+	//TODO Chyba powinno być volatile
 	bool runThread;
 
 	// Kalman filter to gather position information
@@ -53,6 +54,7 @@ public:
 	virtual ~PositionEstimation();
 
 	// The cycle of the position estimation thread
+	//TODO Przemyśleć przeniesienie tego do private
 	void run();
 
 	// Stopping the position estimation thread

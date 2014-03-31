@@ -27,7 +27,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>6</number>
+     <number>7</number>
     </property>
     <widget class="QWidget" name="cameraTab">
      <attribute name="title">
@@ -1363,7 +1363,7 @@
         <x>30</x>
         <y>29</y>
         <width>770</width>
-        <height>194</height>
+        <height>250</height>
        </rect>
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout">
@@ -1442,12 +1442,22 @@
          <item>
           <widget class="QLabel" name="label_4">
            <property name="text">
-            <string>Device:</string>
+            <string>Left device:</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QComboBox" name="robotDrivePortCombo"/>
+          <widget class="QComboBox" name="robotDriversLeftPortCombo"/>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_35">
+           <property name="text">
+            <string>Right device:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="robotDriversRightPortCombo"/>
          </item>
          <item>
           <widget class="QLabel" name="robotDriveStatusLabel">
@@ -1716,7 +1726,7 @@
       <property name="geometry">
        <rect>
         <x>40</x>
-        <y>270</y>
+        <y>310</y>
         <width>98</width>
         <height>27</height>
        </rect>
@@ -1729,7 +1739,7 @@
       <property name="geometry">
        <rect>
         <x>40</x>
-        <y>310</y>
+        <y>340</y>
         <width>98</width>
         <height>27</height>
        </rect>

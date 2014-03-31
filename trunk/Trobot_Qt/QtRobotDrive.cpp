@@ -173,8 +173,11 @@ bool QtRobotDrive::isOpen(){
 }
 
 void QtRobotDrive::openRobotDrive(){
-	if(ui->robotDrivePortCombo->count() != 0){
-		//robot->openRobotsDrive(string(ui->robotDrivePortCombo->currentText().toAscii().data()));
+	if(ui->robotDriversLeftPortCombo->count() != 0 &&
+		ui->robotDriversRightPortCombo->count() != 0)
+	{
+		robot->openRobotsDrive(string(ui->robotDriversLeftPortCombo->currentText().toAscii().data()),
+								string(ui->robotDriversRightPortCombo->currentText().toAscii().data()));
 		setButtonsEnabled(true);
 	}
 }

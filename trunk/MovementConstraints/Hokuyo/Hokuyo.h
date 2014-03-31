@@ -10,6 +10,8 @@
 class Hokuyo;
 
 #include <string>
+#include <thread>
+#include <mutex>
 #include <opencv2/opencv.hpp>
 #include <urg_cpp/Urg_driver.h>
 
@@ -20,7 +22,15 @@ class Debug;
 class Hokuyo {
 	friend class Debug;
 
+	std::thread readingThread;
+	volatile bool runThread;
+
 	qrk::Urg_driver hokuyo;
+
+	cv::Mat curMeas;
+	std::mutex mtx;
+
+	void run();
 public:
 	Hokuyo();
 	virtual ~Hokuyo();

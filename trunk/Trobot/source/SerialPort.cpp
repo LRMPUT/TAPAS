@@ -238,6 +238,8 @@ namespace trobot {
 		names.push_back(string("arduino"));
 		names.push_back(string("hokuyo"));
 		names.push_back(string("encoders"));
+		names.push_back(string("driverLeft"));
+		names.push_back(string("driverRight"));
 		/*filesystem::path dirPath("/dev");
 		names.push_back(string("ttyACM"));
 		names.push_back(string("ttyUSB"));
@@ -245,8 +247,10 @@ namespace trobot {
 		filesystem::directory_iterator endIt;
 		for(filesystem::directory_iterator dirIt(dirPath); dirIt != endIt; dirIt++){
 			for(int i = 0; i < names.size(); i++){
-				if(string(dirIt->path().filename().c_str()).find(names[i]) != string::npos){
-					ports.push_back(dirIt->path().c_str());
+				if(string(dirIt->path().filename().c_str()).length() == names[i].length()){
+					if(string(dirIt->path().filename().c_str()).find(names[i]) == 0){
+						ports.push_back(dirIt->path().c_str());
+					}
 				}
 			}
 		}
