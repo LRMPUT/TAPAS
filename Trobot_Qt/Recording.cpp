@@ -19,7 +19,7 @@ Recording::Recording(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug) :
 	connect(&hokuyoTimer, SIGNAL(timeout()), this, SLOT(getDataHokuyo()));
 	connect(&encodersTimer, SIGNAL(timeout()), this, SLOT(getDataEncoders()));
 	connect(&gpsTimer, SIGNAL(timeout()), this, SLOT(getDataGps()));
-	connect(&cameraTimer, SIGNAL(timeout()), this, SLOT(getDataCamera));
+	connect(&cameraTimer, SIGNAL(timeout()), this, SLOT(getDataCamera()));
 	connect(&imuTimer, SIGNAL(timeout()), this, SLOT(getDataImu()));
 	connect(ui->startRecButton, SIGNAL(clicked()), this, SLOT(startRec()));
 	connect(ui->stopRecButon, SIGNAL(clicked()), this, SLOT(stopRec()));
@@ -73,9 +73,9 @@ void Recording::getDataImu(){
 }
 
 void Recording::getDataCamera(){
-	cout << "Getting camera data" << endl;
+	//cout << "Getting camera data" << endl;
 	static int index = 0;
-	static const QString cameraPrefix("camera");
+	static const QString cameraPrefix("rec/camera");
 	static const QString cameraExt(".jpg");
 	vector<int> jpegParams;
 	jpegParams.push_back(CV_IMWRITE_JPEG_QUALITY);
@@ -84,6 +84,7 @@ void Recording::getDataCamera(){
 	cameraStream << time.elapsed() << " " << fileName.toAscii().data() << endl;
 	vector<Mat> cameraData = debug->getCameraData();
 	imwrite(fileName.toAscii().data(), cameraData.front(), jpegParams);
+	index++;
 }
 
 
@@ -106,7 +107,7 @@ void Recording::startRec(){
 			stopRec();
 			return;
 		}
-		hokuyoStream.open("hokuyo.data");
+		hokuyoStream.open("rec/hokuyo.data");
 		hokuyoTimer.setInterval(max((int)(1000/ui->saRateHokuyoLineEdit->text().toFloat()), 1));
 		hokuyoTimer.start();
 	}
@@ -116,7 +117,7 @@ void Recording::startRec(){
 			stopRec();
 			return;
 		}
-		encodersStream.open("encoders.data");
+		encodersStream.open("rec/encoders.data");
 		encodersTimer.setInterval(max((int)(1000/ui->saRateEncodersLineEdit->text().toFloat()), 1));
 		encodersTimer.start();
 	}
@@ -126,7 +127,7 @@ void Recording::startRec(){
 			stopRec();
 			return;
 		}
-		gpsStream.open("gps.data");
+		gpsStream.open("rec/gps.data");
 		gpsTimer.setInterval(max((int)(1000/ui->saRateGpsLineEdit->text().toFloat()), 1));
 		gpsTimer.start();
 	}
@@ -136,10 +137,10 @@ void Recording::startRec(){
 			stopRec();
 			return;
 		}
-		cameraStream.open("camera.data");
+		cameraStream.open("rec/camera.data");
 		cameraTimer.setInterval(max((int)(1000/ui->saRateCamerasLineEdit->text().toFloat()), 1));
-		cout << "Starting camera timer with interval "
-				<< max((int)(1000/ui->saRateCamerasLineEdit->text().toFloat()), 1) << endl;
+		//cout << "Starting camera timer with interval "
+		//		<< max((int)(1000/ui->saRateCamerasLineEdit->text().toFloat()), 1) << endl;
 		cameraTimer.start();
 	}
 	if(ui->includeImuCheckBox->isChecked() == true){
@@ -149,7 +150,7 @@ void Recording::startRec(){
 			return;
 		}
 
-		imuStream.open("imu.data");
+		imuStream.open("rec/imu.data");
 		imuTimer.setInterval(max((int)(1000/ui->saRateImuLineEdit->text().toFloat()), 1));
 		imuTimer.start();
 	}

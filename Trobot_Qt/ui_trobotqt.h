@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'trobotqt.ui'
 **
-** Created: Thu Mar 27 09:41:49 2014
+** Created: Fri Mar 28 11:38:08 2014
 **      by: Qt User Interface Compiler version 4.8.1
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -185,7 +185,9 @@ public:
     QPushButton *robotDriveConnectButton;
     QPushButton *robotDriveDisconnectButton;
     QLabel *label_4;
-    QComboBox *robotDrivePortCombo;
+    QComboBox *robotDriversLeftPortCombo;
+    QLabel *label_35;
+    QComboBox *robotDriversRightPortCombo;
     QLabel *robotDriveStatusLabel;
     QCheckBox *robotDriveAutoCheckBox;
     QVBoxLayout *verticalLayout_12;
@@ -921,7 +923,7 @@ public:
         DevicesTab->setObjectName(QString::fromUtf8("DevicesTab"));
         horizontalLayoutWidget = new QWidget(DevicesTab);
         horizontalLayoutWidget->setObjectName(QString::fromUtf8("horizontalLayoutWidget"));
-        horizontalLayoutWidget->setGeometry(QRect(30, 29, 770, 194));
+        horizontalLayoutWidget->setGeometry(QRect(30, 29, 770, 250));
         horizontalLayout = new QHBoxLayout(horizontalLayoutWidget);
         horizontalLayout->setSpacing(6);
         horizontalLayout->setContentsMargins(11, 11, 11, 11);
@@ -991,10 +993,20 @@ public:
 
         verticalLayout_6->addWidget(label_4);
 
-        robotDrivePortCombo = new QComboBox(horizontalLayoutWidget);
-        robotDrivePortCombo->setObjectName(QString::fromUtf8("robotDrivePortCombo"));
+        robotDriversLeftPortCombo = new QComboBox(horizontalLayoutWidget);
+        robotDriversLeftPortCombo->setObjectName(QString::fromUtf8("robotDriversLeftPortCombo"));
 
-        verticalLayout_6->addWidget(robotDrivePortCombo);
+        verticalLayout_6->addWidget(robotDriversLeftPortCombo);
+
+        label_35 = new QLabel(horizontalLayoutWidget);
+        label_35->setObjectName(QString::fromUtf8("label_35"));
+
+        verticalLayout_6->addWidget(label_35);
+
+        robotDriversRightPortCombo = new QComboBox(horizontalLayoutWidget);
+        robotDriversRightPortCombo->setObjectName(QString::fromUtf8("robotDriversRightPortCombo"));
+
+        verticalLayout_6->addWidget(robotDriversRightPortCombo);
 
         robotDriveStatusLabel = new QLabel(horizontalLayoutWidget);
         robotDriveStatusLabel->setObjectName(QString::fromUtf8("robotDriveStatusLabel"));
@@ -1216,10 +1228,10 @@ public:
 
         allDevicesConnectButton = new QPushButton(DevicesTab);
         allDevicesConnectButton->setObjectName(QString::fromUtf8("allDevicesConnectButton"));
-        allDevicesConnectButton->setGeometry(QRect(40, 270, 98, 27));
+        allDevicesConnectButton->setGeometry(QRect(40, 310, 98, 27));
         allDevicesDisconnectButton = new QPushButton(DevicesTab);
         allDevicesDisconnectButton->setObjectName(QString::fromUtf8("allDevicesDisconnectButton"));
-        allDevicesDisconnectButton->setGeometry(QRect(40, 310, 98, 27));
+        allDevicesDisconnectButton->setGeometry(QRect(40, 340, 98, 27));
         mainTab->addTab(DevicesTab, QString());
         CalibrationTab = new QWidget();
         CalibrationTab->setObjectName(QString::fromUtf8("CalibrationTab"));
@@ -1264,7 +1276,7 @@ public:
 
         retranslateUi(TrobotQtClass);
 
-        mainTab->setCurrentIndex(6);
+        mainTab->setCurrentIndex(7);
 
 
         QMetaObject::connectSlotsByName(TrobotQtClass);
@@ -1378,7 +1390,8 @@ public:
         label_23->setText(QApplication::translate("TrobotQtClass", "Robot's Drive", 0, QApplication::UnicodeUTF8));
         robotDriveConnectButton->setText(QApplication::translate("TrobotQtClass", "Connect", 0, QApplication::UnicodeUTF8));
         robotDriveDisconnectButton->setText(QApplication::translate("TrobotQtClass", "Disconnect", 0, QApplication::UnicodeUTF8));
-        label_4->setText(QApplication::translate("TrobotQtClass", "Device:", 0, QApplication::UnicodeUTF8));
+        label_4->setText(QApplication::translate("TrobotQtClass", "Left device:", 0, QApplication::UnicodeUTF8));
+        label_35->setText(QApplication::translate("TrobotQtClass", "Right device:", 0, QApplication::UnicodeUTF8));
         robotDriveStatusLabel->setText(QApplication::translate("TrobotQtClass", "Status", 0, QApplication::UnicodeUTF8));
         robotDriveAutoCheckBox->setText(QApplication::translate("TrobotQtClass", "Auto", 0, QApplication::UnicodeUTF8));
         label_30->setText(QApplication::translate("TrobotQtClass", "Encoders", 0, QApplication::UnicodeUTF8));

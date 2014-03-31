@@ -36,11 +36,10 @@ void Drivers::exitSafeStart(){
 }
 
 void Drivers::setMotorSpeed(float speed){
-
 	if (speed > 0)
 	serialPort->write('F' + boost::lexical_cast<string>(speed) + '\r');
 	else
-	serialPort->write('R' + boost::lexical_cast<string>(speed) + '\r');
+	serialPort->write('R' + boost::lexical_cast<string>(-speed) + '\r');
 }
 
 void Drivers::stopMotor(){
