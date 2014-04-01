@@ -12,6 +12,8 @@
 #include <cmath>
 #include <sstream>
 #include <algorithm>
+#include <fstream>
+#include <sstream>
 //RobotsIntellect
 #include "Camera.h"
 
@@ -24,6 +26,8 @@ using namespace std;
 #define CAMERAS_COUNT 2
 #define ROWS 480
 #define COLS 640*/
+
+#define PI 3.14159265359
 
 #define POLY_VERT 4
 #define X_STEP 100
@@ -214,7 +218,63 @@ std::vector<cv::Point3f> Camera::computePointReprojection(	const std::vector<cv:
 }
 
 cv::Mat Camera::compOrient(cv::Mat imuData){
+	Mat ret(Mat::eye(4, 4, CV_32FC1));
+	float yaw = imuData.at<float>(11);
+	float pitch = imuData.at<float>(10);
+	float roll = imuData.at<float>(9);
+	Matx33f Rz(	cos(yaw), sin(yaw), 0,
+				-sin(yaw), cos(yaw), 0,
+				0, 0, 1);
+	Matx33f Ry(	cos(pitch), 0, -sin(pitch),
+				0, 1, 0,
+				sin(pitch), 0, cos(pitch));
+	Matx33f Rx(	1, 0, 0,
+				0, cos(roll), sin(roll),
+				0, -sin(roll), cos(roll));
+	Mat tmp(Rx*Ry*Rz);
+	tmp.copyTo(ret(Rect(0, 0, 3, 3)));
+	return ret;
+}
 
+
+cv::Mat Camera::compTrans(	cv::Mat orient,
+							cv::Mat encodersDiff)
+{
+	static const float wheelCir = 200*3.14*2;
+	static const float wheelDistance = 400;
+	static const int encodersCPR = 64;
+	float sl = encodersDiff.at<float>(0)*wheelCir/encodersCPR;
+	float sr = encodersDiff.at<float>(1)*wheelCir/encodersCPR;
+	float theta = (sl - sr)/(-wheelDistance);
+	Mat trans(4, 1, CV_32FC1, Scalar(0));
+	if(theta < 0.1){
+		trans.at<float>(0) = (sl + sr)/2;
+	}
+	else{
+		//TODO obliczyć poprawną wartość
+		trans.at<float>(0) = (sl + sr)/2;
+	}
+	trans = orient*trans;
+	return trans;
+}
+
+bool Camera::readLine(std::ifstream& stream, Mat data){
+	data = Mat(0, 1, CV_32FC1);
+	string line;
+	getline(stream, line);
+	if(stream.eof()){
+		return false;
+	}
+	stringstream tmp(line);
+	//double time;
+	//tmp >> time;
+	while(!tmp.eof()){
+		float val;
+		tmp >> val;
+		data.push_back(val);
+	}
+	data = data.reshape(0, 1);
+	return true;
 }
 
 int Camera::selectPolygonPixels(std::vector<cv::Point2i> polygon, float regionId, cv::Mat& regionsOnImage){
@@ -241,106 +301,183 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 	//namedWindow("original");
 	vector<Entry> dataset;
 	vector<double> weights;
-	filesystem::directory_iterator endIt;
-	for(filesystem::directory_iterator dirIt(dir); dirIt != endIt; dirIt++){
-		if(dirIt->path().filename().string().find(".xml") != string::npos){
-			cout << "Reading XML file: " << dirIt->path().string() << endl;
-			TiXmlDocument data(dirIt->path().string());
-			if(!data.LoadFile()){
-				throw "Bad data file";
+
+	ifstream hokuyoFile(dir.string() + "/hokuyo.data");
+	if(!hokuyoFile.is_open()){
+		throw "Error - no hokuyo file";
+	}
+	ifstream imuFile(dir.string() + "/imu.data");
+	if(!imuFile.is_open()){
+		throw "Error - no imu file";
+	}
+	ifstream encodersFile(dir.string() + "/encoders.data");
+	if(!encodersFile.is_open()){
+		throw "Error - no encoders file";
+	}
+	ifstream cameraFile(dir.string() + "/camera.data");
+	if(!encodersFile.is_open()){
+		throw "Error - no camera file";
+	}
+	Mat hokuyoAllPointsCamera;
+	Mat imuPrev, encodersPrev;
+	bool endFlag = false;
+	while(!endFlag)
+	{
+		int cameraCurTime;
+		cameraFile >> cameraCurTime;
+		if(cameraFile.eof()){
+			endFlag = true;
+			break;
+		}
+		string cameraImageFileExt;
+		cameraFile >> cameraImageFileExt;
+		char buffer[50];
+		sscanf(cameraImageFileExt.c_str(), "%s.jpg", buffer);
+		string cameraImageFile(buffer);
+
+		int hokuyoCurTime;
+		hokuyoFile >> hokuyoCurTime;
+		while(hokuyoCurTime <= cameraCurTime){
+			Mat hokuyoCurPoints, hokuyoCurPointsDist, hokuyoCurPointsInt;
+			char tmpChar;
+			hokuyoFile >> tmpChar;
+			readLine(hokuyoFile, hokuyoCurPointsDist);
+			hokuyoFile >> tmpChar;
+			readLine(hokuyoFile, hokuyoCurPointsInt);
+			hokuyoCurPoints = Mat(6, hokuyoCurPointsDist.cols, CV_32FC1, Scalar(1));
+
+			static const float startAngle = -45*PI/180;
+			static const float stepAngle = 0.25*PI/180;
+			for(int i = 0; i < hokuyoCurPointsDist.cols; i++){
+				hokuyoCurPoints.at<float>(i, 0) = -cos(startAngle + stepAngle*i)*hokuyoCurPointsDist.at<float>(i);
+				hokuyoCurPoints.at<float>(i, 1) = 0;
+				hokuyoCurPoints.at<float>(i, 2) = sin(startAngle + stepAngle*i)*hokuyoCurPointsDist.at<float>(i);
 			}
-			TiXmlElement* pAnnotation = data.FirstChildElement("annotation");
-			if(!pAnnotation){
-				throw "Bad data file - no annotation entry";
+			hokuyoCurPointsDist.copyTo(hokuyoCurPoints.colRange(4, 4));
+			hokuyoCurPointsInt.copyTo(hokuyoCurPoints.colRange(5, 5));
+
+			hokuyoCurPoints.rowRange(0, 3) = cameraOrigLaser.front().inv()*hokuyoCurPoints.rowRange(0, 3);
+
+			if(imuPrev.empty()){
+				int tmpTime;
+				imuFile >> tmpTime;
+				readLine(imuFile, imuPrev);
 			}
-			TiXmlElement* pFile = pAnnotation->FirstChildElement("filename");
-			if(!pFile){
-				throw "Bad data file - no filename entry";
+			if(encodersPrev.empty()){
+				int tmpTime;
+				encodersFile >> tmpTime;
+				readLine(encodersFile, encodersPrev);
+			}
+			Mat imuCur, encodersCur;
+			int imuCurTime;
+			imuFile >> imuCurTime;
+			while(imuCurTime <= hokuyoCurTime){
+				readLine(imuFile, imuCur);
+
+				imuFile >> imuCurTime;
 			}
 
-			Mat image = imread(dir.string() + string("/") + pFile->GetText());
-			if(image.data == NULL){
-				throw "Bad image file";
+			int encodersCurTime;
+			encodersFile >> encodersCurTime;
+			while(encodersCurTime <= hokuyoCurTime){
+				readLine(encodersFile, encodersCur);
+
+				encodersFile >> encodersCurTime;
 			}
 
-			//loading map
-			int imageNum;
-			sscanf(pFile->GetText(), "camera%d.jpg", &imageNum);
-			Mat terrain;
-			char terrainFilename[200];
-			sprintf(terrainFilename, "%smap%03d.log", (dir.string() + string("/")).c_str(), imageNum);
-			ifstream terrainFile(terrainFilename);
-			if(terrainFile.is_open() == false){
-				throw "No map file";
+			Mat trans = compTrans(compOrient(imuPrev), encodersCur - encodersPrev);
+			Mat rot = compOrient(imuPrev).t()*compOrient(imuCur);	//inversion of orthonormal matrix
+			Mat RT = Mat::eye(4, 4, CV_32FC1);
+			trans.copyTo(RT(Rect(3, 0, 1, 4)));
+			RT = RT*rot;
+
+			hokuyoAllPointsCamera.rowRange(0, 3) = hokuyoAllPointsCamera.rowRange(0, 3)*RT;
+			Mat tmpAllPoints(6, hokuyoAllPointsCamera.cols + hokuyoCurPoints.cols, CV_32FC1);
+			hokuyoAllPointsCamera.copyTo(tmpAllPoints.colRange(0, hokuyoAllPointsCamera.cols - 1));
+			hokuyoCurPoints.copyTo(tmpAllPoints.colRange(hokuyoAllPointsCamera.cols, hokuyoAllPointsCamera.cols + hokuyoCurPoints.cols - 1));
+			hokuyoAllPointsCamera = tmpAllPoints;
+
+			imuCur.copyTo(imuPrev);
+			encodersCur.copyTo(encodersPrev);
+			hokuyoFile >> hokuyoCurTime;
+		}
+
+		TiXmlDocument data(cameraImageFile + string(".xml"));
+		if(!data.LoadFile()){
+			throw "Bad data file";
+		}
+		TiXmlElement* pAnnotation = data.FirstChildElement("annotation");
+		if(!pAnnotation){
+			throw "Bad data file - no annotation entry";
+		}
+		TiXmlElement* pFile = pAnnotation->FirstChildElement("filename");
+		if(!pFile){
+			throw "Bad data file - no filename entry";
+		}
+
+		Mat image = imread(dir.string() + string("/") + pFile->GetText());
+		if(image.data == NULL){
+			throw "Bad image file";
+		}
+
+		Mat manualRegionsOnImage(image.rows, image.cols, CV_32SC1, Scalar(0));
+		int manualRegionsCount = 0;
+
+		Mat autoRegionsOnImage = hierClassifiers.front()->segmentImage(image);
+		map<int, int> mapRegionIdToLabel;
+
+		TiXmlElement* pObject = pAnnotation->FirstChildElement("object");
+		while(pObject){
+
+			TiXmlElement* pPolygon = pObject->FirstChildElement("polygon");
+			if(!pPolygon){
+				throw "Bad data file - no polygon inside object";
 			}
-			double tmp;
-			while(!terrainFile.eof()){
-				Mat terrainPoint(1, 5, CV_32FC1);	//x, y, z, distance, intensity
-				for(int i = 0; i < 5; i++){
-					terrainFile >> tmp;
-					terrainPoint.at<float>(0, i) = tmp;
+			vector<Point2i> poly;
+
+			TiXmlElement* pPt = pPolygon->FirstChildElement("pt");
+			while(pPt){
+				int x = atoi(pPt->FirstChildElement("x")->GetText());
+				int y = atoi(pPt->FirstChildElement("y")->GetText());
+				poly.push_back(Point2i(x, y));
+				pPt = pPt->NextSiblingElement("pt");
+			}
+
+			TiXmlElement* pAttributes = pObject->FirstChildElement("attributes");
+			if(!pAttributes){
+				throw "Bad data file - no object attributes";
+			}
+			string labelText = pAttributes->GetText();
+			int label = 0;
+			for(int i = 0; i < labels.size(); i++){
+				if(labelText == labels[i]){
+					label = i;
+					break;
 				}
-				terrain.push_back(terrainPoint);
-			}
-			terrain = terrain.t();
-
-			Mat manualRegionsOnImage(image.rows, image.cols, CV_32SC1, Scalar(0));
-			int manualRegionsCount = 0;
-
-			Mat autoRegionsOnImage = hierClassifiers.front()->segmentImage(image);
-			map<int, int> mapRegionIdToLabel;
-
-			TiXmlElement* pObject = pAnnotation->FirstChildElement("object");
-			while(pObject){
-
-				TiXmlElement* pPolygon = pObject->FirstChildElement("polygon");
-				if(!pPolygon){
-					throw "Bad data file - no polygon inside object";
-				}
-				vector<Point2i> poly;
-
-				TiXmlElement* pPt = pPolygon->FirstChildElement("pt");
-				while(pPt){
-					int x = atoi(pPt->FirstChildElement("x")->GetText());
-					int y = atoi(pPt->FirstChildElement("y")->GetText());
-					poly.push_back(Point2i(x, y));
-					pPt = pPt->NextSiblingElement("pt");
-				}
-
-				TiXmlElement* pAttributes = pObject->FirstChildElement("attributes");
-				if(!pAttributes){
-					throw "Bad data file - no object attributes";
-				}
-				string labelText = pAttributes->GetText();
-				int label = 0;
-				for(int i = 0; i < labels.size(); i++){
-					if(labelText == labels[i]){
-						label = i;
-						break;
-					}
-				}
-
-				mapRegionIdToLabel[++manualRegionsCount] = label;
-				//cout << "Selecting polygon pixels for label " << labels[label] <<  endl;
-				selectPolygonPixels(poly, manualRegionsCount, manualRegionsOnImage);
-				//cout << "End selecting" << endl;
-
-				pObject = pObject->NextSiblingElement("object");
 			}
 
-			map<int, int> assignedManualId = hierClassifiers.front()->assignManualId(autoRegionsOnImage, manualRegionsOnImage);
-			//imshow("original", image);
-			//imshow("segments", hierClassifiers.front()->colorSegments(autoRegionsOnImage));
-			//waitKey();
+			mapRegionIdToLabel[++manualRegionsCount] = label;
+			//cout << "Selecting polygon pixels for label " << labels[label] <<  endl;
+			selectPolygonPixels(poly, manualRegionsCount, manualRegionsOnImage);
+			//cout << "End selecting" << endl;
 
-			vector<Entry> newData = hierClassifiers.front()->extractEntries(image, terrain, autoRegionsOnImage);
-			for(int e = 0; e < newData.size(); e++){
-				if(mapRegionIdToLabel.count(assignedManualId[newData[e].imageId]) > 0){
-					newData[e].label = mapRegionIdToLabel[assignedManualId[newData[e].imageId]];
-					dataset.push_back(newData[e]);
-				}
+			pObject = pObject->NextSiblingElement("object");
+		}
+
+		map<int, int> assignedManualId = hierClassifiers.front()->assignManualId(autoRegionsOnImage, manualRegionsOnImage);
+		//imshow("original", image);
+		//imshow("segments", hierClassifiers.front()->colorSegments(autoRegionsOnImage));
+		//waitKey();
+
+		//TODO change format of hokuyoAllPointsCamera
+		vector<Entry> newData = hierClassifiers.front()->extractEntries(image, hokuyoAllPointsCamera, autoRegionsOnImage);
+		for(int e = 0; e < newData.size(); e++){
+			if(mapRegionIdToLabel.count(assignedManualId[newData[e].imageId]) > 0){
+				newData[e].label = mapRegionIdToLabel[assignedManualId[newData[e].imageId]];
+				dataset.push_back(newData[e]);
 			}
 		}
+
 	}
 
 	map<int, double> sizeOfLabels;

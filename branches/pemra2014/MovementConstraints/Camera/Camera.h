@@ -90,6 +90,11 @@ class Camera {
 
 	cv::Mat compOrient(cv::Mat imuData);
 
+	cv::Mat compTrans(	cv::Mat orient,
+						cv::Mat encodersDiff);
+
+	bool readLine(std::ifstream& stream, cv::Mat data);
+
 	/** \brief Funkcja rysująca na obrazie wielobok i wypełniająca go wartością regionId.
 	 *
 	 */
