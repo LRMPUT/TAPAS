@@ -218,22 +218,35 @@ std::vector<cv::Point3f> Camera::computePointReprojection(	const std::vector<cv:
 }
 
 cv::Mat Camera::compOrient(cv::Mat imuData){
+	//cout << "Computing orientation from IMU" << endl;
+	//cout << "imuData = " << imuData << endl;
+	Matx44f imuOrigCamera(	0.0017, 0.9994, -0.0339, 0,
+							-0.5397, 0.0295, 0.8413, 0,
+							0.8418, 0.0169, 0.5395, 0,
+							0, 0, 0, 1);
+
 	Mat ret(Mat::eye(4, 4, CV_32FC1));
-	float yaw = imuData.at<float>(11);
-	float pitch = imuData.at<float>(10);
-	float roll = imuData.at<float>(9);
+	float yaw = imuData.at<float>(11)*PI/180;
+	float pitch = imuData.at<float>(10)*PI/180;
+	float roll = imuData.at<float>(9)*PI/180;
+	//cout << "Computing Rz, Ry, Rx, yaw = " << yaw << endl;
 	Matx33f Rz(	cos(yaw), sin(yaw), 0,
 				-sin(yaw), cos(yaw), 0,
 				0, 0, 1);
+	//cout << "Rz = " << Rz << endl;
 	Matx33f Ry(	cos(pitch), 0, -sin(pitch),
 				0, 1, 0,
 				sin(pitch), 0, cos(pitch));
+	//cout << "Ry = " << Ry << endl;
 	Matx33f Rx(	1, 0, 0,
 				0, cos(roll), sin(roll),
 				0, -sin(roll), cos(roll));
+	//cout << "Rx = " << Rx << endl;
 	Mat tmp(Rx*Ry*Rz);
 	tmp.copyTo(ret(Rect(0, 0, 3, 3)));
-	return ret;
+
+	//cout << "End computing orientation from IMU" << endl;
+	return Mat(imuOrigCamera)*ret;
 }
 
 
@@ -258,10 +271,11 @@ cv::Mat Camera::compTrans(	cv::Mat orient,
 	return trans;
 }
 
-bool Camera::readLine(std::ifstream& stream, Mat data){
+bool Camera::readLine(std::ifstream& stream, Mat& data){
 	data = Mat(0, 1, CV_32FC1);
 	string line;
 	getline(stream, line);
+	//cout << "Got line: " << line << endl;
 	if(stream.eof()){
 		return false;
 	}
@@ -304,6 +318,7 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 
 	ifstream hokuyoFile(dir.string() + "/hokuyo.data");
 	if(!hokuyoFile.is_open()){
+		cout << dir.string() + "/hokuyo.data" << endl;
 		throw "Error - no hokuyo file";
 	}
 	ifstream imuFile(dir.string() + "/imu.data");
@@ -320,6 +335,13 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 	}
 	Mat hokuyoAllPointsCamera;
 	Mat imuPrev, encodersPrev;
+	int hokuyoCurTime;
+	hokuyoFile >> hokuyoCurTime;
+	int imuCurTime;
+	imuFile >> imuCurTime;
+	int encodersCurTime;
+	encodersFile >> encodersCurTime;
+
 	bool endFlag = false;
 	while(!endFlag)
 	{
@@ -329,15 +351,13 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 			endFlag = true;
 			break;
 		}
-		string cameraImageFileExt;
-		cameraFile >> cameraImageFileExt;
-		char buffer[50];
-		sscanf(cameraImageFileExt.c_str(), "%s.jpg", buffer);
-		string cameraImageFile(buffer);
+		filesystem::path cameraImageFile;
+		cameraFile >> cameraImageFile;
+		cout << "Camera time: " << cameraCurTime << ", camera file: " << cameraImageFile.stem() << endl;
 
-		int hokuyoCurTime;
-		hokuyoFile >> hokuyoCurTime;
 		while(hokuyoCurTime <= cameraCurTime){
+			cout << "Hokuyo time: " << hokuyoCurTime << endl;
+
 			Mat hokuyoCurPoints, hokuyoCurPointsDist, hokuyoCurPointsInt;
 			char tmpChar;
 			hokuyoFile >> tmpChar;
@@ -349,52 +369,53 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 			static const float startAngle = -45*PI/180;
 			static const float stepAngle = 0.25*PI/180;
 			for(int i = 0; i < hokuyoCurPointsDist.cols; i++){
-				hokuyoCurPoints.at<float>(i, 0) = -cos(startAngle + stepAngle*i)*hokuyoCurPointsDist.at<float>(i);
-				hokuyoCurPoints.at<float>(i, 1) = 0;
-				hokuyoCurPoints.at<float>(i, 2) = sin(startAngle + stepAngle*i)*hokuyoCurPointsDist.at<float>(i);
+				hokuyoCurPoints.at<float>(0, i) = -cos(startAngle + stepAngle*i)*hokuyoCurPointsDist.at<float>(i);
+				hokuyoCurPoints.at<float>(1, i) = 0;
+				hokuyoCurPoints.at<float>(2, i) = sin(startAngle + stepAngle*i)*hokuyoCurPointsDist.at<float>(i);
 			}
-			hokuyoCurPointsDist.copyTo(hokuyoCurPoints.colRange(4, 4));
-			hokuyoCurPointsInt.copyTo(hokuyoCurPoints.colRange(5, 5));
+			hokuyoCurPointsDist.copyTo(hokuyoCurPoints.rowRange(4, 5));
+			hokuyoCurPointsInt.copyTo(hokuyoCurPoints.rowRange(5, 6));
 
-			hokuyoCurPoints.rowRange(0, 3) = cameraOrigLaser.front().inv()*hokuyoCurPoints.rowRange(0, 3);
+			hokuyoCurPoints.rowRange(0, 4) = cameraOrigLaser.front().inv()*hokuyoCurPoints.rowRange(0, 4);
 
 			if(imuPrev.empty()){
-				int tmpTime;
-				imuFile >> tmpTime;
 				readLine(imuFile, imuPrev);
+				imuFile >> imuCurTime;
 			}
 			if(encodersPrev.empty()){
-				int tmpTime;
-				encodersFile >> tmpTime;
 				readLine(encodersFile, encodersPrev);
+				encodersFile >> encodersCurTime;
 			}
 			Mat imuCur, encodersCur;
-			int imuCurTime;
-			imuFile >> imuCurTime;
+
 			while(imuCurTime <= hokuyoCurTime){
+				cout << "Imu time: " << imuCurTime << endl;
 				readLine(imuFile, imuCur);
 
 				imuFile >> imuCurTime;
 			}
 
-			int encodersCurTime;
-			encodersFile >> encodersCurTime;
 			while(encodersCurTime <= hokuyoCurTime){
+				cout << "Encoders time: " << encodersCurTime << endl;
 				readLine(encodersFile, encodersCur);
 
 				encodersFile >> encodersCurTime;
 			}
 
+			cout << "Computing RT" << endl;
 			Mat trans = compTrans(compOrient(imuPrev), encodersCur - encodersPrev);
 			Mat rot = compOrient(imuPrev).t()*compOrient(imuCur);	//inversion of orthonormal matrix
 			Mat RT = Mat::eye(4, 4, CV_32FC1);
 			trans.copyTo(RT(Rect(3, 0, 1, 4)));
 			RT = RT*rot;
 
-			hokuyoAllPointsCamera.rowRange(0, 3) = hokuyoAllPointsCamera.rowRange(0, 3)*RT;
-			Mat tmpAllPoints(6, hokuyoAllPointsCamera.cols + hokuyoCurPoints.cols, CV_32FC1);
-			hokuyoAllPointsCamera.copyTo(tmpAllPoints.colRange(0, hokuyoAllPointsCamera.cols - 1));
-			hokuyoCurPoints.copyTo(tmpAllPoints.colRange(hokuyoAllPointsCamera.cols, hokuyoAllPointsCamera.cols + hokuyoCurPoints.cols - 1));
+			cout << "Moving hokuyoAllPointsCamera" << endl;
+			Mat tmpAllPoints(hokuyoCurPoints.rows, hokuyoAllPointsCamera.cols + hokuyoCurPoints.cols, CV_32FC1);
+			if(!hokuyoAllPointsCamera.empty()){
+				hokuyoAllPointsCamera.rowRange(0, 4) = RT*hokuyoAllPointsCamera.rowRange(0, 4);
+				hokuyoAllPointsCamera.copyTo(tmpAllPoints.colRange(0, hokuyoAllPointsCamera.cols));
+			}
+			hokuyoCurPoints.copyTo(tmpAllPoints.colRange(hokuyoAllPointsCamera.cols, hokuyoAllPointsCamera.cols + hokuyoCurPoints.cols));
 			hokuyoAllPointsCamera = tmpAllPoints;
 
 			imuCur.copyTo(imuPrev);
@@ -402,7 +423,10 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 			hokuyoFile >> hokuyoCurTime;
 		}
 
-		TiXmlDocument data(cameraImageFile + string(".xml"));
+		TiXmlDocument data(	cameraImageFile.parent_path().string() +
+							string("/") +
+							cameraImageFile.stem().string() +
+							string(".xml"));
 		if(!data.LoadFile()){
 			throw "Bad data file";
 		}
@@ -469,7 +493,6 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 		//imshow("segments", hierClassifiers.front()->colorSegments(autoRegionsOnImage));
 		//waitKey();
 
-		//TODO change format of hokuyoAllPointsCamera
 		vector<Entry> newData = hierClassifiers.front()->extractEntries(image, hokuyoAllPointsCamera, autoRegionsOnImage);
 		for(int e = 0; e < newData.size(); e++){
 			if(mapRegionIdToLabel.count(assignedManualId[newData[e].imageId]) > 0){

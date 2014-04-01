@@ -21,8 +21,8 @@ int main()
 		Debug debug(&robot);
 		//debug.testConstraints(filesystem::path("../MovementConstraints/Camera/database/train"),
 		//						filesystem::path("../MovementConstraints/Camera/database/classify"));
-
-		debug.testEncoders();
+		debug.testTraining(filesystem::path("../MovementConstraints/Camera/database/learn"));
+		//debug.testEncoders();
 		int a;
 		//while(1)
 		//{
