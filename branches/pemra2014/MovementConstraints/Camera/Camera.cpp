@@ -220,10 +220,6 @@ std::vector<cv::Point3f> Camera::computePointReprojection(	const std::vector<cv:
 cv::Mat Camera::compOrient(cv::Mat imuData){
 	//cout << "Computing orientation from IMU" << endl;
 	//cout << "imuData = " << imuData << endl;
-	Matx44f imuOrigCamera(	0.0017, 0.9994, -0.0339, 0,
-							-0.5397, 0.0295, 0.8413, 0,
-							0.8418, 0.0169, 0.5395, 0,
-							0, 0, 0, 1);
 
 	Mat ret(Mat::eye(4, 4, CV_32FC1));
 	float yaw = imuData.at<float>(11)*PI/180;
@@ -246,16 +242,16 @@ cv::Mat Camera::compOrient(cv::Mat imuData){
 	tmp.copyTo(ret(Rect(0, 0, 3, 3)));
 
 	//cout << "End computing orientation from IMU" << endl;
-	return Mat(imuOrigCamera)*ret;
+	return ret;
 }
 
 
 cv::Mat Camera::compTrans(	cv::Mat orient,
 							cv::Mat encodersDiff)
 {
-	static const float wheelCir = 200*3.14*2;
-	static const float wheelDistance = 400;
-	static const int encodersCPR = 64;
+	static const float wheelCir = 178*PI;
+	static const float wheelDistance = 432;
+	static const int encodersCPR = 300;
 	float sl = encodersDiff.at<float>(0)*wheelCir/encodersCPR;
 	float sr = encodersDiff.at<float>(1)*wheelCir/encodersCPR;
 	float theta = (sl - sr)/(-wheelDistance);
@@ -311,6 +307,7 @@ int Camera::selectPolygonPixels(std::vector<cv::Point2f> polygon, float regionId
 
 
 void Camera::learnFromDir(boost::filesystem::path dir){
+	cout << "Learning from dir" << endl;
 	//namedWindow("segments");
 	//namedWindow("original");
 	vector<Entry> dataset;
@@ -318,7 +315,6 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 
 	ifstream hokuyoFile(dir.string() + "/hokuyo.data");
 	if(!hokuyoFile.is_open()){
-		cout << dir.string() + "/hokuyo.data" << endl;
 		throw "Error - no hokuyo file";
 	}
 	ifstream imuFile(dir.string() + "/imu.data");
@@ -333,14 +329,16 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 	if(!encodersFile.is_open()){
 		throw "Error - no camera file";
 	}
-	Mat hokuyoAllPointsCamera;
+	Mat hokuyoAllPointsGlobal;
 	Mat imuPrev, encodersPrev;
+	Mat globalPos, curPos;
 	int hokuyoCurTime;
 	hokuyoFile >> hokuyoCurTime;
 	int imuCurTime;
 	imuFile >> imuCurTime;
 	int encodersCurTime;
 	encodersFile >> encodersCurTime;
+	namedWindow("test");
 
 	bool endFlag = false;
 	while(!endFlag)
@@ -369,7 +367,7 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 			static const float startAngle = -45*PI/180;
 			static const float stepAngle = 0.25*PI/180;
 			for(int i = 0; i < hokuyoCurPointsDist.cols; i++){
-				hokuyoCurPoints.at<float>(0, i) = -cos(startAngle + stepAngle*i)*hokuyoCurPointsDist.at<float>(i);
+				hokuyoCurPoints.at<float>(0, i) = cos(startAngle + stepAngle*i)*hokuyoCurPointsDist.at<float>(i);
 				hokuyoCurPoints.at<float>(1, i) = 0;
 				hokuyoCurPoints.at<float>(2, i) = sin(startAngle + stepAngle*i)*hokuyoCurPointsDist.at<float>(i);
 			}
@@ -380,6 +378,8 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 
 			if(imuPrev.empty()){
 				readLine(imuFile, imuPrev);
+				globalPos = compOrient(imuPrev)*cameraOrigImu.front();
+				globalPos.copyTo(curPos);
 				imuFile >> imuCurTime;
 			}
 			if(encodersPrev.empty()){
@@ -402,28 +402,61 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 				encodersFile >> encodersCurTime;
 			}
 
-			cout << "Computing RT" << endl;
+			cout << "Computing curPos" << endl;
 			Mat trans = compTrans(compOrient(imuPrev), encodersCur - encodersPrev);
-			Mat rot = compOrient(imuPrev).t()*compOrient(imuCur);	//inversion of orthonormal matrix
-			Mat RT = Mat::eye(4, 4, CV_32FC1);
-			trans.copyTo(RT(Rect(3, 0, 1, 4)));
-			RT = RT*rot;
+			Mat curTrans = Mat(curPos, Rect(3, 0, 1, 4)) + trans;
+			Mat curRot = compOrient(imuCur)*cameraOrigImu.front();
+			curRot.copyTo(curPos);
+			curTrans.copyTo(Mat(curPos, Rect(3, 0, 1, 4)));
+			cout << "trans = " << trans << endl;
+			cout << "curTrans = " << curTrans << endl;
+			cout << "curRot = " << curRot << endl;
+			cout << "curPos = " << curPos << endl;
+			//cout << "globalPos.inv()*curPos = " << globalPos.inv()*curPos << endl;
 
-			cout << "Moving hokuyoAllPointsCamera" << endl;
-			Mat tmpAllPoints(hokuyoCurPoints.rows, hokuyoAllPointsCamera.cols + hokuyoCurPoints.cols, CV_32FC1);
-			if(!hokuyoAllPointsCamera.empty()){
-				hokuyoAllPointsCamera.rowRange(0, 4) = RT*hokuyoAllPointsCamera.rowRange(0, 4);
-				hokuyoAllPointsCamera.copyTo(tmpAllPoints.colRange(0, hokuyoAllPointsCamera.cols));
+			cout << "Moving hokuyoAllPointsGlobal" << endl;
+			Mat tmpAllPoints(hokuyoCurPoints.rows, hokuyoAllPointsGlobal.cols + hokuyoCurPoints.cols, CV_32FC1);
+			if(!hokuyoAllPointsGlobal.empty()){
+				hokuyoAllPointsGlobal.copyTo(tmpAllPoints.colRange(0, hokuyoAllPointsGlobal.cols));
 			}
-			hokuyoCurPoints.copyTo(tmpAllPoints.colRange(hokuyoAllPointsCamera.cols, hokuyoAllPointsCamera.cols + hokuyoCurPoints.cols));
-			hokuyoAllPointsCamera = tmpAllPoints;
+			cout << "Addding hokuyoCurPoints" << endl;
+			Mat hokuyoCurPointsGlobal(hokuyoCurPoints.rows, hokuyoCurPoints.cols, CV_32FC1);
+			hokuyoCurPointsGlobal.rowRange(0, 4) = curPos*hokuyoCurPoints.rowRange(0, 4);
+			hokuyoCurPointsGlobal.rowRange(4, 6) = hokuyoCurPoints.rowRange(4, 6);
+			//cout << hokuyoCurPointsGlobal.channels() << ", " << hokuyoAllPointsGlobal.channels() << endl;
+			hokuyoCurPointsGlobal.copyTo(tmpAllPoints.colRange(hokuyoAllPointsGlobal.cols, hokuyoAllPointsGlobal.cols + hokuyoCurPoints.cols));
+			hokuyoAllPointsGlobal = tmpAllPoints;
+
+			//waitKey();
 
 			imuCur.copyTo(imuPrev);
 			encodersCur.copyTo(encodersPrev);
 			hokuyoFile >> hokuyoCurTime;
 		}
 
-		TiXmlDocument data(	cameraImageFile.parent_path().string() +
+		cout << "Displaying test image from file: " << dir.string() + string("/") + cameraImageFile.string() << endl;
+		Mat image = imread(dir.string() + string("/") + cameraImageFile.filename().string());
+		Mat hokuyoAllPointsCamera = curPos.inv()*hokuyoAllPointsGlobal.rowRange(0, 4);
+		cout << "Computing point projection" << endl;
+		vector<Point2f> pointsImage;
+		projectPoints(	hokuyoAllPointsCamera.rowRange(0, 3).t(),
+						Matx<float, 3, 1>(0, 0, 0),
+						Matx<float, 3, 1>(0, 0, 0),
+						cameraMatrix.front(),
+						distCoeffs.front(),
+						pointsImage);
+		cout << "Drawing points" << endl;
+		for(int p = 0; p < pointsImage.size(); p++){
+			if(pointsImage[p].x >= 0 && pointsImage[p].x < image.cols &&
+				pointsImage[p].y >= 0 && pointsImage[p].y < image.rows)
+			{
+				image.at<Vec3b>(pointsImage[p].y, pointsImage[p].x) = Vec3b(0, 0, 255);
+			}
+		}
+		imshow("test", image);
+		waitKey();
+
+		/*TiXmlDocument data(	cameraImageFile.parent_path().string() +
 							string("/") +
 							cameraImageFile.stem().string() +
 							string(".xml"));
@@ -499,11 +532,11 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 				newData[e].label = mapRegionIdToLabel[assignedManualId[newData[e].imageId]];
 				dataset.push_back(newData[e]);
 			}
-		}
+		}*/
 
 	}
 
-	map<int, double> sizeOfLabels;
+	/*map<int, double> sizeOfLabels;
 	for(int e = 0; e < dataset.size(); e++){
 		sizeOfLabels[dataset[e].label] += dataset[e].weight;
 	}
@@ -527,7 +560,7 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 
 	if(cacheEnabled){
 		saveCache("cameraCache");
-	}
+	}*/
 }
 
 void Camera::classifyFromDir(boost::filesystem::path dir){
@@ -919,6 +952,7 @@ void Camera::readSettings(TiXmlElement* settings){
 	pPtr = settings->FirstChildElement("sensor");
 	cameraOrigGlobal.resize(numCameras);
 	cameraOrigLaser.resize(numCameras);
+	cameraOrigImu.resize(numCameras);
 	cameraMatrix.resize(numCameras);
 	distCoeffs.resize(numCameras);
 	hierClassifiers.resize(numCameras);
@@ -940,6 +974,11 @@ void Camera::readSettings(TiXmlElement* settings){
 
 		cameraOrigGlobal[idx] = readMatrixSettings(pPtr, "position_global", 4, 4);
 		cameraOrigLaser[idx] = readMatrixSettings(pPtr, "position_laser", 4, 4);
+		//TODO Add to settings XML
+		cameraOrigImu[idx] = Mat(Matx44f(	0.0017, 0.9994, -0.0339, 0,
+										-0.5397, 0.0295, 0.8413, 0,
+										0.8418, 0.0169, 0.5395, 0,
+										0, 0, 0, 1).t());
 		cameraMatrix[idx] = readMatrixSettings(pPtr, "camera_matrix", 3, 3);
 		distCoeffs[idx] = readMatrixSettings(pPtr, "dist_coeffs", 1, 5);
 
