@@ -13,7 +13,13 @@
 #include "../../Trobot/include/SerialPort.h"
 
 class Drivers {
+
 	trobot::SerialPort* serialPort;
+
+	boost::circular_buffer<char> driverResp;
+
+	//bool commandCorrect;
+
 public:
 	Drivers();
 	Drivers(unsigned int baud, const std::string device);
@@ -25,6 +31,7 @@ public:
 	void setMotorSpeed(float speed);
 
 	void stopMotor();
+
 
 };
 
