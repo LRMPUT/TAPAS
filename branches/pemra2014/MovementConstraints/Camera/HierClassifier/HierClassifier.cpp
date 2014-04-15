@@ -645,8 +645,8 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 						meanLaser,
 						CV_COVAR_NORMAL | CV_COVAR_SCALE | CV_COVAR_COLS,
 						CV_32F);
-		cout << "meanLaser = " << meanLaser << endl;
-		cout << "covarLaser = " << covarLaser << endl;
+		//cout << "meanLaser = " << meanLaser << endl;
+		//cout << "covarLaser = " << covarLaser << endl;
 		covarLaser = covarLaser.reshape(0, 1);
 		meanLaser = meanLaser.reshape(0, 1);
 		//normalize(covarLaser, covarLaser);

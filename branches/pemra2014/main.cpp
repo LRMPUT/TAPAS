@@ -21,8 +21,12 @@ int main()
 		Debug debug(&robot);
 		//debug.testConstraints(filesystem::path("../MovementConstraints/Camera/database/train"),
 		//						filesystem::path("../MovementConstraints/Camera/database/classify"));
-		debug.testClassification(filesystem::path("../MovementConstraints/Camera/database/learn/przejazd14"),
-								filesystem::path("../MovementConstraints/Camera/database/learn/przejazd15"));
+		vector<filesystem::path> dirsLearn, dirsClassify;
+		dirsLearn.push_back(filesystem::path("../MovementConstraints/Camera/database/learn/przejazd14"));
+		dirsLearn.push_back(filesystem::path("../MovementConstraints/Camera/database/learn/przejazd18"));
+		dirsClassify.push_back(filesystem::path("../MovementConstraints/Camera/database/learn/przejazd15"));
+		dirsClassify.push_back(filesystem::path("../MovementConstraints/Camera/database/learn/przejazd19"));
+		debug.testClassification(dirsLearn, dirsClassify);
 		//debug.testEncoders();
 		int a;
 		//while(1)

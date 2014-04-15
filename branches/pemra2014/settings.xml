@@ -80,6 +80,8 @@
 			<labels>
 				<label text="grass" id="0"/>
 				<label text="pavement" id="1"/>
+				<label text="pavement2" id="2" />
+				<label text="asphalt" id="3" />
 			</labels>
 
 			<sensor id="left">

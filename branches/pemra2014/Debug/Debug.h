@@ -45,9 +45,10 @@ public:
 
 	void testSegmentation(boost::filesystem::path dir);
 
-	void testTraining(boost::filesystem::path dir);
+	void testTraining(std::vector<boost::filesystem::path> dir);
 
-	void testClassification(boost::filesystem::path dirTrain, boost::filesystem::path dirTest);
+	void testClassification(std::vector<boost::filesystem::path> dirsTrain,
+							std::vector<boost::filesystem::path> dirsTest);
 
 	void testConstraints(boost::filesystem::path dirTrain, boost::filesystem::path dirTest);
 

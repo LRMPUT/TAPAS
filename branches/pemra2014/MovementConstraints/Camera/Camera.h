@@ -121,12 +121,12 @@ class Camera {
 	/** \brief Funkcja ucząca klasyfikator danymi z katalogu.
 	 *
 	 */
-	void learnFromDir(boost::filesystem::path dir);
+	void learnFromDir(std::vector<boost::filesystem::path> dirs);
 
 	/** \brief Funkcja klasyfikująca dane z katalogu.
 	 *
 	 */
-	void classifyFromDir(boost::filesystem::path dir);
+	void classifyFromDir(std::vector<boost::filesystem::path> dirs);
 
 	/*cv::Mat classifySlidingWindow(cv::Mat image);
 

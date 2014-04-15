@@ -558,7 +558,7 @@ void Camera::processDir(boost::filesystem::path dir,
 }
 
 
-void Camera::learnFromDir(boost::filesystem::path dir){
+void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 	cout << "Learning from dir" << endl;
 	//namedWindow("segments");
 	//namedWindow("original");
@@ -567,11 +567,23 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 	std::vector<std::map<int, int> > mapRegionIdToLabel;
 	std::vector<cv::Mat> terrains;
 
-	processDir(	dir,
-				images,
-				manualRegionsOnImages,
-				mapRegionIdToLabel,
-				terrains);
+	for(int d = 0; d < dirs.size(); d++){
+		std::vector<cv::Mat> tmpImages;
+		std::vector<cv::Mat> tmpManualRegionsOnImages;
+		std::vector<std::map<int, int> > tmpMapRegionIdToLabel;
+		std::vector<cv::Mat> tmpTerrains;
+		processDir(	dirs[d],
+					tmpImages,
+					tmpManualRegionsOnImages,
+					tmpMapRegionIdToLabel,
+					tmpTerrains);
+		for(int i = 0; i < tmpImages.size(); i++){
+			images.push_back(tmpImages[i]);
+			manualRegionsOnImages.push_back(tmpManualRegionsOnImages[i]);
+			mapRegionIdToLabel.push_back(tmpMapRegionIdToLabel[i]);
+			terrains.push_back(tmpTerrains[i]);
+		}
+	}
 
 	cout << "images.size() = " << images.size() << endl << "manualRegionsOnImages.size() = " << manualRegionsOnImages.size() << endl;
 
@@ -631,7 +643,7 @@ void Camera::learnFromDir(boost::filesystem::path dir){
 	}
 }
 
-void Camera::classifyFromDir(boost::filesystem::path dir){
+void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	cout << "Classifying" << endl;
 	for(int l = 0; l < labels.size(); l++){
 		namedWindow(labels[l]);
@@ -648,11 +660,23 @@ void Camera::classifyFromDir(boost::filesystem::path dir){
 	std::vector<std::map<int, int> > mapRegionIdToLabel;
 	std::vector<cv::Mat> terrains;
 
-	processDir(	dir,
-				images,
-				manualRegionsOnImages,
-				mapRegionIdToLabel,
-				terrains);
+	for(int d = 0; d < dirs.size(); d++){
+		std::vector<cv::Mat> tmpImages;
+		std::vector<cv::Mat> tmpManualRegionsOnImages;
+		std::vector<std::map<int, int> > tmpMapRegionIdToLabel;
+		std::vector<cv::Mat> tmpTerrains;
+		processDir(	dirs[d],
+					tmpImages,
+					tmpManualRegionsOnImages,
+					tmpMapRegionIdToLabel,
+					tmpTerrains);
+		for(int i = 0; i < tmpImages.size(); i++){
+			images.push_back(tmpImages[i]);
+			manualRegionsOnImages.push_back(tmpManualRegionsOnImages[i]);
+			mapRegionIdToLabel.push_back(tmpMapRegionIdToLabel[i]);
+			terrains.push_back(tmpTerrains[i]);
+		}
+	}
 
 	cout << "images.size() = " << images.size() << endl << "manualRegionsOnImages.size() = " << manualRegionsOnImages.size() << endl;
 
