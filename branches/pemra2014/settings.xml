@@ -4,7 +4,7 @@
 			<cache enabled="true" />
 			<HierClassifier>
 				<cache enabled="true" />
-				<segmentation k="50" min_size="200" />
+				<segmentation k="200" min_size="400" />
 				<descriptor>
 					<hist_HS len_H="4" len_S="4" />
 					<hist_V len="8" />
@@ -45,7 +45,7 @@
 					</svm>
 					<info desc_beg="2" desc_end="4" />
 				</Classifier>
-				<!--<Classifier type="SVM">
+				<Classifier type="SVM">
 					<cache enabled="true" />
 					<svm type="C_SVC">
 						<kernelType value="RBF" />
@@ -64,7 +64,7 @@
 						<C value="16607.5" />
 					</svm>
 					<info desc_beg="7" desc_end="8" />
-				</Classifier>-->
+				</Classifier>
 				<!--<Classifier type="SVM">
 					<cache enabled="true" />
 					<svm type="C_SVC">
@@ -79,9 +79,7 @@
 			<learning dir="../../MovementConstraints/Camera/training_data" />
 			<labels>
 				<label text="grass" id="0"/>
-				<label text="wood" id="1"/>
-				<label text="ceramic" id="2"/>
-				<label text="asphalt" id="3"/>
+				<label text="pavement" id="1"/>
 			</labels>
 
 			<sensor id="left">
@@ -92,11 +90,17 @@
 						   0         0         0    1.0000
 				</position_global>
 				<position_laser>
-					0.9986    0.0307    0.0427 	49.7
-				 -0.0472    0.8810    0.4707	-526.1
-				 -0.0232   -0.4720    0.8813	-471.9
+					0.9995    0.0205   -0.0250	61.3
+				 -0.0037    0.8406    0.5416	-482.9
+					0.0321   -0.5412    0.8403	-497.5
 				 0 0 0 1
 				</position_laser>
+				<position_imu>
+		   		0.0401    0.9992    0.0001	0
+					-0.6617    0.0265    0.7493	0
+					0.7487   -0.0302    0.6623	0
+					0	0	0	1
+				</position_imu>
 				<camera_matrix>
 					646.345999973665580	0	312.531846659870780
         	0	645.650527914581740	244.961100510703430

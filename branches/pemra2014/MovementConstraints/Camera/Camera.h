@@ -111,6 +111,12 @@ class Camera {
 							float regionId,
 							cv::Mat& regionsOnImage);
 
+	void processDir(boost::filesystem::path dir,
+					std::vector<cv::Mat>& images,
+					std::vector<cv::Mat>& manualRegionsOnImages,
+					std::vector<std::map<int, int> >& mapRegionIdToLabel,
+					std::vector<cv::Mat>& terrains);
+
 
 	/** \brief Funkcja ucząca klasyfikator danymi z katalogu.
 	 *

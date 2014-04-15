@@ -299,10 +299,13 @@ void HierClassifier::loadCache(boost::filesystem::path file){
 void HierClassifier::train(const std::vector<Entry>& data,
 		int inumLabels)
 {
-	cout << "HierClassifier::train, numIterations = " << numIterations << endl;
+	cout << "HierClassifier::train, numIterations = " << numIterations << ", numLabels = " << inumLabels << endl;
 
 	clearData();
 	prepareData(data);
+
+	static const float epsMin = 10e-20;
+	static const float epsMax = 10e20;
 
 	numLabels = inumLabels;
 	//initializing weights
@@ -332,7 +335,7 @@ void HierClassifier::train(const std::vector<Entry>& data,
 					int ind = (l == dataClassifiers[c][e].label ? 1 : -1);
 					//cout << ind << " (" << probEst.at<float>(l) << "), ";
 					//dataWeights*entrysWeights
-					score += dataClassifiers[maxIndex][e].weight*dataWeights[e]*probEst.at<float>(l)*ind/numLabels;
+					score += dataClassifiers[c][e].weight*dataWeights[e]*probEst.at<float>(l)*ind/numLabels;
 				}
 				//cout << endl;
 			}
@@ -346,6 +349,10 @@ void HierClassifier::train(const std::vector<Entry>& data,
 		//computing weight for best classifer
 		//compute accurate value of alpha
 		double alpha = 0.5*log((1 + maxVal)/(1 - maxVal));
+		if(alpha > epsMax || std::isnan(alpha)){
+			cout << "Warning - alpha greater than epsMax" << endl;
+			alpha = epsMax;
+		}
 		weights.push_back(alpha);
 		sumClassifierWeights += alpha;
 
@@ -358,25 +365,50 @@ void HierClassifier::train(const std::vector<Entry>& data,
 		//recomputing dataWeights
 		double sum = 0;
 		double sumVar = 0;
+		double maxWeight = 0;
+		int indMaxWeight = 0;
 		for(int e = 0; e < dataClassifiers[maxIndex].size(); e++){
 			Mat probEst = classifiers.back()->classify(dataClassifiers[maxIndex][e].descriptor);
 			probEst *= 2;
 			probEst -= 1;
 			double score = 0;
-			//cout << "Entry " << e << " ";
+			//if(e == 602){
+			//	cout << "Entry " << e << " ";
+			//}
 			for(int l = 0; l < numLabels; l++){
 				int ind = (l == dataClassifiers[maxIndex][e].label ? 1 : -1);
 				//entrysWeights
 				score += probEst.at<float>(l)*ind/numLabels;
-				//cout << (probEst.at<float>(l)+1)/2 << " (" << ind << "), ";
+				//if(e == 602){
+				//	cout << (probEst.at<float>(l)+1)/2 << " (" << ind << "), ";
+				//}
 			}
 			score *= dataClassifiers[maxIndex].size() * dataClassifiers[maxIndex][e].weight;
-			//cout << endl;
+			//if(e == 602){
+			//	cout << ", score = " << score << endl;
+			//}
 			dataWeights[e] *= exp(-alpha*score);
+			if(dataWeights[e] < epsMin){
+				cout << "Warning - dataWeights[" << e << "] lesser than epsMin" << endl;
+				dataWeights[e] = epsMin;
+			}
+			if(dataWeights[e] > epsMax){
+				cout << "Warning - dataWeights[" << e << "] greater than epsMax" << endl;
+				dataWeights[e] = epsMax;
+			}
+			if(dataWeights[e] > maxWeight){
+				maxWeight = dataWeights[e];
+				indMaxWeight = e;
+			}
+			//if(e == 602){
+			//	cout << "dataWeights[" << e << "] = " << dataWeights[e] << endl;
+			//}
 			//dataWeights*entrysWeights
 			sum += dataWeights[e]*dataClassifiers[maxIndex][e].weight;
 			sumVar += dataWeights[e];
+			//cout << "sum = " << sum << endl;
 		}
+		cout << "max weight = " << maxWeight << ", ind = " << indMaxWeight << endl;
 		double var = 0;
 		double mean = sumVar / dataWeights.size();
 		for(int e = 0; e < dataWeights.size(); e++){
@@ -613,6 +645,8 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 						meanLaser,
 						CV_COVAR_NORMAL | CV_COVAR_SCALE | CV_COVAR_COLS,
 						CV_32F);
+		cout << "meanLaser = " << meanLaser << endl;
+		cout << "covarLaser = " << covarLaser << endl;
 		covarLaser = covarLaser.reshape(0, 1);
 		meanLaser = meanLaser.reshape(0, 1);
 		//normalize(covarLaser, covarLaser);
@@ -646,8 +680,8 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 
 		Mat histogramDI;
 		int channelsDI[] = {0, 1};
-		float rangeD[] = {2000, 3000};
-		float rangeI[] = {800, 2500};
+		float rangeD[] = {600, 4000};
+		float rangeI[] = {1600, 4700};
 		const float* rangesDI[] = {rangeD, rangeI};
 		int sizeDI[] = {histDLen, histILen};
 		Mat valHistD = valuesTer.rowRange(4, 5);
