@@ -607,12 +607,12 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		}
 
 		int channelsHS[] = {0, 1};
-		float rangeH[] = {0, 60};
-		float rangeS[] = {0, 256};
+		float rangeH[] = {0, 97};
+		float rangeS[] = {37, 110};
 		const float* rangesHS[] = {rangeH, rangeS};
 		int sizeHS[] = {histHLen, histSLen};
 		int channelsV[] = {2};
-		float rangeV[] = {0, 256};
+		float rangeV[] = {96, 183};
 		const float* rangesV[] = {rangeV};
 		int sizeV[] = {histVLen};
 		calcHist(&values, 1, channelsHS, Mat(), histogramHS, 2, sizeHS, rangesHS);
@@ -680,8 +680,8 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 
 		Mat histogramDI;
 		int channelsDI[] = {0, 1};
-		float rangeD[] = {600, 4000};
-		float rangeI[] = {1600, 4700};
+		float rangeD[] = {1245, 2947};
+		float rangeI[] = {2234, 2967};
 		const float* rangesDI[] = {rangeD, rangeI};
 		int sizeDI[] = {histDLen, histILen};
 		Mat valHistD = valuesTer.rowRange(4, 5);

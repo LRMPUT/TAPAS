@@ -348,6 +348,14 @@ void Camera::processDir(boost::filesystem::path dir,
 	encodersFile >> encodersCurTime;
 	namedWindow("test");
 
+	static Mat covarImage(3, 3, CV_32FC1, Scalar(0));
+	static Mat meanImage(3, 1, CV_32FC1, Scalar(0));
+	static int numPix = 0;
+
+	static Mat covarLaser(2, 2, CV_32FC1, Scalar(0));
+	static Mat meanLaser(2, 1, CV_32FC1, Scalar(0));
+	static int numPts = 0;
+
 	bool endFlag = false;
 	while(!endFlag)
 	{
@@ -449,6 +457,15 @@ void Camera::processDir(boost::filesystem::path dir,
 			hokuyoAllPointsGlobal = tmpAllPoints;
 
 			//waitKey();
+			Mat covarLaserCur, meanLaserCur;
+			calcCovarMatrix(hokuyoCurPoints.rowRange(4, 6),
+							covarLaserCur,
+							meanLaserCur,
+							CV_COVAR_NORMAL | CV_COVAR_SCALE | CV_COVAR_COLS,
+							CV_32F);
+			meanLaser = (meanLaser*numPts + meanLaserCur*hokuyoCurPoints.cols)/(numPts + hokuyoCurPoints.cols);
+			covarLaser = (covarLaser*numPts + covarLaserCur*hokuyoCurPoints.cols)/(numPts + hokuyoCurPoints.cols);
+			numPts += hokuyoCurPoints.cols;
 
 			imuCur.copyTo(imuPrev);
 			encodersCur.copyTo(encodersPrev);
@@ -475,15 +492,29 @@ void Camera::processDir(boost::filesystem::path dir,
 						distCoeffs.front(),
 						pointsImage);
 		//cout << "Drawing points" << endl;
-		Mat covar, mean;
-		calcCovarMatrix(hokuyoAllPointsGlobal.rowRange(4, 6),
-						covar,
-						mean,
-						CV_COVAR_NORMAL | CV_COVAR_SCALE | CV_COVAR_COLS,
+
+		cout << "Number of points terrain = " << numPts << endl;
+		cout << "mean terrain = " << meanLaser << endl;
+		cout << "covar terrain = " << covarLaser << endl;
+
+		Mat covarImageCur, meanImageCur;
+		Mat imageHSV;
+		cvtColor(image, imageHSV, CV_BGR2HSV);
+		imageHSV = imageHSV.reshape(1, imageHSV.cols*imageHSV.rows);
+		calcCovarMatrix(imageHSV,
+						covarImageCur,
+						meanImageCur,
+						CV_COVAR_NORMAL | CV_COVAR_SCALE | CV_COVAR_ROWS,
 						CV_32F);
-		cout << "Number of points = " << hokuyoAllPointsGlobal.cols << endl;
-		cout << "mean = " << mean << endl;
-		cout << "covar = " << covar << endl;
+
+		meanImage = (meanImage*numPix + meanImageCur.t()*imageHSV.rows)/(numPix + imageHSV.rows);
+		covarImage = (covarImage*numPix + covarImageCur*imageHSV.rows)/(numPix + imageHSV.rows);
+		numPix += imageHSV.rows;
+
+		cout << "Number of points image = " << numPix << endl;
+		cout << "mean image = " << meanImage << endl;
+		cout << "covar image = " << covarImage << endl;
+
 		for(int p = 0; p < pointsImage.size(); p++){
 			if(pointsImage[p].x >= 0 && pointsImage[p].x < image.cols &&
 				pointsImage[p].y >= 0 && pointsImage[p].y < image.rows)
@@ -683,7 +714,7 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	vector<Entry> dataset;
 
 	for(int i = 0; i < images.size(); i++){
-		Mat autoSegmented = hierClassifiers.front()->segmentImage(images[i], 200);
+		Mat autoSegmented = hierClassifiers.front()->segmentImage(images[i]);
 		map<int, int> assignedManualId = hierClassifiers.front()->assignManualId(autoSegmented, manualRegionsOnImages[i]);
 		imshow("original", images[i]);
 		imshow("segments", hierClassifiers.front()->colorSegments(autoSegmented));
