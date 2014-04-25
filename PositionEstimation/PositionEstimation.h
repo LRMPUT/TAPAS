@@ -33,7 +33,8 @@ private:
 	bool runThread;
 
 	// Kalman filter to gather position information
-	ExtendedKalmanFilter EKF;
+	ExtendedKalmanFilter *EKF;
+	cv::Mat state;
 
 	// GPS
 	GPS gps;
@@ -77,7 +78,7 @@ public:
 
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
 	//CV_32SC1 2x1: left, right encoder
-	cv::Mat getEncoderData();
+	cv::Mat getEncoderData(std::chrono::milliseconds &timestamp);
 
 	//----------------------ACCESS TO COMPUTED DATA
 	//CV_32SC1 3x1: x, y, fi

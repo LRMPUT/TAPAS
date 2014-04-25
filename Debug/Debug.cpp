@@ -40,7 +40,8 @@ void Debug::setMotorsVel(float motLeft, float motRight){
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 //CV_32SC1 2x1: left, right encoder
 const cv::Mat Debug::getEncoderData(){
-	return robot->positionEstimation.getEncoderData();
+	std::chrono::milliseconds timestamp;
+	return robot->positionEstimation.getEncoderData(timestamp);
 }
 
 //CV_32SC1 4x1: x, y, lat, lon position

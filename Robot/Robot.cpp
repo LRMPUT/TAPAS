@@ -21,6 +21,8 @@ Robot::Robot(boost::filesystem::path settingsFile) : globalPlanner(this), positi
 	}
 	TiXmlElement* pMovementConstraints = pRobot->FirstChildElement("MovementConstraints");
 	movementConstraints = new MovementConstraints(this, pMovementConstraints);
+
+	startTime = std::chrono::high_resolution_clock::now();
 }
 
 Robot::~Robot() {
@@ -111,7 +113,8 @@ bool Robot::isCameraOpen(){
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 //CV_32UC1 2x1: left, right encoder
 const cv::Mat Robot::getEncoderData(){
-	return positionEstimation.getEncoderData();
+	std::chrono::milliseconds timestamp;
+	return positionEstimation.getEncoderData(timestamp);
 }
 
 //----------------------ACCESS TO COMPUTED DATA
