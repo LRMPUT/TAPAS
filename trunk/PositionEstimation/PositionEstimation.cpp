@@ -16,7 +16,8 @@
 using namespace cv;
 using namespace std;
 
-PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot) {
+PositionEstimation::PositionEstimation(Robot* irobot) :
+		robot(irobot), imu(irobot) , gps(irobot), encoders(irobot) {
 
 	ENCODER_TICK_PER_REV = 48 * 75;
 	WHEEL_DIAMETER = 0.12;
@@ -37,7 +38,7 @@ PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot) {
 PositionEstimation::~PositionEstimation() {
 	closeGps();
 	closeImu();
-	delete KF;
+	delete EKF;
 }
 
 void PositionEstimation::run() {
@@ -74,19 +75,7 @@ void PositionEstimation::stopThread() {
 }
 
 void PositionEstimation::kalmanSetup() {
-	KF = new KalmanFilter();
-	KF->init(2, 2, 2);
-
-	KF->transitionMatrix = *(Mat_<double>(2, 2) << 1, 0, 0, 1);
-
-	KF->controlMatrix = *(Mat_<double>(2, 2) << 1, 0, 0, 1);
-
-	KF->measurementMatrix = *(Mat_<double>(2, 2) << 1, 0, 0, 1);
-
-	setIdentity(KF->processNoiseCov, Scalar::all(.005));
-	setIdentity(KF->measurementNoiseCov, Scalar::all(0.5));
-
-	state = cv::Mat(3,1, CV_32F);
+	EKF = new ExtendedKalmanFilter(0.2, 2, 2, 2, 0.01);
 
 	setZeroPosition();
 }
@@ -102,16 +91,12 @@ void PositionEstimation::KalmanUpdate()
 		gps_data.at<float>(0,0) = this->gps.getPosX();
 		gps_data.at<float>(1,0) = this->gps.getPosY();
 
-		cv::Mat correctedPosition = KF->correct(gps_data);
-		state.at<float>(0) = correctedPosition.at<float>(0);
-		state.at<float>(0) = correctedPosition.at<float>(0);
+		EKF->correctGPS(gps_data);
+//		cv::Mat correctedPosition = KF->correct(gps_data);
+//		state.at<float>(0) = correctedPosition.at<float>(0);
+//		state.at<float>(0) = correctedPosition.at<float>(0);
 	}
-	// there was no update, so we need to copy the data
-	else
-	{
-		KF->statePre.copyTo(KF->statePost);
-		KF->errorCovPre.copyTo(KF->errorCovPost);
-	}
+
 }
 
 // Encoders - predict
@@ -119,7 +104,8 @@ void PositionEstimation::KalmanPredict()
 {
 	// If the encoders are working
 	if (isEncodersOpen()) {
-		cv::Mat enc = this->robot->getEncoderData();
+		std::chrono::milliseconds timestamp;
+		cv::Mat enc = this->getEncoderData(timestamp);
 
 		// Getting the encoder ticks
 		float left_enc = enc.at<float>(0, 0)
@@ -146,16 +132,16 @@ void PositionEstimation::KalmanPredict()
 		prediction.at<float>(0) = distance_covered * sin(theta);
 		prediction.at<float>(1) = distance_covered * cos(theta);
 
-		cv::Mat predictedState = KF->predict(prediction);
-		state.at<float>(0) = predictedState.at<float>(0);
-		state.at<float>(1) = predictedState.at<float>(2);
-		state.at<float>(2) = theta;
+//		cv::Mat predictedState = KF->predict(prediction);
+//		state.at<float>(0) = predictedState.at<float>(0);
+//		state.at<float>(1) = predictedState.at<float>(2);
+//		state.at<float>(2) = theta;
 	}
 	// No encoders
 	else
 	{
-		KF->statePost.copyTo(KF->statePre);
-		KF->errorCovPost.copyTo(KF->errorCovPre);
+//		KF->statePost.copyTo(KF->statePre);
+//		KF->errorCovPost.copyTo(KF->errorCovPre);
 	}
 }
 
@@ -169,13 +155,13 @@ void PositionEstimation::setZeroPosition() {
 		gps.setZeroXY(gps.getLat(), gps.getLon());
 	}
 
-	KF->statePost = KF->statePre = Mat::zeros(2,1, CV_32F);
+//	KF->statePost = KF->statePre = Mat::zeros(2,1, CV_32F);
 }
 
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 //CV_32SC1 2x1: left, right encoder
-cv::Mat PositionEstimation::getEncoderData(){
-	return encoders.getEncoders();
+cv::Mat PositionEstimation::getEncoderData(std::chrono::milliseconds &timestamp){
+	return encoders.getEncoders(timestamp);
 }
 
 //----------------------ACCESS TO COMPUTED DATA

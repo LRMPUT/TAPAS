@@ -16,6 +16,10 @@ Encoders::Encoders() {
 
 }
 
+Encoders::Encoders(Robot* irobot) : robot(irobot) {
+
+}
+
 Encoders::Encoders(const std::string& device, unsigned int baud){
 	openPort(device, baud);
 }
@@ -39,7 +43,7 @@ bool Encoders::isPortOpen(){
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 
 //CV_32SC1 2x1: left, right encoder
-cv::Mat Encoders::getEncoders(){
+cv::Mat Encoders::getEncoders(std::chrono::milliseconds &timestamp){
 	//cout << "Encoders::getEncoders" << endl;
 	Mat ret(2, 1, CV_32SC1);
 	serialPort.startReadCount();
@@ -93,5 +97,7 @@ cv::Mat Encoders::getEncoders(){
 	}
 	ret.at<int>(0) = left;
 	ret.at<int>(1) = right;
+
+	//timestamp = robot->getGlobalTime();
 	return ret;
 }

@@ -11,6 +11,7 @@
 #include "../../Trobot/include/Imu.h"
 
 class Debug;
+class Robot;
 
 #define NUM_VALUES 12
 
@@ -28,8 +29,11 @@ class IMU {
 	friend class Debug;
 
 	trobot::Imu* imu;
+	Robot *robot;
+
 public:
 	IMU();
+	IMU(Robot* irobot);
 	virtual ~IMU();
 
 	void openPort(std::string port);

@@ -33,6 +33,16 @@ GPS::GPS() {
 	Radius = 0.0;
 }
 
+GPS::GPS(Robot* irobot) : robot(irobot) {
+	PosX = 0.0;
+	PosY = 0.0;
+	PosLat = 0.0;
+	PosLon = 0.0;
+	StartPosLat = 0.0;
+	StartPosLon = 0.0;
+	Radius = 0.0;
+}
+
 GPS::GPS(const char *PortName, int BaudRate) {
 	PosX = 0.0;
 	PosY = 0.0;

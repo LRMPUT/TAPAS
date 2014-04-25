@@ -33,6 +33,10 @@ IMU::IMU() : imu(NULL) {
 
 }
 
+IMU::IMU(Robot* irobot) : imu(NULL), robot(irobot) {
+
+}
+
 IMU::~IMU() {
 	closePort();
 }

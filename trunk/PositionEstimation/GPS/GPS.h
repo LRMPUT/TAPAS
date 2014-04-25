@@ -19,18 +19,23 @@
 #define BUFFER_SIZE 2048
 
 class Debug;
+class Robot;
 
 /**
  * GPS Class
  */
 class GPS {
 	friend class Debug;
-
+	Robot *robot;
 public:
 	/**
 	 * Initiates all variables. You need to use @see initController() for starting the module
 	 */
 	GPS();
+	/**
+	 * Initiates all variables. You need to use @see initController() for starting the module
+	 */
+	GPS(Robot* robot);
 	/**
 	 * Initiates all variables and starts the module.
 	 * @param[in] PortName Pointer to array containing name of port, to which the GPS module is attached
