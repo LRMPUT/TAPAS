@@ -30,6 +30,7 @@ set(RobotsIntellect_SOURCES
 	#Planning/PlanningWithGold/LocalPlannerWithGold.cpp
 	Planning/RobotDrivers/robotDrivers.cpp
 	Planning/GlobalPlanner.cpp
+	PositionEstimation/Util/ExtendedKalmanFilter.cpp
 	PositionEstimation/Encoders/Encoders.cpp
 	PositionEstimation/GPS/src/context.c
 	PositionEstimation/GPS/src/generate.c

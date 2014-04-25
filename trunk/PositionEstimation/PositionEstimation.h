@@ -13,6 +13,7 @@
 #include "Encoders/Encoders.h"
 #include "GPS/GPS.h"
 #include "IMU/IMU.h"
+#include "Util/ExtendedKalmanFilter.h"
 #include <thread>
 
 
@@ -26,11 +27,13 @@ private:
 	// unique pointer to the PositionEstimation thread
 	std::thread estimationThread;
 	//TODO Chyba powinno być volatile
+	// Nope. Volatile nie działa tak jak myśli 80% programistów ;d. Wydaje mi się, że fakt, ze x86/x64 wykonuja
+	// operacje w sposob atomowy na bool(intcie) jest wystarczajacy. W takim wypadku moze byc problem z inwalidacja
+	// wpisow w linii cache, ale to dzieje sie raz na instacje
 	bool runThread;
 
 	// Kalman filter to gather position information
-	cv::Mat state;
-	cv::KalmanFilter *KF;
+	ExtendedKalmanFilter EKF;
 
 	// GPS
 	GPS gps;
