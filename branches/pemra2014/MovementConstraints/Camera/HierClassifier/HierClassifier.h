@@ -79,6 +79,7 @@ class HierClassifier {
 	/** Rozmiary poszczególnych składowych wektora cech. */
 	int histHLen, histSLen, histVLen, covarHSVLen, meanHSVLen;
 	int covarLaserLen, meanLaserLen, kurtLaserLen, histDLen, histILen;
+	int shapeLen;
 
 	/** Wektor z położeniami początków poszczególnych składowych wektora cech. */
 	std::vector<int> descBeg;

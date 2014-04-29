@@ -73,11 +73,11 @@ void ClassifierSVM::prepareProblem(	const std::vector<Entry>& entries,
 	numEntries = entries.size();
 	scalesSub = new double[descLen];
 	scalesDiv = new double[descLen];
-	double* meanVal = new double[descLen];
-	double* varVal = new double[descLen];
+	double* maxVal = new double[descLen];
+	double* minVal = new double[descLen];
 	for(int i = 0; i < descLen; i++){
-		meanVal[i] = 0;
-		varVal[i] = 0;
+		maxVal[i] = -INF;
+		minVal[i] = INF;
 	}
 
 	labData = new svm_node*[numEntries];
@@ -90,7 +90,8 @@ void ClassifierSVM::prepareProblem(	const std::vector<Entry>& entries,
 			svm_node tmp;
 			tmp.index = i;
 			tmp.value = entries[e].descriptor.at<float>(i);
-			meanVal[i] += tmp.value;
+			maxVal[i] = max(maxVal[i], tmp.value);
+			minVal[i] = min(minVal[i], tmp.value);
 			labData[e][i] = tmp;
 		}
 		svm_node tmp;
@@ -102,24 +103,17 @@ void ClassifierSVM::prepareProblem(	const std::vector<Entry>& entries,
 		if(!productWeights.empty()){
 			svmProblem.W[e] *= productWeights[e];
 		}
+		//svmProblem.W[e] = 1;
 	}
 	numLabels++;
 
 
 	for(int i = 0; i < descLen; i++){
-		meanVal[i] /= numEntries;
-		for(int e = 0; e < numEntries; e++){
-			varVal[i] += (labData[e][i].value - meanVal[i])*(labData[e][i].value - meanVal[i]);
-		}
-		varVal[i] /= (numEntries - 1);
+		scalesSub[i] = minVal[i];
+		scalesDiv[i] = maxVal[i] - minVal[i];
 	}
-
-	for(int i = 0; i < descLen; i++){
-		scalesSub[i] = meanVal[i];
-		scalesDiv[i] = sqrt(varVal[i]);
-	}
-	delete[] meanVal;
-	delete[] varVal;
+	delete[] minVal;
+	delete[] maxVal;
 
 	for(int e = 0; e < numEntries; e++){
 		for(int i = 0; i < descLen; i++){

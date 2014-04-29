@@ -16,6 +16,7 @@
 #include "UnionFind.h"
 #include "ClassifierSVM.h"
 
+#define PI 3.14159265359
 /*#define HIST_SIZE_H 4
 #define HIST_SIZE_S 4
 #define HIST_SIZE_V 4
@@ -200,6 +201,13 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 			}
 			descLen[7] = histDLen*histILen;
 		}
+		else if(dPtr->Value() == string("shape")){
+			shapeLen = 25;	//5x5
+			if(descLen.size() < 9){
+				descLen.resize(9);
+			}
+			descLen[8] = shapeLen;
+		}
 		else{
 			throw "Bad settings file - no such descriptor";
 		}
@@ -238,7 +246,7 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 		cPtr = cPtr->NextSiblingElement("Classifier");
 	}
 
-	numIterations = 15;
+	numIterations = 18;
 }
 
 void HierClassifier::saveCache(boost::filesystem::path file){
@@ -299,6 +307,15 @@ void HierClassifier::loadCache(boost::filesystem::path file){
 void HierClassifier::train(const std::vector<Entry>& data,
 		int inumLabels)
 {
+
+	for(int i = 0; i < 20; i++){
+		int e = rand() % data.size();
+		cout << "label = " << data[e].label << ", weight = " << data[e].weight << endl;
+		for(int d = 0; d < descBeg.size() - 1; d++){
+			cout << "descriptor <" << descBeg[d] << ".." << descBeg[d + 1] << ") = " << data[e].descriptor.colRange(descBeg[d], descBeg[d + 1]) << endl;
+		}
+	}
+
 	cout << "HierClassifier::train, numIterations = " << numIterations << ", numLabels = " << inumLabels << endl;
 
 	clearData();
@@ -327,7 +344,7 @@ void HierClassifier::train(const std::vector<Entry>& data,
 			//evaluating
 			double score = 0;
 			for(int e = 0; e < dataClassifiers[c].size(); e++){
-				//cout << "Entry " << e << ", weight " << dataWeights[e] << ": ";
+				//cout << "Entry " << e << ", weight " << dataWeights[e]*dataClassifiers[c][e].weight << ": ";
 				Mat probEst = weakClassifiersSet[c]->classify(dataClassifiers[c][e].descriptor);
 				probEst *= 2;
 				probEst -= 1;
@@ -353,7 +370,7 @@ void HierClassifier::train(const std::vector<Entry>& data,
 			cout << "Warning - alpha greater than epsMax" << endl;
 			alpha = epsMax;
 		}
-		weights.push_back(alpha);
+		weights.push_back(abs(alpha));
 		sumClassifierWeights += alpha;
 
 		cout << "Adding classifier " << maxIndex << ", alpha = " << alpha << endl;
@@ -378,12 +395,12 @@ void HierClassifier::train(const std::vector<Entry>& data,
 			for(int l = 0; l < numLabels; l++){
 				int ind = (l == dataClassifiers[maxIndex][e].label ? 1 : -1);
 				//entrysWeights
-				score += probEst.at<float>(l)*ind/numLabels;
+				score += dataWeights[e]*probEst.at<float>(l)*ind/numLabels;
 				//if(e == 602){
 				//	cout << (probEst.at<float>(l)+1)/2 << " (" << ind << "), ";
 				//}
 			}
-			score *= dataClassifiers[maxIndex].size() * dataClassifiers[maxIndex][e].weight;
+			score *= dataClassifiers[maxIndex][e].weight;
 			//if(e == 602){
 			//	cout << ", score = " << score << endl;
 			//}
@@ -409,6 +426,7 @@ void HierClassifier::train(const std::vector<Entry>& data,
 			//cout << "sum = " << sum << endl;
 		}
 		cout << "max weight = " << maxWeight << ", ind = " << indMaxWeight << endl;
+		cout << "sum = " << sum << ", sumVar = " << sumVar << endl;
 		double var = 0;
 		double mean = sumVar / dataWeights.size();
 		for(int e = 0; e < dataWeights.size(); e++){
@@ -508,7 +526,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 	using namespace std::chrono;
 	high_resolution_clock::time_point start = high_resolution_clock::now();
 
-	//namedWindow("imageBGR");
+	namedWindow("imageRegion");
 	Mat imageHSV;
 	cvtColor(imageBGR, imageHSV, CV_BGR2HSV);
 	vector<Pixel> pixels;
@@ -547,7 +565,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 	}
 
 	high_resolution_clock::time_point endSorting = high_resolution_clock::now();
-	cout << "End sorting terrain" << endl;
+	//cout << "End sorting terrain" << endl;
 
 	vector<Entry> ret;
 	int endIm = 0;
@@ -607,12 +625,12 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		}
 
 		int channelsHS[] = {0, 1};
-		float rangeH[] = {0, 97};
-		float rangeS[] = {37, 110};
+		float rangeH[] = {0, 40};
+		float rangeS[] = {0, 146};
 		const float* rangesHS[] = {rangeH, rangeS};
 		int sizeHS[] = {histHLen, histSLen};
 		int channelsV[] = {2};
-		float rangeV[] = {96, 183};
+		float rangeV[] = {48, 228};
 		const float* rangesV[] = {rangeV};
 		int sizeV[] = {histVLen};
 		calcHist(&values, 1, channelsHS, Mat(), histogramHS, 2, sizeHS, rangesHS);
@@ -624,16 +642,19 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		//cout << "V size = " << histogramV.size() << ", HS size = " << histogramHS.size() << endl;
 
 
-		values = values.reshape(1, 3);
+		values = values.reshape(1, values.cols);
 		//cout << "values size = " << values.size() << endl;
 		Mat covarHSV;
 		Mat meanHSV;
 		calcCovarMatrix(values,
 						covarHSV,
 						meanHSV,
-						CV_COVAR_NORMAL | CV_COVAR_SCALE | CV_COVAR_COLS,
+						CV_COVAR_NORMAL | CV_COVAR_SCALE | CV_COVAR_ROWS,
 						CV_32F);
 		//cout << "Calculated covar matrix" << endl;
+		//cout << "meanHSV.size() = " << meanHSV.size() << endl;
+		//cout << "covarHSV.size() = " << covarHSV.size() << endl;
+
 		covarHSV = covarHSV.reshape(0, 1);
 		meanHSV = meanHSV.reshape(0, 1);
 		//normalize(covarHSV, covarHSV);
@@ -680,8 +701,8 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 
 		Mat histogramDI;
 		int channelsDI[] = {0, 1};
-		float rangeD[] = {1245, 2947};
-		float rangeI[] = {2234, 2967};
+		float rangeD[] = {1500, 2500};
+		float rangeI[] = {1868, 3333};
 		const float* rangesDI[] = {rangeD, rangeI};
 		int sizeDI[] = {histDLen, histILen};
 		Mat valHistD = valuesTer.rowRange(4, 5);
@@ -691,7 +712,66 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		histogramDI = histogramDI.reshape(0, 1);
 		normalize(histogramDI, histogramDI);
 
+		/*Mat huMoments;
+		int curImageId = pixels[begIm].imageId;
+		Mat tmpRegions = (regionsOnImage == curImageId);
+		Moments mom = moments(tmpRegions, true);
+		HuMoments(mom, huMoments);
+		huMoments = huMoments.reshape(0, 1);*/
+		//imshow("imageRegion", tmpRegions);
+		//waitKey();
 
+		static const int maxRadFreq = 5;
+		static const int maxAngFreq = 5;
+		Mat fr(maxRadFreq, maxAngFreq, CV_64FC1, Scalar(0));
+		Mat fi(maxRadFreq, maxAngFreq, CV_64FC1, Scalar(0));
+		//centroid
+		double rc = 0;
+		double cc = 0;
+		for(int p = begIm; p < endIm; p++){
+			rc += pixels[p].r;
+			cc += pixels[p].c;
+		}
+		rc /= endIm - begIm;
+		cc /= endIm - begIm;
+		//maximum radius
+		double maxRad = 0;
+		for(int p = begIm; p < endIm; p++){
+			double curRad = (rc - pixels[p].r)*(rc - pixels[p].r) + (cc - pixels[p].c)*(cc - pixels[p].c);
+			if(curRad > maxRad){
+				maxRad = curRad;
+			}
+		}
+		maxRad = sqrt(maxRad);
+		//polar fourier transform
+		for(int rad = 0; rad < maxRadFreq; rad++){
+			for(int ang = 0; ang < maxAngFreq; ang++){
+				for(int p = begIm; p < endIm; p++){
+					double radius = sqrt((pixels[p].r - rc)*(pixels[p].r - rc) +
+										(pixels[p].c - cc)*(pixels[p].c - cc));
+					double theta = atan2(pixels[p].r - rc, pixels[p].c - cc);
+					if(theta < 0){
+						theta += 2*PI;
+					}
+					fr.at<double>(rad, ang) += (double)1.0*cos(2*PI*rad*(radius/maxRad) + ang*theta);	//real
+					fi.at<double>(rad, ang) -= (double)1.0*sin(2*PI*rad*(radius/maxRad) + ang*theta); //imaginary
+				}
+			}
+		}
+		//FD
+		Mat fd(1, maxRadFreq*maxAngFreq, CV_32FC1);
+		for(int rad = 0; rad < maxRadFreq; rad++){
+			for(int ang = 0; ang < maxAngFreq; ang++){
+				if(rad == 0 && ang == 0){
+					fd.at<float>(0) = (float)sqrt(fr.at<double>(0, 0)*fr.at<double>(0, 0) +
+													fi.at<double>(0, 0)*fi.at<double>(0, 0))/(PI*maxRad*maxRad);
+				}
+				else{
+					fd.at<float>(rad*maxAngFreq + ang) = sqrt(fr.at<double>(ang, rad)*fr.at<double>(ang, rad) +
+																fi.at<double>(ang, rad)*fi.at<double>(ang, rad))/fd.at<float>(0);
+				}
+			}
+		}
 
 		Entry tmp;
 		tmp.imageId = pixels[begIm].imageId;
@@ -703,7 +783,8 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 							covarLaserLen +
 							meanLaserLen +
 							kurtLaserLen +
-							histDLen*histILen,
+							histDLen*histILen +
+							shapeLen,
 							CV_32FC1);
 
 		int begCol = 0;
@@ -723,6 +804,8 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		begCol += kurtLaserLen;
 		histogramDI.copyTo(tmp.descriptor.colRange(begCol, begCol + histDLen*histILen));
 		begCol += histDLen*histILen;
+		fd.copyTo(tmp.descriptor.colRange(begCol, begCol + shapeLen));
+		begCol += shapeLen;
 
 		ret.push_back(tmp);
 	}

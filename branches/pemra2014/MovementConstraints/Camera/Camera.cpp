@@ -340,6 +340,7 @@ void Camera::processDir(boost::filesystem::path dir,
 	Mat hokuyoAllPointsGlobal;
 	Mat imuPrev, encodersPrev;
 	Mat globalPos, curPos;
+	Mat prevRot;
 	int hokuyoCurTime;
 	hokuyoFile >> hokuyoCurTime;
 	int imuCurTime;
@@ -347,6 +348,20 @@ void Camera::processDir(boost::filesystem::path dir,
 	int encodersCurTime;
 	encodersFile >> encodersCurTime;
 	namedWindow("test");
+
+	/*static const int begInt = 1868;
+	static const int endInt = 3333;
+	map<int, Vec3b> colorMap;
+	Mat intVal(1, endInt - begInt, CV_32SC1);
+	for(int i = begInt; i < endInt; i++){
+		intVal.at<int>(i - begInt) = i;
+	}
+	Mat colorVal;
+	applyColorMap(intVal, colorVal, COLORMAP_JET);
+	cout << "colorVal.type() = " << colorVal.type() << ", CV_32SC1 = " << CV_32SC1 << endl;
+	for(int i = 0; i < intVal.cols; i++){
+		colorMap[intVal.at<int>(i)] = colorVal.at<Vec3b>(i);
+	}*/
 
 	static Mat covarImage(3, 3, CV_32FC1, Scalar(0));
 	static Mat meanImage(3, 1, CV_32FC1, Scalar(0));
@@ -378,22 +393,30 @@ void Camera::processDir(boost::filesystem::path dir,
 			readLine(hokuyoFile, hokuyoCurPointsDist);
 			hokuyoFile >> tmpChar;
 			readLine(hokuyoFile, hokuyoCurPointsInt);
-			hokuyoCurPoints = Mat(6, hokuyoCurPointsDist.cols, CV_32FC1, Scalar(1));
+			//hokuyoCurPoints = Mat(6, hokuyoCurPointsDist.cols, CV_32FC1, Scalar(1));
+			hokuyoCurPoints = Mat(0, 6, CV_32FC1);
 
 			static const float startAngle = -45*PI/180;
 			static const float stepAngle = 0.25*PI/180;
 			for(int i = 0; i < hokuyoCurPointsDist.cols; i++){
-				hokuyoCurPoints.at<float>(0, i) = cos(startAngle + stepAngle*i)*hokuyoCurPointsDist.at<float>(i);
-				hokuyoCurPoints.at<float>(1, i) = 0;
-				hokuyoCurPoints.at<float>(2, i) = sin(startAngle + stepAngle*i)*hokuyoCurPointsDist.at<float>(i);
+				if(hokuyoCurPointsDist.at<float>(i) > 500){
+					Mat curPoint(1, 6, CV_32FC1);
+					curPoint.at<float>(0) = cos(startAngle + stepAngle*i)*hokuyoCurPointsDist.at<float>(i);
+					curPoint.at<float>(1) = 0;
+					curPoint.at<float>(2) = sin(startAngle + stepAngle*i)*hokuyoCurPointsDist.at<float>(i);
+					curPoint.at<float>(3) = 1;
+					curPoint.at<float>(4) = hokuyoCurPointsDist.at<float>(i);
+					curPoint.at<float>(5) = hokuyoCurPointsInt.at<float>(i);
+					hokuyoCurPoints.push_back(curPoint);
+				}
 			}
-			hokuyoCurPointsDist.copyTo(hokuyoCurPoints.rowRange(4, 5));
-			hokuyoCurPointsInt.copyTo(hokuyoCurPoints.rowRange(5, 6));
+			cout << endl;
+			hokuyoCurPoints = hokuyoCurPoints.t();
 
 			hokuyoCurPoints.rowRange(0, 4) = cameraOrigLaser.front().inv()*hokuyoCurPoints.rowRange(0, 4);
 
 			//narrow hokuyo scan range 45 - 135
-			hokuyoCurPoints = hokuyoCurPoints.colRange(400, 681);
+			//hokuyoCurPoints = hokuyoCurPoints.colRange(400, 681);
 
 			if(imuPrev.empty()){
 				readLine(imuFile, imuPrev);
@@ -430,9 +453,11 @@ void Camera::processDir(boost::filesystem::path dir,
 			//cout << "Computing curPos" << endl;
 			//cout << "encodersCur = " << encodersCur << endl << "encodersPrev = " << encodersPrev << endl;
 			Mat trans = compTrans(compOrient(imuPrev), encodersCur - encodersPrev);
+			cout << "trans = " << trans << endl;
 			//cout << "Computing curTrans" << endl;
 			Mat curTrans = Mat(curPos, Rect(3, 0, 1, 4)) + trans;
 			//cout << "Computing curRot" << endl;
+
 			Mat curRot = compOrient(imuCur)*cameraOrigImu.front();
 			curRot.copyTo(curPos);
 			curTrans.copyTo(Mat(curPos, Rect(3, 0, 1, 4)));
@@ -470,6 +495,8 @@ void Camera::processDir(boost::filesystem::path dir,
 			imuCur.copyTo(imuPrev);
 			encodersCur.copyTo(encodersPrev);
 			hokuyoFile >> hokuyoCurTime;
+
+			curRot.copyTo(prevRot);
 		}
 		Mat terrain = hokuyoAllPointsGlobal.clone();
 		terrain.rowRange(0, 4) = curPos.inv()*hokuyoAllPointsGlobal.rowRange(0, 4);
@@ -515,18 +542,28 @@ void Camera::processDir(boost::filesystem::path dir,
 		cout << "mean image = " << meanImage << endl;
 		cout << "covar image = " << covarImage << endl;
 
+		ofstream pointsFile("points/" + cameraImageFile.stem().string() + ".log");
+
 		for(int p = 0; p < pointsImage.size(); p++){
 			if(pointsImage[p].x >= 0 && pointsImage[p].x < image.cols &&
 				pointsImage[p].y >= 0 && pointsImage[p].y < image.rows)
 			{
+				pointsFile << pointsImage[p].x << " " << pointsImage[p].y << " " << hokuyoAllPointsGlobal.at<float>(5, p) << endl;
 				//image.at<Vec3b>(pointsImage[p].y, pointsImage[p].x) = Vec3b(0, 0, 255);
 				circle(image, Point(pointsImage[p].x, pointsImage[p].y), 2, Scalar(0, 0, 255), -1);
+				//int intensity = hokuyoAllPointsGlobal.at<float>(5, p);
+				//cout << intensity << endl;
+				//if(colorMap.count(intensity) > 0){
+				//	Vec3b color = colorMap[intensity];
+					//cout << color << endl;
+				//	circle(image, Point(pointsImage[p].x, pointsImage[p].y), 2, Scalar(color[0], color[1], color[2]), -1);
+				//}
 			}
 		}
 		imshow("test", image);
-		waitKey(50);
+		waitKey();
 
-		TiXmlDocument data(	dir.string() +
+		/*TiXmlDocument data(	dir.string() +
 							string("/") +
 							cameraImageFile.stem().string() +
 							string(".xml"));
@@ -568,12 +605,15 @@ void Camera::processDir(boost::filesystem::path dir,
 				throw "Bad data file - no object attributes";
 			}
 			string labelText = pAttributes->GetText();
-			int label = 0;
+			int label = -1;
 			for(int i = 0; i < labels.size(); i++){
 				if(labelText == labels[i]){
 					label = i;
 					break;
 				}
+			}
+			if(label == -1){
+				throw "No such label found";
 			}
 
 			mapRegionIdToLabelCur[++manualRegionsCount] = label;
@@ -584,7 +624,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			pObject = pObject->NextSiblingElement("object");
 		}
 		mapRegionIdToLabel.push_back(mapRegionIdToLabelCur);
-		manualRegionsOnImages.push_back(manualRegionsOnImageCur);
+		manualRegionsOnImages.push_back(manualRegionsOnImageCur);*/
 	}
 }
 
@@ -637,17 +677,32 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 				dataset.push_back(newData[e]);
 			}
 		}
-
 	}
+	ofstream dataFile("data.log");
+	dataFile.precision(15);
+	for(int e = 0; e < dataset.size(); e++){
+		dataFile << dataset[e].label << " " << dataset[e].weight << " ";
+		for(int d = 0; d < dataset[e].descriptor.cols; d++){
+			dataFile << dataset[e].descriptor.at<float>(d) << " ";
+		}
+		dataFile << endl;
+	}
+	dataFile.close();
+
 	cout << "dataset.size() = " << dataset.size() << endl;
 
 	map<int, double> sizeOfLabels;
+	map<int, int> popOfLabels;
 	for(int e = 0; e < dataset.size(); e++){
 		sizeOfLabels[dataset[e].label] += dataset[e].weight;
+		popOfLabels[dataset[e].label]++;
 	}
 	cout << "Before normalization" << endl;
 	for(map<int, double>::iterator it = sizeOfLabels.begin(); it != sizeOfLabels.end(); ++it){
 		cout << "label " << it->first << ", weight = " << it->second << endl;
+	}
+	for(map<int, int>::iterator it = popOfLabels.begin(); it != popOfLabels.end(); ++it){
+		cout << "label " << it->first << ", pop = " << it->second << endl;
 	}
 
 	for(int e = 0; e < dataset.size(); e++){
@@ -670,7 +725,7 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 	hierClassifiers.front()->train(dataset, labels.size());
 
 	if(cacheEnabled){
-		saveCache("cameraCache");
+		saveCache("cache/cameraCache");
 	}
 }
 
@@ -791,7 +846,7 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 			cout << endl;
 		}
 
-		waitKey();
+		waitKey(100);
 	}
 
 	cout << "General pixel results: " << endl;
