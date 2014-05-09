@@ -51,6 +51,7 @@ void Calibration::getData(){
 	imwrite((cameraFile + QString("%1").arg(index, 3, 10, QChar('0')) + cameraExt).toAscii().data(), cameraData[0]);
 
 	ofstream imuOut((imuFile + QString("%1").arg(index, 3, 10, QChar('0')) + imuExt).toAscii().data());
+	imuOut.precision(15);
 	for(int i = 0; i < 10; i++){
 		Mat data = debug->getImuData();
 		for(int j = 0; j < 3; j++){

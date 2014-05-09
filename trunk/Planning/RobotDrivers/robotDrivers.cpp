@@ -94,7 +94,7 @@ void Drivers::setMotorSpeed(float speed){
 	else
 		serialPort->write('R' + boost::lexical_cast<string>(-speed) + '\r');
 
-	while(!commandCorrect){
+	while(!commandCorrect && driveCount < 50){
 
 				/// send command again if failure occured
 				if (errorCount1 > 0 || errorCount2 > 0){
@@ -146,7 +146,7 @@ void Drivers::stopMotor(){
 
 	serialPort->write("X\r");
 
-		while(!commandCorrect){
+		while(!commandCorrect && driveCount < 50){
 
 			/// send command again if failure occured
 			if (errorCount1 > 0 || errorCount2 > 0)
@@ -158,8 +158,6 @@ void Drivers::stopMotor(){
 			if (searchBufferR(driverResp, "?") != -1  )
 				errorCount1++;
 			else if (searchBufferR(driverResp, "!") != -1  )
-				errorCount2++;
-			else if (searchBufferR(driverResp, ".") != -1  )
 				commandCorrect = true;
 
 			usleep(1000);
