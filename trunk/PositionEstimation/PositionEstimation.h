@@ -47,12 +47,14 @@ private:
 	IMU imu;
 
 	// Encoders
+	int lastLeft, lastRight;
+	bool encoderStart;
 	Encoders encoders;
 
 	//Parent class Robot
 	Robot* robot;
 
-	int ENCODER_TICK_PER_REV;
+	double ENCODER_TICK_PER_REV;
 	double WHEEL_DIAMETER;
 	double WHEEL_BASE;
 

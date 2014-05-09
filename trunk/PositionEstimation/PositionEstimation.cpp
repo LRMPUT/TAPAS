@@ -19,9 +19,9 @@ using namespace std;
 PositionEstimation::PositionEstimation(Robot* irobot) :
 		robot(irobot), imu(irobot), gps(irobot), encoders(irobot) {
 
-	ENCODER_TICK_PER_REV = 48 * 75;
-	WHEEL_DIAMETER = 0.12;
-	WHEEL_BASE = 0.24;
+	ENCODER_TICK_PER_REV = 300;
+	WHEEL_DIAMETER = 178/1000;
+	WHEEL_BASE = 432/1000;
 	/* KALMAN:
 	 * - we track 2 values -> global position
 	 *
@@ -55,7 +55,7 @@ void PositionEstimation::run() {
 
 		// Thread sleep, so that the position is not updated too often
 		// Right now 1 ms as Robot Drive has it's own sleep
-		std::chrono::milliseconds duration(50);
+		std::chrono::milliseconds duration(500);
 		std::this_thread::sleep_for(duration);
 
 		gettimeofday(&end, NULL);
@@ -66,9 +66,9 @@ void PositionEstimation::run() {
 
 		if (mtime == 0)
 			mtime = 1;
-		cout << "PE:: x: " << state.at<float>(0) << " y: " << state.at<float>(1)
-				<< " z: " << state.at<float>(2) << endl;
-		cout << "PE:: framerate: " << 1000.0 / mtime << endl;
+		printf("PE: X:%5.5f \tY:%5.5f \tS:%5.5f \tA:%5.5f\n", state.at<float>(0), state.at<float>(1), state.at<float>(2), state.at<float>(3));
+
+		//cout << "PE:: framerate: " << 1000.0 / mtime << endl;
 	}
 }
 
@@ -120,22 +120,39 @@ void PositionEstimation::KalmanLoop() {
 					> (encoderTimestamp - lastUpdateTimestamp).count();
 			if (dt > 0) {
 				lastUpdateTimestamp = encoderTimestamp;
-				EKF->predict(dt);
+				EKF->predict(dt/1000);
 			}
 
 
 			if (encoder_dt > 0) {
+//				printf("Encoder data: %d %d\n", enc_data.at<int>(0) - lastLeft, enc_data.at<int>(1) - lastRight );
 				lastEncoderTimestamp = encoderTimestamp;
-				float left_encoder = ((float) enc_data.at<int>(0))
+
+				if (encoderStart)
+				{
+					lastLeft = enc_data.at<int>(0);
+					lastRight = enc_data.at<int>(1);
+					encoderStart = 0;
+				}
+
+				printf("Enc compare %d %d %d %d\n", enc_data.at<int>(0), lastLeft,
+						enc_data.at<int>(1), lastRight);
+				float left_encoder = ((float) (enc_data.at<int>(0) - lastLeft))
 						/ ENCODER_TICK_PER_REV * M_PI * WHEEL_DIAMETER;
-				float right_encoder = ((float) enc_data.at<int>(1))
+				float right_encoder = ((float) (enc_data.at<int>(1) - lastRight))
 						/ ENCODER_TICK_PER_REV * M_PI * WHEEL_DIAMETER;
 
 				float distance = (left_encoder + right_encoder) / 2.0;
 
 				Mat speed(1, 1, CV_32FC1);
-				speed.at<float>(0) = distance / (encoder_dt / 1000); // Is in seconds or ms ?
+				speed.at<float>(0) = distance / encoder_dt * 1000 ; // Is in seconds or ms ?
+//				printf("Encoder distance: %.10f\n", distance );
+//				printf("Encoder encoder_dt: %.10f\n", encoder_dt );
+//				printf("Encoder speed update: %f\n", distance / encoder_dt );
 				state = EKF->correctEncoder(speed);
+
+				lastLeft = enc_data.at<int>(0);
+				lastRight = enc_data.at<int>(1);
 			}
 		}
 	}
@@ -146,21 +163,22 @@ void PositionEstimation::KalmanLoop() {
 		float imu_dt = std::chrono::duration_cast
 						< std::chrono::milliseconds
 						> (imuTimestamp - lastImuTimestamp).count();
-
+//		printf( "imu dt = %f\n", imu_dt);
 		if (imu_dt > 0) {
 			lastImuTimestamp = imuTimestamp;
 
 			float dt = std::chrono::duration_cast < std::chrono::milliseconds
-					> (lastUpdateTimestamp - imuTimestamp).count();
+					> (imuTimestamp - lastUpdateTimestamp).count();
 			if ( dt > 0)
 			{
 				lastUpdateTimestamp = imuTimestamp;
-				EKF->predict(dt);
+				EKF->predict(dt/1000);
 			}
 
 			// 3x4 - acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
 			Mat orientation(1, 1, CV_32FC1);
-			orientation.at<float>(0) = imuData.at<float>(11);
+			orientation.at<float>(0) = imuData.at<float>(11) *  M_PI / 180.0;
+//			printf("IMU update: %f\n", imuData.at<float>(11));
 			state = EKF->correctIMU(orientation);
 		}
 	}
@@ -170,6 +188,10 @@ void PositionEstimation::setZeroPosition() {
 	state.at<float>(0) = 0.0;
 	state.at<float>(1) = 0.0;
 	state.at<float>(2) = 0.0;
+
+	lastLeft = 0;
+	lastRight = 0;
+	encoderStart = 1;
 
 	if (isGpsOpen()) {
 		gps.setZeroXY(gps.getLat(), gps.getLon());
