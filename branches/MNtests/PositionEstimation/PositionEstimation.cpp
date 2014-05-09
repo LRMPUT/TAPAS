@@ -47,7 +47,7 @@ PositionEstimation::~PositionEstimation() {
 }
 
 // Update Kalman - updates on GPS
-void PositionEstimation::KalmanUpdate()
+void PositionEstimation::KalmanLoop()
 {
 	state = KF.correct( this->getGpsData() );
 	

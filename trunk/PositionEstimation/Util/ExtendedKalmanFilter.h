@@ -1,4 +1,5 @@
 #include <opencv2/core/core.hpp>
+#include <cmath>
 
 class ExtendedKalmanFilter {
 
@@ -12,13 +13,13 @@ class ExtendedKalmanFilter {
 	cv::Mat Hgps, Himu, Henc;
 
 public:
-	ExtendedKalmanFilter(float _Q, float _Rgps, float _Rimu, float _Renc, float _dt);
+	ExtendedKalmanFilter(float _Q = 10, float _Rgps = 20, float _Rimu = 2000/180*M_PI, float _Renc = 0.01, float _dt = 0.01);
 
 	void predict(float dt);
 
-	void correctGPS(cv::Mat gpsMeasurement);
-	void correctIMU(cv::Mat imuMeasurement);
-	void correctEncoder(cv::Mat encMeasurement);
+	cv::Mat correctGPS(cv::Mat gpsMeasurement);
+	cv::Mat correctIMU(cv::Mat imuMeasurement);
+	cv::Mat correctEncoder(cv::Mat encMeasurement);
 
 private:
 	// TODO: Fill jacobian with real values

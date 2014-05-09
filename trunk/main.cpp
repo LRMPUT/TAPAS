@@ -18,17 +18,19 @@ int main()
 	try{
 		Robot robot("../settings.xml");
 		cout << "Robot created" << endl;
-		Debug debug(&robot);
+		//Debug debug(&robot);
 		//debug.testConstraints(filesystem::path("../MovementConstraints/Camera/database/train"),
 		//						filesystem::path("../MovementConstraints/Camera/database/classify"));
 
-		debug.testEncoders();
-		int a;
-		//while(1)
-		//{
+		//debug.testEncoders();
 
-
-		//}
+		char a;
+		while(1)
+		{
+			cin >> a;
+			if ( a == 'q')
+				break;
+		}
 
 	}
 	catch(char const* error){

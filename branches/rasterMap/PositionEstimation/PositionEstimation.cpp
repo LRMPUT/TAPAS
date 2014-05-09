@@ -47,7 +47,7 @@ void PositionEstimation::run() {
 		gettimeofday(&start, NULL);
 
 		KalmanPredict();
-		KalmanUpdate();
+		KalmanLoop();
 
 		// Thread sleep, so that the position is not updated too often
 		// Right now 1 ms as Robot Drive has it's own sleep
@@ -93,7 +93,7 @@ void PositionEstimation::kalmanSetup() {
 
 
 // Update Kalman - updates on GPS
-void PositionEstimation::KalmanUpdate()
+void PositionEstimation::KalmanLoop()
 {
 	// Get the GPS data if GPS is available
 	if ( gps.getFixStatus() > 1 )

@@ -30,7 +30,7 @@ public:
 	virtual ~PositionEstimation();
 
 	// Update Kalman - updates on GPS
-	void KalmanUpdate();
+	void KalmanLoop();
 
 	// Encoders - predict
 	void KalmanPredict();

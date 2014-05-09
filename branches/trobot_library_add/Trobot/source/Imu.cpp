@@ -229,9 +229,15 @@ namespace trobot
 				M_Proc_Z_Register.Mag_Proc_Z		=	Register[MAG_PROC_Z]._int;
 
 			if(rejestr[i] == EULER_PHI_THETA)
+			{
 				E_Phi_Theta_Register.Euler_Phi_Theta=	Register[EULER_PHI_THETA]._int;
+				timestamp = std::chrono::high_resolution_clock::now();
+			}
 			if(rejestr[i] == EULER_PSI)
+			{
 				E_Psi_Register.Euler_Psi			=	Register[EULER_PSI]._int;
+				timestamp = std::chrono::high_resolution_clock::now();
+			}
 			if(rejestr[i] == QUAT_AB)
 				Q_AB_Register.Quat_AB				=	Register[QUAT_AB]._int;
 			if(rejestr[i] == QUAT_CD)
@@ -800,6 +806,11 @@ namespace trobot
 		Write_To_UM6(COMMUNICATION, 1);
 
 		broadcasting_ = false;
+	}
+
+	std::chrono::high_resolution_clock::time_point Imu::getTimestamp()
+	{
+		return timestamp;
 	}
 
 

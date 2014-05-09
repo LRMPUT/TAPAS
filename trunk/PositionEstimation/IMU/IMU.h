@@ -41,7 +41,7 @@ public:
 	bool isPortOpen();
 
 	//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
-	const cv::Mat getData();
+	const cv::Mat getData(std::chrono::high_resolution_clock::time_point &timestamp);
 };
 
 #endif /* IMU_H_ */
