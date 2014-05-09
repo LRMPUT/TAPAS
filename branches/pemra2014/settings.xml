@@ -4,7 +4,7 @@
 			<cache enabled="true" />
 			<HierClassifier>
 				<cache enabled="true" />
-				<segmentation k="200" min_size="400" />
+				<segmentation k="150" min_size="400" />
 				<descriptor>
 					<hist_HS len_H="4" len_S="4" />
 					<hist_V len="8" />
@@ -13,7 +13,7 @@
 					<covar_laser len="4" />
 					<mean_laser len="2" />
 					<kurt_laser len="2" />
-					<hist_DI len_D="5" len_I="5" />
+					<hist_DI len_D="1" len_I="25" />
 					<shape />
 				</descriptor>
 				<Classifier type="SVM">
@@ -22,7 +22,7 @@
 						<kernelType value="RBF" />
 						<gamma value="5.4061" />
 						<degree value="2" />
-						<C value="1000" />
+						<C value="10" />
 					</svm>
 					<info desc_beg="0" desc_end="1" />
 				</Classifier>
@@ -32,16 +32,16 @@
 						<kernelType value="RBF" />
 						<gamma value="5.4061" />
 						<degree value="2" />
-						<C value="1000" />
+						<C value="1" />
 					</svm>
-					<info desc_beg="1" desc_end="2" />
+					<info desc_beg="10" desc_end="2" />
 				</Classifier>
 				<Classifier type="SVM">
 					<cache enabled="true" />
 					<svm type="C_SVC">
 						<kernelType value="RBF" />
 						<gamma value="5.4061" />
-						<degree value="1000" />
+						<degree value="10" />
 						<C value="1" />
 					</svm>
 					<info desc_beg="2" desc_end="4" />
@@ -51,7 +51,7 @@
 					<svm type="C_SVC">
 						<kernelType value="RBF" />
 						<gamma value="5.4061" />
-						<degree value="1000" />
+						<degree value="10" />
 						<C value="1" />
 					</svm>
 					<info desc_beg="4" desc_end="7" />
@@ -62,7 +62,7 @@
 						<kernelType value="RBF" />
 						<gamma value="1.80203" />
 						<degree value="2" />
-						<C value="1000" />
+						<C value="10" />
 					</svm>
 					<info desc_beg="7" desc_end="8" />
 				</Classifier>
@@ -72,29 +72,29 @@
 						<kernelType value="RBF" />
 						<gamma value="1.80203" />
 						<degree value="2" />
-						<C value="1000" />
+						<C value="10" />
 					</svm>
 					<info desc_beg="8" desc_end="9" />
-				</Classifier>
+				</Classifier>-->
 				<!--<Classifier type="SVM">
 					<cache enabled="true" />
 					<svm type="C_SVC">
 						<kernelType value="RBF" />
 						<gamma value="0.200226" />
 						<degree value="2" />
-						<C value="16607.5" />
+						<C value="10" />
 					</svm>
-					<info desc_beg="0" desc_end="8" />
+					<info desc_beg="0" desc_end="9" />
 				</Classifier>-->
 			</HierClassifier>
 			<learning dir="../../MovementConstraints/Camera/training_data" />
 			<labels>
-				<!--<label text="grass" id="0"/>
+				<label text="grass" id="0"/>
 				<label text="pavement" id="1"/>
 				<label text="pavement2" id="2" />
-				<label text="asphalt" id="3" />-->
-				<label text="pavement2" id="0" />
-				<label text="asphalt" id="1" />
+				<label text="asphalt" id="3" />
+				<!--<label text="pavement2" id="0" />
+				<label text="asphalt" id="1" />-->
 			</labels>
 
 			<sensor id="left">

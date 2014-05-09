@@ -202,7 +202,7 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 			descLen[7] = histDLen*histILen;
 		}
 		else if(dPtr->Value() == string("shape")){
-			shapeLen = 25;	//5x5
+			shapeLen = 8;
 			if(descLen.size() < 9){
 				descLen.resize(9);
 			}
@@ -395,12 +395,12 @@ void HierClassifier::train(const std::vector<Entry>& data,
 			for(int l = 0; l < numLabels; l++){
 				int ind = (l == dataClassifiers[maxIndex][e].label ? 1 : -1);
 				//entrysWeights
-				score += dataWeights[e]*probEst.at<float>(l)*ind/numLabels;
+				score += probEst.at<float>(l)*ind/numLabels;
 				//if(e == 602){
 				//	cout << (probEst.at<float>(l)+1)/2 << " (" << ind << "), ";
 				//}
 			}
-			score *= dataClassifiers[maxIndex][e].weight;
+			//score *= dataWeights[e]*dataClassifiers[maxIndex][e].weight*dataClassifiers[maxIndex].size();
 			//if(e == 602){
 			//	cout << ", score = " << score << endl;
 			//}
@@ -702,7 +702,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		Mat histogramDI;
 		int channelsDI[] = {0, 1};
 		float rangeD[] = {1500, 2500};
-		float rangeI[] = {1868, 3333};
+		float rangeI[] = {1868, 4000};
 		const float* rangesDI[] = {rangeD, rangeI};
 		int sizeDI[] = {histDLen, histILen};
 		Mat valHistD = valuesTer.rowRange(4, 5);
@@ -721,7 +721,8 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		//imshow("imageRegion", tmpRegions);
 		//waitKey();
 
-		static const int maxRadFreq = 5;
+		//Generalised Fourier Descriptor
+		/*static const int maxRadFreq = 5;
 		static const int maxAngFreq = 5;
 		Mat fr(maxRadFreq, maxAngFreq, CV_64FC1, Scalar(0));
 		Mat fi(maxRadFreq, maxAngFreq, CV_64FC1, Scalar(0));
@@ -753,8 +754,11 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 					if(theta < 0){
 						theta += 2*PI;
 					}
-					fr.at<double>(rad, ang) += (double)1.0*cos(2*PI*rad*(radius/maxRad) + ang*theta);	//real
-					fi.at<double>(rad, ang) -= (double)1.0*sin(2*PI*rad*(radius/maxRad) + ang*theta); //imaginary
+					Vec3b color = imageBGR.at<Vec3b>(pixels[p].r, pixels[p].c);
+					//double intensity = (color[0]*0.114 + color[1]*0.587 + color[2]*0.299)/255;
+					double intensity = 1.0;
+					fr.at<double>(rad, ang) += (double)intensity*cos(2*PI*rad*(radius/maxRad) + ang*theta);	//real
+					fi.at<double>(rad, ang) -= (double)intensity*sin(2*PI*rad*(radius/maxRad) + ang*theta); //imaginary
 				}
 			}
 		}
@@ -771,7 +775,44 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 																fi.at<double>(ang, rad)*fi.at<double>(ang, rad))/fd.at<float>(0);
 				}
 			}
+		}*/
+		Mat tmpRegions(regionsOnImage.rows + 2, regionsOnImage.cols + 2, CV_32SC1, Scalar(-1));
+		regionsOnImage.copyTo(Mat(tmpRegions, Rect(1, 1, regionsOnImage.cols, regionsOnImage.rows)));
+		Mat turns(1, 8, CV_32FC1, Scalar(0));
+		{
+			int nhood[][2] = {{1, 0},
+							{1, 1},
+							{0, 1},
+							{-1, 1},
+							{-1, 0},
+							{-1, -1},
+							{0, -1},
+							{1, -1}};
+			//vector<bool> visited(endIm - begIm, 0);
+			int regId = pixels[begIm].imageId;
+			//imshow("imageRegion", tmpRegions == regId);
+			int count = 0;
+			for(int p = begIm; p < endIm; p++){
+				int r = pixels[p].r;
+				int c = pixels[p].c;
+				if(r != 0 && c != 0 && r != imageBGR.rows && c != imageBGR.cols){
+					for(int dir = 0; dir < sizeof(nhood)/sizeof(nhood[0]); dir++){
+						int nextDir = (dir + 1) % (sizeof(nhood)/sizeof(nhood[0]));
+						if(tmpRegions.at<int>(r + 1 + nhood[dir][0], c + 1 + nhood[dir][1]) != regId &&
+							tmpRegions.at<int>(r + 1 + nhood[nextDir][0], c + 1 + nhood[nextDir][1]) == regId)
+						{
+							count++;
+							turns.at<float>(nextDir) += 1.0;
+						}
+					}
+				}
+			}
+			//cout << "count == " << count << endl;
+			if(count > 0){
+				turns = turns / count;
+			}
 		}
+		//waitKey();
 
 		Entry tmp;
 		tmp.imageId = pixels[begIm].imageId;
@@ -804,7 +845,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		begCol += kurtLaserLen;
 		histogramDI.copyTo(tmp.descriptor.colRange(begCol, begCol + histDLen*histILen));
 		begCol += histDLen*histILen;
-		fd.copyTo(tmp.descriptor.colRange(begCol, begCol + shapeLen));
+		turns.copyTo(tmp.descriptor.colRange(begCol, begCol + shapeLen));
 		begCol += shapeLen;
 
 		ret.push_back(tmp);
@@ -854,12 +895,12 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image, int kCurSegment){
 	Mat imageChannels[] = {imageR, imageG, imageB};
 	Mat imageFloat(image.rows, image.cols, CV_32FC3);
 	int nchannels = 3;
-	int nhood[][2] = {{-1, 1},
+	/*int nhood[][2] = {{-1, 1},
 					{1, 0},
 					{1, 1},
-					{0, 1}};
-	/*int nhood[][2] = {{1, 0},
 					{0, 1}};*/
+	int nhood[][2] = {{1, 0},
+					{0, 1}};
 	//cout << "Size of nhood " << sizeof(nhood)/sizeof(nhood[0]) << endl;
 	//cout << "rows: " << image.rows << ", cols: " << image.cols << endl;
 	if(kCurSegment == -1){

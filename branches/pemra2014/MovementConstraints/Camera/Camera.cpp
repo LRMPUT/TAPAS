@@ -563,7 +563,7 @@ void Camera::processDir(boost::filesystem::path dir,
 		imshow("test", image);
 		waitKey();
 
-		/*TiXmlDocument data(	dir.string() +
+		TiXmlDocument data(	dir.string() +
 							string("/") +
 							cameraImageFile.stem().string() +
 							string(".xml"));
@@ -624,7 +624,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			pObject = pObject->NextSiblingElement("object");
 		}
 		mapRegionIdToLabel.push_back(mapRegionIdToLabelCur);
-		manualRegionsOnImages.push_back(manualRegionsOnImageCur);*/
+		manualRegionsOnImages.push_back(manualRegionsOnImageCur);
 	}
 }
 
@@ -668,7 +668,7 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 		map<int, int> assignedManualId = hierClassifiers.front()->assignManualId(autoRegionsOnImage, manualRegionsOnImages[i]);
 		imshow("original", images[i]);
 		imshow("segments", hierClassifiers.front()->colorSegments(autoRegionsOnImage));
-		waitKey(50);
+		waitKey(100);
 		cout << "Extracting entries" << endl;
 		vector<Entry> newData = hierClassifiers.front()->extractEntries(images[i], terrains[i], autoRegionsOnImage);
 		for(int e = 0; e < newData.size(); e++){

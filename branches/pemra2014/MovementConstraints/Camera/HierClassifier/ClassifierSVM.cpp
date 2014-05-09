@@ -7,6 +7,7 @@
 
 #include <cstring>
 #include <cstdio>
+#include <random>
 
 //Boost
 #include <boost/format.hpp>
@@ -69,15 +70,75 @@ void ClassifierSVM::prepareProblem(	const std::vector<Entry>& entries,
 {
 	clearData();
 
+	default_random_engine generator;
+	uniform_real_distribution<double> uniRealDist(0.0, 1.0);
+	uniform_int_distribution<int> uniIntDist(0, entries.size() - 1);
+
 	descLen = entries.front().descriptor.cols;
 	numEntries = entries.size();
 	scalesSub = new double[descLen];
 	scalesDiv = new double[descLen];
-	double* maxVal = new double[descLen];
-	double* minVal = new double[descLen];
+
+	//normalization
+	/*double* meanVal = new double[descLen];
+	double* varVal = new double[descLen];
 	for(int i = 0; i < descLen; i++){
-		maxVal[i] = -INF;
-		minVal[i] = INF;
+		meanVal[i] = 0;
+		varVal[i] = 0;
+	}
+
+	for(int e = 0; e < numEntries; e++){
+		double w = entries[e].weight;
+		if(!productWeights.empty()){
+			w *= productWeights[e];
+		}
+		for(int i = 0; i < descLen; i++){
+			meanVal[i] += entries[e].descriptor.at<float>(i) * w;
+		}
+	}
+	for(int e = 0; e < numEntries; e++){
+		for(int i = 0; i < descLen; i++){
+			double w = entries[e].weight;
+			if(!productWeights.empty()){
+				w *= productWeights[e];
+			}
+			varVal[i] += (entries[e].descriptor.at<float>(i) - meanVal[i])*
+						(entries[e].descriptor.at<float>(i) - meanVal[i]) * w;
+		}
+	}
+
+	for(int i = 0; i < descLen; i++){
+		scalesSub[i] = meanVal[i];
+		scalesDiv[i] = sqrt(varVal[i]);
+	}
+	delete[] meanVal;
+	delete[] varVal;*/
+
+	//boostrap
+	vector<int> finalIdxs(numEntries, 0);
+	{
+		int idx = uniIntDist(generator);
+		double beta = 0;
+		double maxW = 0;
+		for(int e = 0; e < numEntries; e++){
+			maxW = max(maxW, entries[e].weight);
+		}
+		for(int e = 0; e < numEntries; e++){
+			double w = entries[idx].weight;
+			if(!productWeights.empty()){
+				w *= productWeights[idx];
+			}
+			beta += 2*maxW*uniRealDist(generator);
+			while(w < beta){
+				beta -= w;
+				idx = (idx + 1) % numEntries;
+				w = entries[idx].weight;
+				if(!productWeights.empty()){
+					w *= productWeights[idx];
+				}
+			}
+			finalIdxs[e] = idx;
+		}
 	}
 
 	labData = new svm_node*[numEntries];
@@ -89,31 +150,87 @@ void ClassifierSVM::prepareProblem(	const std::vector<Entry>& entries,
 		for(int i = 0; i < descLen; i++){
 			svm_node tmp;
 			tmp.index = i;
-			tmp.value = entries[e].descriptor.at<float>(i);
-			maxVal[i] = max(maxVal[i], tmp.value);
-			minVal[i] = min(minVal[i], tmp.value);
+			tmp.value = entries[finalIdxs[e]].descriptor.at<float>(i);
 			labData[e][i] = tmp;
 		}
 		svm_node tmp;
 		tmp.index = -1;
 		labData[e][descLen] = tmp;
-		dataLabels[e] = entries[e].label;
-		numLabels = max(numLabels, entries[e].label);
-		svmProblem.W[e] = entries[e].weight;
-		if(!productWeights.empty()){
-			svmProblem.W[e] *= productWeights[e];
-		}
-		//svmProblem.W[e] = 1;
+		dataLabels[e] = entries[finalIdxs[e]].label;
+		numLabels = max(numLabels, entries[finalIdxs[e]].label);
+		svmProblem.W[e] = 1.0/numEntries;
+		//svmProblem.W[e] = entries[finalIdxs[e]].weight;
+		//if(!productWeights.empty()){
+		//	svmProblem.W[e] *= productWeights[e];
+		//}
 	}
 	numLabels++;
 
+	vector<double> popWeights(numLabels, 0);
+	vector<double> popBootstrap(numLabels, 0);
+	for(int e = 0; e < numEntries; e++){
+		double w = entries[e].weight;
+		if(!productWeights.empty()){
+			w *= productWeights[e];
+		}
+		popWeights[entries[e].label] += w;
+		popBootstrap[dataLabels[e]]++;
+	}
+	for(int l = 0; l < numLabels; l++){
+		cout << "label " << l << ", weight = " << popWeights[l] << ", boostrap = " << popBootstrap[l]/numEntries << endl;
+	}
 
+	//normalization
+	double* maxVal = new double[descLen];
+	double* minVal = new double[descLen];
+	for(int i = 0; i < descLen; i++){
+		maxVal[i] = -INF;
+		minVal[i] = INF;
+	}
+	for(int e = 0; e < numEntries; e++){
+		for(int i = 0; i < descLen; i++){
+			maxVal[i] = max(maxVal[i], (double)labData[e][i].value);
+			minVal[i] = min(minVal[i], (double)labData[e][i].value);
+		}
+	}
 	for(int i = 0; i < descLen; i++){
 		scalesSub[i] = minVal[i];
 		scalesDiv[i] = maxVal[i] - minVal[i];
 	}
 	delete[] minVal;
 	delete[] maxVal;
+
+	/*double* meanVal = new double[descLen];
+	double* varVal = new double[descLen];
+	for(int i = 0; i < descLen; i++){
+		meanVal[i] = 0;
+		varVal[i] = 0;
+	}
+
+	for(int e = 0; e < numEntries; e++){
+		for(int i = 0; i < descLen; i++){
+			meanVal[i] += labData[e][i].value;
+		}
+	}
+	for(int i = 0; i < descLen; i++){
+		meanVal[i] /= numEntries;
+	}
+	for(int e = 0; e < numEntries; e++){
+		for(int i = 0; i < descLen; i++){
+			varVal[i] += (labData[e][i].value - meanVal[i])*
+						(labData[e][i].value - meanVal[i]);
+		}
+	}
+	for(int i = 0; i < descLen; i++){
+		varVal[i] /= (numEntries - 1);
+	}
+
+	for(int i = 0; i < descLen; i++){
+		scalesSub[i] = meanVal[i];
+		scalesDiv[i] = sqrt(varVal[i]);
+	}
+	delete[] meanVal;
+	delete[] varVal;*/
 
 	for(int e = 0; e < numEntries; e++){
 		for(int i = 0; i < descLen; i++){
@@ -123,7 +240,6 @@ void ClassifierSVM::prepareProblem(	const std::vector<Entry>& entries,
 			}
 		}
 	}
-
 
 	svmParams.nr_weight = 0;
 	svmProblem.l = numEntries;
@@ -406,7 +522,7 @@ void ClassifierSVM::crossValidate(const std::vector<Entry>& entries)
 	double bestC, bestG, bestScore = -1;
 	for(double paramC = gridCMin; paramC <= gridCMax; paramC *= gridCStep){
 		for(double paramG = gridGMin; paramG <= gridGMax; paramG *= gridGStep){
-			//cout << "Validating params: C = " << paramC << ", gamma = " << paramG << endl;
+			cout << "Validating params: C = " << paramC << ", gamma = " << paramG << endl;
 			svmParams.C = paramC;
 			svmParams.gamma = paramG;
 			svm_cross_validation(&svmProblem, &svmParams, 5, results);
@@ -415,7 +531,7 @@ void ClassifierSVM::crossValidate(const std::vector<Entry>& entries)
 				//cout << results[e] << ", " << entries[e].label << ", weight = " << svmProblem.W[e] <<  endl;
 				score += (abs(results[e] - entries[e].label) > 0.01 ? 0 : 1)*entries[e].weight;
 			}
-			//cout << "Score = " << score << endl;
+			cout << "Score = " << score << endl;
 			if(score > bestScore){
 				bestScore = score;
 				bestC = paramC;
