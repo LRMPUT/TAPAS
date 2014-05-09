@@ -44,7 +44,7 @@ cv::Mat ExtendedKalmanFilter::state() {
 	A.at<float>(3, 3) = 1;
 
 
-	return A*this->x_aposteriori;
+	return A;
 }
 
 cv::Mat ExtendedKalmanFilter::jacobian() {
@@ -72,7 +72,7 @@ cv::Mat ExtendedKalmanFilter::jacobian() {
 
 void ExtendedKalmanFilter::predict(float _dt) {
 	this->dt = _dt;
-	this->x_apriori = this->state();
+	this->x_apriori = this->state() * this->x_aposteriori;
 
 	cv::Mat F = this->jacobian();
 	this->P_apriori = F * this->P_aposteriori * F.t() + this->Q;

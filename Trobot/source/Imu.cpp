@@ -689,6 +689,7 @@ namespace trobot
 
 							addDataToRegister(SerialPacketReadIMU, SerialPacketReadIMU.address, SerialPacketReadIMU.packet_type.bits.BL);
 							UpdateRegister(address_array);
+							timestamp = std::chrono::high_resolution_clock::now();
 							raport = _READ_COMPLETE;
 						}
 

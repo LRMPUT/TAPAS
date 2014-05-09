@@ -12,7 +12,7 @@ class ExtendedKalmanFilter {
 	cv::Mat Hgps, Himu, Henc;
 
 public:
-	ExtendedKalmanFilter(float _Q = 10, float _Rgps = 20, float _Rimu = 2000/180*M_PI, float _Renc = 0.01, float _dt = 0.01);
+	ExtendedKalmanFilter(float _Q = 10, float _Rgps = 20, float _Rimu = 200/180*M_PI, float _Renc = 0.01, float _dt = 0.01);
 
 	void predict(float dt);
 
