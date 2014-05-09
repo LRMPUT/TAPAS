@@ -80,80 +80,91 @@ void PositionEstimation::stopThread() {
 void PositionEstimation::kalmanSetup() {
 	EKF = new ExtendedKalmanFilter();
 
-	state = cv::Mat(4,1, CV_32F);
+	state = cv::Mat(4, 1, CV_32F);
 	setZeroPosition();
 }
 
 void PositionEstimation::KalmanLoop() {
-	std::chrono::high_resolution_clock::time_point encoderTimestamp, gpsTimestamp, imuTimestamp;
+	std::chrono::high_resolution_clock::time_point encoderTimestamp,
+			gpsTimestamp, imuTimestamp;
 
-	printf("??");
 	// Get the GPS data if GPS is available
 	gpsTimestamp = this->gps.getTimestamp();
-	if (isGpsOpen() && gps.getFixStatus() > 1 && lastGpsTimestamp != gpsTimestamp) {
-		printf("GPS FAIL");
-		lastUpdateTimestamp = gpsTimestamp;
+	float gps_dt = std::chrono::duration_cast < std::chrono::milliseconds
+			> (gpsTimestamp - lastGpsTimestamp).count();
 
-		float dt = std::chrono::duration_cast < std::chrono::milliseconds > (lastUpdateTimestamp - gpsTimestamp).count();
-		//EKF->predict(dt);
-
+	if (gps.getFixStatus() > 1 && gps_dt > 0) {
+		float dt = std::chrono::duration_cast < std::chrono::milliseconds
+				> (gpsTimestamp - lastUpdateTimestamp).count();
+		if (dt > 0) {
+			EKF->predict(dt);
+			lastUpdateTimestamp = gpsTimestamp;
+		}
+		lastGpsTimestamp = gpsTimestamp;
 		Mat gps_data = Mat(2, 1, CV_32FC1);
 		gps_data.at<float>(0, 0) = this->gps.getPosX();
 		gps_data.at<float>(1, 0) = this->gps.getPosY();
 
-		//state = EKF->correctGPS(gps_data);
+		state = EKF->correctGPS(gps_data);
+
 	}
 
 	if (isEncodersOpen()) {
-		printf("ENC FAIL");
 		cv::Mat enc_data = this->getEncoderData(encoderTimestamp);
 
-		if (encoderTimestamp != lastEncoderTimestamp)
-		{
-			lastEncoderTimestamp = encoderTimestamp;
-
+		float encoder_dt = std::chrono::duration_cast
+				< std::chrono::milliseconds
+				> (encoderTimestamp - lastEncoderTimestamp).count();
+		if (encoder_dt > 0) {
 			float dt = std::chrono::duration_cast < std::chrono::milliseconds
-					> (lastUpdateTimestamp - encoderTimestamp).count();
-			lastUpdateTimestamp = encoderTimestamp;
-			EKF->predict(dt);
+					> (encoderTimestamp - lastUpdateTimestamp).count();
+			if (dt > 0) {
+				lastUpdateTimestamp = encoderTimestamp;
+				EKF->predict(dt);
+			}
 
-			dt = std::chrono::duration_cast < std::chrono::milliseconds
-							> (lastEncoderTimestamp - encoderTimestamp).count();
-			float left_encoder = ( (float) enc_data.at<int>(0)) / ENCODER_TICK_PER_REV
-					* M_PI * WHEEL_DIAMETER;
-			float right_encoder = ( (float) enc_data.at<int>(1)) / ENCODER_TICK_PER_REV
-							* M_PI * WHEEL_DIAMETER;
 
-			float distance = (left_encoder + right_encoder) / 2.0;
+			if (encoder_dt > 0) {
+				lastEncoderTimestamp = encoderTimestamp;
+				float left_encoder = ((float) enc_data.at<int>(0))
+						/ ENCODER_TICK_PER_REV * M_PI * WHEEL_DIAMETER;
+				float right_encoder = ((float) enc_data.at<int>(1))
+						/ ENCODER_TICK_PER_REV * M_PI * WHEEL_DIAMETER;
 
-			Mat speed(1, 1, CV_32FC1);
-			speed.at<float>(0) = distance / (dt / 1000); // Is in seconds or ms ?
-			//state = EKF->correctEncoder(speed);
+				float distance = (left_encoder + right_encoder) / 2.0;
+
+				Mat speed(1, 1, CV_32FC1);
+				speed.at<float>(0) = distance / (encoder_dt / 1000); // Is in seconds or ms ?
+				state = EKF->correctEncoder(speed);
+			}
 		}
 	}
 
-	if (isImuOpen())
-	{
-		printf("IMU FAIL");
-
-		float dt = std::chrono::duration_cast < std::chrono::milliseconds
-							> (lastUpdateTimestamp - encoderTimestamp).count();
-		lastUpdateTimestamp = encoderTimestamp;
-		//EKF->predict(dt);
-
+	if (isImuOpen()) {
 		cv::Mat imuData = this->imu.getData(imuTimestamp);
-		if (imuTimestamp != lastImuTimestamp)
-		{
+
+		float imu_dt = std::chrono::duration_cast
+						< std::chrono::milliseconds
+						> (imuTimestamp - lastImuTimestamp).count();
+
+		if (imu_dt > 0) {
 			lastImuTimestamp = imuTimestamp;
+
+			float dt = std::chrono::duration_cast < std::chrono::milliseconds
+					> (lastUpdateTimestamp - imuTimestamp).count();
+			if ( dt > 0)
+			{
+				lastUpdateTimestamp = imuTimestamp;
+				EKF->predict(dt);
+			}
 
 			// 3x4 - acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
 			Mat orientation(1, 1, CV_32FC1);
 			orientation.at<float>(0) = imuData.at<float>(11);
-			//state = EKF->correctIMU(orientation);
+			state = EKF->correctIMU(orientation);
 		}
 	}
 }
-
 
 void PositionEstimation::setZeroPosition() {
 	state.at<float>(0) = 0.0;

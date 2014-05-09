@@ -6,7 +6,6 @@ class ExtendedKalmanFilter {
 	cv::Mat Rgps, Rimu, Renc, Q; // Covariances of correct/predict
 
 	cv::Mat I; // Identity
-	cv::Mat K; // Kalman Gain
 	float dt;
 	cv::Mat x_apriori, x_aposteriori; // 4x1 matrices
 	cv::Mat P_apriori, P_aposteriori; // 4x4 matrices
