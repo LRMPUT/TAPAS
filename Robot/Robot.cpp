@@ -113,7 +113,7 @@ bool Robot::isCameraOpen(){
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 //CV_32UC1 2x1: left, right encoder
 const cv::Mat Robot::getEncoderData(){
-	std::chrono::milliseconds timestamp;
+	std::chrono::high_resolution_clock::time_point timestamp;
 	return positionEstimation.getEncoderData(timestamp);
 }
 

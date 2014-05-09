@@ -16,6 +16,8 @@
 #include "Util/ExtendedKalmanFilter.h"
 #include <thread>
 
+#include <chrono>
+#include <iostream>
 
 class Robot;
 class Debug;
@@ -34,6 +36,8 @@ private:
 
 	// Kalman filter to gather position information
 	ExtendedKalmanFilter *EKF;
+	std::chrono::high_resolution_clock::time_point lastUpdateTimestamp,
+			lastEncoderTimestamp, lastGpsTimestamp, lastImuTimestamp;
 	cv::Mat state;
 
 	// GPS
@@ -48,10 +52,9 @@ private:
 	//Parent class Robot
 	Robot* robot;
 
-	int ENCODER_TICK_PER_REV ;
-	double WHEEL_DIAMETER ;
-	double WHEEL_BASE ;
-
+	int ENCODER_TICK_PER_REV;
+	double WHEEL_DIAMETER;
+	double WHEEL_BASE;
 
 public:
 	PositionEstimation(Robot* irobot);
@@ -68,7 +71,7 @@ public:
 	void kalmanSetup();
 
 	// Update Kalman - updates on GPS
-	void KalmanUpdate();
+	void KalmanLoop();
 
 	// Encoders - predict
 	void KalmanPredict();
@@ -78,7 +81,8 @@ public:
 
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
 	//CV_32SC1 2x1: left, right encoder
-	cv::Mat getEncoderData(std::chrono::milliseconds &timestamp);
+	cv::Mat getEncoderData(
+			std::chrono::high_resolution_clock::time_point &timestamp);
 
 	//----------------------ACCESS TO COMPUTED DATA
 	//CV_32SC1 3x1: x, y, fi

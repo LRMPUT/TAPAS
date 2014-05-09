@@ -43,7 +43,7 @@ bool Encoders::isPortOpen(){
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 
 //CV_32SC1 2x1: left, right encoder
-cv::Mat Encoders::getEncoders(std::chrono::milliseconds &timestamp){
+cv::Mat Encoders::getEncoders(std::chrono::high_resolution_clock::time_point &timestamp){
 	//cout << "Encoders::getEncoders" << endl;
 	Mat ret(2, 1, CV_32SC1);
 	serialPort.startReadCount();
@@ -98,6 +98,6 @@ cv::Mat Encoders::getEncoders(std::chrono::milliseconds &timestamp){
 	ret.at<int>(0) = left;
 	ret.at<int>(1) = right;
 
-	//timestamp = robot->getGlobalTime();
+	timestamp = std::chrono::high_resolution_clock::now();
 	return ret;
 }

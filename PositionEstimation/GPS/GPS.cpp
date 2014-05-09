@@ -31,6 +31,7 @@ GPS::GPS() {
 	StartPosLat = 0.0;
 	StartPosLon = 0.0;
 	Radius = 0.0;
+	newMeasurement = false;
 }
 
 GPS::GPS(Robot* irobot) : robot(irobot) {
@@ -41,6 +42,7 @@ GPS::GPS(Robot* irobot) : robot(irobot) {
 	StartPosLat = 0.0;
 	StartPosLon = 0.0;
 	Radius = 0.0;
+	newMeasurement = false;
 }
 
 GPS::GPS(const char *PortName, int BaudRate) {
@@ -51,6 +53,7 @@ GPS::GPS(const char *PortName, int BaudRate) {
 	StartPosLat = 0.0;
 	StartPosLon = 0.0;
 	Radius = 0.0;
+	newMeasurement = false;
 	initController(PortName, BaudRate);
 }
 
@@ -91,7 +94,13 @@ bool GPS::isOpen()
 	return SerialPort.isActive();
 }
 
+std::chrono::high_resolution_clock::time_point GPS::getTimestamp() {
+	return timestamp;
+}
+
+
 double GPS::getPosX(){
+	newMeasurement = false;
 	PosX = (nmea_ndeg2radian(Info.lon - StartPosLon))*Radius;
 	//cout << "Angular difference X = " << Info.lon << " - " << StartPosLon << " = " <<
 	//		 nmea_ndeg2radian(Info.lon - StartPosLon) << endl;
@@ -99,6 +108,7 @@ double GPS::getPosX(){
 }
 
 double GPS::getPosY(){
+	newMeasurement = false;
 	PosY = (nmea_ndeg2radian(Info.lat - StartPosLat))*Radius;
 	return PosY;
 }
@@ -171,8 +181,10 @@ void GPS::monitorSerialPort()
 			int packetsRead = nmea_parse(&Parser, Buffer, cnt, &Info);
 			//cout << "GPS parsed " << packetsRead << endl;
 			if(packetsRead > 0){
+				timestamp = std::chrono::high_resolution_clock::now();
 				PosLat = nmea_ndeg2degree(Info.lat);
 				PosLon = nmea_ndeg2degree(Info.lon);
+				newMeasurement = true;
 			}
 		}
 		if(threadEnd == true){
@@ -197,4 +209,9 @@ int GPS::calculateRadius(){
 			/ ((pow( EqRd*cos(StartPosLatRad),2.0)) + (pow( PlRd*sin(StartPosLatRad),2.0))));
 	//cout << "Radius = " << Radius << endl;
 	return 0;
+}
+
+bool GPS::getNewMeasurement()
+{
+	return newMeasurement;
 }

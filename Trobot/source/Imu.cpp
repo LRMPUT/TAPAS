@@ -809,6 +809,11 @@ namespace trobot
 		broadcasting_ = false;
 	}
 
+	std::chrono::high_resolution_clock::time_point Imu::getTimestamp()
+	{
+		return timestamp;
+	}
+
 
 
 }

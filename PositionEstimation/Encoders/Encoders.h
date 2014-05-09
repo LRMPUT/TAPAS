@@ -28,7 +28,7 @@ public:
 	void openPort(const std::string& device, unsigned int baud);
 	void closePort();
 	bool isPortOpen();
-	cv::Mat getEncoders(std::chrono::milliseconds &timestamp);
+	cv::Mat getEncoders(std::chrono::high_resolution_clock::time_point &timestamp);
 };
 
 #endif /* ENCODERS_H_ */
