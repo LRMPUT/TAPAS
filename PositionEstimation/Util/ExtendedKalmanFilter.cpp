@@ -8,12 +8,12 @@ ExtendedKalmanFilter::ExtendedKalmanFilter(float _Q, float _Rgps, float _Rimu, f
 	this->Renc = cv::Mat::eye(1, 1, CV_32F) * _Renc;
 
 	this->I = cv::Mat::eye(4, 4, CV_32F);
-	this->K = cv::Mat::zeros(7, 4, CV_32F);
+	this->K = cv::Mat::zeros(4, 1, CV_32F);
 	this->dt = _dt;
-	this->x_apriori = cv::Mat::zeros(7, 1, CV_32F);
-	this->x_aposteriori = cv::Mat::zeros(7, 1, CV_32F);
-	this->P_apriori = cv::Mat::zeros(7, 7, CV_32F);
-	this->P_aposteriori = cv::Mat::zeros(7, 7, CV_32F);
+	this->x_apriori = cv::Mat::zeros(4, 1, CV_32F);
+	this->x_aposteriori = cv::Mat::zeros(4, 1, CV_32F);
+	this->P_apriori = cv::Mat::zeros(4, 4, CV_32F);
+	this->P_aposteriori = cv::Mat::zeros(4, 4, CV_32F);
 
 	this->Hgps = cv::Mat::zeros(2, 4, CV_32F);
 	this->Hgps.at<float>(0, 0) = 1.0;
