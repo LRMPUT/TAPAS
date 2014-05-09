@@ -87,23 +87,25 @@ void PositionEstimation::kalmanSetup() {
 void PositionEstimation::KalmanLoop() {
 	std::chrono::high_resolution_clock::time_point encoderTimestamp, gpsTimestamp, imuTimestamp;
 
-
+	printf("??");
 	// Get the GPS data if GPS is available
 	gpsTimestamp = this->gps.getTimestamp();
-	if (gps.getFixStatus() > 1 && lastGpsTimestamp != gpsTimestamp) {
+	if (isGpsOpen() && gps.getFixStatus() > 1 && lastGpsTimestamp != gpsTimestamp) {
+		printf("GPS FAIL");
 		lastUpdateTimestamp = gpsTimestamp;
 
 		float dt = std::chrono::duration_cast < std::chrono::milliseconds > (lastUpdateTimestamp - gpsTimestamp).count();
-		EKF->predict(dt);
+		//EKF->predict(dt);
 
 		Mat gps_data = Mat(2, 1, CV_32FC1);
 		gps_data.at<float>(0, 0) = this->gps.getPosX();
 		gps_data.at<float>(1, 0) = this->gps.getPosY();
 
-		state = EKF->correctGPS(gps_data);
+		//state = EKF->correctGPS(gps_data);
 	}
 
 	if (isEncodersOpen()) {
+		printf("ENC FAIL");
 		cv::Mat enc_data = this->getEncoderData(encoderTimestamp);
 
 		if (encoderTimestamp != lastEncoderTimestamp)
@@ -126,12 +128,19 @@ void PositionEstimation::KalmanLoop() {
 
 			Mat speed(1, 1, CV_32FC1);
 			speed.at<float>(0) = distance / (dt / 1000); // Is in seconds or ms ?
-			state = EKF->correctEncoder(speed);
+			//state = EKF->correctEncoder(speed);
 		}
 	}
 
 	if (isImuOpen())
 	{
+		printf("IMU FAIL");
+
+		float dt = std::chrono::duration_cast < std::chrono::milliseconds
+							> (lastUpdateTimestamp - encoderTimestamp).count();
+		lastUpdateTimestamp = encoderTimestamp;
+		//EKF->predict(dt);
+
 		cv::Mat imuData = this->imu.getData(imuTimestamp);
 		if (imuTimestamp != lastImuTimestamp)
 		{
@@ -140,7 +149,7 @@ void PositionEstimation::KalmanLoop() {
 			// 3x4 - acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
 			Mat orientation(1, 1, CV_32FC1);
 			orientation.at<float>(0) = imuData.at<float>(11);
-			state = EKF->correctIMU(orientation);
+			//state = EKF->correctIMU(orientation);
 		}
 	}
 }
