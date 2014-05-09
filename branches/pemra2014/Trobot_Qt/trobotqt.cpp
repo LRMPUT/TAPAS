@@ -23,8 +23,12 @@ TrobotQt::TrobotQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
 	ui.gpsPortCombo->addItems(portList);
 	qtGps = new QtGps(&ui, &robot, &debug);
 
-	ui.robotDrivePortCombo->addItems(portList);
+	ui.robotDriversLeftPortCombo->addItems(portList);
+	ui.robotDriversRightPortCombo->addItems(portList);
 	drive = new QtRobotDrive(&ui, &robot, &debug);
+
+	ui.encodersPortCombo->addItems(portList);
+	encoders = new QtEncoders(&ui, &robot, &debug);
 
 	ui.imuPortCombo->addItems(portList);
 	imuChart = new ImuChart(&ui, &robot, &debug);

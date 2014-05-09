@@ -11,6 +11,8 @@
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
 #include <boost/asio/serial_port.hpp>
+#include <chrono>
+#include <iostream>
 
 #include "../../Trobot/include/SerialPort.h"
 
@@ -19,18 +21,23 @@
 #define BUFFER_SIZE 2048
 
 class Debug;
+class Robot;
 
 /**
  * GPS Class
  */
 class GPS {
 	friend class Debug;
-
+	Robot *robot;
 public:
 	/**
 	 * Initiates all variables. You need to use @see initController() for starting the module
 	 */
 	GPS();
+	/**
+	 * Initiates all variables. You need to use @see initController() for starting the module
+	 */
+	GPS(Robot* robot);
 	/**
 	 * Initiates all variables and starts the module.
 	 * @param[in] PortName Pointer to array containing name of port, to which the GPS module is attached
@@ -52,6 +59,14 @@ public:
 	 */
 	virtual ~GPS();
 
+	/*
+	 * @return Timestamp of the measurement.
+	 */
+	std::chrono::high_resolution_clock::time_point getTimestamp();
+	/*
+	* @return Bool indicating if there has been a new measurement from the last read.
+	*/
+	bool getNewMeasurement();
 	/*
 	 * @return Distance from Zero Point measured in meters, X (longitude - rownoleznikowo).
 	 */
@@ -104,6 +119,9 @@ private:
 	void closePort();
 	void monitorSerialPort();
 	int calculateRadius();
+
+	std::chrono::high_resolution_clock::time_point timestamp;
+	bool newMeasurement;
 
 	boost::thread m_Thread;
 	nmeaINFO Info;

@@ -16,7 +16,8 @@
 using namespace cv;
 using namespace std;
 
-PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot) {
+PositionEstimation::PositionEstimation(Robot* irobot) :
+		robot(irobot), imu(irobot), gps(irobot), encoders(irobot) {
 
 	ENCODER_TICK_PER_REV = 48 * 75;
 	WHEEL_DIAMETER = 0.12;
@@ -30,14 +31,18 @@ PositionEstimation::PositionEstimation(Robot* irobot) : robot(irobot) {
 	 */
 	kalmanSetup();
 
-	runThread = false;
+	lastUpdateTimestamp = std::chrono::high_resolution_clock::now();
+	lastEncoderTimestamp = std::chrono::high_resolution_clock::now();
+	lastGpsTimestamp = std::chrono::high_resolution_clock::now();
+	lastImuTimestamp = std::chrono::high_resolution_clock::now();
+	runThread = true;
 	estimationThread = std::thread(&PositionEstimation::run, this);
 }
 
 PositionEstimation::~PositionEstimation() {
 	closeGps();
 	closeImu();
-	delete KF;
+	delete EKF;
 }
 
 void PositionEstimation::run() {
@@ -46,7 +51,6 @@ void PositionEstimation::run() {
 	while (runThread) {
 		gettimeofday(&start, NULL);
 
-		KalmanPredict();
 		KalmanLoop();
 
 		// Thread sleep, so that the position is not updated too often
@@ -62,9 +66,9 @@ void PositionEstimation::run() {
 
 		if (mtime == 0)
 			mtime = 1;
-		//cout << "PE:: x: " << state.at<float>(0) << " y: " << state.at<float>(1)
-		//		<< " z: " << state.at<float>(2) << endl;
-		//cout << "PE:: framerate: " << 1000.0 / mtime << endl;
+		cout << "PE:: x: " << state.at<float>(0) << " y: " << state.at<float>(1)
+				<< " z: " << state.at<float>(2) << endl;
+		cout << "PE:: framerate: " << 1000.0 / mtime << endl;
 	}
 }
 
@@ -74,152 +78,135 @@ void PositionEstimation::stopThread() {
 }
 
 void PositionEstimation::kalmanSetup() {
-	KF = new KalmanFilter();
-	KF->init(2, 2, 2);
+	EKF = new ExtendedKalmanFilter();
 
-	KF->transitionMatrix = *(Mat_<double>(2, 2) << 1, 0, 0, 1);
-
-	KF->controlMatrix = *(Mat_<double>(2, 2) << 1, 0, 0, 1);
-
-	KF->measurementMatrix = *(Mat_<double>(2, 2) << 1, 0, 0, 1);
-
-	setIdentity(KF->processNoiseCov, Scalar::all(.005));
-	setIdentity(KF->measurementNoiseCov, Scalar::all(0.5));
-
-	state = cv::Mat(3,1, CV_32F);
-
+	state = cv::Mat(4,1, CV_32F);
 	setZeroPosition();
 }
 
+void PositionEstimation::KalmanLoop() {
+	std::chrono::high_resolution_clock::time_point encoderTimestamp, gpsTimestamp, imuTimestamp;
 
-// Update Kalman - updates on GPS
-void PositionEstimation::KalmanLoop()
-{
+
 	// Get the GPS data if GPS is available
-	if ( gps.getFixStatus() > 1 )
-	{
-		Mat gps_data = Mat(2,1, CV_32FC1);
-		gps_data.at<float>(0,0) = this->gps.getPosX();
-		gps_data.at<float>(1,0) = this->gps.getPosY();
+	gpsTimestamp = this->gps.getTimestamp();
+	if (gps.getFixStatus() > 1 && lastGpsTimestamp != gpsTimestamp) {
+		lastUpdateTimestamp = gpsTimestamp;
 
-		cv::Mat correctedPosition = KF->correct(gps_data);
-		state.at<float>(0) = correctedPosition.at<float>(0);
-		state.at<float>(0) = correctedPosition.at<float>(0);
-	}
-	// there was no update, so we need to copy the data
-	else
-	{
-		KF->statePre.copyTo(KF->statePost);
-		KF->errorCovPre.copyTo(KF->errorCovPost);
-	}
-}
+		float dt = std::chrono::duration_cast < std::chrono::milliseconds > (lastUpdateTimestamp - gpsTimestamp).count();
+		EKF->predict(dt);
 
-// Encoders - predict
-void PositionEstimation::KalmanPredict()
-{
-	// If the encoders are working
+		Mat gps_data = Mat(2, 1, CV_32FC1);
+		gps_data.at<float>(0, 0) = this->gps.getPosX();
+		gps_data.at<float>(1, 0) = this->gps.getPosY();
+
+		state = EKF->correctGPS(gps_data);
+	}
+
 	if (isEncodersOpen()) {
-		cv::Mat enc = this->robot->getEncoderData();
+		cv::Mat enc_data = this->getEncoderData(encoderTimestamp);
 
-		// Getting the encoder ticks
-		float left_enc = enc.at<float>(0, 0)
-				/ ENCODER_TICK_PER_REV* WHEEL_DIAMETER * M_PI;
-		float right_enc = enc.at<float>(1, 0)
-				/ ENCODER_TICK_PER_REV* WHEEL_DIAMETER * M_PI;
+		if (encoderTimestamp != lastEncoderTimestamp)
+		{
+			lastEncoderTimestamp = encoderTimestamp;
 
-		double theta = state.at<float>(2);
-		// if there is IMU, we use IMU to estimate theta !:)
-		if (this->isImuOpen()) {
-			// Getting the angle theta of the IMU
-			cv::Mat imu = this->imu.getData();
+			float dt = std::chrono::duration_cast < std::chrono::milliseconds
+					> (lastUpdateTimestamp - encoderTimestamp).count();
+			lastUpdateTimestamp = encoderTimestamp;
+			EKF->predict(dt);
 
-			//3x4 - acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
-			theta = imu.at<float>(0, 3);
+			dt = std::chrono::duration_cast < std::chrono::milliseconds
+							> (lastEncoderTimestamp - encoderTimestamp).count();
+			float left_encoder = ( (float) enc_data.at<int>(0)) / ENCODER_TICK_PER_REV
+					* M_PI * WHEEL_DIAMETER;
+			float right_encoder = ( (float) enc_data.at<int>(1)) / ENCODER_TICK_PER_REV
+							* M_PI * WHEEL_DIAMETER;
+
+			float distance = (left_encoder + right_encoder) / 2.0;
+
+			Mat speed(1, 1, CV_32FC1);
+			speed.at<float>(0) = distance / (dt / 1000); // Is in seconds or ms ?
+			state = EKF->correctEncoder(speed);
 		}
-		// No IMU :(
-		else {
-			theta += (left_enc - right_enc) / WHEEL_BASE;
-		}
-
-		double distance_covered = (left_enc + right_enc) / 2;
-		cv::Mat prediction = cv::Mat(2, 1, CV_32FC1);
-		prediction.at<float>(0) = distance_covered * sin(theta);
-		prediction.at<float>(1) = distance_covered * cos(theta);
-
-		cv::Mat predictedState = KF->predict(prediction);
-		state.at<float>(0) = predictedState.at<float>(0);
-		state.at<float>(1) = predictedState.at<float>(2);
-		state.at<float>(2) = theta;
 	}
-	// No encoders
-	else
+
+	if (isImuOpen())
 	{
-		KF->statePost.copyTo(KF->statePre);
-		KF->errorCovPost.copyTo(KF->errorCovPre);
+		cv::Mat imuData = this->imu.getData(imuTimestamp);
+		if (imuTimestamp != lastImuTimestamp)
+		{
+			lastImuTimestamp = imuTimestamp;
+
+			// 3x4 - acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
+			Mat orientation(1, 1, CV_32FC1);
+			orientation.at<float>(0) = imuData.at<float>(11);
+			state = EKF->correctIMU(orientation);
+		}
 	}
 }
+
 
 void PositionEstimation::setZeroPosition() {
 	state.at<float>(0) = 0.0;
 	state.at<float>(1) = 0.0;
 	state.at<float>(2) = 0.0;
 
-	if ( isGpsOpen() )
-	{
+	if (isGpsOpen()) {
 		gps.setZeroXY(gps.getLat(), gps.getLon());
 	}
 
-	KF->statePost = KF->statePre = Mat::zeros(2,1, CV_32F);
+//	KF->statePost = KF->statePre = Mat::zeros(2,1, CV_32F);
 }
 
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 //CV_32SC1 2x1: left, right encoder
-cv::Mat PositionEstimation::getEncoderData(){
-	return encoders.getEncoders();
+cv::Mat PositionEstimation::getEncoderData(
+		std::chrono::high_resolution_clock::time_point &timestamp) {
+	return encoders.getEncoders(timestamp);
 }
 
 //----------------------ACCESS TO COMPUTED DATA
 //CV_32SC1 3x1: x, y, fi
-const cv::Mat PositionEstimation::getEstimatedPosition(){
+const cv::Mat PositionEstimation::getEstimatedPosition() {
 	return state;
 }
 
 //----------------------MENAGMENT OF PositionEstimation DEVICES
 //Gps
-void PositionEstimation::openGps(std::string port){
+void PositionEstimation::openGps(std::string port) {
 	gps.initController(port.c_str(), 9600);
 }
 
-void PositionEstimation::closeGps(){
+void PositionEstimation::closeGps() {
 	gps.deinitController();
 }
 
-bool PositionEstimation::isGpsOpen(){
+bool PositionEstimation::isGpsOpen() {
 	return gps.isOpen();
 }
 
 //Imu
-void PositionEstimation::openImu(std::string port){
+void PositionEstimation::openImu(std::string port) {
 	imu.openPort(port);
 }
 
-void PositionEstimation::closeImu(){
+void PositionEstimation::closeImu() {
 	imu.closePort();
 }
 
-bool PositionEstimation::isImuOpen(){
+bool PositionEstimation::isImuOpen() {
 	return imu.isPortOpen();
 }
 
 //Encoders
-void PositionEstimation::openEncoders(std::string port){
+void PositionEstimation::openEncoders(std::string port) {
 	encoders.openPort(port, 115200);
 }
 
-void PositionEstimation::closeEncoders(){
+void PositionEstimation::closeEncoders() {
 	encoders.closePort();
 }
 
-bool PositionEstimation::isEncodersOpen(){
+bool PositionEstimation::isEncodersOpen() {
 	return encoders.isPortOpen();
 }

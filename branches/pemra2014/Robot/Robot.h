@@ -17,6 +17,9 @@
 //Boost
 #include <boost/filesystem.hpp>
 
+// Time measurement
+#include <chrono>
+
 class Robot;
 class Debug;
 
@@ -39,13 +42,22 @@ class Robot {
 
 	MovementConstraints* movementConstraints;
 
+	// Global time of start
+	std::chrono::high_resolution_clock::time_point startTime;
+
 public:
 	Robot(boost::filesystem::path settings);
 	virtual ~Robot();
 
+	// Get global time
+	std::chrono::milliseconds getGlobalTime() const {
+		return std::chrono::duration_cast < std::chrono::milliseconds
+				> (std::chrono::high_resolution_clock::now() - startTime);
+	}
+
 	//----------------------MENAGMENT OF GlobalPlanner DEVICES
 	//Robots Drive
-	void openRobotsDrive(std::string port);
+	void openRobotsDrive(std::string port1, std::string port2);
 
 	void closeRobotsDrive();
 

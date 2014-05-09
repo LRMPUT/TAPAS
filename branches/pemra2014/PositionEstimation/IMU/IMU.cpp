@@ -33,6 +33,10 @@ IMU::IMU() : imu(NULL) {
 
 }
 
+IMU::IMU(Robot* irobot) : imu(NULL), robot(irobot) {
+
+}
+
 IMU::~IMU() {
 	closePort();
 }
@@ -53,7 +57,7 @@ bool IMU::isPortOpen(){
 }
 
 //CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
-const cv::Mat IMU::getData(){
+const cv::Mat IMU::getData(std::chrono::high_resolution_clock::time_point &timestamp){
 	Mat ret(3, 4, CV_32FC1);
 	for(int i = 0; i < NUM_VALUES; i++){
 		float tmp = (short)((imu->Register[quantities[i].address / 4]._int >> 8*(quantities[i].address % 4)) & 0xffff);
@@ -66,5 +70,6 @@ const cv::Mat IMU::getData(){
 		ret.at<float>(i % 3, i / 3) = tmp;
 	}
 	//cout << endl;
+	timestamp = imu->getTimestamp();
 	return ret;
 }

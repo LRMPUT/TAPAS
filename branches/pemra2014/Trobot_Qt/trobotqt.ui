@@ -27,7 +27,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>8</number>
+     <number>7</number>
     </property>
     <widget class="QWidget" name="cameraTab">
      <attribute name="title">
@@ -1215,7 +1215,7 @@
         <item>
          <widget class="QLineEdit" name="saRateEncodersLineEdit">
           <property name="text">
-           <string>10000</string>
+           <string>100</string>
           </property>
          </widget>
         </item>
@@ -1266,7 +1266,7 @@
         <item>
          <widget class="QLineEdit" name="saRateImuLineEdit">
           <property name="text">
-           <string>10</string>
+           <string>100</string>
           </property>
          </widget>
         </item>
@@ -1363,7 +1363,7 @@
         <x>30</x>
         <y>29</y>
         <width>770</width>
-        <height>194</height>
+        <height>250</height>
        </rect>
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout">
@@ -1442,12 +1442,22 @@
          <item>
           <widget class="QLabel" name="label_4">
            <property name="text">
-            <string>Device:</string>
+            <string>Left device:</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QComboBox" name="robotDrivePortCombo"/>
+          <widget class="QComboBox" name="robotDriversLeftPortCombo"/>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_35">
+           <property name="text">
+            <string>Right device:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="robotDriversRightPortCombo"/>
          </item>
          <item>
           <widget class="QLabel" name="robotDriveStatusLabel">
@@ -1458,6 +1468,55 @@
          </item>
          <item>
           <widget class="QCheckBox" name="robotDriveAutoCheckBox">
+           <property name="text">
+            <string>Auto</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="verticalLayout_12">
+         <item>
+          <widget class="QLabel" name="label_30">
+           <property name="text">
+            <string>Encoders</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="encodersConnectButton">
+           <property name="text">
+            <string>Connect</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="encodersDisconnectButton">
+           <property name="text">
+            <string>Disconnect</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_33">
+           <property name="text">
+            <string>Device:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QComboBox" name="encodersPortCombo"/>
+         </item>
+         <item>
+          <widget class="QLabel" name="label_34">
+           <property name="text">
+            <string>Status</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="encodersAutoCheckBox">
            <property name="text">
             <string>Auto</string>
            </property>
@@ -1667,7 +1726,7 @@
       <property name="geometry">
        <rect>
         <x>40</x>
-        <y>270</y>
+        <y>310</y>
         <width>98</width>
         <height>27</height>
        </rect>
@@ -1680,7 +1739,7 @@
       <property name="geometry">
        <rect>
         <x>40</x>
-        <y>310</y>
+        <y>340</y>
         <width>98</width>
         <height>27</height>
        </rect>

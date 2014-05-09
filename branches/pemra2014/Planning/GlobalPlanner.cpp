@@ -31,15 +31,22 @@ void GlobalPlanner::switchMode(OperationMode mode){
 }
 
 void GlobalPlanner::setMotorsVel(float motLeft, float motRight){
-	robotDrive->runMotor(motLeft, LEFT_CHANNEL);
-	robotDrive->runMotor(motRight, RIGHT_CHANNEL);
+
+	robotDrive1->exitSafeStart();
+	robotDrive2->exitSafeStart();
+
+	robotDrive1->setMotorSpeed(motLeft);
+	robotDrive2->setMotorSpeed(motRight);
 }
 
 //----------------------MENAGMENT OF GlobalPlanner DEVICES
 //Robots Drive
-void GlobalPlanner::openRobotsDrive(std::string port){
-	closeRobotsDrive();
-	robotDrive = new RobotDrive(port);
+void GlobalPlanner::openRobotsDrive(std::string port1, std::string port2 ){
+	//closeRobotsDrive();
+	//robotDrive = new RobotDrive(port);
+	cout << "Left: " << port1 << ", right: " << port2 << endl;
+	robotDrive1 = new Drivers(115200, port1);
+	robotDrive2 = new Drivers(115200, port2);
 }
 
 void GlobalPlanner::closeRobotsDrive(){

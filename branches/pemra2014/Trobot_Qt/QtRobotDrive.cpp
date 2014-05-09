@@ -173,15 +173,16 @@ bool QtRobotDrive::isOpen(){
 }
 
 void QtRobotDrive::openRobotDrive(){
-	if(ui->robotDrivePortCombo->count() != 0){
-		//TODO move somewhere else
-		robot->openEncoders(string(ui->robotDrivePortCombo->currentText().toAscii().data()));
-		cout << robot->isEncodersOpen() << endl;
+	if(ui->robotDriversLeftPortCombo->count() != 0 &&
+		ui->robotDriversRightPortCombo->count() != 0)
+	{
+		robot->openRobotsDrive(string(ui->robotDriversLeftPortCombo->currentText().toAscii().data()),
+								string(ui->robotDriversRightPortCombo->currentText().toAscii().data()));
 		setButtonsEnabled(true);
 	}
 }
 
 void QtRobotDrive::closeRobotDrive(){
 	setButtonsEnabled(false);
-	robot->closeEncoders();
+	robot->closeRobotsDrive();
 }

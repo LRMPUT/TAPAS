@@ -40,7 +40,8 @@ void Debug::setMotorsVel(float motLeft, float motRight){
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 //CV_32SC1 2x1: left, right encoder
 const cv::Mat Debug::getEncoderData(){
-	return robot->positionEstimation.getEncoderData();
+	std::chrono::high_resolution_clock::time_point timestamp;
+	return robot->positionEstimation.getEncoderData(timestamp);
 }
 
 //CV_32SC1 4x1: x, y, lat, lon position
@@ -68,7 +69,8 @@ void Debug::setGpsZeroPoint(double lat, double lon){
 
 //CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
 const cv::Mat Debug::getImuData(){
-	return robot->positionEstimation.imu.getData();
+	std::chrono::high_resolution_clock::time_point timestamp;
+	return robot->positionEstimation.imu.getData(timestamp);
 }
 
 //CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right
@@ -143,6 +145,21 @@ void Debug::testEncoders(){
 		}
 	}
 }
+
+void Debug::testDrivers(){
+	robot->openRobotsDrive("/dev/robots/driver1", "/dev/robots/driver2");
+
+	while(true){
+
+		robot->globalPlanner.setMotorsVel(1000, 1000);
+		char a = waitKey(500);
+		if(a == 'q'){
+			break;
+		}
+		robot->globalPlanner.setMotorsVel(0, 0);
+		}
+	}
+
 
 //----------------------ACCESS TO COMPUTED DATA
 //CV_32SC1 3x1: x, y, fi

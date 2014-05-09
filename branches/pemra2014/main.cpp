@@ -18,7 +18,7 @@ int main()
 	try{
 		Robot robot("../settings.xml");
 		cout << "Robot created" << endl;
-		Debug debug(&robot);
+		//Debug debug(&robot);
 		//debug.testConstraints(filesystem::path("../MovementConstraints/Camera/database/train"),
 		//						filesystem::path("../MovementConstraints/Camera/database/classify"));
 		vector<filesystem::path> dirsLearn, dirsClassify;
@@ -32,8 +32,13 @@ int main()
 		//while(1)
 		//{
 
-
-		//}
+		char a;
+		while(1)
+		{
+			cin >> a;
+			if ( a == 'q')
+				break;
+		}
 
 	}
 	catch(char const* error){

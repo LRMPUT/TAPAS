@@ -7,6 +7,8 @@
 #include <ctime>
 #include <string>
 
+#include <chrono>
+
 namespace trobot 
 {
 	//! Baud Rate
@@ -1180,6 +1182,9 @@ namespace trobot
 			//Change serial port configuration.
 			void ChangeSerialPortConfiguartion(eBaud baud, const std::string& device);
 
+			// get Timestamp of last orientation update
+			std::chrono::high_resolution_clock::time_point getTimestamp();
+
 		public:
 			Imu(unsigned int baud = Baud, const std::string& device = "COM1");
 			~Imu(void);
@@ -1199,6 +1204,9 @@ namespace trobot
 			uint8				reportAddress;
 			//Packet SerialPacketReadIMU;
 			SerialPort*			serial_port; 
+
+			// Timestamp of last measurement
+			std::chrono::high_resolution_clock::time_point timestamp;
 
 			//! Make array with all register.
 			void ConfigArray();

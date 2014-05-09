@@ -28,7 +28,9 @@ set(RobotsIntellect_SOURCES
 	#Planning/PlanningSearching/LocalPlannerSearching.cpp
 	#Planning/PlanningToGold/LocalPlannerToGold.cpp
 	#Planning/PlanningWithGold/LocalPlannerWithGold.cpp
+	Planning/RobotDrivers/robotDrivers.cpp
 	Planning/GlobalPlanner.cpp
+	PositionEstimation/Util/ExtendedKalmanFilter.cpp
 	PositionEstimation/Encoders/Encoders.cpp
 	PositionEstimation/GPS/src/context.c
 	PositionEstimation/GPS/src/generate.c
@@ -76,7 +78,8 @@ set(trobotQt_SOURCES
 	Trobot_Qt/QtCamera.cpp
 	Trobot_Qt/QtHokuyo.cpp
 	Trobot_Qt/Calibration.cpp
-	Trobot_Qt/trobotqt.cpp)
+	Trobot_Qt/trobotqt.cpp
+	Trobot_Qt/QtEncoders.cpp)
 set(trobotQt_HEADERS
 	Trobot_Qt/CameraWindow.h
 	Trobot_Qt/Chart.h
@@ -87,7 +90,8 @@ set(trobotQt_HEADERS
 	Trobot_Qt/QtCamera.h
 	Trobot_Qt/QtHokuyo.h
 	Trobot_Qt/Calibration.h
-	Trobot_Qt/trobotqt.h)
+	Trobot_Qt/trobotqt.h
+	Trobot_Qt/QtEncoders.h)
 set(trobotQt_FORMS
 	Trobot_Qt/CameraWindow.ui
 	Trobot_Qt/trobotqt.ui)

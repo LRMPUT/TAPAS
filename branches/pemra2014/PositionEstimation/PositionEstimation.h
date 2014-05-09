@@ -13,8 +13,11 @@
 #include "Encoders/Encoders.h"
 #include "GPS/GPS.h"
 #include "IMU/IMU.h"
+#include "Util/ExtendedKalmanFilter.h"
 #include <thread>
 
+#include <chrono>
+#include <iostream>
 
 class Robot;
 class Debug;
@@ -25,11 +28,17 @@ class PositionEstimation {
 private:
 	// unique pointer to the PositionEstimation thread
 	std::thread estimationThread;
+	//TODO Chyba powinno być volatile
+	// Nope. Volatile nie działa tak jak myśli 80% programistów ;d. Wydaje mi się, że fakt, ze x86/x64 wykonuja
+	// operacje w sposob atomowy na bool(intcie) jest wystarczajacy. W takim wypadku moze byc problem z inwalidacja
+	// wpisow w linii cache, ale to dzieje sie raz na instacje
 	bool runThread;
 
 	// Kalman filter to gather position information
+	ExtendedKalmanFilter *EKF;
+	std::chrono::high_resolution_clock::time_point lastUpdateTimestamp,
+			lastEncoderTimestamp, lastGpsTimestamp, lastImuTimestamp;
 	cv::Mat state;
-	cv::KalmanFilter *KF;
 
 	// GPS
 	GPS gps;
@@ -43,16 +52,16 @@ private:
 	//Parent class Robot
 	Robot* robot;
 
-	int ENCODER_TICK_PER_REV ;
-	double WHEEL_DIAMETER ;
-	double WHEEL_BASE ;
-
+	int ENCODER_TICK_PER_REV;
+	double WHEEL_DIAMETER;
+	double WHEEL_BASE;
 
 public:
 	PositionEstimation(Robot* irobot);
 	virtual ~PositionEstimation();
 
 	// The cycle of the position estimation thread
+	//TODO Przemyśleć przeniesienie tego do private
 	void run();
 
 	// Stopping the position estimation thread
@@ -72,7 +81,8 @@ public:
 
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
 	//CV_32SC1 2x1: left, right encoder
-	cv::Mat getEncoderData();
+	cv::Mat getEncoderData(
+			std::chrono::high_resolution_clock::time_point &timestamp);
 
 	//----------------------ACCESS TO COMPUTED DATA
 	//CV_32SC1 3x1: x, y, fi
