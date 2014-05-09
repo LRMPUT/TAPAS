@@ -226,13 +226,13 @@ cv::Mat Camera::compOrient(cv::Mat imuData){
 	float pitch = imuData.at<float>(10)*PI/180;
 	float roll = imuData.at<float>(9)*PI/180;
 	//cout << "Computing Rz, Ry, Rx, yaw = " << yaw << endl;
-	Matx33f Rz(	cos(yaw), sin(yaw), 0,
-				-sin(yaw), cos(yaw), 0,
+	Matx33f Rz(	cos(yaw), -sin(yaw), 0,
+				sin(yaw), cos(yaw), 0,
 				0, 0, 1);
 	//cout << "Rz = " << Rz << endl;
-	Matx33f Ry(	cos(pitch), 0, -sin(pitch),
+	Matx33f Ry(	cos(pitch), 0, sin(pitch),
 				0, 1, 0,
-				sin(pitch), 0, cos(pitch));
+				-sin(pitch), 0, cos(pitch));
 	//cout << "Ry = " << Ry << endl;
 	Matx33f Rx(	1, 0, 0,
 				0, cos(roll), sin(roll),
@@ -339,7 +339,7 @@ void Camera::processDir(boost::filesystem::path dir,
 	}
 	Mat hokuyoAllPointsGlobal;
 	Mat imuPrev, encodersPrev;
-	Mat globalPos, curPos;
+	Mat imuPosGlobal, curPos;
 	Mat prevRot;
 	int hokuyoCurTime;
 	hokuyoFile >> hokuyoCurTime;
@@ -420,8 +420,8 @@ void Camera::processDir(boost::filesystem::path dir,
 
 			if(imuPrev.empty()){
 				readLine(imuFile, imuPrev);
-				globalPos = compOrient(imuPrev)*cameraOrigImu.front();
-				globalPos.copyTo(curPos);
+				imuPosGlobal = compOrient(imuPrev);
+				imuPosGlobal.copyTo(curPos);
 				imuFile >> imuCurTime;
 			}
 			if(encodersPrev.empty()){
@@ -464,7 +464,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			//cout << "trans = " << trans << endl;
 			//cout << "curTrans = " << curTrans << endl;
 			//cout << "curRot = " << curRot << endl;
-			//cout << "curPos = " << curPos << endl;
+			cout << "imuPosGlobal.inv()*curPos*cameraOrigImu.inv() = " << endl << imuPosGlobal.inv()*curPos*cameraOrigImu.front().inv() << endl;
 			//cout << "globalPos.inv()*curPos = " << globalPos.inv()*curPos << endl;
 
 			//cout << "Moving hokuyoAllPointsGlobal" << endl;
@@ -563,7 +563,7 @@ void Camera::processDir(boost::filesystem::path dir,
 		imshow("test", image);
 		waitKey();
 
-		TiXmlDocument data(	dir.string() +
+		/*TiXmlDocument data(	dir.string() +
 							string("/") +
 							cameraImageFile.stem().string() +
 							string(".xml"));
@@ -624,7 +624,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			pObject = pObject->NextSiblingElement("object");
 		}
 		mapRegionIdToLabel.push_back(mapRegionIdToLabelCur);
-		manualRegionsOnImages.push_back(manualRegionsOnImageCur);
+		manualRegionsOnImages.push_back(manualRegionsOnImageCur);*/
 	}
 }
 
