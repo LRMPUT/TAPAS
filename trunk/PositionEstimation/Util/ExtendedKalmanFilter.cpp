@@ -1,14 +1,13 @@
 #include "ExtendedKalmanFilter.h"
 
 ExtendedKalmanFilter::ExtendedKalmanFilter(float _Q, float _Rgps, float _Rimu, float _Renc, float _dt) {
-	this->Q = cv::Mat::eye(7, 7, CV_32F) * _Q;
+	this->Q = cv::Mat::eye(4, 4, CV_32F) * _Q;
 
 	this->Rgps = cv::Mat::eye(2, 2, CV_32F) * _Rgps;
 	this->Rimu = cv::Mat::eye(1, 1, CV_32F) * _Rimu;
 	this->Renc = cv::Mat::eye(1, 1, CV_32F) * _Renc;
 
 	this->I = cv::Mat::eye(4, 4, CV_32F);
-	this->K = cv::Mat::zeros(4, 1, CV_32F);
 	this->dt = _dt;
 	this->x_apriori = cv::Mat::zeros(4, 1, CV_32F);
 	this->x_aposteriori = cv::Mat::zeros(4, 1, CV_32F);
@@ -81,31 +80,34 @@ void ExtendedKalmanFilter::predict(float _dt) {
 
 
 cv::Mat ExtendedKalmanFilter::correctGPS(cv::Mat gpsMeasurement) {
-	this->K = (this->P_apriori * this->Hgps.t())
+	cv::Mat K = cv::Mat::zeros(4, 2, CV_32F);
+	K = (this->P_apriori * this->Hgps.t())
 			* (this->Hgps * this->P_apriori * this->Hgps.t() + this->Rgps).inv();
 	this->x_aposteriori = this->x_apriori
-			+ this->K * (gpsMeasurement - this->Hgps * this->x_apriori);
-	this->P_aposteriori = (this->I - this->K * this->Hgps) * this->P_apriori;
+			+ K * (gpsMeasurement - this->Hgps * this->x_apriori);
+	this->P_aposteriori = (this->I - K * this->Hgps) * this->P_apriori;
 	return this->x_aposteriori;
 }
 
 
 cv::Mat ExtendedKalmanFilter::correctIMU(cv::Mat imuMeasurement) {
-	this->K = (this->P_apriori * this->Himu.t())
+	cv::Mat K = cv::Mat::zeros(4, 1, CV_32F);
+	K = (this->P_apriori * this->Himu.t())
 			* (this->Himu * this->P_apriori * this->Himu.t() + this->Rimu).inv();
 	this->x_aposteriori = this->x_apriori
-			+ this->K * (imuMeasurement - this->Himu * this->x_apriori);
-	this->P_aposteriori = (this->I - this->K * this->Himu) * this->P_apriori;
+			+ K * (imuMeasurement - this->Himu * this->x_apriori);
+	this->P_aposteriori = (this->I - K * this->Himu) * this->P_apriori;
 	return this->x_aposteriori;
 }
 
 
 cv::Mat ExtendedKalmanFilter::correctEncoder(cv::Mat encMeasurement) {
-	this->K = (this->P_apriori * this->Henc.t())
+	cv::Mat K = cv::Mat::zeros(4, 1, CV_32F);
+	K = (this->P_apriori * this->Henc.t())
 			* (this->Henc * this->P_apriori * this->Henc.t() + this->Renc).inv();
 	this->x_aposteriori = this->x_apriori
-			+ this->K * (encMeasurement - this->Henc * this->x_apriori);
-	this->P_aposteriori = (this->I - this->K * this->Henc) * this->P_apriori;
+			+ K * (encMeasurement - this->Henc * this->x_apriori);
+	this->P_aposteriori = (this->I - K * this->Henc) * this->P_apriori;
 	return this->x_aposteriori;
 }
 
