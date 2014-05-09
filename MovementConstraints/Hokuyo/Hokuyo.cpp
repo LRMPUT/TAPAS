@@ -14,14 +14,18 @@ using namespace std;
 using namespace cv;
 
 void Hokuyo::run(){
+	hokuyo.start_measurement(	qrk::Urg_driver::Distance_intensity,
+								qrk::Urg_driver::Infinity_times,
+								0);
 	while(runThread){
 		vector<long int> distance;
 		vector<unsigned short> intensity;
 
+		//cout << "is_open: " << hokuyo.is_open() << endl;
+		//cout << "status: " << hokuyo.status() << endl;
 		//1 measurement doesn't work with Distance_intensity
-		hokuyo.start_measurement(qrk::Urg_driver::Distance_intensity, 2, 0);
 		hokuyo.get_distance_intensity(distance, intensity);
-		hokuyo.get_distance_intensity(distance, intensity);
+		//hokuyo.get_distance_intensity(distance, intensity);
 		//cout << "distance.size() = " << distance.size() << ", intensity.size() = " << intensity.size() << endl;
 		//int count = 0;
 		std::unique_lock<std::mutex> lck(mtx);
@@ -40,9 +44,10 @@ void Hokuyo::run(){
 		lck.unlock();
 		//cout << "Number of zeros: " << count << endl;
 
-		std::chrono::milliseconds duration(100);
+		std::chrono::milliseconds duration(20);
 		std::this_thread::sleep_for(duration);
 	}
+	hokuyo.stop_measurement();
 }
 
 Hokuyo::Hokuyo() :

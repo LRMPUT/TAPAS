@@ -56,7 +56,9 @@ void Recording::getDataGps(){
 	const Mat gpsData = debug->getGpsData();
 	//cout << "Data dims = (" << gpsData.rows << ", " << gpsData.cols << ")" << endl;
 	gpsStream<<time.elapsed()<<" ";
-	gpsStream<<gpsData.at<float>(0)<<" "<<gpsData.at<float>(1)<<std::endl;
+	gpsStream<<gpsData.at<float>(0)<<" "<<gpsData.at<float>(1);
+	//cout << gpsData.at<float>(2) << " " << gpsData.at<float>(3) << std::endl;
+	gpsStream << " " << gpsData.at<float>(2) << " " << gpsData.at<float>(3) << std::endl;
 	//cout << "end Recording::getDataGps()" << endl;
 }
 
@@ -128,6 +130,7 @@ void Recording::startRec(){
 			return;
 		}
 		gpsStream.open("rec/gps.data");
+		gpsStream.precision(15);
 		gpsTimer.setInterval(max((int)(1000/ui->saRateGpsLineEdit->text().toFloat()), 1));
 		gpsTimer.start();
 	}
@@ -151,6 +154,7 @@ void Recording::startRec(){
 		}
 
 		imuStream.open("rec/imu.data");
+		imuStream.precision(15);
 		imuTimer.setInterval(max((int)(1000/ui->saRateImuLineEdit->text().toFloat()), 1));
 		imuTimer.start();
 	}
