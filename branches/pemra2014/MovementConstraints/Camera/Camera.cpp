@@ -561,9 +561,9 @@ void Camera::processDir(boost::filesystem::path dir,
 			}
 		}
 		imshow("test", image);
-		waitKey();
+		waitKey(100);
 
-		/*TiXmlDocument data(	dir.string() +
+		TiXmlDocument data(	dir.string() +
 							string("/") +
 							cameraImageFile.stem().string() +
 							string(".xml"));
@@ -624,7 +624,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			pObject = pObject->NextSiblingElement("object");
 		}
 		mapRegionIdToLabel.push_back(mapRegionIdToLabelCur);
-		manualRegionsOnImages.push_back(manualRegionsOnImageCur);*/
+		manualRegionsOnImages.push_back(manualRegionsOnImageCur);
 	}
 }
 

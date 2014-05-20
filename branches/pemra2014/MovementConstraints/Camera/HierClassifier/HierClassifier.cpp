@@ -202,7 +202,7 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 			descLen[7] = histDLen*histILen;
 		}
 		else if(dPtr->Value() == string("shape")){
-			shapeLen = 8;
+			shapeLen = 6;
 			if(descLen.size() < 9){
 				descLen.resize(9);
 			}
@@ -519,6 +519,49 @@ bool operator<(const Pixel& left, const Pixel& right){
 	return (left.imageId < right.imageId);
 }
 
+void ransac2DLine(	vector<Point2f> points,
+					double& A,
+					double& B,
+					double& C,
+					int iterations,
+					float thresholdCons,
+					float thresholdModel)
+{
+	default_random_engine generator;
+	uniform_int_distribution<int> uniIntDist(0, points.size() - 1);
+	uniform_int_distribution<int> uniIntDistNext(0, points.size() - 2);
+
+	double bestA, bestB, bestC, bestScore;
+	bestA = bestB = bestC = bestScore = 0;
+	vector<int> bestPoints;
+
+	for(int i = 0; i < iterations; i++){
+		//losowanie punktów
+		int point1 = uniIntDist(generator);
+		int point2 = uniIntDistNext(generator);
+		if(point2 >= point1){
+			point2++;
+		}
+		//estymacja modelu
+		double tmpA = points[point1].y - points[point2].y;
+		double tmpB = points[point2].x - points[point1].x;
+		double tmpC = points[point1].x * points[points2].y - points[point2].x * points[point1].y;
+		//sprawdzenie modelu
+		int conSize = 0;
+		vector<int> tmpPoints;
+		for(int p = 0; p < points.size(); p++){
+			if(abs(tmpA * points[p].x + tmpB * points[p].y + tmpC)/sqrt(tmpA * tmpA + tmpB * tmpB) < thresholdCons){
+				tmpPoints.push_back(p);
+				conSize++;
+			}
+		}
+		if(bestScore < (double)conSize/points.size()){
+			bestScore = (double)conSize/points.size();
+			bestPoints = tmpPoints;
+		}
+	}
+}
+
 std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 													cv::Mat terrain,
 													cv::Mat regionsOnImage)
@@ -776,7 +819,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 				}
 			}
 		}*/
-		Mat tmpRegions(regionsOnImage.rows + 2, regionsOnImage.cols + 2, CV_32SC1, Scalar(-1));
+		/*Mat tmpRegions(regionsOnImage.rows + 2, regionsOnImage.cols + 2, CV_32SC1, Scalar(-1));
 		regionsOnImage.copyTo(Mat(tmpRegions, Rect(1, 1, regionsOnImage.cols, regionsOnImage.rows)));
 		Mat turns(1, 8, CV_32FC1, Scalar(0));
 		{
@@ -803,6 +846,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 						{
 							count++;
 							turns.at<float>(nextDir) += 1.0;
+							continue;
 						}
 					}
 				}
@@ -811,8 +855,87 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 			if(count > 0){
 				turns = turns / count;
 			}
+		}*/
+		cout << "Computing lines" << endl;
+		Mat linesDesc(1, 6, CV_32FC1, Scalar(0));
+		vector<Vec4i> lines;
+		Mat tmpImage(imageBGR.rows, imageBGR.cols, CV_8UC1, Scalar(0));
+		int nhood[][2] = {{1, 0},
+						{1, 1},
+						{0, 1},
+						{-1, 1},
+						{-1, 0},
+						{-1, -1},
+						{0, -1},
+						{1, -1}};
+		int regId = pixels[begIm].imageId;
+		int countPix = 0;
+		for(int p = begIm; p < endIm; p++){
+			int r = pixels[p].r;
+			int c = pixels[p].c;
+			if(r != 0 && c != 0 && r != imageBGR.rows - 1 && c != imageBGR.cols - 1){
+				for(int dir = 0; dir < sizeof(nhood)/sizeof(nhood[0]); dir++){
+					int nextDir = (dir + 1) % (sizeof(nhood)/sizeof(nhood[0]));
+					int nr = r + nhood[dir][0];
+					int nc = c + nhood[dir][1];
+					if(nr >= 0 && nc >= 0 && nr < imageBGR.rows && nc < imageBGR.cols){
+						if(regionsOnImage.at<int>(nr, nc) != regId)
+						{
+							tmpImage.at<unsigned char>(r, c) = 255;
+							countPix++;
+							break;
+						}
+					}
+				}
+			}
 		}
-		//waitKey();
+		cout << "countPix = " << countPix << endl;
+		//dilate(tmpImage, tmpImage, Mat(), Point(-1, -1), 1);
+		rectangle(tmpImage, Point(20, 20), Point(200, 200), Scalar(255));
+		HoughLinesP(tmpImage, lines, 1, 4*CV_PI/180, 10, 10);
+		int countLines = 0;
+		double meanRho = 0;
+		double meanLen = 0;
+		double sumLen = 0;
+		cout << "lines.size() = " << lines.size() << endl;
+		for(int l = 0; l < lines.size(); l++){
+			double rho = atan2((double)(lines[l][1] - lines[l][3]), (double)(lines[l][0] - lines[l][2]));
+			double len = sqrt((double)(lines[l][1] - lines[l][3])*(lines[l][1] - lines[l][3]) +
+					(lines[l][0] - lines[l][2])*(lines[l][0] - lines[l][2]));
+			meanRho += rho;
+			meanLen += len;
+			sumLen += len;
+			countLines++;
+		}
+		meanRho /= countLines;
+		meanLen /= countLines;
+		double varRho = 0;
+		double varLen = 0;
+		for(int l = 0; l < lines.size(); l++){
+			double rho = atan2((double)(lines[l][1] - lines[l][3]), (double)(lines[l][0] - lines[l][2]));
+			double len = sqrt((lines[l][1] - lines[l][3])*(lines[l][1] - lines[l][3]) +
+					(lines[l][0] - lines[l][2])*(lines[l][0] - lines[l][2]));
+			varRho += (rho - meanRho)*(rho - meanRho);
+			varLen += (len - meanLen)*(len - meanLen);
+		}
+		varRho /= (countLines - 1);
+		varLen /= (countLines - 1);
+
+		linesDesc.at<float>(0) = (float)countPix;
+		linesDesc.at<float>(1) = (float)sumLen;
+		linesDesc.at<float>(2) = (float)meanRho;
+		linesDesc.at<float>(3) = (float)varRho;
+		linesDesc.at<float>(4) = (float)meanLen;
+		linesDesc.at<float>(5) = (float)varLen;
+
+		cout << "linesDesc = " << linesDesc << endl;
+		Mat showImage;
+		cvtColor(tmpImage, showImage, CV_GRAY2BGR);
+		for(int l = 0; l < lines.size(); l++){
+			line(showImage, Point(lines[l][0], lines[l][1]), Point(lines[l][2], lines[l][3]), Scalar(0, 0, 255));
+		}
+		imshow("imageRegion", showImage);
+		waitKey();
 
 		Entry tmp;
 		tmp.imageId = pixels[begIm].imageId;
@@ -845,7 +968,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		begCol += kurtLaserLen;
 		histogramDI.copyTo(tmp.descriptor.colRange(begCol, begCol + histDLen*histILen));
 		begCol += histDLen*histILen;
-		turns.copyTo(tmp.descriptor.colRange(begCol, begCol + shapeLen));
+		linesDesc.copyTo(tmp.descriptor.colRange(begCol, begCol + shapeLen));
 		begCol += shapeLen;
 
 		ret.push_back(tmp);
