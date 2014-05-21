@@ -89,12 +89,12 @@
 			</HierClassifier>
 			<learning dir="../../MovementConstraints/Camera/training_data" />
 			<labels>
-				<label text="grass" id="0"/>
+				<!--<label text="grass" id="0"/>
 				<label text="pavement" id="1"/>
 				<label text="pavement2" id="2" />
-				<label text="asphalt" id="3" />
-				<!--<label text="pavement2" id="0" />
-				<label text="asphalt" id="1" />-->
+				<label text="asphalt" id="3" />-->
+				<label text="pavement2" id="0" />
+				<label text="asphalt" id="1" />
 			</labels>
 
 			<sensor id="left">

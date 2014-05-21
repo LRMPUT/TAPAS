@@ -670,7 +670,16 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 		imshow("segments", hierClassifiers.front()->colorSegments(autoRegionsOnImage));
 		waitKey(100);
 		cout << "Extracting entries" << endl;
-		vector<Entry> newData = hierClassifiers.front()->extractEntries(images[i], terrains[i], autoRegionsOnImage);
+		bool debug = false;
+		//cout << "Looking for class " << 1 << endl;
+		for(map<int, int>::iterator it = assignedManualId.begin(); it != assignedManualId.end(); it++){
+			//cout << mapRegionIdToLabel[i][it->second] << endl;
+			if(mapRegionIdToLabel[i][it->second] == 1){
+				debug = true;
+				break;
+			}
+		}
+		vector<Entry> newData = hierClassifiers.front()->extractEntries(images[i], terrains[i], autoRegionsOnImage, debug);
 		for(int e = 0; e < newData.size(); e++){
 			if(mapRegionIdToLabel[i].count(assignedManualId[newData[e].imageId]) > 0){
 				newData[e].label = mapRegionIdToLabel[i][assignedManualId[newData[e].imageId]];

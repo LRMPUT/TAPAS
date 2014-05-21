@@ -191,7 +191,8 @@ public:
 	*/
 	std::vector<Entry> extractEntries(cv::Mat image,
 										cv::Mat terrain,
-										cv::Mat regionsOnImage);
+										cv::Mat regionsOnImage,
+										bool debug = false);
 
 	/** \brief Funkcja segmentująca obraz używając danych RGB.
 	 * 	@return Macierz z id segmentu dla każdego piksela na obrazie.

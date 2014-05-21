@@ -202,7 +202,7 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 			descLen[7] = histDLen*histILen;
 		}
 		else if(dPtr->Value() == string("shape")){
-			shapeLen = 6;
+			shapeLen = 7;
 			if(descLen.size() < 9){
 				descLen.resize(9);
 			}
@@ -519,52 +519,152 @@ bool operator<(const Pixel& left, const Pixel& right){
 	return (left.imageId < right.imageId);
 }
 
-void ransac2DLine(	vector<Point2f> points,
-					double& A,
-					double& B,
-					double& C,
+
+int ransac2DLine(	const vector<Point2f>& points,
+					vector<Point2f>& ptsStart,
+					vector<Point2f>& ptsEnd,
+					vector<bool>& bestPoints,
 					int iterations,
-					float thresholdCons,
-					float thresholdModel)
+					double thresholdCons,
+					double thresholdModel,
+					double thresholdGap,
+					double thresholdMinLen,
+					Mat borderImage)
 {
-	default_random_engine generator;
+	unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+	default_random_engine generator(seed);
 	uniform_int_distribution<int> uniIntDist(0, points.size() - 1);
 	uniform_int_distribution<int> uniIntDistNext(0, points.size() - 2);
 
-	double bestA, bestB, bestC, bestScore;
-	bestA = bestB = bestC = bestScore = 0;
-	vector<int> bestPoints;
-
+	double bestA, bestB, bestC;
+	int bestScore;
+	bestA = bestB = bestC = 0;
+	bestScore = 0;
+	bestPoints.assign(points.size(), false);
+	Mat showImage;
 	for(int i = 0; i < iterations; i++){
+		//cout << "iteration " << i << endl;
+		//cvtColor(borderImage, showImage, CV_GRAY2BGR);
 		//losowanie punktów
 		int point1 = uniIntDist(generator);
 		int point2 = uniIntDistNext(generator);
 		if(point2 >= point1){
 			point2++;
 		}
+		//cout << "point1 = " << point1 << ", point2 = " << point2 << endl;
+		//circle(showImage, points[point1], 2, Scalar(0, 0, 255));
+		//circle(showImage, points[point2], 2, Scalar(0, 0, 255));
+		//imshow("imageRegion", showImage);
+		//waitKey();
 		//estymacja modelu
 		double tmpA = points[point1].y - points[point2].y;
 		double tmpB = points[point2].x - points[point1].x;
-		double tmpC = points[point1].x * points[points2].y - points[point2].x * points[point1].y;
+		double tmpC = points[point1].x * points[point2].y - points[point2].x * points[point1].y;
 		//sprawdzenie modelu
 		int conSize = 0;
-		vector<int> tmpPoints;
+		vector<bool> tmpPoints(points.size(), false);
 		for(int p = 0; p < points.size(); p++){
 			if(abs(tmpA * points[p].x + tmpB * points[p].y + tmpC)/sqrt(tmpA * tmpA + tmpB * tmpB) < thresholdCons){
-				tmpPoints.push_back(p);
+				tmpPoints[p] = true;
+				circle(showImage, points[p], 2, Scalar(255, 0, 0));
 				conSize++;
 			}
 		}
-		if(bestScore < (double)conSize/points.size()){
-			bestScore = (double)conSize/points.size();
+		//cout << "score = " << (double)conSize/points.size() << endl;
+		//imshow("imageRegion", showImage);
+		//waitKey();
+		if(bestScore < conSize){
+			bestScore = conSize;
 			bestPoints = tmpPoints;
 		}
+		if((double)bestScore/points.size() > thresholdModel){
+			break;
+		}
 	}
+
+	int segmentsCount = 0;
+	if(bestScore > 0){
+		//cvtColor(borderImage, showImage, CV_GRAY2BGR);
+		//poprawienie modelu - http://pl.wikipedia.org/wiki/Metoda_najmniejszych_kwadrat%C3%B3w
+		double S, Sx, Sy, Sxx, Sxy, Syy;
+		S = bestScore;
+		Sx = Sy = Sxx = Sxy = Syy = 0;
+		for(int i = 0; i < bestPoints.size(); i++){
+			if(bestPoints[i] == true){
+				Sx += points[i].x;
+				Sy += points[i].y;
+				Sxx += points[i].x * points[i].x;
+				Sxy += points[i].x * points[i].y;
+				Syy += points[i].y * points[i].y;
+			}
+		}
+		double delta = S*Sxx - Sx*Sx;
+		bestA = Sx*Sy - S*Sxy;
+		bestB = delta;
+		bestC = Sx*Sxy - Sxx*Sy;
+		//podział na odcinki - http://pl.wikipedia.org/wiki/Prosta#R.C3.B3wnanie_normalne
+		double ni = (bestC < 0 ? 1 : -1)/sqrt(bestA*bestA + bestB*bestB);
+		bestA *= ni;
+		bestB *= ni;
+		bestC *= ni;
+		cout << "bestA = " << bestA << ", bestB = " << bestB << ", bestC = " << bestC << endl;
+		//równanie parametryczne
+		double dirX = -bestB;
+		double dirY = bestA;
+		//punkt na prostej najbliższy punktowi (0, 0)
+		double startX = -bestC * bestA;
+		double startY = -bestC * bestB;
+		vector<pair<double, int> > sortedPoints;
+		for(int i = 0; i < bestPoints.size(); i++){
+			if(bestPoints[i] == true){
+				//rzut na wektor równoległy do prostej
+				double t = dirX * points[i].x + dirY * points[i].y;
+				//cout << "Point = " << points[bestPoints[i]] << ", t = " << t << endl;
+				sortedPoints.push_back(pair<double, int>(t, i));
+			}
+		}
+		sort(sortedPoints.begin(), sortedPoints.end());
+		int begInd = 0;
+		int endInd = 0;
+		while(endInd < sortedPoints.size()){
+			begInd = endInd;
+			Point2f startP = Point2f(	startX + sortedPoints[begInd].first * dirX,
+										startY + sortedPoints[begInd].first * dirY);
+			endInd++;
+			if(endInd < sortedPoints.size()){
+				while(sortedPoints[endInd].first - sortedPoints[endInd - 1].first < thresholdGap){
+					endInd++;
+					if(endInd >= sortedPoints.size()){
+						break;
+					}
+				}
+			}
+			Point2f endP = Point2f(	startX + sortedPoints[endInd - 1].first * dirX,
+									startY + sortedPoints[endInd - 1].first * dirY);
+			//cout << "sortedPoints.size() = " << sortedPoints.size() << ", begInd = " << begInd << ", endInd = " << endInd << endl;
+			if(sortedPoints[endInd - 1].first - sortedPoints[begInd].first > thresholdMinLen){
+				ptsStart.push_back(startP);
+				ptsEnd.push_back(endP);
+				segmentsCount++;
+				//line(showImage, startP, endP, Scalar(0, 0, 255));
+				//imshow("imageRegion", showImage);
+				//waitKey();
+			}
+			else{
+				for(int i = begInd; i < endInd; i++){
+					//cout << "Removing " << sortedPoints[i].second << " from bestPoints" << endl;
+					bestPoints[sortedPoints[i].second] = false;
+				}
+			}
+		}
+	}
+	return segmentsCount;
 }
 
 std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 													cv::Mat terrain,
-													cv::Mat regionsOnImage)
+													cv::Mat regionsOnImage,
+													bool debug)
 {
 	using namespace std::chrono;
 	high_resolution_clock::time_point start = high_resolution_clock::now();
@@ -857,9 +957,10 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 			}
 		}*/
 		cout << "Computing lines" << endl;
-		Mat linesDesc(1, 6, CV_32FC1, Scalar(0));
-		vector<Vec4i> lines;
-		Mat tmpImage(imageBGR.rows, imageBGR.cols, CV_8UC1, Scalar(0));
+		Mat linesDesc(1, 7, CV_32FC1, Scalar(0));
+		//vector<Vec4i> lines;
+		Mat borderImage(imageBGR.rows, imageBGR.cols, CV_8UC1, Scalar(0));
+		vector<Point2f> borderPoints;
 		int nhood[][2] = {{1, 0},
 						{1, 1},
 						{0, 1},
@@ -881,7 +982,8 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 					if(nr >= 0 && nc >= 0 && nr < imageBGR.rows && nc < imageBGR.cols){
 						if(regionsOnImage.at<int>(nr, nc) != regId)
 						{
-							tmpImage.at<unsigned char>(r, c) = 255;
+							borderImage.at<unsigned char>(r, c) = 255;
+							borderPoints.push_back(Point2f(c, r));
 							countPix++;
 							break;
 						}
@@ -890,52 +992,84 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 			}
 		}
 		cout << "countPix = " << countPix << endl;
-		//dilate(tmpImage, tmpImage, Mat(), Point(-1, -1), 1);
+		/*//dilate(tmpImage, tmpImage, Mat(), Point(-1, -1), 1);
 		rectangle(tmpImage, Point(20, 20), Point(200, 200), Scalar(255));
-		HoughLinesP(tmpImage, lines, 1, 4*CV_PI/180, 10, 10);
+		HoughLinesP(tmpImage, lines, 1, 4*CV_PI/180, 10, 10);*/
+
+		vector<Point2f> ptsStart, ptsEnd;
+		while(borderPoints.size() > 10){
+			vector<bool> bestPoints;
+			if(ransac2DLine(borderPoints,
+							ptsStart,
+							ptsEnd,
+							bestPoints,
+							50,
+							3,
+							0.8,
+							5,
+							10,
+							borderImage) == 0)
+			{
+				break;
+			}
+			vector<Point2f> newBorderPoints;
+			for(int i = 0; i < borderPoints.size(); i++){
+				if(bestPoints[i] == false){
+					newBorderPoints.push_back(borderPoints[i]);
+				}
+			}
+			borderPoints = newBorderPoints;
+		}
+
 		int countLines = 0;
 		double meanRho = 0;
 		double meanLen = 0;
 		double sumLen = 0;
-		cout << "lines.size() = " << lines.size() << endl;
-		for(int l = 0; l < lines.size(); l++){
-			double rho = atan2((double)(lines[l][1] - lines[l][3]), (double)(lines[l][0] - lines[l][2]));
-			double len = sqrt((double)(lines[l][1] - lines[l][3])*(lines[l][1] - lines[l][3]) +
-					(lines[l][0] - lines[l][2])*(lines[l][0] - lines[l][2]));
-			meanRho += rho;
-			meanLen += len;
-			sumLen += len;
-			countLines++;
-		}
-		meanRho /= countLines;
-		meanLen /= countLines;
-		double varRho = 0;
-		double varLen = 0;
-		for(int l = 0; l < lines.size(); l++){
-			double rho = atan2((double)(lines[l][1] - lines[l][3]), (double)(lines[l][0] - lines[l][2]));
-			double len = sqrt((lines[l][1] - lines[l][3])*(lines[l][1] - lines[l][3]) +
-					(lines[l][0] - lines[l][2])*(lines[l][0] - lines[l][2]));
-			varRho += (rho - meanRho)*(rho - meanRho);
-			varLen += (len - meanLen)*(len - meanLen);
-		}
-		varRho /= (countLines - 1);
-		varLen /= (countLines - 1);
+		cout << "ptsStart.size() = " << ptsStart.size() << endl;
+		if(ptsStart.size() > 0){
+			for(int l = 0; l < ptsStart.size(); l++){
+				double rho = atan2((double)(ptsStart[l].y - ptsEnd[l].y), (double)(ptsStart[l].x - ptsEnd[l].x));
+				double len = sqrt((double)(ptsStart[l].y - ptsEnd[l].y)*(ptsStart[l].y - ptsEnd[l].y) +
+						(ptsStart[l].x - ptsEnd[l].x)*(ptsStart[l].x - ptsEnd[l].x));
+				meanRho += rho;
+				meanLen += len;
+				sumLen += len;
+				countLines++;
+			}
+			meanRho /= countLines;
+			meanLen /= countLines;
+			double varRho = 0;
+			double varLen = 0;
+			for(int l = 0; l < ptsStart.size(); l++){
+				double rho = atan2((double)(ptsStart[l].y - ptsEnd[l].y), (double)(ptsStart[l].x - ptsEnd[l].x));
+				double len = sqrt((ptsStart[l].y - ptsEnd[l].y)*(ptsStart[l].y - ptsEnd[l].y) +
+						(ptsStart[l].x - ptsEnd[l].x)*(ptsStart[l].x - ptsEnd[l].x));
+				varRho += (rho - meanRho)*(rho - meanRho);
+				varLen += (len - meanLen)*(len - meanLen);
+			}
 
-		linesDesc.at<float>(0) = (float)countPix;
-		linesDesc.at<float>(1) = (float)sumLen;
-		linesDesc.at<float>(2) = (float)meanRho;
-		linesDesc.at<float>(3) = (float)varRho;
-		linesDesc.at<float>(4) = (float)meanLen;
-		linesDesc.at<float>(5) = (float)varLen;
+			varRho /= (countLines);
+			varLen /= (countLines);
 
-		cout << "linesDesc = " << linesDesc << endl;
-		Mat showImage;
-		cvtColor(tmpImage, showImage, CV_GRAY2BGR);
-		for(int l = 0; l < lines.size(); l++){
-			line(showImage, Point(lines[l][0], lines[l][1]), Point(lines[l][2], lines[l][3]), Scalar(0, 0, 255));
+			linesDesc.at<float>(0) = (float)countPix;
+			linesDesc.at<float>(1) = (float)sumLen;
+			linesDesc.at<float>(2) = (float)meanRho;
+			linesDesc.at<float>(3) = (float)varRho;
+			linesDesc.at<float>(4) = (float)meanLen;
+			linesDesc.at<float>(5) = (float)varLen;
+			linesDesc.at<float>(6) = (float)countLines;
 		}
-		imshow("imageRegion", showImage);
-		waitKey();
+
+		if(debug){
+			cout << "linesDesc = " << linesDesc << endl;
+			Mat showImage;
+			cvtColor(borderImage, showImage, CV_GRAY2BGR);
+			for(int l = 0; l < ptsStart.size(); l++){
+				line(showImage, Point(ptsStart[l].x, ptsStart[l].y), Point(ptsEnd[l].x, ptsEnd[l].y), Scalar(0, 0, 255));
+			}
+			imshow("imageRegion", showImage);
+			waitKey();
+		}
 
 		Entry tmp;
 		tmp.imageId = pixels[begIm].imageId;

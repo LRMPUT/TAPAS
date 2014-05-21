@@ -8,6 +8,7 @@
 #include <cstring>
 #include <cstdio>
 #include <random>
+#include <chrono>
 
 //Boost
 #include <boost/format.hpp>
@@ -70,7 +71,8 @@ void ClassifierSVM::prepareProblem(	const std::vector<Entry>& entries,
 {
 	clearData();
 
-	default_random_engine generator;
+	unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+	default_random_engine generator(seed);
 	uniform_real_distribution<double> uniRealDist(0.0, 1.0);
 	uniform_int_distribution<int> uniIntDist(0, entries.size() - 1);
 
