@@ -16,7 +16,7 @@
 					<hist_DI len_D="1" len_I="25" />
 					<shape />
 				</descriptor>
-				<Classifier type="SVM">
+				<!--<Classifier type="SVM">
 					<cache enabled="true" />
 					<svm type="C_SVC">
 						<kernelType value="RBF" />
@@ -65,7 +65,7 @@
 						<C value="10" />
 					</svm>
 					<info desc_beg="7" desc_end="8" />
-				</Classifier>
+				</Classifier>-->
 				<Classifier type="SVM">
 					<cache enabled="true" />
 					<svm type="C_SVC">
@@ -75,7 +75,7 @@
 						<C value="10" />
 					</svm>
 					<info desc_beg="8" desc_end="9" />
-				</Classifier>-->
+				</Classifier>
 				<!--<Classifier type="SVM">
 					<cache enabled="true" />
 					<svm type="C_SVC">

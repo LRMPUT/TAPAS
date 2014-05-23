@@ -202,7 +202,7 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 			descLen[7] = histDLen*histILen;
 		}
 		else if(dPtr->Value() == string("shape")){
-			shapeLen = 7;
+			shapeLen = 14;
 			if(descLen.size() < 9){
 				descLen.resize(9);
 			}
@@ -246,7 +246,7 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 		cPtr = cPtr->NextSiblingElement("Classifier");
 	}
 
-	numIterations = 18;
+	numIterations = 1;
 }
 
 void HierClassifier::saveCache(boost::filesystem::path file){
@@ -528,8 +528,7 @@ int ransac2DLine(	const vector<Point2f>& points,
 					double thresholdCons,
 					double thresholdModel,
 					double thresholdGap,
-					double thresholdMinLen,
-					Mat borderImage)
+					double thresholdMinLen)
 {
 	unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
 	default_random_engine generator(seed);
@@ -541,10 +540,14 @@ int ransac2DLine(	const vector<Point2f>& points,
 	bestA = bestB = bestC = 0;
 	bestScore = 0;
 	bestPoints.assign(points.size(), false);
-	Mat showImage;
+	//Mat borderImage(480, 640, CV_8UC3, Scalar(0, 0, 0));
+	//for(int p = 0; p < points.size(); p++){
+	//	borderImage.at<Vec3b>((int)points[p].y, (int)points[p].x) = Vec3b(255, 255, 255);
+	//}
+	//Mat showImage;
 	for(int i = 0; i < iterations; i++){
 		//cout << "iteration " << i << endl;
-		//cvtColor(borderImage, showImage, CV_GRAY2BGR);
+		//borderImage.copyTo(showImage);
 		//losowanie punktów
 		int point1 = uniIntDist(generator);
 		int point2 = uniIntDistNext(generator);
@@ -566,7 +569,7 @@ int ransac2DLine(	const vector<Point2f>& points,
 		for(int p = 0; p < points.size(); p++){
 			if(abs(tmpA * points[p].x + tmpB * points[p].y + tmpC)/sqrt(tmpA * tmpA + tmpB * tmpB) < thresholdCons){
 				tmpPoints[p] = true;
-				circle(showImage, points[p], 2, Scalar(255, 0, 0));
+				//circle(showImage, points[p], 2, Scalar(255, 0, 0));
 				conSize++;
 			}
 		}
@@ -584,7 +587,14 @@ int ransac2DLine(	const vector<Point2f>& points,
 
 	int segmentsCount = 0;
 	if(bestScore > 0){
-		//cvtColor(borderImage, showImage, CV_GRAY2BGR);
+		//borderImage.copyTo(showImage);
+		//for(int p = 0; p < bestPoints.size(); p++){
+		//	if(bestPoints[p] == true){
+		//		circle(showImage, points[p], 2, Scalar(255, 0, 0));
+		//	}
+		//}
+		//imshow("imageRegion", showImage);
+		//waitKey();
 		//poprawienie modelu - http://pl.wikipedia.org/wiki/Metoda_najmniejszych_kwadrat%C3%B3w
 		double S, Sx, Sy, Sxx, Sxy, Syy;
 		S = bestScore;
@@ -607,7 +617,7 @@ int ransac2DLine(	const vector<Point2f>& points,
 		bestA *= ni;
 		bestB *= ni;
 		bestC *= ni;
-		cout << "bestA = " << bestA << ", bestB = " << bestB << ", bestC = " << bestC << endl;
+		//cout << "bestA = " << bestA << ", bestB = " << bestB << ", bestC = " << bestC << endl;
 		//równanie parametryczne
 		double dirX = -bestB;
 		double dirY = bestA;
@@ -957,7 +967,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 			}
 		}*/
 		cout << "Computing lines" << endl;
-		Mat linesDesc(1, 7, CV_32FC1, Scalar(0));
+		Mat linesDesc(1, 14, CV_32FC1, Scalar(0));
 		//vector<Vec4i> lines;
 		Mat borderImage(imageBGR.rows, imageBGR.cols, CV_8UC1, Scalar(0));
 		vector<Point2f> borderPoints;
@@ -1004,11 +1014,10 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 							ptsEnd,
 							bestPoints,
 							50,
-							3,
+							2,
 							0.8,
 							5,
-							10,
-							borderImage) == 0)
+							10) == 0)
 			{
 				break;
 			}
@@ -1021,43 +1030,75 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 			borderPoints = newBorderPoints;
 		}
 
-		int countLines = 0;
-		double meanRho = 0;
 		double meanLen = 0;
 		double sumLen = 0;
+		Mat rhos(1, ptsStart.size(), CV_32FC1);
 		cout << "ptsStart.size() = " << ptsStart.size() << endl;
 		if(ptsStart.size() > 0){
 			for(int l = 0; l < ptsStart.size(); l++){
 				double rho = atan2((double)(ptsStart[l].y - ptsEnd[l].y), (double)(ptsStart[l].x - ptsEnd[l].x));
+				if(rho < 0){
+					rhos.at<float>(l) = (float)(CV_PI + rho);
+				}
+				else{
+					rhos.at<float>(l) = (float)rho;
+				}
 				double len = sqrt((double)(ptsStart[l].y - ptsEnd[l].y)*(ptsStart[l].y - ptsEnd[l].y) +
 						(ptsStart[l].x - ptsEnd[l].x)*(ptsStart[l].x - ptsEnd[l].x));
-				meanRho += rho;
 				meanLen += len;
 				sumLen += len;
-				countLines++;
 			}
-			meanRho /= countLines;
-			meanLen /= countLines;
-			double varRho = 0;
+
+			meanLen /= ptsStart.size();
 			double varLen = 0;
 			for(int l = 0; l < ptsStart.size(); l++){
-				double rho = atan2((double)(ptsStart[l].y - ptsEnd[l].y), (double)(ptsStart[l].x - ptsEnd[l].x));
+				//double rho = atan2((double)(ptsStart[l].y - ptsEnd[l].y), (double)(ptsStart[l].x - ptsEnd[l].x));
 				double len = sqrt((ptsStart[l].y - ptsEnd[l].y)*(ptsStart[l].y - ptsEnd[l].y) +
 						(ptsStart[l].x - ptsEnd[l].x)*(ptsStart[l].x - ptsEnd[l].x));
-				varRho += (rho - meanRho)*(rho - meanRho);
+				//varRho += (rho - meanRho)*(rho - meanRho);
 				varLen += (len - meanLen)*(len - meanLen);
 			}
+			varLen /= ptsStart.size();
 
-			varRho /= (countLines);
-			varLen /= (countLines);
+			//cout << "Calculating hist" << endl;
+			int rhoBins = 10;
+			int histSize[] = {rhoBins};
+			int channelsHist[] = {0};
+			float rhoRanges[] = {0, CV_PI};
+			const float* ranges[] = {rhoRanges};
+			Mat rhoHist;
+			calcHist(&rhos, 1, channelsHist, Mat(), rhoHist, 1, histSize, ranges);
+			rhoHist = rhoHist.reshape(0, 1);
+			//cout << "Shifting hist, rhoHist.type = " << rhoHist.type() << ", CV_32FC1 = " << CV_32FC1 << endl;
+			float maxVal = 0;
+			int maxInd = 0;
+			for(int i = 0; i < rhoHist.cols; i++){
+				//cout << "rhoHist.at<float>(" << i << ") = " << rhoHist.at<float>(i) << endl;
+				if(rhoHist.at<float>(i) > maxVal){
+					maxVal = rhoHist.at<float>(i);
+					maxInd = i;
+				}
+			}
+			//cout << "Copying shifted hist, maxInd = " << maxInd << endl;
+			Mat tmpRhoHist(rhoHist.rows, rhoHist.cols, CV_32FC1);
 
-			linesDesc.at<float>(0) = (float)countPix;
-			linesDesc.at<float>(1) = (float)sumLen;
-			linesDesc.at<float>(2) = (float)meanRho;
-			linesDesc.at<float>(3) = (float)varRho;
-			linesDesc.at<float>(4) = (float)meanLen;
-			linesDesc.at<float>(5) = (float)varLen;
-			linesDesc.at<float>(6) = (float)countLines;
+			if(maxInd > 0){
+				//cout << "First part" << endl;
+				rhoHist.colRange(maxInd, rhoHist.cols).copyTo(tmpRhoHist.colRange(0, rhoHist.cols - maxInd));
+				//cout << "Second part" << endl;
+				rhoHist.colRange(0, maxInd).copyTo(tmpRhoHist.colRange(rhoHist.cols - maxInd, rhoHist.cols));
+				rhoHist = tmpRhoHist;
+			}
+			//cout << "Normalization" << endl;
+			rhoHist = rhoHist/ptsStart.size();
+
+			linesDesc.at<float>(0) = (float)sumLen/countPix;
+			linesDesc.at<float>(1) = (float)meanLen;
+			linesDesc.at<float>(2) = (float)varLen;
+			linesDesc.at<float>(3) = (float)ptsStart.size();
+			//cout << "Copying hist, rhoHist.cols = " << rhoHist.cols << endl;
+			rhoHist.copyTo(linesDesc.colRange(4, linesDesc.cols));
+			//cout << "End copying hist" << endl;
 		}
 
 		if(debug){
