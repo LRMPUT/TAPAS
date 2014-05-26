@@ -243,6 +243,16 @@ void ClassifierSVM::prepareProblem(	const std::vector<Entry>& entries,
 		}
 	}
 
+	/*ofstream logFile("dataNorm.log");
+	for(int e = 0; e < numEntries; e++){
+		logFile << dataLabels[e] << " ";
+		for(int i = 0; i < descLen; i++){
+			logFile << labData[e][i].value << " ";
+		}
+		logFile << endl;
+	}
+	logFile.close();*/
+
 	svmParams.nr_weight = 0;
 	svmProblem.l = numEntries;
 	svmProblem.y = dataLabels;

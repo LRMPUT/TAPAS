@@ -16,7 +16,7 @@
 					<hist_DI len_D="1" len_I="25" />
 					<shape />
 				</descriptor>
-				<!--<Classifier type="SVM">
+				<Classifier type="SVM">
 					<cache enabled="true" />
 					<svm type="C_SVC">
 						<kernelType value="RBF" />
@@ -65,7 +65,7 @@
 						<C value="10" />
 					</svm>
 					<info desc_beg="7" desc_end="8" />
-				</Classifier>-->
+				</Classifier>
 				<Classifier type="SVM">
 					<cache enabled="true" />
 					<svm type="C_SVC">
@@ -84,17 +84,17 @@
 						<degree value="2" />
 						<C value="10" />
 					</svm>
-					<info desc_beg="0" desc_end="9" />
+					<info desc_beg="8" desc_end="9" />
 				</Classifier>-->
 			</HierClassifier>
 			<learning dir="../../MovementConstraints/Camera/training_data" />
 			<labels>
-				<!--<label text="grass" id="0"/>
+				<label text="grass" id="0"/>
 				<label text="pavement" id="1"/>
 				<label text="pavement2" id="2" />
-				<label text="asphalt" id="3" />-->
-				<label text="pavement2" id="0" />
-				<label text="asphalt" id="1" />
+				<label text="asphalt" id="3" />
+				<!--<label text="pavement2" id="0" />
+				<label text="asphalt" id="1" />-->
 			</labels>
 
 			<sensor id="left">

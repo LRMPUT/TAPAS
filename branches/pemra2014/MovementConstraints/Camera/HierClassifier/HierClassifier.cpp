@@ -246,7 +246,7 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 		cPtr = cPtr->NextSiblingElement("Classifier");
 	}
 
-	numIterations = 1;
+	numIterations = 18;
 }
 
 void HierClassifier::saveCache(boost::filesystem::path file){
@@ -455,7 +455,7 @@ std::vector<cv::Mat> HierClassifier::classify(cv::Mat image,
 	else{
 		regionsOnImage = segmentation;
 	}
-	vector<Entry> entries = extractEntries(image, terrain, regionsOnImage);
+	vector<Entry> entries = extractEntries(image, terrain, regionsOnImage, false);
 
 	using namespace std::chrono;
 	high_resolution_clock::time_point start = high_resolution_clock::now();
@@ -535,10 +535,10 @@ int ransac2DLine(	const vector<Point2f>& points,
 	uniform_int_distribution<int> uniIntDist(0, points.size() - 1);
 	uniform_int_distribution<int> uniIntDistNext(0, points.size() - 2);
 
-	double bestA, bestB, bestC;
-	int bestScore;
-	bestA = bestB = bestC = 0;
-	bestScore = 0;
+	//double bestA, bestB, bestC;
+	//bestA = bestB = bestC = 0;
+	Point2f bestPtStart, bestPtEnd;
+	int bestScore = -1;
 	bestPoints.assign(points.size(), false);
 	//Mat borderImage(480, 640, CV_8UC3, Scalar(0, 0, 0));
 	//for(int p = 0; p < points.size(); p++){
@@ -573,19 +573,82 @@ int ransac2DLine(	const vector<Point2f>& points,
 				conSize++;
 			}
 		}
+
+		//podział na odcinki - http://pl.wikipedia.org/wiki/Prosta#R.C3.B3wnanie_normalne
+		double ni = (tmpC < 0 ? 1 : -1)/sqrt(tmpA*tmpA + tmpB*tmpB);
+		tmpA *= ni;
+		tmpB *= ni;
+		tmpC *= ni;
+		//cout << "bestA = " << bestA << ", bestB = " << bestB << ", bestC = " << bestC << endl;
+		//równanie parametryczne
+		double dirX = -tmpB;
+		double dirY = tmpA;
+		//punkt na prostej najbliższy punktowi (0, 0)
+		double startX = -tmpC * tmpA;
+		double startY = -tmpC * tmpB;
+		vector<pair<double, int> > sortedPoints;
+		for(int i = 0; i < bestPoints.size(); i++){
+			if(tmpPoints[i] == true){
+				//rzut na wektor równoległy do prostej
+				double t = dirX * points[i].x + dirY * points[i].y;
+				//cout << "Point = " << points[bestPoints[i]] << ", t = " << t << endl;
+				sortedPoints.push_back(pair<double, int>(t, i));
+			}
+		}
+		sort(sortedPoints.begin(), sortedPoints.end());
+		//double bestLen = 0;
+		//Point2f bestStartP, bestEndP;
+		int begInd = 0;
+		int endInd = 0;
+		while(endInd < sortedPoints.size()){
+			begInd = endInd;
+			Point2f startP = Point2f(	startX + sortedPoints[begInd].first * dirX,
+										startY + sortedPoints[begInd].first * dirY);
+			endInd++;
+			if(endInd < sortedPoints.size()){
+				while(sortedPoints[endInd].first - sortedPoints[endInd - 1].first < thresholdGap){
+					endInd++;
+					if(endInd >= sortedPoints.size()){
+						break;
+					}
+				}
+			}
+			Point2f endP = Point2f(	startX + sortedPoints[endInd - 1].first * dirX,
+									startY + sortedPoints[endInd - 1].first * dirY);
+			//cout << "sortedPoints.size() = " << sortedPoints.size() << ", begInd = " << begInd << ", endInd = " << endInd << endl;
+			if(sortedPoints[endInd - 1].first - sortedPoints[begInd].first > thresholdMinLen){
+				if(bestScore < endInd - begInd){
+					bestPtStart = startP;
+					bestPtEnd = endP;
+					bestScore = endInd - begInd;
+					bestPoints.assign(points.size(), false);
+					for(int i = begInd; i < endInd; i++){
+						bestPoints[sortedPoints[i].second] = true;
+					}
+				}
+			}
+		}
+		//line(showImage, bestPtStart, bestPtEnd, Scalar(0, 0, 255));
+		//imshow("imageRegion", showImage);
+		//waitKey();
 		//cout << "score = " << (double)conSize/points.size() << endl;
 		//imshow("imageRegion", showImage);
 		//waitKey();
-		if(bestScore < conSize){
-			bestScore = conSize;
-			bestPoints = tmpPoints;
-		}
+		//if(bestScore < conSize){
+		//	bestScore = conSize;
+		//	bestPoints = tmpPoints;
+		//}
 		if((double)bestScore/points.size() > thresholdModel){
 			break;
 		}
 	}
-
-	int segmentsCount = 0;
+	if(bestScore > 0){
+		ptsStart.push_back(bestPtStart);
+		ptsEnd.push_back(bestPtEnd);
+		return 1;
+	}
+	return 0;
+	/*int segmentsCount = 0;
 	if(bestScore > 0){
 		//borderImage.copyTo(showImage);
 		//for(int p = 0; p < bestPoints.size(); p++){
@@ -634,6 +697,8 @@ int ransac2DLine(	const vector<Point2f>& points,
 			}
 		}
 		sort(sortedPoints.begin(), sortedPoints.end());
+		//double bestLen = 0;
+		//Point2f bestStartP, bestEndP;
 		int begInd = 0;
 		int endInd = 0;
 		while(endInd < sortedPoints.size()){
@@ -667,8 +732,7 @@ int ransac2DLine(	const vector<Point2f>& points,
 				}
 			}
 		}
-	}
-	return segmentsCount;
+	}*/
 }
 
 std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
@@ -679,7 +743,9 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 	using namespace std::chrono;
 	high_resolution_clock::time_point start = high_resolution_clock::now();
 
-	namedWindow("imageRegion");
+	if(debug){
+		namedWindow("imageRegion");
+	}
 	Mat imageHSV;
 	cvtColor(imageBGR, imageHSV, CV_BGR2HSV);
 	vector<Pixel> pixels;
@@ -691,6 +757,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 	}
 	sort(pixels.begin(), pixels.end());
 
+	bool runToNext = false;
 	vector<pair<int, int> > terrainRegion;
 	if(!terrain.empty()){
 		Mat terrainPointsImage(terrain.cols, 2, CV_32FC1);
@@ -1014,10 +1081,10 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 							ptsEnd,
 							bestPoints,
 							50,
-							2,
+							3,
 							0.8,
 							5,
-							10) == 0)
+							15) == 0)
 			{
 				break;
 			}
@@ -1101,7 +1168,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 			//cout << "End copying hist" << endl;
 		}
 
-		if(debug){
+		if(debug && !runToNext){
 			cout << "linesDesc = " << linesDesc << endl;
 			Mat showImage;
 			cvtColor(borderImage, showImage, CV_GRAY2BGR);
@@ -1109,7 +1176,10 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 				line(showImage, Point(ptsStart[l].x, ptsStart[l].y), Point(ptsEnd[l].x, ptsEnd[l].y), Scalar(0, 0, 255));
 			}
 			imshow("imageRegion", showImage);
-			waitKey();
+			char a = waitKey();
+			if(a == 's'){
+				runToNext = true;
+			}
 		}
 
 		Entry tmp;

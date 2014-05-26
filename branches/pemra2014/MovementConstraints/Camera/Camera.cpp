@@ -855,7 +855,7 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 			cout << endl;
 		}
 
-		waitKey(100);
+		waitKey();
 	}
 
 	cout << "General pixel results: " << endl;
