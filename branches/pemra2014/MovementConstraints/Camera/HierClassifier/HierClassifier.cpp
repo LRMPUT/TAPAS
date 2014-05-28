@@ -11,6 +11,7 @@
 #include <cmath>
 #include <algorithm>
 #include <chrono>
+#include <queue>
 //RobotsIntellect
 #include "HierClassifier.h"
 #include "UnionFind.h"
@@ -535,6 +536,8 @@ int ransac2DLine(	const vector<Point2f>& points,
 	uniform_int_distribution<int> uniIntDist(0, points.size() - 1);
 	uniform_int_distribution<int> uniIntDistNext(0, points.size() - 2);
 
+	static int sortElements = 0;
+	static int sortTimes = 0;
 	//double bestA, bestB, bestC;
 	//bestA = bestB = bestC = 0;
 	Point2f bestPtStart, bestPtEnd;
@@ -595,6 +598,8 @@ int ransac2DLine(	const vector<Point2f>& points,
 				sortedPoints.push_back(pair<double, int>(t, i));
 			}
 		}
+		sortElements += sortedPoints.size();
+		sortTimes++;
 		sort(sortedPoints.begin(), sortedPoints.end());
 		//double bestLen = 0;
 		//Point2f bestStartP, bestEndP;
@@ -642,6 +647,9 @@ int ransac2DLine(	const vector<Point2f>& points,
 			break;
 		}
 	}
+
+	cout << "Average sort elements = " << sortElements/sortTimes << endl;
+	cout << "Sort times = " << sortTimes << endl;
 	if(bestScore > 0){
 		ptsStart.push_back(bestPtStart);
 		ptsEnd.push_back(bestPtEnd);

@@ -13,19 +13,44 @@
 
 struct Edge{
 	int i, j;
-	double theta;
+	Edge() {}
+	Edge(int ii, int ij) : i(ii), j(ij) {}
 };
 
 struct Graph{
+	std::vector<double> thetaE;
 	std::vector<Edge> edges;
-	cv::Mat thetasNode;
+
+	std::vector<double> thetaN;
+	std::vector<int> nodes;
 };
 
 class Crf{
+	std::vector<int> labelsList;
 
+	std::vector<double> conditionalDist(int node,
+										const Graph& graph,
+										const std::vector<int>& labels,
+										const std::vector<std::vector<double> >& probObs,
+										const std::vector<cv::Mat>& features);
+	double functionEdge(const Edge& edge,
+						const Graph& graph,
+						const std::vector<int>& labels,
+						const std::vector<std::vector<double> >& probObs,
+						const std::vector<cv::Mat>& features);
+	double functionNode(int node,
+						const Graph& graph,
+						const std::vector<int>& labels,
+						const std::vector<std::vector<double> >& probObs,
+						const std::vector<cv::Mat>& features);
 public:
-	Crf();
-	cv::Mat optimize(cv::Mat prob);
+	Crf(const std::vector<int> ilabelsList);
+	std::vector<double> optimize(	const Graph& graph,
+									std::vector<double> probObs);
+	std::vector<std::vector<double> > gibbsSampler(const Graph& graph,
+												const std::vector<int>& initLab,
+												const std::vector<std::vector<double> >& probObs,
+												const std::vector<cv::Mat>& features);
 };
 
 

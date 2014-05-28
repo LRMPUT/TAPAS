@@ -80,7 +80,8 @@ class Camera {
 	//array containing polygon vertices for all image regions
 	//std::vector<std::vector<std::vector<cv::Point*> > > groundPolygons;
 
-	void computeConstraints(std::vector<cv::Mat> image);
+	void computeConstraints(std::vector<cv::Mat> image,
+							cv::Mat terrain);
 
 	void computeImagePolygons();
 

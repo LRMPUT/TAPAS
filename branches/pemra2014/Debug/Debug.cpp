@@ -110,8 +110,8 @@ void Debug::testTraining(std::vector<boost::filesystem::path> dirs){
 void Debug::testClassification(	std::vector<boost::filesystem::path> dirsTrain,
 								std::vector<boost::filesystem::path> dirsTest)
 {
-	//robot->movementConstraints->camera->learnFromDir(dirsTrain);
-	robot->movementConstraints->camera->readCache("cache/cameraCache");
+	robot->movementConstraints->camera->learnFromDir(dirsTrain);
+	//robot->movementConstraints->camera->readCache("cache/cameraCache");
 	robot->movementConstraints->camera->classifyFromDir(dirsTest);
 }
 
@@ -128,7 +128,7 @@ void Debug::testConstraints(boost::filesystem::path dirTrain,
 				throw "Bad image file";
 			}
 			vector<Mat> data(1, image);
-			robot->movementConstraints->camera->computeConstraints(data);
+			//robot->movementConstraints->camera->computeConstraints(data);
 			waitKey();
 		}
 	}

@@ -24,6 +24,7 @@ set(RobotsIntellect_SOURCES
 	MovementConstraints/Camera/HierClassifier/Classifier.cpp
 	MovementConstraints/Camera/HierClassifier/ClassifierSVM.cpp
 	MovementConstraints/Camera/HierClassifier/HierClassifier.cpp
+	MovementConstraints/Camera/HierClassifier/Crf.cpp
 	MovementConstraints/MovementConstraints.cpp
 	#Planning/PlanningSearching/LocalPlannerSearching.cpp
 	#Planning/PlanningToGold/LocalPlannerToGold.cpp

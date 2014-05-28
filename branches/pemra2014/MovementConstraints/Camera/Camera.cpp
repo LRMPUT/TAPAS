@@ -16,6 +16,7 @@
 #include <sstream>
 //RobotsIntellect
 #include "Camera.h"
+#include "HierClassifier/Crf.h"
 
 using namespace boost;
 using namespace std;
@@ -74,15 +75,20 @@ Camera::~Camera(){
 	}
 }
 
-void Camera::computeConstraints(std::vector<cv::Mat> image){
+void Camera::computeConstraints(std::vector<cv::Mat> image,
+								cv::Mat terrain)
+{
 	cout << "Computing constraints" << endl;
-	constraints = Mat(X_RES, Y_RES, CV_32FC1, Scalar(0));
-	Mat constrNorm(X_RES, Y_RES, CV_32FC1, Scalar(0));
+	constraints = Mat(Y_RES, X_RES, CV_32FC1, Scalar(0));
+	Mat constrNorm(Y_RES, X_RES, CV_32FC1, Scalar(0));
 	namedWindow("original");
 	namedWindow("prob asphalt");
 	namedWindow("constraints");
+	for(int l = 0; l < labels.size(); l++){
+		namedWindow(labels[l]);
+	}
 	for(int c = 0; c < image.size(); c++){
-		vector<Mat> classRes = hierClassifiers[c]->classify(image[c]);
+		vector<Mat> classRes = hierClassifiers[c]->classify(image[c], terrain);
 		//cout << "Drawing polygons" << endl;
 		Mat regions(image[c].rows, image[c].cols, CV_32SC1, Scalar(-1));
 		for(int xInd = 0; xInd < X_RES; xInd++){
@@ -102,6 +108,14 @@ void Camera::computeConstraints(std::vector<cv::Mat> image){
 			}
 		}
 		//cout << "adding probabilities, classRes.size() = " << classRes.size() << endl;
+		vector<vector<double> > probObs;
+		for(int l = 0; l < labels.size(); l++){
+			probObs.push_back(vector<double>(X_RES * Y_RES, 0));
+		}
+		vector<Mat> features;
+		for(int n = 0; n < X_RES * Y_RES; n++){
+			features.push_back(Mat(1, 3, CV_32FC1, Scalar(0)));
+		}
 		for(int row = 0; row < image[c].rows; row++){
 			for(int col = 0; col < image[c].cols; col++){
 				if(regions.at<int>(row, col) != -1){
@@ -109,6 +123,12 @@ void Camera::computeConstraints(std::vector<cv::Mat> image){
 					int yInd = regions.at<int>(row, col) % X_RES;
 					//cout << "adding " << classRes[DRIVABLE_LABEL].at<float>(row, col) << endl;
 					constraints.at<float>(yInd, xInd) += classRes[DRIVABLE_LABEL].at<float>(row, col);
+					for(int l = 0; l < labels.size(); l++){
+						probObs[l][xInd * X_RES + yInd] += classRes[l].at<float>(row, col);
+					}
+					features[xInd * X_RES + yInd].at<float>(0) += image[c].at<Vec3b>(row, col)[0];
+					features[xInd * X_RES + yInd].at<float>(1) += image[c].at<Vec3b>(row, col)[1];
+					features[xInd * X_RES + yInd].at<float>(2) += image[c].at<Vec3b>(row, col)[2];
 					constrNorm.at<float>(yInd, xInd) += 1;
 				}
 			}
@@ -118,6 +138,10 @@ void Camera::computeConstraints(std::vector<cv::Mat> image){
 			for(int yInd = 0; yInd < Y_RES; yInd++){
 				if(constrNorm.at<float>(yInd, xInd) != 0){
 					constraints.at<float>(yInd, xInd) /= constrNorm.at<float>(yInd, xInd);
+					for(int l = 0; l < labels.size(); l++){
+						probObs[l][xInd * X_RES + yInd] /= constrNorm.at<float>(yInd, xInd);
+					}
+					features[xInd * X_RES + yInd] /= constrNorm.at<float>(yInd, xInd);
 				}
 			}
 		}
@@ -135,6 +159,72 @@ void Camera::computeConstraints(std::vector<cv::Mat> image){
 		imshow("prob asphalt", classRes[DRIVABLE_LABEL]);
 		imshow("constraints", test);
 		waitKey();
+
+		vector<int> initLab(X_RES * Y_RES, 0);
+		for(int xInd = 0; xInd < X_RES; xInd++){
+			for(int yInd = 0; yInd < Y_RES; yInd++){
+				int bestLab = 0;
+				int bestProb = 0;
+				for(int l = 0; l < labels.size(); l++){
+					if(probObs[l][xInd * X_RES + yInd] > bestProb){
+						bestProb = probObs[l][xInd * X_RES + yInd];
+						bestLab = l;
+					}
+				}
+				initLab[xInd * X_RES + yInd] = bestLab;
+			}
+		}
+
+		int nhood[][2] = {{1, 0},
+						{0, 1}};
+		Graph graph;
+		for(int xInd = 0; xInd < X_RES; xInd++){
+			for(int yInd = 0; yInd < Y_RES; yInd++){
+				for(int nh = 0; nh < sizeof(nhood)/sizeof(nhood[0]); nh++){
+					int nXInd = xInd + nhood[nh][0];
+					int nYInd = yInd + nhood[nh][1];
+					if(nXInd < X_RES && nYInd < Y_RES && nXInd >= 0 && nYInd >= 0){
+						graph.edges.push_back(Edge(xInd * X_RES + yInd, nXInd * X_RES + nYInd));
+					}
+				}
+			}
+		}
+		graph.thetaE.assign(features.front().cols, 0.5);
+
+		graph.nodes.assign(X_RES * Y_RES, 0);
+		for(int xInd = 0; xInd < X_RES; xInd++){
+			for(int yInd = 0; yInd < Y_RES; yInd++){
+				graph.nodes[xInd * X_RES + yInd] = xInd * X_RES + yInd;
+			}
+		}
+		graph.thetaN.assign(1, 0.5);
+
+		vector<int> labelsList;
+		for(int l = 0; l < labels.size(); l++){
+			labelsList.push_back(l);
+		}
+		Crf crf(labelsList);
+		vector<vector<double> > gibbsProb = crf.gibbsSampler(graph,
+													initLab,
+													probObs,
+													features);
+		vector<Mat> crfProb;
+		for(int l = 0; l < labels.size(); l++){
+			crfProb.push_back(Mat(Y_RES, X_RES, CV_32FC1, Scalar(0)));
+			for(int xInd = 0; xInd < X_RES; xInd++){
+				for(int yInd = 0; yInd < Y_RES; yInd++){
+					crfProb[l].at<float>(yInd, xInd) = gibbsProb[l][xInd * X_RES + yInd];
+
+					Mat testCrf(image[c].rows, image[c].cols, CV_32FC1, Scalar(0));
+					selectPolygonPixels(imagePolygons[c][xInd][yInd],
+										crfProb[l].at<float>(yInd, xInd),
+										testCrf);
+					imshow(labels[l], testCrf);
+				}
+			}
+		}
+		waitKey();
+
 	}
 }
 
