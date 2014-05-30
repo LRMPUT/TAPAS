@@ -11,21 +11,27 @@
 #include <vector>
 #include <opencv2/opencv.hpp>
 
-struct Edge{
-	int i, j;
-	Edge() {}
-	Edge(int ii, int ij) : i(ii), j(ij) {}
-};
-
-struct Graph{
-	std::vector<double> thetaE;
-	std::vector<Edge> edges;
-
-	std::vector<double> thetaN;
-	std::vector<int> nodes;
-};
 
 class Crf{
+
+public:
+	struct Edge{
+		int i, j;
+		Edge() {}
+		Edge(int ii, int ij) : i(ii), j(ij) {}
+	};
+
+	struct Graph{
+		std::vector<double> thetaE;
+		std::vector<Edge> edges;
+
+		std::vector<double> thetaN;
+		std::vector<int> nodes;
+	};
+
+
+private:
+
 	std::vector<int> labelsList;
 
 	std::vector<double> conditionalDist(int node,

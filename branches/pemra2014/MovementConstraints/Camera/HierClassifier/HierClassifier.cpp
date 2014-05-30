@@ -1286,6 +1286,9 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image, int kCurSegment){
 	//resize(imageFloat, imageFloat, Size(320, 240));
 	GaussianBlur(imageFloat, imageFloat, Size(7, 7), 0.8);
 	split(imageFloat, imageChannels);
+	//namedWindow("seg");
+	//imshow("seg", imageChannels[0]/255);
+	//waitKey();
 
 	int nrows = imageFloat.rows;
 	int ncols = imageFloat.cols;
@@ -1293,6 +1296,7 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image, int kCurSegment){
 	vector<Mat> segments;
 
 	vector<Edge> edges;
+	edges.reserve(nrows*ncols*sizeof(nhood)/sizeof(nhood[0]));
 	for(int r = 0; r < nrows; r++){
 		for(int c = 0; c < ncols; c++){
 			for(int nh = 0; nh < sizeof(nhood)/sizeof(nhood[0]); nh++){
@@ -1306,6 +1310,7 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image, int kCurSegment){
 					}
 					diffAll = sqrt(diffAll);
 					edges.push_back(Edge(c + ncols*r, c + nhood[nh][1] + ncols*(r + nhood[nh][0]), diffAll));
+					//cout << diffAll << " " << edges.back().weight << endl;
 					//if(edges.back().i == 567768 || edges.back().j == 567768){
 					//	cout << "diff = abs(" << (int)imageChannels[ch].at<unsigned char>(r, c) << " - " << (int)imageChannels[ch].at<unsigned char>(r + nhood[nh][0], c + nhood[nh][1]) << ") = " << diff << endl;
 					//}
@@ -1313,7 +1318,7 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image, int kCurSegment){
 			}
 		}
 	}
-	sort(edges.begin(), edges.end()); //possible improvement by bin sorting
+	sort(edges.begin(), edges.end());
 
 	endSorting = high_resolution_clock::now();
 

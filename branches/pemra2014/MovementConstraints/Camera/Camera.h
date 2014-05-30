@@ -81,7 +81,8 @@ class Camera {
 	//std::vector<std::vector<std::vector<cv::Point*> > > groundPolygons;
 
 	void computeConstraints(std::vector<cv::Mat> image,
-							cv::Mat terrain);
+						  cv::Mat terrain = cv::Mat(),
+						  cv::Mat segmentation = cv::Mat());
 
 	void computeImagePolygons();
 

@@ -76,7 +76,8 @@ Camera::~Camera(){
 }
 
 void Camera::computeConstraints(std::vector<cv::Mat> image,
-								cv::Mat terrain)
+							  cv::Mat terrain,
+							  cv::Mat segmentation)
 {
 	cout << "Computing constraints" << endl;
 	constraints = Mat(Y_RES, X_RES, CV_32FC1, Scalar(0));
@@ -177,14 +178,14 @@ void Camera::computeConstraints(std::vector<cv::Mat> image,
 
 		int nhood[][2] = {{1, 0},
 						{0, 1}};
-		Graph graph;
+		Crf::Graph graph;
 		for(int xInd = 0; xInd < X_RES; xInd++){
 			for(int yInd = 0; yInd < Y_RES; yInd++){
 				for(int nh = 0; nh < sizeof(nhood)/sizeof(nhood[0]); nh++){
 					int nXInd = xInd + nhood[nh][0];
 					int nYInd = yInd + nhood[nh][1];
 					if(nXInd < X_RES && nYInd < Y_RES && nXInd >= 0 && nYInd >= 0){
-						graph.edges.push_back(Edge(xInd * X_RES + yInd, nXInd * X_RES + nYInd));
+						graph.edges.push_back(Crf::Edge(xInd * X_RES + yInd, nXInd * X_RES + nYInd));
 					}
 				}
 			}
@@ -868,7 +869,9 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	vector<Entry> dataset;
 
 	for(int i = 0; i < images.size(); i++){
+		cout << "Segmenting" << endl;
 		Mat autoSegmented = hierClassifiers.front()->segmentImage(images[i]);
+		cout << "Assigning manual ids" << endl;
 		map<int, int> assignedManualId = hierClassifiers.front()->assignManualId(autoSegmented, manualRegionsOnImages[i]);
 		imshow("original", images[i]);
 		imshow("segments", hierClassifiers.front()->colorSegments(autoSegmented));
@@ -876,7 +879,12 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 		vector<vector<int> > curClassResultsPix(labels.size(), vector<int>(labels.size(), 0));
 		vector<vector<int> > curClassResultsSeg(labels.size(), vector<int>(labels.size(), 0));
 
+		cout << "Classifing" << endl;
 		vector<Mat> classificationResult = hierClassifiers.front()->classify(images[i], terrains[i], autoSegmented);
+		bool crfTest = true;
+		if(crfTest){
+			computeConstraints(images[i], terrains[i], autoSegmented);
+		}
 		for(int l = 0; l < labels.size(); l++){
 			double minVal, maxVal;
 			minMaxIdx(classificationResult[l], &minVal, &maxVal);
