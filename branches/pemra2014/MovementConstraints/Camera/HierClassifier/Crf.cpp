@@ -23,33 +23,40 @@ std::vector<std::vector<double> > Crf::gibbsSampler(const Graph& graph,
 	unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
 	default_random_engine generator(seed);
 	uniform_real_distribution<double> uniRealDist(0.0, 1.0);
-	uniform_int_distribution<int> uniIntDist(0, labelsList.size() - 1);
+	//uniform_int_distribution<int> uniIntDist(0, labelsList.size() - 1);
 
-	vector<vector<double> > ret(graph.nodes.size(), vector<double>(labelsList.size(), 0));
+	vector<vector<double> > ret(labelsList.size(), vector<double>(graph.edgesList.size(), 0));
 	vector<int> curLab(initLab);
 	static const int burnIn = 500;
-	static const int numIter = 1000;
+	static const int numIter = 2000;
 	for(int i = 0; i < numIter; i++){
-		for(int n = 0; n < graph.nodes.size(); n++){
+		cout << "Iteration " << i << endl;
+		for(int n = 0; n < graph.edgesList.size(); n++){
 			vector<double> condDist = conditionalDist(n,
 														graph,
 														curLab,
 														probObs,
 														features);
-			int newLab = uniIntDist(generator);
-			double alpha = min(condDist[newLab]/condDist[curLab[n]], 1.0);
-			double acceptRand = uniRealDist(generator);
-			if(acceptRand < alpha){
-				curLab[n] = newLab;
-				if(i >= burnIn){
-					ret[n][newLab] += 1;
+			/*for(int l = 0; l < labelsList.size(); l++){
+				if(abs(condDist[l] - probObs[l][n]) > 0.001){
+					cout << "condDist[" << l << "] = " << condDist[l] << ", probObs[" << l << "][" << n << "] = " << probObs[l][n] << endl;
 				}
+			}*/
+			int newLab = 0;
+			double acceptRand = uniRealDist(generator);
+			while((acceptRand > condDist[newLab]) && (newLab < condDist.size() - 1)){
+				acceptRand -= condDist[newLab];
+				newLab++;
+			}
+			curLab[n] = newLab;
+			if(i >= burnIn){
+				ret[newLab][n] += 1;
 			}
 		}
 	}
-	for(int n = 0; n < graph.nodes.size(); n++){
+	for(int n = 0; n < graph.edgesList.size(); n++){
 		for(int l = 0; l < labelsList.size(); l++){
-			ret[n][l] /= numIter - burnIn;
+			ret[l][n] /= numIter - burnIn;
 		}
 	}
 	return ret;
@@ -67,20 +74,19 @@ std::vector<double> Crf::conditionalDist(int node,
 	for(int l = 0; l < labelsList.size(); l++){
 		double prob = 0;
 		locLabels[node] = labelsList[l];
-		for(int n = 0; n < graph.nodes.size(); n++){
-			prob += functionNode(n,
+		prob += functionNode(node,
+							graph,
+							locLabels,
+							probObs,
+							features);
+		for(int e = 0; e < graph.edgesList[node].size(); e++){
+			prob += functionEdge(graph.edgesList[node][e],
 								graph,
 								locLabels,
 								probObs,
 								features);
 		}
-		for(int e = 0; e < graph.edges.size(); e++){
-			prob += functionEdge(graph.edges[e],
-								graph,
-								locLabels,
-								probObs,
-								features);
-		}
+
 		prob = exp(prob);
 		ret[l] = prob;
 		normConst += prob;
@@ -104,7 +110,7 @@ double Crf::functionEdge(const Edge& edge,
 	vector<double> funG(features.front().cols, 0);
 
 	//function
-	static const double beta = 0.5;
+	static const double beta = 0.01;
 	if(labI != labJ){
 		for(int f = 0; f < funG.size(); f++){
 			double diffF = (features[edge.i].at<float>(f) - features[edge.j].at<float>(f));

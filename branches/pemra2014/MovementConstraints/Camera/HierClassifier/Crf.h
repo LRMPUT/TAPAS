@@ -23,10 +23,10 @@ public:
 
 	struct Graph{
 		std::vector<double> thetaE;
-		std::vector<Edge> edges;
+		std::vector<std::vector<Edge> > edgesList;
 
 		std::vector<double> thetaN;
-		std::vector<int> nodes;
+		//std::vector<int> nodes;
 	};
 
 

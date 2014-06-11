@@ -77,7 +77,9 @@ Camera::~Camera(){
 
 void Camera::computeConstraints(std::vector<cv::Mat> image,
 							  cv::Mat terrain,
-							  cv::Mat segmentation)
+							  cv::Mat segmentation,
+							  std::vector<cv::Mat>* retProbImageBefore,
+							  std::vector<cv::Mat>* retProbImageAfter)
 {
 	cout << "Computing constraints" << endl;
 	constraints = Mat(Y_RES, X_RES, CV_32FC1, Scalar(0));
@@ -86,7 +88,10 @@ void Camera::computeConstraints(std::vector<cv::Mat> image,
 	namedWindow("prob asphalt");
 	namedWindow("constraints");
 	for(int l = 0; l < labels.size(); l++){
-		namedWindow(labels[l]);
+		namedWindow(labels[l] + string("_before"));
+	}
+	for(int l = 0; l < labels.size(); l++){
+		namedWindow(labels[l] + string("_after"));
 	}
 	for(int c = 0; c < image.size(); c++){
 		vector<Mat> classRes = hierClassifiers[c]->classify(image[c], terrain);
@@ -179,53 +184,61 @@ void Camera::computeConstraints(std::vector<cv::Mat> image,
 		int nhood[][2] = {{1, 0},
 						{0, 1}};
 		Crf::Graph graph;
+		graph.edgesList.resize(X_RES*Y_RES);
 		for(int xInd = 0; xInd < X_RES; xInd++){
 			for(int yInd = 0; yInd < Y_RES; yInd++){
 				for(int nh = 0; nh < sizeof(nhood)/sizeof(nhood[0]); nh++){
 					int nXInd = xInd + nhood[nh][0];
 					int nYInd = yInd + nhood[nh][1];
 					if(nXInd < X_RES && nYInd < Y_RES && nXInd >= 0 && nYInd >= 0){
-						graph.edges.push_back(Crf::Edge(xInd * X_RES + yInd, nXInd * X_RES + nYInd));
+						graph.edgesList[xInd * X_RES + yInd].push_back(Crf::Edge(xInd * X_RES + yInd, nXInd * X_RES + nYInd));
 					}
 				}
 			}
 		}
-		graph.thetaE.assign(features.front().cols, 0.5);
-
-		graph.nodes.assign(X_RES * Y_RES, 0);
-		for(int xInd = 0; xInd < X_RES; xInd++){
-			for(int yInd = 0; yInd < Y_RES; yInd++){
-				graph.nodes[xInd * X_RES + yInd] = xInd * X_RES + yInd;
-			}
-		}
-		graph.thetaN.assign(1, 0.5);
+		graph.thetaE.assign(features.front().cols, -1);
+		graph.thetaN.assign(1, 1);
 
 		vector<int> labelsList;
 		for(int l = 0; l < labels.size(); l++){
 			labelsList.push_back(l);
 		}
 		Crf crf(labelsList);
+		cout << "Gibbs sampling" << endl;
 		vector<vector<double> > gibbsProb = crf.gibbsSampler(graph,
 													initLab,
 													probObs,
 													features);
+		cout << "Displaying crfProb" << endl;
 		vector<Mat> crfProb;
 		for(int l = 0; l < labels.size(); l++){
-			crfProb.push_back(Mat(Y_RES, X_RES, CV_32FC1, Scalar(0)));
+			//crfProb.push_back(Mat(Y_RES, X_RES, CV_32FC1, Scalar(0)));
+			Mat testCrfBefore(image[c].rows, image[c].cols, CV_32FC1, Scalar(0));
+			Mat testCrfAfter(image[c].rows, image[c].cols, CV_32FC1, Scalar(0));
 			for(int xInd = 0; xInd < X_RES; xInd++){
 				for(int yInd = 0; yInd < Y_RES; yInd++){
-					crfProb[l].at<float>(yInd, xInd) = gibbsProb[l][xInd * X_RES + yInd];
+					//crfProb[l].at<float>(yInd, xInd) = gibbsProb[l][xInd * X_RES + yInd];
 
-					Mat testCrf(image[c].rows, image[c].cols, CV_32FC1, Scalar(0));
 					selectPolygonPixels(imagePolygons[c][xInd][yInd],
-										crfProb[l].at<float>(yInd, xInd),
-										testCrf);
-					imshow(labels[l], testCrf);
+										probObs[l][xInd * X_RES + yInd],
+										testCrfBefore);
+					selectPolygonPixels(imagePolygons[c][xInd][yInd],
+										gibbsProb[l][xInd * X_RES + yInd],
+										testCrfAfter);
 				}
 			}
-		}
-		waitKey();
+			imshow(labels[l] + string("_before"), testCrfBefore);
+			imshow(labels[l] + string("_after"), testCrfAfter);
 
+			if(retProbImageBefore != NULL){
+				retProbImageBefore->at(l) = testCrfBefore.clone();
+			}
+			if(retProbImageAfter != NULL){
+				retProbImageAfter->at(l) = testCrfAfter.clone();
+			}
+		}
+		cout << "End displaying crfProb" << endl;
+		waitKey();
 	}
 }
 
@@ -829,11 +842,49 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 	}
 }
 
+void Camera::computeFrameScore(const std::vector<cv::Mat>& prob,
+						cv::Mat autoSegmented,
+						const std::map<int, int>& assignedManualId,
+						cv::Mat manualRegionsOnImages,
+						const std::map<int, int>& mapRegionIdToLabel,
+						std::vector<std::vector<int> >& pixResults,
+						std::vector<std::vector<int> >& segResults)
+{
+	pixResults = vector<vector<int> >(labels.size(), vector<int>(labels.size(), 0));
+	segResults = vector<vector<int> >(labels.size(), vector<int>(labels.size(), 0));
+	Mat bestLabels(autoSegmented.rows, autoSegmented.cols, CV_32SC1, Scalar(0));
+	Mat bestScore(autoSegmented.rows, autoSegmented.cols, CV_32FC1, Scalar(-1));
+	for(int l = 0; l < labels.size(); l++){
+		Mat cmp;
+		compare(bestScore, prob[l], cmp, CMP_LE);
+		bestLabels.setTo(l, cmp);
+		bestScore = max(bestScore, prob[l]);
+	}
+
+	set<int> counted;
+	for(int r = 0; r < autoSegmented.rows; r++){
+		for(int c = 0; c < autoSegmented.cols; c++){
+			int pred = bestLabels.at<int>(r, c);
+			if(mapRegionIdToLabel.count(assignedManualId.at(autoSegmented.at<int>(r, c))) > 0){
+				if(counted.count(autoSegmented.at<int>(r, c)) == 0){
+					int groundTrue = mapRegionIdToLabel.at(assignedManualId.at(autoSegmented.at<int>(r, c)));
+					segResults[groundTrue][pred]++;
+					counted.insert(autoSegmented.at<int>(r, c));
+				}
+			}
+			if(mapRegionIdToLabel.count(manualRegionsOnImages.at<int>(r, c)) > 0){
+				int groundTrue = mapRegionIdToLabel.at(manualRegionsOnImages.at<int>(r, c));
+				pixResults[groundTrue][pred]++;
+			}
+		}
+	}
+}
+
 void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	cout << "Classifying" << endl;
-	for(int l = 0; l < labels.size(); l++){
-		namedWindow(labels[l]);
-	}
+	//for(int l = 0; l < labels.size(); l++){
+	//	namedWindow(labels[l]);
+	//}
 	namedWindow("segments");
 	namedWindow("original");
 	namedWindow("colored");
@@ -876,21 +927,59 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 		imshow("original", images[i]);
 		imshow("segments", hierClassifiers.front()->colorSegments(autoSegmented));
 
-		vector<vector<int> > curClassResultsPix(labels.size(), vector<int>(labels.size(), 0));
-		vector<vector<int> > curClassResultsSeg(labels.size(), vector<int>(labels.size(), 0));
-
 		cout << "Classifing" << endl;
 		vector<Mat> classificationResult = hierClassifiers.front()->classify(images[i], terrains[i], autoSegmented);
 		bool crfTest = true;
 		if(crfTest){
-			computeConstraints(images[i], terrains[i], autoSegmented);
+			cout << "Testing crf" << endl;
+			vector<Mat> crfResultsBefore(labels.size(), Mat());
+			vector<Mat> crfResultsAfter(labels.size(), Mat());
+			computeConstraints(vector<Mat>(1, images[i]),
+								terrains[i],
+								autoSegmented,
+								&crfResultsBefore,
+								&crfResultsAfter);
+
+			vector<vector<int> > curClassResultsPix;
+			vector<vector<int> > curClassResultsSeg;
+			computeFrameScore(crfResultsBefore,
+								autoSegmented,
+								assignedManualId,
+								manualRegionsOnImages[i],
+								mapRegionIdToLabel[i],
+								curClassResultsPix,
+								curClassResultsSeg);
+			cout << "Crf urrent frame pixel results before: " << endl;
+			for(int t = 0; t < labels.size(); t++){
+				cout << "true = " << t << ": ";
+				for(int p = 0; p < labels.size(); p++){
+					cout << curClassResultsPix[t][p] << ", ";
+				}
+				cout << endl;
+			}
+
+			computeFrameScore(crfResultsAfter,
+								autoSegmented,
+								assignedManualId,
+								manualRegionsOnImages[i],
+								mapRegionIdToLabel[i],
+								curClassResultsPix,
+								curClassResultsSeg);
+			cout << "Crf current frame pixel results after: " << endl;
+			for(int t = 0; t < labels.size(); t++){
+				cout << "true = " << t << ": ";
+				for(int p = 0; p < labels.size(); p++){
+					cout << curClassResultsPix[t][p] << ", ";
+				}
+				cout << endl;
+			}
 		}
-		for(int l = 0; l < labels.size(); l++){
-			double minVal, maxVal;
-			minMaxIdx(classificationResult[l], &minVal, &maxVal);
-			cout << labels[l] << ", min = " << minVal << ", max = " << maxVal << endl;
-			imshow(labels[l], classificationResult[l]);
-		}
+		//for(int l = 0; l < labels.size(); l++){
+		//	double minVal, maxVal;
+		//	minMaxIdx(classificationResult[l], &minVal, &maxVal);
+		//	cout << labels[l] << ", min = " << minVal << ", max = " << maxVal << endl;
+		//	imshow(labels[l], classificationResult[l]);
+		//}
 		vector<Scalar> colors;
 		colors.push_back(Scalar(0, 255, 0));	//grass - green
 		colors.push_back(Scalar(0, 0, 255));	//wood - red
@@ -910,23 +999,15 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 		}
 		imshow("colored", coloredOriginal * 0.25 + images[i] * 0.75);
 
-		set<int> counted;
-		for(int r = 0; r < images[i].rows; r++){
-			for(int c = 0; c < images[i].cols; c++){
-				int pred = bestLabels.at<int>(r, c);
-				if(mapRegionIdToLabel[i].count(assignedManualId[autoSegmented.at<int>(r, c)]) > 0){
-					if(counted.count(autoSegmented.at<int>(r, c)) == 0){
-						int groundTrue = mapRegionIdToLabel[i][assignedManualId[autoSegmented.at<int>(r, c)]];
-						curClassResultsSeg[groundTrue][pred]++;
-						counted.insert(autoSegmented.at<int>(r, c));
-					}
-				}
-				if(mapRegionIdToLabel[i].count(manualRegionsOnImages[i].at<int>(r, c)) > 0){
-					int groundTrue = mapRegionIdToLabel[i][manualRegionsOnImages[i].at<int>(r, c)];
-					curClassResultsPix[groundTrue][pred]++;
-				}
-			}
-		}
+		vector<vector<int> > curClassResultsPix;
+		vector<vector<int> > curClassResultsSeg;
+		computeFrameScore(classificationResult,
+							autoSegmented,
+							assignedManualId,
+							manualRegionsOnImages[i],
+							mapRegionIdToLabel[i],
+							curClassResultsPix,
+							curClassResultsSeg);
 
 		for(int t = 0; t < labels.size(); t++){
 			for(int p = 0; p < labels.size(); p++){

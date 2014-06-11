@@ -648,8 +648,8 @@ int ransac2DLine(	const vector<Point2f>& points,
 		}
 	}
 
-	cout << "Average sort elements = " << sortElements/sortTimes << endl;
-	cout << "Sort times = " << sortTimes << endl;
+	//cout << "Average sort elements = " << sortElements/sortTimes << endl;
+	//cout << "Sort times = " << sortTimes << endl;
 	if(bestScore > 0){
 		ptsStart.push_back(bestPtStart);
 		ptsEnd.push_back(bestPtEnd);
@@ -1041,7 +1041,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 				turns = turns / count;
 			}
 		}*/
-		cout << "Computing lines" << endl;
+		//cout << "Computing lines" << endl;
 		Mat linesDesc(1, 14, CV_32FC1, Scalar(0));
 		//vector<Vec4i> lines;
 		Mat borderImage(imageBGR.rows, imageBGR.cols, CV_8UC1, Scalar(0));
@@ -1076,7 +1076,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 				}
 			}
 		}
-		cout << "countPix = " << countPix << endl;
+		//cout << "countPix = " << countPix << endl;
 		/*//dilate(tmpImage, tmpImage, Mat(), Point(-1, -1), 1);
 		rectangle(tmpImage, Point(20, 20), Point(200, 200), Scalar(255));
 		HoughLinesP(tmpImage, lines, 1, 4*CV_PI/180, 10, 10);*/
@@ -1108,7 +1108,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		double meanLen = 0;
 		double sumLen = 0;
 		Mat rhos(1, ptsStart.size(), CV_32FC1);
-		cout << "ptsStart.size() = " << ptsStart.size() << endl;
+		//cout << "ptsStart.size() = " << ptsStart.size() << endl;
 		if(ptsStart.size() > 0){
 			for(int l = 0; l < ptsStart.size(); l++){
 				double rho = atan2((double)(ptsStart[l].y - ptsEnd[l].y), (double)(ptsStart[l].x - ptsEnd[l].x));

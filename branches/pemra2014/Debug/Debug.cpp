@@ -111,7 +111,7 @@ void Debug::testClassification(	std::vector<boost::filesystem::path> dirsTrain,
 								std::vector<boost::filesystem::path> dirsTest)
 {
 	//robot->movementConstraints->camera->learnFromDir(dirsTrain);
-	//robot->movementConstraints->camera->readCache("cache/cameraCache");
+	robot->movementConstraints->camera->readCache("cache/cameraCache");
 	robot->movementConstraints->camera->classifyFromDir(dirsTest);
 }
 

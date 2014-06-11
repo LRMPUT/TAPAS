@@ -82,7 +82,9 @@ class Camera {
 
 	void computeConstraints(std::vector<cv::Mat> image,
 						  cv::Mat terrain = cv::Mat(),
-						  cv::Mat segmentation = cv::Mat());
+						  cv::Mat segmentation = cv::Mat(),
+						  std::vector<cv::Mat>* retProbImageBefore = NULL,
+						  std::vector<cv::Mat>* retProbImageAfter = NULL);
 
 	void computeImagePolygons();
 
@@ -124,6 +126,14 @@ class Camera {
 	 *
 	 */
 	void learnFromDir(std::vector<boost::filesystem::path> dirs);
+
+	void computeFrameScore(const std::vector<cv::Mat>& prob,
+							cv::Mat autoSegmented,
+							const std::map<int, int>& assignedManualId,
+							cv::Mat manualRegionsOnImages,
+							const std::map<int, int>& mapRegionIdToLabel,
+							std::vector<std::vector<int> >& pixResults,
+							std::vector<std::vector<int> >& segResults);
 
 	/** \brief Funkcja klasyfikująca dane z katalogu.
 	 *
