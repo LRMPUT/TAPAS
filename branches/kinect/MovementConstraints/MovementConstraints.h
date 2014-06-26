@@ -17,6 +17,7 @@
 #include "Camera/Camera.h"
 #include "Hokuyo/Hokuyo.h"
 #include "Sharp/Sharp.h"
+#include "Kinect/Kinect.h"
 
 class Robot;
 class Debug;
@@ -29,6 +30,9 @@ class MovementConstraints {
 
 	// Class to get data from Hokuyo
 	Hokuyo hokuyo;
+
+	// Class to get data from Kinect
+	Kinect kinect;
 
 	// Class to get data from Sharp
 	Sharp sharp;

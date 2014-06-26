@@ -1,35 +1,39 @@
 /*
- * Kinect.h
+ * Hokuyo.h
  *
  *  Simple interface to get data and return it in some way
  */
 
-#ifndef KINECT_H_
-#define KINECT_H_
+#ifndef HOKUYO_H_
+#define HOKUYO_H_
 
-class Kinect;
+class Hokuyo;
 
 #include <string>
 #include <thread>
 #include <mutex>
 #include <opencv2/opencv.hpp>
+#include <urg_cpp/Urg_driver.h>
+
+#define HOKUYO_SCANS 1081
 
 class Debug;
 
-class Kinect {
+class Hokuyo {
 	friend class Debug;
 
 	std::thread readingThread;
 	volatile bool runThread;
 
+	qrk::Urg_driver hokuyo;
 
 	cv::Mat curMeas;
 	std::mutex mtx;
 
 	void run();
 public:
-	Kinect();
-	virtual ~Kinect();
+	Hokuyo();
+	virtual ~Hokuyo();
 
 	void openPort(std::string port);
 
@@ -37,9 +41,9 @@ public:
 
 	bool isOpen();
 
-	//CV_
+	//CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right
 	const cv::Mat getData();
 };
 
 
-#endif /* KINECT_H_ */
+#endif /* HOKUYO_H_ */
