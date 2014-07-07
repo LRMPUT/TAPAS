@@ -1,5 +1,26 @@
 <Robot>
 	<MovementConstraints>
+		<camera_position_laser>
+			0.9995    0.0205   -0.0250	61.3
+		 -0.0037    0.8406    0.5416	-482.9
+			0.0321   -0.5412    0.8403	-497.5
+		 0 0 0 1
+		</camera_position_laser>
+		<imu_position_camera>
+   		0.0401    0.9992    0.0001	0
+			-0.6617    0.0265    0.7493	0
+			0.7487   -0.0302    0.6623	0
+			0	0	0	1
+		</imu_position_camera>
+		<!--<imu_position_global>
+			1	0	0	80
+			0	1	0	0
+			0	0	1	-80
+			0	0	0	1
+		</imu_position_global>-->
+		<ground_plane_global>
+			0	0	1 -30
+		</ground_plane_global>
 		<Camera number="1" rows="640" cols="480">
 			<cache enabled="true" />
 			<HierClassifier>

@@ -9,6 +9,8 @@
 //STL
 #include <string>
 #include <vector>
+#include <thread>
+#include <chrono>
 //OpenCV
 #include <opencv2/opencv.hpp>
 //TinyXML
@@ -35,6 +37,40 @@ class MovementConstraints {
 
 	//Parent class Robot
 	Robot* robot;
+
+	//CV_32FC1 4x4: camera origin position and orientation w.r.t. global coordinate system
+	cv::Mat cameraOrigGlobal;
+
+	//CV_32FC1 4x4: camera origin position and orientation w.r.t. laser coordinate system
+	cv::Mat cameraOrigLaser;
+
+	cv::Mat cameraOrigImu;
+
+	//CV_32FC1 4x1: ground plane equation [A, B, C, D]'
+	cv::Mat groundPlane;
+
+	void readSettings(TiXmlElement* settings);
+
+	cv::Mat readMatrixSettings(TiXmlElement* parent, const char* node, int rows, int cols);
+	//
+	cv::Mat constraintsMap;
+
+	//Map center position in global coordinates
+	double mapCenterX, mapCenterY, mapCenterPhi;
+
+	std::thread movementConstraintsThread;
+
+	bool runThread;
+
+	// Main loop of MovementContraints thread.
+	void run();
+
+	// Stop MovementConstraints thread.
+	void stopThread();
+
+	void updateConstraintsMap(double curX, double curY, double curPhi);
+
+	void insertHokuyoConstraints(cv::Mat map, double curMapX, double curMapY, double curMapPhi);
 
 public:
 	MovementConstraints(Robot* irobot, TiXmlElement* settings);
