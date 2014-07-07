@@ -48,7 +48,8 @@ private:
 
 	// Encoders
 	int lastLeft, lastRight;
-	bool encoderStart;
+	float imuZeroAngle;
+	bool encoderStart, imuStart;
 	Encoders encoders;
 
 	//Parent class Robot
