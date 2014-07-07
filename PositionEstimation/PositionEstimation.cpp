@@ -20,8 +20,8 @@ PositionEstimation::PositionEstimation(Robot* irobot) :
 		robot(irobot), imu(irobot), gps(irobot), encoders(irobot) {
 
 	ENCODER_TICK_PER_REV = 300;
-	WHEEL_DIAMETER = 178/1000;
-	WHEEL_BASE = 432/1000;
+	WHEEL_DIAMETER = 178.0/1000;
+	WHEEL_BASE = 432.0/1000;
 	/* KALMAN:
 	 * - we track 2 values -> global position
 	 *
@@ -66,7 +66,7 @@ void PositionEstimation::run() {
 
 		if (mtime == 0)
 			mtime = 1;
-		printf("PE: X:%5.5f \tY:%5.5f \tS:%5.5f \tA:%5.5f\n", state.at<float>(0), state.at<float>(1), state.at<float>(2), state.at<float>(3));
+		printf("PE: X:%5.5f \tY:%5.5f \tS:%5.5f \tA:%5.5f\n", state.at<double>(0), state.at<double>(1), state.at<double>(2), state.at<double>(3));
 
 		//cout << "PE:: framerate: " << 1000.0 / mtime << endl;
 	}
@@ -80,13 +80,20 @@ void PositionEstimation::stopThread() {
 void PositionEstimation::kalmanSetup() {
 	EKF = new ExtendedKalmanFilter();
 
-	state = cv::Mat(4, 1, CV_32F);
+	state = cv::Mat(4, 1, CV_64F);
 	setZeroPosition();
 }
 
 void PositionEstimation::KalmanLoop() {
 	std::chrono::high_resolution_clock::time_point encoderTimestamp,
 			gpsTimestamp, imuTimestamp;
+
+	float predictTime = std::chrono::duration_cast
+					< std::chrono::milliseconds
+					> (std::chrono::high_resolution_clock::now() - lastUpdateTimestamp).count();
+	lastUpdateTimestamp = std::chrono::high_resolution_clock::now();
+
+	bool predictPerformed = false;
 
 	// Get the GPS data if GPS is available
 	gpsTimestamp = this->gps.getTimestamp();
@@ -112,48 +119,58 @@ void PositionEstimation::KalmanLoop() {
 	if (isEncodersOpen()) {
 		cv::Mat enc_data = this->getEncoderData(encoderTimestamp);
 
+
 		float encoder_dt = std::chrono::duration_cast
 				< std::chrono::milliseconds
 				> (encoderTimestamp - lastEncoderTimestamp).count();
 		if (encoder_dt > 0) {
-			float dt = std::chrono::duration_cast < std::chrono::milliseconds
-					> (encoderTimestamp - lastUpdateTimestamp).count();
-			if (dt > 0) {
-				lastUpdateTimestamp = encoderTimestamp;
-				EKF->predict(dt/1000);
+//			float dt = std::chrono::duration_cast < std::chrono::milliseconds
+//					> (encoderTimestamp - lastUpdateTimestamp).count();
+//			if (dt > 0) {
+//				lastUpdateTimestamp = encoderTimestamp;
+//
+//			}
+			if ( !predictPerformed )
+			{
+				EKF->predict(predictTime / 1000);
+				predictPerformed = true;
+			}
+			else
+			{
+				EKF->predict(0);
 			}
 
+			printf("Encoder data: %d %d %f\n", enc_data.at<int>(0) - lastLeft,
+					enc_data.at<int>(1) - lastRight, encoder_dt );
+			lastEncoderTimestamp = encoderTimestamp;
 
-			if (encoder_dt > 0) {
-//				printf("Encoder data: %d %d\n", enc_data.at<int>(0) - lastLeft, enc_data.at<int>(1) - lastRight );
-				lastEncoderTimestamp = encoderTimestamp;
-
-				if (encoderStart)
-				{
-					lastLeft = enc_data.at<int>(0);
-					lastRight = enc_data.at<int>(1);
-					encoderStart = 0;
-				}
-
-				printf("Enc compare %d %d %d %d\n", enc_data.at<int>(0), lastLeft,
-						enc_data.at<int>(1), lastRight);
-				float left_encoder = ((float) (enc_data.at<int>(0) - lastLeft))
-						/ ENCODER_TICK_PER_REV * M_PI * WHEEL_DIAMETER;
-				float right_encoder = ((float) (enc_data.at<int>(1) - lastRight))
-						/ ENCODER_TICK_PER_REV * M_PI * WHEEL_DIAMETER;
-
-				float distance = (left_encoder + right_encoder) / 2.0;
-
-				Mat speed(1, 1, CV_32FC1);
-				speed.at<float>(0) = distance / encoder_dt * 1000 ; // Is in seconds or ms ?
-//				printf("Encoder distance: %.10f\n", distance );
-//				printf("Encoder encoder_dt: %.10f\n", encoder_dt );
-//				printf("Encoder speed update: %f\n", distance / encoder_dt );
-				state = EKF->correctEncoder(speed);
-
+			if (encoderStart) {
 				lastLeft = enc_data.at<int>(0);
 				lastRight = enc_data.at<int>(1);
+				encoderStart = 0;
 			}
+
+			printf("Bug test: %f %f\n", ENCODER_TICK_PER_REV, WHEEL_DIAMETER);
+
+			float left_encoder = ((float) (enc_data.at<int>(0) - lastLeft))
+					/ ENCODER_TICK_PER_REV * M_PI * WHEEL_DIAMETER;
+			float right_encoder = ((float) (enc_data.at<int>(1) - lastRight))
+					/ ENCODER_TICK_PER_REV * M_PI * WHEEL_DIAMETER;
+
+			printf("Encoder left/right: %f %f\n", left_encoder,right_encoder);
+
+			float distance = (left_encoder + right_encoder) / 2.0;
+
+			Mat speed(1, 1, CV_64FC1);
+			speed.at<double>(0) = (double) (distance / encoder_dt * 1000); // Is in seconds or ms ?
+				printf("Encoder distance: %.10f\n", distance );
+//				printf("Encoder encoder_dt: %.10f\n", encoder_dt );
+				printf("Encoder speed update: %f\n", distance / encoder_dt );
+			state = EKF->correctEncoder(speed);
+
+			lastLeft = enc_data.at<int>(0);
+			lastRight = enc_data.at<int>(1);
+
 		}
 	}
 
@@ -163,21 +180,33 @@ void PositionEstimation::KalmanLoop() {
 		float imu_dt = std::chrono::duration_cast
 						< std::chrono::milliseconds
 						> (imuTimestamp - lastImuTimestamp).count();
+
+		if (imuStart) {
+			imuZeroAngle = imuData.at<float>(11);
+			imuStart = false;
+		}
+
 //		printf( "imu dt = %f\n", imu_dt);
 		if (imu_dt > 0) {
 			lastImuTimestamp = imuTimestamp;
 
-			float dt = std::chrono::duration_cast < std::chrono::milliseconds
-					> (imuTimestamp - lastUpdateTimestamp).count();
-			if ( dt > 0)
-			{
-				lastUpdateTimestamp = imuTimestamp;
-				EKF->predict(dt/1000);
+//			float dt = std::chrono::duration_cast < std::chrono::milliseconds
+//					> (imuTimestamp - lastUpdateTimestamp).count();
+//			if ( dt > 0)
+//			{
+//				lastUpdateTimestamp = imuTimestamp;
+//				EKF->predict(dt/1000);
+//			}
+			if (!predictPerformed) {
+				EKF->predict(predictTime / 1000);
+				predictPerformed = true;
+			} else {
+				EKF->predict(0);
 			}
 
 			// 3x4 - acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(yaw, pitch, roll)
-			Mat orientation(1, 1, CV_32FC1);
-			orientation.at<float>(0) = imuData.at<float>(11) *  M_PI / 180.0;
+			Mat orientation(1, 1, CV_64FC1);
+			orientation.at<double>(0) = (double)(imuData.at<float>(11)-imuZeroAngle) *  M_PI / 180.0;
 //			printf("IMU update: %f\n", imuData.at<float>(11));
 			state = EKF->correctIMU(orientation);
 		}
@@ -192,6 +221,7 @@ void PositionEstimation::setZeroPosition() {
 	lastLeft = 0;
 	lastRight = 0;
 	encoderStart = 1;
+	imuStart = 1;
 
 	if (isGpsOpen()) {
 		gps.setZeroXY(gps.getLat(), gps.getLon());
