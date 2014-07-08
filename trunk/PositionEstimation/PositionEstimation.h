@@ -87,6 +87,9 @@ public:
 	cv::Mat getEncoderData(
 			std::chrono::high_resolution_clock::time_point &timestamp);
 
+	//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
+	cv::Mat getImuData(std::chrono::high_resolution_clock::time_point &timestamp);
+
 	//----------------------ACCESS TO COMPUTED DATA
 	//CV_32SC1 3x1: x, y, fi
 	const cv::Mat getEstimatedPosition();

@@ -112,9 +112,14 @@ bool Robot::isCameraOpen(){
 
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 //CV_32UC1 2x1: left, right encoder
-const cv::Mat Robot::getEncoderData(){
+cv::Mat Robot::getEncoderData(){
 	std::chrono::high_resolution_clock::time_point timestamp;
 	return positionEstimation.getEncoderData(timestamp);
+}
+
+//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
+cv::Mat Robot::getImuData(std::chrono::high_resolution_clock::time_point &timestamp){
+	return positionEstimation.getImuData(timestamp);
 }
 
 //----------------------ACCESS TO COMPUTED DATA

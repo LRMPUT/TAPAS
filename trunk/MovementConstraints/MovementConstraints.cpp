@@ -5,9 +5,9 @@
 
 #include "MovementConstraints.h"
 
-#define MAP_SIZE 100	//100x100 MAP_STEPxMAP_STEP cells
-#define MAP_STEP 100	//in mm
-#define MAP_MARGIN 25	//25 cells margin
+//#define MAP_SIZE 100	//100x100 MAP_STEPxMAP_STEP cells
+//#define MAP_STEP 100	//in mm
+//#define MAP_MARGIN 25	//25 cells margin
 
 using namespace cv;
 using namespace std;
@@ -80,22 +80,25 @@ void MovementConstraints::updateConstraintsMap(double curGlobX, double curGlobY,
 
 	//przesuwanie mapy
 	bool move = false;
-	if(curMapX > (MAP_SIZE/2 - MAP_MARGIN) * MAP_STEP){
+	if(curMapX > (MAP_SIZE/2 - MAP_MARGIN) * MAP_RASTER_SIZE){
 		move = true;
 	}
-	else if(curMapX < (-MAP_SIZE/2 + MAP_MARGIN) * MAP_STEP){
+	else if(curMapX < (-MAP_SIZE/2 + MAP_MARGIN) * MAP_RASTER_SIZE){
 		move = true;
 	}
-	if(curMapY > (MAP_SIZE/2 - MAP_MARGIN) * MAP_STEP){
+	if(curMapY > (MAP_SIZE/2 - MAP_MARGIN) * MAP_RASTER_SIZE){
 		move = true;
 	}
-	else if(curMapY < (-MAP_SIZE/2 + MAP_MARGIN) * MAP_STEP){
+	else if(curMapY < (-MAP_SIZE/2 + MAP_MARGIN) * MAP_RASTER_SIZE){
 		move = true;
 	}
 	if(move == true){
 		mapCenterX = curGlobX;
 		mapCenterY = curGlobY;
 		mapCenterPhi = curGlobPhi;
+		std::chrono::high_resolution_clock::time_point imuTimestamp;
+		Mat imuCur = robot->getImuData(imuTimestamp);
+		curPosCloudMapCenter = compOrient(imuCur);
 	}
 	constraintsMap = Scalar(0);
 
@@ -107,6 +110,115 @@ void MovementConstraints::updateConstraintsMap(double curGlobX, double curGlobY,
 void MovementConstraints::insertHokuyoConstraints(cv::Mat map, double curMapX, double curMapY, double curMapPhi){
 	//Mat hokuyoData = getHokuyoData();
 
+}
+
+cv::Mat MovementConstraints::compOrient(cv::Mat imuData){
+	//cout << "Computing orientation from IMU" << endl;
+	//cout << "imuData = " << imuData << endl;
+
+	Mat ret(Mat::eye(4, 4, CV_32FC1));
+	float yaw = imuData.at<float>(11)*PI/180;
+	float pitch = imuData.at<float>(10)*PI/180;
+	float roll = imuData.at<float>(9)*PI/180;
+	//cout << "Computing Rz, Ry, Rx, yaw = " << yaw << endl;
+	Matx33f Rz(	cos(yaw), -sin(yaw), 0,
+				sin(yaw), cos(yaw), 0,
+				0, 0, 1);
+	//cout << "Rz = " << Rz << endl;
+	Matx33f Ry(	cos(pitch), 0, sin(pitch),
+				0, 1, 0,
+				-sin(pitch), 0, cos(pitch));
+	//cout << "Ry = " << Ry << endl;
+	Matx33f Rx(	1, 0, 0,
+				0, cos(roll), sin(roll),
+				0, -sin(roll), cos(roll));
+	//cout << "Rx = " << Rx << endl;
+	Mat tmp(Rx*Ry*Rz);
+	tmp.copyTo(ret(Rect(0, 0, 3, 3)));
+
+	//cout << "End computing orientation from IMU" << endl;
+	return ret;
+}
+
+
+cv::Mat MovementConstraints::compTrans(	cv::Mat orient,
+							cv::Mat encodersDiff)
+{
+	static const float wheelCir = 178*PI;
+	static const float wheelDistance = 432;
+	static const int encodersCPR = 300;
+	float sl = encodersDiff.at<float>(0)*wheelCir/encodersCPR;
+	float sr = encodersDiff.at<float>(1)*wheelCir/encodersCPR;
+	float theta = (sl - sr)/(-wheelDistance);
+	Mat trans(4, 1, CV_32FC1, Scalar(0));
+	//cout << "theta = " << theta << endl;
+	if(theta < 0.1){
+		trans.at<float>(0) = (sl + sr)/2;
+	}
+	else{
+		float r = -wheelDistance*(sl - sr)/(2*(sl - sr));
+		trans.at<float>(0) = r*sin(theta);
+		trans.at<float>(1) = r*(cos(theta) - 1);
+
+	}
+	//cout << trans << endl << orient << endl;
+	trans = orient*trans;
+	return trans;
+}
+
+void MovementConstraints::processPointCloud(){
+	std::chrono::high_resolution_clock::time_point imuTimestamp;
+	Mat encodersCur = robot->getEncoderData();
+	Mat imuCur = robot->getImuData(imuTimestamp);
+
+	Mat hokuyoData = hokuyo.getData();
+	Mat hokuyoCurPoints(hokuyoData.cols, 6, CV_32FC1);
+
+	hokuyoData.rowRange(0, 1).copyTo(hokuyoCurPoints.rowRange(0, 1));
+	hokuyoCurPoints.rowRange(1, 2) = Scalar(0);
+	hokuyoData.rowRange(1, 2).copyTo(hokuyoCurPoints.rowRange(2, 3));
+	hokuyoCurPoints.rowRange(1, 2) = Scalar(1);
+	hokuyoData.rowRange(2, 4).copyTo(hokuyoCurPoints.rowRange(4, 6));
+
+	hokuyoCurPoints.rowRange(0, 4) = cameraOrigLaser.inv()*hokuyoCurPoints.rowRange(0, 4);
+
+	if(imuCur.empty()){
+		imuPrev.copyTo(imuCur);
+	}
+	if(encodersCur.empty()){
+		encodersPrev.copyTo(encodersCur);
+	}
+
+	//cout << "Computing curPos" << endl;
+	//cout << "encodersCur = " << encodersCur << endl << "encodersPrev = " << encodersPrev << endl;
+	Mat trans = compTrans(compOrient(imuPrev), encodersCur - encodersPrev);
+	cout << "trans = " << trans << endl;
+	//cout << "Computing curTrans" << endl;
+	Mat curTrans = Mat(curPosCloudMapCenter, Rect(3, 0, 1, 4)) + trans;
+	//cout << "Computing curRot" << endl;
+
+	Mat curRot = compOrient(imuCur)*cameraOrigImu;
+	curRot.copyTo(curPosCloudMapCenter);
+	curTrans.copyTo(Mat(curPosCloudMapCenter, Rect(3, 0, 1, 4)));
+	//cout << "trans = " << trans << endl;
+	//cout << "curTrans = " << curTrans << endl;
+	//cout << "curRot = " << curRot << endl;
+	//cout << "imuPosGlobal.inv()*curPos*cameraOrigImu.inv() = " << endl << imuPosGlobal.inv()*curPos*cameraOrigImu.front().inv() << endl;
+	//cout << "globalPos.inv()*curPos = " << globalPos.inv()*curPos << endl;
+
+	//cout << "Moving hokuyoAllPointsGlobal" << endl;
+	Mat tmpAllPoints(hokuyoCurPoints.rows, pointCloudCameraMapCenter.cols + hokuyoCurPoints.cols, CV_32FC1);
+	if(!pointCloudCameraMapCenter.empty()){
+		pointCloudCameraMapCenter.copyTo(tmpAllPoints.colRange(0, pointCloudCameraMapCenter.cols));
+	}
+	//cout << "Addding hokuyoCurPoints" << endl;
+	Mat curPointCloudCameraMapCenter(hokuyoCurPoints.rows, hokuyoCurPoints.cols, CV_32FC1);
+	Mat tmpCurPoints = curPosCloudMapCenter*hokuyoCurPoints.rowRange(0, 4);
+	tmpCurPoints.copyTo(curPointCloudCameraMapCenter.rowRange(0, 4));
+	hokuyoCurPoints.rowRange(4, 6).copyTo(curPointCloudCameraMapCenter.rowRange(4, 6));
+	//cout << hokuyoCurPointsGlobal.channels() << ", " << hokuyoAllPointsGlobal.channels() << endl;
+	curPointCloudCameraMapCenter.copyTo(tmpAllPoints.colRange(pointCloudCameraMapCenter.cols, pointCloudCameraMapCenter.cols + hokuyoCurPoints.cols));
+	pointCloudCameraMapCenter = tmpAllPoints;
 }
 
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS

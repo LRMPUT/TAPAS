@@ -49,9 +49,14 @@ class MovementConstraints {
 	//CV_32FC1 4x1: ground plane equation [A, B, C, D]'
 	cv::Mat groundPlane;
 
-	void readSettings(TiXmlElement* settings);
+	//Point Cloud from Hokuyo
 
-	cv::Mat readMatrixSettings(TiXmlElement* parent, const char* node, int rows, int cols);
+	cv::Mat curPosCloudMapCenter;
+
+	cv::Mat pointCloudCameraMapCenter;
+
+	cv::Mat imuPrev, encodersPrev;
+
 	//
 	cv::Mat constraintsMap;
 
@@ -68,9 +73,20 @@ class MovementConstraints {
 	// Stop MovementConstraints thread.
 	void stopThread();
 
+	void readSettings(TiXmlElement* settings);
+
+	cv::Mat readMatrixSettings(TiXmlElement* parent, const char* node, int rows, int cols);
+
 	void updateConstraintsMap(double curX, double curY, double curPhi);
 
 	void insertHokuyoConstraints(cv::Mat map, double curMapX, double curMapY, double curMapPhi);
+
+	cv::Mat compOrient(cv::Mat imuData);
+
+	cv::Mat compTrans(	cv::Mat orient,
+						cv::Mat encodersDiff);
+
+	void processPointCloud();
 
 public:
 	MovementConstraints(Robot* irobot, TiXmlElement* settings);
