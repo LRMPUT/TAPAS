@@ -83,7 +83,7 @@ bool Hokuyo::isOpen(){
 }
 
 //CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right
-const cv::Mat Hokuyo:: getData(){
+cv::Mat Hokuyo:: getData(){
 	Mat ret(curMeas.rows, curMeas.cols, CV_32SC1);
 	std::unique_lock<std::mutex> lck(mtx);
 	curMeas.copyTo(ret);

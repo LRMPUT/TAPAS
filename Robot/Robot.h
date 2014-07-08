@@ -28,8 +28,11 @@ class Debug;
 #include "../MovementConstraints/MovementConstraints.h"
 #include "../Planning/GlobalPlanner.h"
 
-#define RASTER_SIZE 200		//[mm]
-#define MAP_SIZE	10000/RASTER_SIZE	//[u] 10m
+#define MAP_RASTER_SIZE 200		//[mm]
+#define MAP_SIZE	10000/MAP_RASTER_SIZE	//[u] 10m
+#define MAP_MARGIN 2500/MAP_RASTER_SIZE	//[u] 2,5m margin
+
+#define PI 3.14159265359
 
 class Robot {
 	friend class Debug;
@@ -102,7 +105,10 @@ public:
 
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
 	//CV_32SC1 2x1: left, right encoder
-	const cv::Mat getEncoderData();
+	cv::Mat getEncoderData();
+
+	//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
+	cv::Mat getImuData(std::chrono::high_resolution_clock::time_point &timestamp);
 
 	//----------------------ACCESS TO COMPUTED DATA
 	//CV_32SC1 3x1: x, y, fi
