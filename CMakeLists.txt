@@ -78,6 +78,7 @@ set(trobotQt_SOURCES
 	Trobot_Qt/QtCamera.cpp
 	Trobot_Qt/QtHokuyo.cpp
 	Trobot_Qt/Calibration.cpp
+	Trobot_Qt/Constraints.cpp
 	Trobot_Qt/trobotqt.cpp
 	Trobot_Qt/QtEncoders.cpp)
 set(trobotQt_HEADERS
@@ -90,6 +91,7 @@ set(trobotQt_HEADERS
 	Trobot_Qt/QtCamera.h
 	Trobot_Qt/QtHokuyo.h
 	Trobot_Qt/Calibration.h
+	Trobot_Qt/Constraints.h
 	Trobot_Qt/trobotqt.h
 	Trobot_Qt/QtEncoders.h)
 set(trobotQt_FORMS

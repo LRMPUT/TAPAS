@@ -60,6 +60,8 @@ public:
 
 	//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)
 	const cv::Mat getMovementConstraints();
+
+	std::vector<cv::Point2f> getPointCloudCamera(cv::Mat& image);
 };
 
 

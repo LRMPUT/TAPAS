@@ -12,6 +12,7 @@ class Hokuyo;
 #include <string>
 #include <thread>
 #include <mutex>
+#include <chrono>
 #include <opencv2/opencv.hpp>
 #include <urg_cpp/Urg_driver.h>
 
@@ -28,6 +29,7 @@ class Hokuyo {
 	qrk::Urg_driver hokuyo;
 
 	cv::Mat curMeas;
+	std::chrono::high_resolution_clock::time_point curTimestamp;
 	std::mutex mtx;
 
 	void run();
@@ -42,7 +44,7 @@ public:
 	bool isOpen();
 
 	//CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right
-	cv::Mat getData();
+	cv::Mat getData(std::chrono::high_resolution_clock::time_point &timestamp);
 };
 
 
