@@ -11,6 +11,7 @@
 #include <vector>
 #include <thread>
 #include <chrono>
+#include <queue>
 //OpenCV
 #include <opencv2/opencv.hpp>
 //TinyXML
@@ -24,6 +25,14 @@ class Robot;
 class Debug;
 
 class MovementConstraints {
+	struct PointsPacket{
+		std::chrono::high_resolution_clock::time_point timestamp;
+		int numPoints;
+		PointsPacket(std::chrono::high_resolution_clock::time_point itimestamp,
+					int inumPoints) : timestamp(itimestamp), numPoints(inumPoints)
+		{}
+	};
+
 	friend class Debug;
 
 	// Class to get data from Camera
@@ -53,7 +62,12 @@ class MovementConstraints {
 
 	cv::Mat curPosCloudMapCenter;
 
+	cv::Mat posMapCenterGlobal;
+
 	cv::Mat pointCloudCameraMapCenter;
+
+	//Queue of points
+	std::queue<PointsPacket> pointsQueue;
 
 	cv::Mat imuPrev, encodersPrev;
 
@@ -86,6 +100,8 @@ class MovementConstraints {
 	cv::Mat compTrans(	cv::Mat orient,
 						cv::Mat encodersDiff);
 
+	void updateCurPosCloudMapCenter();
+
 	void processPointCloud();
 
 public:
@@ -99,6 +115,8 @@ public:
 	//----------------------ACCESS TO COMPUTED DATA
 	//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)
 	const cv::Mat getMovementConstraints();
+
+	cv::Mat getPointCloud(cv::Mat& curPosMapCenter);
 
 	//----------------------MENAGMENT OF MovementConstraints DEVICES
 	//Hokuyo

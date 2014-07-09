@@ -96,9 +96,17 @@ void MovementConstraints::updateConstraintsMap(double curGlobX, double curGlobY,
 		mapCenterX = curGlobX;
 		mapCenterY = curGlobY;
 		mapCenterPhi = curGlobPhi;
+
 		std::chrono::high_resolution_clock::time_point imuTimestamp;
 		Mat imuCur = robot->getImuData(imuTimestamp);
-		curPosCloudMapCenter = compOrient(imuCur);
+		updateCurPosCloudMapCenter();
+
+		//Move points to new map center
+		Mat newPointCloudCoords = curPosCloudMapCenter.inv()*pointCloudCameraMapCenter.rowRange(0, 4);
+		newPointCloudCoords.copyTo(pointCloudCameraMapCenter.rowRange(0, 4));
+
+		posMapCenterGlobal = compOrient(imuCur)*cameraOrigImu;
+		curPosCloudMapCenter = Mat::eye(4, 4, CV_32FC1);
 	}
 	constraintsMap = Scalar(0);
 
@@ -108,8 +116,26 @@ void MovementConstraints::updateConstraintsMap(double curGlobX, double curGlobY,
 
 
 void MovementConstraints::insertHokuyoConstraints(cv::Mat map, double curMapX, double curMapY, double curMapPhi){
-	//Mat hokuyoData = getHokuyoData();
-
+	Mat pointCloudImu = cameraOrigImu.inv()*pointCloudCameraMapCenter.rowRange(0, 4);
+	vector<vector<vector<Point3f> > > bins(MAP_SIZE, vector<vector<Point3f> >(MAP_SIZE, vector<Point3f>()));
+	for(int p = 0; p < pointCloudImu.cols; p++){
+		int x = pointCloudImu.at<float>(0, p)/MAP_RASTER_SIZE;
+		int y = pointCloudImu.at<float>(1, p)/MAP_RASTER_SIZE;
+		bins[x][y].push_back(Point3f(pointCloudImu.at<float>(0, p),
+									pointCloudImu.at<float>(1, p),
+									pointCloudImu.at<float>(2, p)));
+	}
+	for(int y = 0; y < MAP_SIZE; y++){
+		for(int x = 0; x < MAP_SIZE; y++){
+			float minZ = 10e9;
+			for(int p = 0; p < bins[x][y].size(); p++){
+				minZ = min(minZ, bins[x][y][p].z);
+			}
+			if(minZ < 700){	//if something is taller than camera position minus 700 mm
+				map.at<float>(x, y) = 1;
+			}
+		}
+	}
 }
 
 cv::Mat MovementConstraints::compOrient(cv::Mat imuData){
@@ -166,14 +192,48 @@ cv::Mat MovementConstraints::compTrans(	cv::Mat orient,
 	return trans;
 }
 
-void MovementConstraints::processPointCloud(){
+void MovementConstraints::updateCurPosCloudMapCenter(){
 	std::chrono::high_resolution_clock::time_point imuTimestamp;
 	Mat encodersCur = robot->getEncoderData();
 	Mat imuCur = robot->getImuData(imuTimestamp);
 
-	Mat hokuyoData = hokuyo.getData();
+	if(imuCur.empty()){
+		imuPrev.copyTo(imuCur);
+	}
+	if(encodersCur.empty()){
+		encodersPrev.copyTo(encodersCur);
+	}
+	if(posMapCenterGlobal.empty()){
+		posMapCenterGlobal = compOrient(imuCur)*cameraOrigImu;
+	}
+
+	//cout << "Computing curPos" << endl;
+	//cout << "encodersCur = " << encodersCur << endl << "encodersPrev = " << encodersPrev << endl;
+	Mat trans = posMapCenterGlobal.inv()*compTrans(compOrient(imuPrev), encodersCur - encodersPrev);
+	cout << "trans = " << trans << endl;
+	//cout << "Computing curTrans" << endl;
+	Mat curTrans = Mat(curPosCloudMapCenter, Rect(3, 0, 1, 4)) + trans;
+	//cout << "Computing curRot" << endl;
+
+	Mat curRot = posMapCenterGlobal.inv()*compOrient(imuCur)*cameraOrigImu;
+	curRot.copyTo(curPosCloudMapCenter);
+	curTrans.copyTo(Mat(curPosCloudMapCenter, Rect(3, 0, 1, 4)));
+	//cout << "trans = " << trans << endl;
+	//cout << "curTrans = " << curTrans << endl;
+	//cout << "curRot = " << curRot << endl;
+	//cout << "imuPosGlobal.inv()*curPos*cameraOrigImu.inv() = " << endl << imuPosGlobal.inv()*curPos*cameraOrigImu.front().inv() << endl;
+	//cout << "globalPos.inv()*curPos = " << globalPos.inv()*curPos << endl;
+}
+
+void MovementConstraints::processPointCloud(){
+
+	updateCurPosCloudMapCenter();
+
+	std::chrono::high_resolution_clock::time_point hokuyoTimestamp;
+	Mat hokuyoData = hokuyo.getData(hokuyoTimestamp);
 	Mat hokuyoCurPoints(hokuyoData.cols, 6, CV_32FC1);
 
+	//TODO remove invalid points
 	hokuyoData.rowRange(0, 1).copyTo(hokuyoCurPoints.rowRange(0, 1));
 	hokuyoCurPoints.rowRange(1, 2) = Scalar(0);
 	hokuyoData.rowRange(1, 2).copyTo(hokuyoCurPoints.rowRange(2, 3));
@@ -182,34 +242,18 @@ void MovementConstraints::processPointCloud(){
 
 	hokuyoCurPoints.rowRange(0, 4) = cameraOrigLaser.inv()*hokuyoCurPoints.rowRange(0, 4);
 
-	if(imuCur.empty()){
-		imuPrev.copyTo(imuCur);
+	//remove all points older than 2000 ms
+	int pointsSkipped = 0;
+	std::chrono::high_resolution_clock::time_point curTimestamp = std::chrono::high_resolution_clock::now();
+	while(std::chrono::duration_cast<std::chrono::milliseconds>(curTimestamp - pointsQueue.front().timestamp).count() > 2000){
+		pointsSkipped += pointsQueue.front().numPoints;
+		pointsQueue.pop();
 	}
-	if(encodersCur.empty()){
-		encodersPrev.copyTo(encodersCur);
-	}
-
-	//cout << "Computing curPos" << endl;
-	//cout << "encodersCur = " << encodersCur << endl << "encodersPrev = " << encodersPrev << endl;
-	Mat trans = compTrans(compOrient(imuPrev), encodersCur - encodersPrev);
-	cout << "trans = " << trans << endl;
-	//cout << "Computing curTrans" << endl;
-	Mat curTrans = Mat(curPosCloudMapCenter, Rect(3, 0, 1, 4)) + trans;
-	//cout << "Computing curRot" << endl;
-
-	Mat curRot = compOrient(imuCur)*cameraOrigImu;
-	curRot.copyTo(curPosCloudMapCenter);
-	curTrans.copyTo(Mat(curPosCloudMapCenter, Rect(3, 0, 1, 4)));
-	//cout << "trans = " << trans << endl;
-	//cout << "curTrans = " << curTrans << endl;
-	//cout << "curRot = " << curRot << endl;
-	//cout << "imuPosGlobal.inv()*curPos*cameraOrigImu.inv() = " << endl << imuPosGlobal.inv()*curPos*cameraOrigImu.front().inv() << endl;
-	//cout << "globalPos.inv()*curPos = " << globalPos.inv()*curPos << endl;
 
 	//cout << "Moving hokuyoAllPointsGlobal" << endl;
-	Mat tmpAllPoints(hokuyoCurPoints.rows, pointCloudCameraMapCenter.cols + hokuyoCurPoints.cols, CV_32FC1);
+	Mat tmpAllPoints(hokuyoCurPoints.rows, pointCloudCameraMapCenter.cols + hokuyoCurPoints.cols - pointsSkipped, CV_32FC1);
 	if(!pointCloudCameraMapCenter.empty()){
-		pointCloudCameraMapCenter.copyTo(tmpAllPoints.colRange(0, pointCloudCameraMapCenter.cols));
+		pointCloudCameraMapCenter.copyTo(tmpAllPoints.colRange(pointsSkipped, pointCloudCameraMapCenter.cols));
 	}
 	//cout << "Addding hokuyoCurPoints" << endl;
 	Mat curPointCloudCameraMapCenter(hokuyoCurPoints.rows, hokuyoCurPoints.cols, CV_32FC1);
@@ -217,20 +261,34 @@ void MovementConstraints::processPointCloud(){
 	tmpCurPoints.copyTo(curPointCloudCameraMapCenter.rowRange(0, 4));
 	hokuyoCurPoints.rowRange(4, 6).copyTo(curPointCloudCameraMapCenter.rowRange(4, 6));
 	//cout << hokuyoCurPointsGlobal.channels() << ", " << hokuyoAllPointsGlobal.channels() << endl;
-	curPointCloudCameraMapCenter.copyTo(tmpAllPoints.colRange(pointCloudCameraMapCenter.cols, pointCloudCameraMapCenter.cols + hokuyoCurPoints.cols));
+	curPointCloudCameraMapCenter.copyTo(tmpAllPoints.colRange(pointCloudCameraMapCenter.cols - pointsSkipped,
+																pointCloudCameraMapCenter.cols + hokuyoCurPoints.cols - pointsSkipped));
 	pointCloudCameraMapCenter = tmpAllPoints;
+	pointsQueue.push(PointsPacket(hokuyoTimestamp, hokuyoCurPoints.cols));
 }
 
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 //CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right
 const cv::Mat MovementConstraints::getHokuyoData(){
-	return hokuyo.getData();
+	std::chrono::high_resolution_clock::time_point hokuyoTimestamp;
+	return hokuyo.getData(hokuyoTimestamp);
 }
 
 //----------------------ACCESS TO COMPUTED DATA
-//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)
+//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied
 const cv::Mat MovementConstraints::getMovementConstraints(){
-	return Mat(MAP_SIZE, MAP_SIZE, CV_32FC1);
+	Mat ret;
+	//TODO Add mutex
+	constraintsMap.copyTo(ret);
+	return ret;
+}
+
+cv::Mat MovementConstraints::getPointCloud(cv::Mat& curPosMapCenter){
+	Mat ret;
+	//TODO Add mutex
+	pointCloudCameraMapCenter.copyTo(ret);
+	curPosCloudMapCenter.copyTo(curPosMapCenter);
+	return ret;
 }
 
 //----------------------MENAGMENT OF MovementConstraints DEVICES

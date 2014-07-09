@@ -6,6 +6,8 @@
  */
 
 #include "Debug.h"
+//STL
+#include <chrono>
 //OpenCV
 #include <opencv2/opencv.hpp>
 //Boost
@@ -75,7 +77,8 @@ const cv::Mat Debug::getImuData(){
 
 //CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right
 const cv::Mat Debug::getHokuyoData(){
-	return robot->movementConstraints->hokuyo.getData();
+	std::chrono::high_resolution_clock::time_point timestamp;
+	return robot->movementConstraints->hokuyo.getData(timestamp);
 }
 
 //CV_8UC3 2x640x480: left, right image
@@ -169,4 +172,21 @@ const cv::Mat Debug::getEstimatedPosition(){
 //CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)
 const cv::Mat Debug::getMovementConstraints(){
 	return robot->movementConstraints->getMovementConstraints();
+}
+
+std::vector<cv::Point2f> Debug::getPointCloudCamera(cv::Mat& image){
+	Mat curPosMapCenter;
+	Mat pointCloudCameraMapCenter = robot->movementConstraints->getPointCloud(curPosMapCenter);
+	image = robot->movementConstraints->camera->getData().front();
+
+	Mat allPointsCamera = curPosMapCenter.inv()*pointCloudCameraMapCenter.rowRange(0, 4);
+	//cout << "Computing point projection" << endl;
+	vector<Point2f> pointsImage;
+	projectPoints(	allPointsCamera.rowRange(0, 3).t(),
+					Matx<float, 3, 1>(0, 0, 0),
+					Matx<float, 3, 1>(0, 0, 0),
+					robot->movementConstraints->camera->cameraMatrix.front(),
+					robot->movementConstraints->camera->distCoeffs.front(),
+					pointsImage);
+	return pointsImage;
 }

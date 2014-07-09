@@ -25,6 +25,7 @@ void Hokuyo::run(){
 		//cout << "status: " << hokuyo.status() << endl;
 		//1 measurement doesn't work with Distance_intensity
 		hokuyo.get_distance_intensity(distance, intensity);
+		curTimestamp = std::chrono::high_resolution_clock::now();
 		//hokuyo.get_distance_intensity(distance, intensity);
 		//cout << "distance.size() = " << distance.size() << ", intensity.size() = " << intensity.size() << endl;
 		//int count = 0;
@@ -83,10 +84,11 @@ bool Hokuyo::isOpen(){
 }
 
 //CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right
-cv::Mat Hokuyo:: getData(){
+cv::Mat Hokuyo:: getData(std::chrono::high_resolution_clock::time_point &timestamp){
 	Mat ret(curMeas.rows, curMeas.cols, CV_32SC1);
 	std::unique_lock<std::mutex> lck(mtx);
 	curMeas.copyTo(ret);
+	timestamp = curTimestamp;
 	lck.unlock();
 
 	return ret;
