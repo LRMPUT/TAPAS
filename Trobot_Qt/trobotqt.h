@@ -22,6 +22,7 @@
 #include "QtHokuyo.h"
 #include "QtEncoders.h"
 #include "Calibration.h"
+#include "Constraints.h"
 
 class TrobotQt : public QMainWindow
 {
@@ -54,6 +55,8 @@ private:
 	QtHokuyo* qtHokuyo;
 
 	Calibration* calib;
+
+	Constraints* constr;
 
 	Recording* recording;
 private slots:

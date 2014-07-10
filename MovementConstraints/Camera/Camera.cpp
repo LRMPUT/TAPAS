@@ -954,5 +954,5 @@ void Camera::close(){
 }
 
 bool Camera::isOpen(){
-	return true;
+	return (cameras.size() > 0);
 }

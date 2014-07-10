@@ -43,8 +43,15 @@ TrobotQt::TrobotQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
 
 	ui.sensorsPortCombo->addItems(portList);
 
+	constr = new Constraints(&ui, &debug);
+
 	recording = new Recording(&ui, &robot, &debug);
 	cout << "TrobotQt::TrobotQt end" << endl;
+
+	robot.openImu("/dev/robots/imu");
+	robot.openEncoders("/dev/robots/encoders");
+	robot.openHokuyo("/dev/robots/hokuyo");
+	robot.openCamera(vector<string>(1, "/dev/video0"));
 
 }
 

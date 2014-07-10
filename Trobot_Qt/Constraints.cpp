@@ -21,8 +21,8 @@ Constraints::Constraints(Ui::TrobotQtClass* iui, Debug* idebug) :
 	debug(idebug)
 {
 	QObject::connect(&timer, SIGNAL(timeout()), this, SLOT(updateViews()));
-	timer.setInterval(100);
-	timer.start();
+	//timer.setInterval(100);
+	timer.start(100);
 }
 
 Constraints::~Constraints(){
@@ -30,15 +30,26 @@ Constraints::~Constraints(){
 }
 
 void Constraints::updateCameraView(){
+	//cout << "Updating camera view" << endl;
 	Mat image;
 	vector<Point2f> pointCloudCamera = debug->getPointCloudCamera(image);
+	//cout << "Got point cloud camera" << endl;
+	QPixmap map;
+	double scaleX = 640 / ui->constraintCameraViewLabel->width();
+	double scaleY = 480 / ui->constraintCameraViewLabel->height();
 
-	cvtColor(image, image, CV_BGR2RGB);
-	Mat resizedImage;
-	cv::resize(image, resizedImage, cv::Size(ui->constraintCameraViewLabel->width(), ui->constraintCameraViewLabel->height()));
-	double scaleX = (double)image.cols / ui->constraintCameraViewLabel->width();
-	double scaleY = (double)image.rows / ui->constraintCameraViewLabel->height();
-	QPixmap map = QPixmap::fromImage(QImage(resizedImage.ptr(), resizedImage.cols, resizedImage.rows, QImage::Format_RGB888));
+	if(!image.empty()){
+		cvtColor(image, image, CV_BGR2RGB);
+		Mat resizedImage;
+		cv::resize(image, resizedImage, cv::Size(ui->constraintCameraViewLabel->width(), ui->constraintCameraViewLabel->height()));
+		scaleX = (double)image.cols / ui->constraintCameraViewLabel->width();
+		scaleY = (double)image.rows / ui->constraintCameraViewLabel->height();
+		map = QPixmap::fromImage(QImage(resizedImage.ptr(), resizedImage.cols, resizedImage.rows, QImage::Format_RGB888));
+	}
+	else{
+		map = QPixmap(ui->constraintCameraViewLabel->width(), ui->constraintCameraViewLabel->height());
+		map.fill(Qt::white);
+	}
 
 	QPainter painter(&map);
 	painter.setPen(Qt::red);
@@ -60,6 +71,7 @@ void Constraints::updateMapView(){
 }
 
 void Constraints::updateViews(){
+	//cout << "Updating views" << endl;
 	if(ui->constraintCameraViewLabel->isVisible()){
 		updateCameraView();
 	}
