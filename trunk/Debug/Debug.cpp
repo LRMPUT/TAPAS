@@ -177,16 +177,22 @@ const cv::Mat Debug::getMovementConstraints(){
 std::vector<cv::Point2f> Debug::getPointCloudCamera(cv::Mat& image){
 	Mat curPosMapCenter;
 	Mat pointCloudCameraMapCenter = robot->movementConstraints->getPointCloud(curPosMapCenter);
-	image = robot->movementConstraints->camera->getData().front();
-
-	Mat allPointsCamera = curPosMapCenter.inv()*pointCloudCameraMapCenter.rowRange(0, 4);
-	//cout << "Computing point projection" << endl;
+	//cout << "Got point cloud" << endl;
+	if(robot->movementConstraints->camera->isOpen()){
+		image = robot->movementConstraints->camera->getData().front();
+	}
 	vector<Point2f> pointsImage;
-	projectPoints(	allPointsCamera.rowRange(0, 3).t(),
-					Matx<float, 3, 1>(0, 0, 0),
-					Matx<float, 3, 1>(0, 0, 0),
-					robot->movementConstraints->camera->cameraMatrix.front(),
-					robot->movementConstraints->camera->distCoeffs.front(),
-					pointsImage);
+	//cout << curPosMapCenter.size() << ", " << pointCloudCameraMapCenter.size() << endl;
+	if(!curPosMapCenter.empty() && !pointCloudCameraMapCenter.empty()){
+		Mat allPointsCamera = curPosMapCenter.inv()*pointCloudCameraMapCenter.rowRange(0, 4);
+		//cout << "Computing point projection" << endl;
+
+		projectPoints(	allPointsCamera.rowRange(0, 3).t(),
+						Matx<float, 3, 1>(0, 0, 0),
+						Matx<float, 3, 1>(0, 0, 0),
+						robot->movementConstraints->camera->cameraMatrix.front(),
+						robot->movementConstraints->camera->distCoeffs.front(),
+						pointsImage);
+	}
 	return pointsImage;
 }

@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 #include <thread>
+#include <mutex>
 #include <chrono>
 #include <queue>
 //OpenCV
@@ -59,6 +60,9 @@ class MovementConstraints {
 	cv::Mat groundPlane;
 
 	//Point Cloud from Hokuyo
+	std::mutex mtxPointCloud;
+
+	std::mutex mtxMap;
 
 	cv::Mat curPosCloudMapCenter;
 

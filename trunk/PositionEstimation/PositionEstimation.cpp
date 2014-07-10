@@ -35,7 +35,7 @@ PositionEstimation::PositionEstimation(Robot* irobot) :
 	lastEncoderTimestamp = std::chrono::high_resolution_clock::now();
 	lastGpsTimestamp = std::chrono::high_resolution_clock::now();
 	lastImuTimestamp = std::chrono::high_resolution_clock::now();
-	runThread = true;
+	runThread = false;
 	estimationThread = std::thread(&PositionEstimation::run, this);
 }
 
