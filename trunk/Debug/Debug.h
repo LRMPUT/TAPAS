@@ -63,7 +63,7 @@ public:
 
 	std::vector<cv::Point2f> getPointCloudCamera(cv::Mat& image);
 
-	cv::Mat getPointCloudImu(cv::Mat curPosImuMapCenter);
+	cv::Mat getPointCloudImu(cv::Mat& curPosImuMapCenter);
 };
 
 

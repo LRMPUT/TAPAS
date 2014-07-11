@@ -6,6 +6,8 @@
  */
 
 #include "Viewer.h"
+
+#include <GL/glu.h>
 //TAPAS
 #include "../Robot/Robot.h"
 
@@ -13,18 +15,25 @@ using namespace std;
 using namespace cv;
 
 void Viewer::drawRobot(){
-	glPushMatrix();
-	multCurMatrix(posImuMapCenter);
+	//cout << "drawRobot()" << endl;
+	//cout << "posImuMapCenter.size()" << posImuMapCenter.size() << endl;
+	if(!posImuMapCenter.empty()){
+		glPushMatrix();
+		multCurMatrix(posImuMapCenter);
 
-	glColor3f(0.0f,1.0f,0.0f);
-	sphere(0, 0, 0, 500);
-	drawAxis(1000);
+		glColor3f(0.0f,1.0f,0.0f);
+		sphere(0, 0, 0, 200);
+		drawAxis(1000);
 
-	glPopMatrix();
+		glPopMatrix();
+	}
+	//cout << "End drawRobot()" << endl;
 }
 
 void Viewer::drawPointCloud(){
+	cout << "drawPointCloud()" << endl;
 	glPointSize(5);
+	glColor3f(1.0f, 0.0f, 0.0f);
 	glBegin(GL_POINTS);
 	for(int p = 0; p < pointCloudMapCenter.cols; p++){
 		glVertex4f(pointCloudMapCenter.at<float>(0, p),
@@ -33,6 +42,8 @@ void Viewer::drawPointCloud(){
 					pointCloudMapCenter.at<float>(3, p));
 	}
 	glEnd();
+
+	cout << "End drawPointCloud()" << endl;
 }
 
 void Viewer::drawConstraintsMap(){
@@ -101,10 +112,12 @@ void Viewer::draw()
 	//glLoadIdentity();
 	glColor3f(1.0f,1.0f,1.0f);
 	//camera()->draw();
-	drawGrid(MAP_RASTER_SIZE);
-	//drawAxis();
+	drawGrid(MAP_SIZE*MAP_RASTER_SIZE, MAP_SIZE);
+	drawAxis(1000);
 	glColor3f(1.0, 0, 0);
 
+	drawRobot();
+	drawPointCloud();
 
 }
 
@@ -113,10 +126,10 @@ void Viewer::init()
 	//glClearColor(1.0, 0, 0, 0);
 	cout << "inicjuje kamere" << endl;
 	camera()->setType(qglviewer::Camera::PERSPECTIVE);
-	camera()->setPosition(qglviewer::Vec(2000, 2000, 2000));
+	camera()->setPosition(qglviewer::Vec(-2000, -2000, -2000));
 	//camera()->setFieldOfView(3.14/2);
 	setSceneRadius(10000);
-	camera()->setUpVector(qglviewer::Vec(-0.57735, -0.57735, 0.57735));
+	camera()->setUpVector(qglviewer::Vec(0.57735, 0.57735, -0.57735));
 	camera()->lookAt(sceneCenter());
 	cout << "zNear = " << camera()->zNear() << ", zFar = " << camera()->zFar() << endl;
 	cout << "scene center = (" << sceneCenter().x << ", " << sceneCenter().y << ", " << sceneCenter().z << ")" << endl;
@@ -131,6 +144,7 @@ void Viewer::updatePointCloud(cv::Mat newPointCloud){
 
 void Viewer::updateRobotPos(cv::Mat newRobotPos){
 	posImuMapCenter = newRobotPos;
+	//cout << "posImuMapCenter.size()" << posImuMapCenter.size() << endl;
 }
 
 void Viewer::updateConstraintsMap(cv::Mat newConstraintsMap){

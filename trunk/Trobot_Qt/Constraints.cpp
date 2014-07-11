@@ -71,8 +71,11 @@ void Constraints::updateCameraView(){
 }
 
 void Constraints::updateMapView(){
+	//cout << "updateMapView()" << endl;
 	Mat curPosImuMapCenter;
 	Mat pointCloudImuMapCenter = debug->getPointCloudImu(curPosImuMapCenter);
+
+	//cout << "curPosImuMapCenter.size() = " << curPosImuMapCenter.size() << endl;
 	if(!curPosImuMapCenter.empty() && !pointCloudImuMapCenter.empty()){
 		viewer->updatePointCloud(pointCloudImuMapCenter);
 		viewer->updateRobotPos(curPosImuMapCenter);

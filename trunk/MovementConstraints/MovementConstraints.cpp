@@ -239,7 +239,7 @@ void MovementConstraints::updateCurPosCloudMapCenter(){
 		lck.unlock();
 		//cout << "trans = " << trans << endl;
 		//cout << "posMapCenterGlobal = " << posMapCenterGlobal << endl;
-		cout << "curPosCloudMapCenter = " << curPosCloudMapCenter << endl;
+		//cout << "curPosCloudMapCenter = " << curPosCloudMapCenter << endl;
 		//cout << "curTrans = " << curTrans << endl;
 		//cout << "curRot = " << curRot << endl;
 		//cout << "imuPosGlobal.inv()*curPos*cameraOrigImu.inv() = " << endl << imuPosGlobal.inv()*curPos*cameraOrigImu.front().inv() << endl;
@@ -251,7 +251,7 @@ void MovementConstraints::updateCurPosCloudMapCenter(){
 }
 
 void MovementConstraints::processPointCloud(){
-	cout << "processPointCloud()" << endl;
+	//cout << "processPointCloud()" << endl;
 
 	updateCurPosCloudMapCenter();
 
@@ -315,7 +315,7 @@ void MovementConstraints::processPointCloud(){
 		lck.unlock();
 	}
 
-	cout << "End processPointCloud()" << endl;
+	//cout << "End processPointCloud()" << endl;
 }
 
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
@@ -336,7 +336,7 @@ const cv::Mat MovementConstraints::getMovementConstraints(){
 }
 
 cv::Mat MovementConstraints::getPointCloud(cv::Mat& curPosMapCenter){
-	cout << "getPointCloud()" << endl;
+	//cout << "getPointCloud()" << endl;
 	Mat ret;
 	std::unique_lock<std::mutex> lck(mtxPointCloud);
 	pointCloudCameraMapCenter.copyTo(ret);
@@ -344,7 +344,7 @@ cv::Mat MovementConstraints::getPointCloud(cv::Mat& curPosMapCenter){
 		curPosMapCenter = curPosCloudMapCenter*cameraOrigImu;
 	}
 	lck.unlock();
-	cout << "End getPointCloud()" << endl;
+	//cout << "End getPointCloud()" << endl;
 	return ret;
 }
 
