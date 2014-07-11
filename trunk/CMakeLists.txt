@@ -66,7 +66,10 @@ target_link_libraries(RobotsIntellect
 	${urg_LIBRARIES}
 	${TinyXML_LIBRARIES})
 
-find_package(Qt4 REQUIRED)
+find_package(OpenGL)
+set(QGLViewer_LIBRARIES QGLViewer)
+
+find_package(Qt4 COMPONENTS QtCore QtXml QtGui QtOpenGL REQUIRED)
 set(trobotQt_SOURCES
 	Trobot_Qt/CameraWindow.cpp
 	Trobot_Qt/Chart.cpp
@@ -79,6 +82,7 @@ set(trobotQt_SOURCES
 	Trobot_Qt/QtHokuyo.cpp
 	Trobot_Qt/Calibration.cpp
 	Trobot_Qt/Constraints.cpp
+	Trobot_Qt/Viewer.cpp
 	Trobot_Qt/trobotqt.cpp
 	Trobot_Qt/QtEncoders.cpp)
 set(trobotQt_HEADERS
@@ -92,6 +96,7 @@ set(trobotQt_HEADERS
 	Trobot_Qt/QtHokuyo.h
 	Trobot_Qt/Calibration.h
 	Trobot_Qt/Constraints.h
+	Trobot_Qt/Viewer.h
 	Trobot_Qt/trobotqt.h
 	Trobot_Qt/QtEncoders.h)
 set(trobotQt_FORMS
@@ -119,5 +124,7 @@ target_link_libraries(Trobot_Qt/gui
 	${QT_LIBRARIES}
 	${OpenCV_LIBS}
 	${Boost_LIBRARIES}
+	${OPENGL_LIBRARIES}
+	${QGLViewer_LIBRARIES}
 	${urg_LIBRARIES}
 	${TinyXML_LIBRARIES})

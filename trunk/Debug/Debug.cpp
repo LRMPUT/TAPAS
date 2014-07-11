@@ -196,3 +196,9 @@ std::vector<cv::Point2f> Debug::getPointCloudCamera(cv::Mat& image){
 	}
 	return pointsImage;
 }
+
+
+cv::Mat Debug::getPointCloudImu(cv::Mat curPosImuMapCenter){
+	Mat pointCloudImuMapCenter = robot->movementConstraints->getPointCloud(curPosImuMapCenter);
+	return pointCloudImuMapCenter;
+}

@@ -21,6 +21,10 @@ Constraints::Constraints(Ui::TrobotQtClass* iui, Debug* idebug) :
 	debug(idebug)
 {
 	QObject::connect(&timer, SIGNAL(timeout()), this, SLOT(updateViews()));
+
+	viewer = new Viewer();
+	ui->constraintMapViewScrollArea->setWidget(viewer);
+
 	//timer.setInterval(100);
 	timer.start(100);
 }
@@ -67,7 +71,13 @@ void Constraints::updateCameraView(){
 }
 
 void Constraints::updateMapView(){
-	//TODO Uzupełnić
+	Mat curPosImuMapCenter;
+	Mat pointCloudImuMapCenter = debug->getPointCloudImu(curPosImuMapCenter);
+	if(!curPosImuMapCenter.empty() && !pointCloudImuMapCenter.empty()){
+		viewer->updatePointCloud(pointCloudImuMapCenter);
+		viewer->updateRobotPos(curPosImuMapCenter);
+		viewer->rysuj();
+	}
 }
 
 void Constraints::updateViews(){
@@ -75,7 +85,7 @@ void Constraints::updateViews(){
 	if(ui->constraintCameraViewLabel->isVisible()){
 		updateCameraView();
 	}
-	if(ui->constraintMapViewLabel->isVisible()){
+	if(ui->constraintMapViewScrollArea->isVisible()){
 		updateMapView();
 	}
 }

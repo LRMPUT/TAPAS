@@ -15,6 +15,7 @@
 #include "../Debug/Debug.h"
 //Trobot Qt
 #include "ui_trobotqt.h"
+#include "Viewer.h"
 
 class Constraints : public QObject
 {
@@ -22,6 +23,8 @@ class Constraints : public QObject
 
 	Ui::TrobotQtClass* ui;
 	Debug* debug;
+
+	Viewer* viewer;
 
 	QTimer timer;
 
