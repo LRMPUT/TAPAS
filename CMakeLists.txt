@@ -66,7 +66,7 @@ target_link_libraries(RobotsIntellect
 	${urg_LIBRARIES}
 	${TinyXML_LIBRARIES})
 
-find_package(OpenGL)
+find_package(OpenGL REQUIRED)
 set(QGLViewer_LIBRARIES QGLViewer)
 
 find_package(Qt4 COMPONENTS QtCore QtXml QtGui QtOpenGL REQUIRED)
