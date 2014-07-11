@@ -1858,22 +1858,6 @@
        <string/>
       </property>
      </widget>
-     <widget class="QLabel" name="constraintMapViewLabel">
-      <property name="geometry">
-       <rect>
-        <x>400</x>
-        <y>210</y>
-        <width>400</width>
-        <height>400</height>
-       </rect>
-      </property>
-      <property name="frameShape">
-       <enum>QFrame::Box</enum>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-     </widget>
      <widget class="QLabel" name="constraintCurPosLabel">
       <property name="geometry">
        <rect>
@@ -1889,6 +1873,29 @@
 0 0 1 0
 0 0 0 1</string>
       </property>
+     </widget>
+     <widget class="QScrollArea" name="constraintMapViewScrollArea">
+      <property name="geometry">
+       <rect>
+        <x>370</x>
+        <y>170</y>
+        <width>400</width>
+        <height>400</height>
+       </rect>
+      </property>
+      <property name="widgetResizable">
+       <bool>true</bool>
+      </property>
+      <widget class="QWidget" name="scrollAreaWidgetContents">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>0</y>
+         <width>398</width>
+         <height>398</height>
+        </rect>
+       </property>
+      </widget>
      </widget>
     </widget>
    </widget>

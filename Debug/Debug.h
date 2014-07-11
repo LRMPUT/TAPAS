@@ -62,6 +62,8 @@ public:
 	const cv::Mat getMovementConstraints();
 
 	std::vector<cv::Point2f> getPointCloudCamera(cv::Mat& image);
+
+	cv::Mat getPointCloudImu(cv::Mat curPosImuMapCenter);
 };
 
 
