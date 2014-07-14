@@ -49,7 +49,7 @@ class MovementConstraints {
 	Robot* robot;
 
 	//CV_32FC1 4x4: camera origin position and orientation w.r.t. global coordinate system
-	cv::Mat cameraOrigGlobal;
+	cv::Mat imuOrigGlobal;
 
 	//CV_32FC1 4x4: camera origin position and orientation w.r.t. laser coordinate system
 	cv::Mat cameraOrigLaser;

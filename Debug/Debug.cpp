@@ -184,7 +184,8 @@ std::vector<cv::Point2f> Debug::getPointCloudCamera(cv::Mat& image){
 	vector<Point2f> pointsImage;
 	//cout << curPosMapCenter.size() << ", " << pointCloudCameraMapCenter.size() << endl;
 	if(!curPosMapCenter.empty() && !pointCloudCameraMapCenter.empty()){
-		Mat allPointsCamera = curPosMapCenter.inv()*pointCloudCameraMapCenter.rowRange(0, 4);
+		Mat cameraOrigImu = robot->movementConstraints->cameraOrigImu;
+		Mat allPointsCamera = (curPosMapCenter*cameraOrigImu).inv()*pointCloudCameraMapCenter.rowRange(0, 4);
 		//cout << "Computing point projection" << endl;
 
 		projectPoints(	allPointsCamera.rowRange(0, 3).t(),
@@ -201,4 +202,13 @@ std::vector<cv::Point2f> Debug::getPointCloudCamera(cv::Mat& image){
 cv::Mat Debug::getPointCloudImu(cv::Mat& curPosImuMapCenter){
 	Mat pointCloudImuMapCenter = robot->movementConstraints->getPointCloud(curPosImuMapCenter);
 	return pointCloudImuMapCenter;
+}
+
+void Debug::getTransformationMatrices(cv::Mat& retImuOrigGlobal,
+									cv::Mat& retCameraOrigLaser,
+									cv::Mat& retCameraOrigImu)
+{
+	robot->movementConstraints->imuOrigGlobal.copyTo(retImuOrigGlobal);
+	robot->movementConstraints->cameraOrigLaser.copyTo(retCameraOrigLaser);
+	robot->movementConstraints->cameraOrigImu.copyTo(retCameraOrigImu);
 }

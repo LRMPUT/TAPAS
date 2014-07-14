@@ -28,12 +28,14 @@ MovementConstraints::MovementConstraints(Robot* irobot, TiXmlElement* settings) 
 }
 
 MovementConstraints::~MovementConstraints() {
+	stopThread();
 	delete camera;
 }
 
 void MovementConstraints::readSettings(TiXmlElement* settings){
 	cameraOrigLaser = readMatrixSettings(settings, "camera_position_laser", 4, 4);
 	cameraOrigImu = readMatrixSettings(settings, "imu_position_camera", 4, 4).t();
+	imuOrigGlobal = readMatrixSettings(settings, "imu_position_global", 4, 4);
 	groundPlane = readMatrixSettings(settings, "ground_plane_global", 4, 1);
 }
 
@@ -341,7 +343,7 @@ cv::Mat MovementConstraints::getPointCloud(cv::Mat& curPosMapCenter){
 	std::unique_lock<std::mutex> lck(mtxPointCloud);
 	pointCloudCameraMapCenter.copyTo(ret);
 	if(!curPosCloudMapCenter.empty()){
-		curPosMapCenter = curPosCloudMapCenter*cameraOrigImu;
+		curPosMapCenter = curPosCloudMapCenter;
 	}
 	lck.unlock();
 	//cout << "End getPointCloud()" << endl;

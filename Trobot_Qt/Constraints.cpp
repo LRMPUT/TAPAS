@@ -22,7 +22,9 @@ Constraints::Constraints(Ui::TrobotQtClass* iui, Debug* idebug) :
 {
 	QObject::connect(&timer, SIGNAL(timeout()), this, SLOT(updateViews()));
 
-	viewer = new Viewer();
+	Mat cameraOrigImu, cameraOrigLaser, imuOrigGlobal;
+	debug->getTransformationMatrices(imuOrigGlobal, cameraOrigLaser, cameraOrigImu);
+	viewer = new Viewer(imuOrigGlobal, cameraOrigImu);
 	ui->constraintMapViewScrollArea->setWidget(viewer);
 
 	//timer.setInterval(100);
@@ -59,7 +61,7 @@ void Constraints::updateCameraView(){
 	painter.setPen(Qt::red);
 	for(int p = 0; p < pointCloudCamera.size(); p++){
 		if(pointCloudCamera[p].x >= 0 && pointCloudCamera[p].x < image.cols &&
-				pointCloudCamera[p].y >= 0 && pointCloudCamera[p].x < image.rows)
+				pointCloudCamera[p].y >= 0 && pointCloudCamera[p].y < image.rows)
 		{
 			painter.drawPoint(pointCloudCamera[p].x / scaleX, pointCloudCamera[p].y / scaleY);
 		}

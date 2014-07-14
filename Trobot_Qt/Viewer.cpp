@@ -31,9 +31,10 @@ void Viewer::drawRobot(){
 }
 
 void Viewer::drawPointCloud(){
-	cout << "drawPointCloud()" << endl;
-	glPointSize(5);
+	//cout << "drawPointCloud()" << endl;
+	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glColor3f(1.0f, 0.0f, 0.0f);
+	glPointSize(5);
 	glBegin(GL_POINTS);
 	for(int p = 0; p < pointCloudMapCenter.cols; p++){
 		glVertex4f(pointCloudMapCenter.at<float>(0, p),
@@ -43,7 +44,7 @@ void Viewer::drawPointCloud(){
 	}
 	glEnd();
 
-	cout << "End drawPointCloud()" << endl;
+	//cout << "End drawPointCloud()" << endl;
 }
 
 void Viewer::drawConstraintsMap(){
@@ -112,8 +113,11 @@ void Viewer::draw()
 	//glLoadIdentity();
 	glColor3f(1.0f,1.0f,1.0f);
 	//camera()->draw();
+	glPushMatrix();
+	multCurMatrix(imuOrigGlobal.inv());
 	drawGrid(MAP_SIZE*MAP_RASTER_SIZE, MAP_SIZE);
 	drawAxis(1000);
+	glPopMatrix();
 	glColor3f(1.0, 0, 0);
 
 	drawRobot();
@@ -151,8 +155,17 @@ void Viewer::updateConstraintsMap(cv::Mat newConstraintsMap){
 	constraintsMap = newConstraintsMap;
 }
 
-Viewer::Viewer() {
+/*void Viewer::updateCameraOrigImu(cv::Mat newCameraOrigImu){
+	cameraOrigImu = newCameraOrigImu;
+}
 
+void Viewer::updateImuOrigGlobal(cv::Mat newImuOrigGlobal){
+	imuOrigGlobal = newImuOrigGlobal;
+}*/
+
+Viewer::Viewer(cv::Mat iimuOrigGlobal, cv::Mat icameraOrigImu) {
+	iimuOrigGlobal.copyTo(imuOrigGlobal);
+	icameraOrigImu.copyTo(cameraOrigImu);
 }
 
 Viewer::~Viewer()

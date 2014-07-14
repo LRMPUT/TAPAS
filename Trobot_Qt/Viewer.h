@@ -21,6 +21,8 @@ class Viewer : public QGLViewer
 private:
 	cv::Mat posImuMapCenter;
 	cv::Mat pointCloudMapCenter;
+	cv::Mat cameraOrigImu;
+	cv::Mat imuOrigGlobal;
 	cv::Mat constraintsMap;
 
 	void drawRobot();
@@ -37,7 +39,9 @@ public:
 	void updatePointCloud(cv::Mat newPointCloud);
 	void updateRobotPos(cv::Mat newRobotPos);
 	void updateConstraintsMap(cv::Mat newConstraintsMap);
-	Viewer();
+	//void updateCameraOrigImu(cv::Mat newCameraOrigImu);
+	//void updateImuOrigGlobal(cv::Mat newImuOrigGlobal);
+	Viewer(cv::Mat iImuOrigGlobal, cv::Mat icameraOrigImu);
 	~Viewer();
 
 protected:
