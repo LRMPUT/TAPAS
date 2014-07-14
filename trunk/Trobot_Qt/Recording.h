@@ -28,6 +28,7 @@ private:
 	QTimer gpsTimer;
 	QTimer imuTimer;
 	QTimer cameraTimer;
+	QTimer estimatedPosTimer;
 	QElapsedTimer time;
 
 	Robot* robot;
@@ -39,6 +40,7 @@ private:
 
 	// Saving Streams
 	std::ofstream imuStream, gpsStream, encodersStream, hokuyoStream, cameraStream;
+	std::ofstream estimatedPosStream;
 public:
 	Recording(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug);
 	~Recording();
@@ -49,6 +51,7 @@ private slots:
 	void getDataGps();
 	void getDataImu();
 	void getDataCamera();
+	void getDataEstimatedPos();
 
 public slots:
 	void startRec();

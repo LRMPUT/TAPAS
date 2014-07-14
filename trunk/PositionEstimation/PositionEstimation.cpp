@@ -35,7 +35,7 @@ PositionEstimation::PositionEstimation(Robot* irobot) :
 	lastEncoderTimestamp = std::chrono::high_resolution_clock::now();
 	lastGpsTimestamp = std::chrono::high_resolution_clock::now();
 	lastImuTimestamp = std::chrono::high_resolution_clock::now();
-	runThread = false;
+	runThread = true;
 	estimationThread = std::thread(&PositionEstimation::run, this);
 }
 
@@ -55,7 +55,7 @@ void PositionEstimation::run() {
 
 		// Thread sleep, so that the position is not updated too often
 		// Right now 1 ms as Robot Drive has it's own sleep
-		std::chrono::milliseconds duration(500);
+		std::chrono::milliseconds duration(50);
 		std::this_thread::sleep_for(duration);
 
 		gettimeofday(&end, NULL);
@@ -100,7 +100,7 @@ void PositionEstimation::KalmanLoop() {
 	float gps_dt = std::chrono::duration_cast < std::chrono::milliseconds
 			> (gpsTimestamp - lastGpsTimestamp).count();
 
-	if (gps.getFixStatus() > 1 && gps_dt > 0) {
+	if (gps.getFixStatus() > 1 && gps_dt > 0 && false) {
 		float dt = std::chrono::duration_cast < std::chrono::milliseconds
 				> (gpsTimestamp - lastUpdateTimestamp).count();
 		if (dt > 0) {

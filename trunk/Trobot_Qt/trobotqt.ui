@@ -27,7 +27,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>9</number>
+     <number>6</number>
     </property>
     <widget class="QWidget" name="cameraTab">
      <attribute name="title">
@@ -1178,7 +1178,7 @@
          <x>10</x>
          <y>30</y>
          <width>181</width>
-         <height>347</height>
+         <height>362</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout">
@@ -1267,6 +1267,20 @@
          <widget class="QLineEdit" name="saRateImuLineEdit">
           <property name="text">
            <string>100</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="includeEstimatedPosCheckBox">
+          <property name="text">
+           <string>Estimated Pos</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="saRateEstimatedPosLineEdit">
+          <property name="text">
+           <string>20</string>
           </property>
          </widget>
         </item>
