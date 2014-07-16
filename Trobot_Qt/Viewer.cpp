@@ -21,7 +21,7 @@ void Viewer::drawRobot(){
 		glPushMatrix();
 		multCurMatrix(posImuMapCenter);
 
-		glColor3f(0.0f,1.0f,0.0f);
+		glColor3f(1.0f,0.0f,0.0f);
 		sphere(0, 0, 0, 200);
 		drawAxis(1000);
 
@@ -33,8 +33,9 @@ void Viewer::drawRobot(){
 void Viewer::drawPointCloud(){
 	//cout << "drawPointCloud()" << endl;
 	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glColor3f(1.0f, 0.0f, 0.0f);
+	glColor3f(0.0f, 1.0f, 0.0f);
 	glPointSize(5);
+	glDisable(GL_LIGHTING);
 	glBegin(GL_POINTS);
 	for(int p = 0; p < pointCloudMapCenter.cols; p++){
 		glVertex4f(pointCloudMapCenter.at<float>(0, p),
@@ -43,12 +44,35 @@ void Viewer::drawPointCloud(){
 					pointCloudMapCenter.at<float>(3, p));
 	}
 	glEnd();
-
+	glEnable(GL_LIGHTING);
 	//cout << "End drawPointCloud()" << endl;
 }
 
 void Viewer::drawConstraintsMap(){
+	//cout << "drawConstraintsMap()" << endl;
+	if(!constraintsMap.empty()){
+		glPushMatrix();
+		multCurMatrix(imuOrigGlobal.inv());
 
+		glDisable(GL_LIGHTING);
+		glBegin(GL_QUADS);
+		glColor3f(0.0, 0.0, 1.0);
+		for(int y = 0; y < MAP_SIZE; y++){
+			for(int x = 0; x < MAP_SIZE; x++){
+				if(constraintsMap.at<float>(x, y) > 0.5){
+					//cout << "drawing QUAD at (" << x << ", " << y << ")" << endl;
+					glVertex3f((x - MAP_SIZE/2) * MAP_RASTER_SIZE, (y - MAP_SIZE/2)*MAP_RASTER_SIZE, 0);
+					glVertex3f((x + 1 - MAP_SIZE/2)*MAP_RASTER_SIZE, (y - MAP_SIZE/2)*MAP_RASTER_SIZE, 0);
+					glVertex3f((x + 1 - MAP_SIZE/2)*MAP_RASTER_SIZE, (y + 1 - MAP_SIZE/2)*MAP_RASTER_SIZE, 0);
+					glVertex3f((x - MAP_SIZE/2)*MAP_RASTER_SIZE, (y + 1 - MAP_SIZE/2)*MAP_RASTER_SIZE, 0);
+				}
+			}
+		}
+		glEnd();
+		glEnable(GL_LIGHTING);
+		glPopMatrix();
+	}
+	//cout << "End drawConstraintsMap()" << endl;
 }
 
 
@@ -115,14 +139,14 @@ void Viewer::draw()
 	//camera()->draw();
 	glPushMatrix();
 	multCurMatrix(imuOrigGlobal.inv());
-	drawGrid(MAP_SIZE*MAP_RASTER_SIZE, MAP_SIZE);
+	drawGrid(MAP_SIZE*MAP_RASTER_SIZE/2, MAP_SIZE);
 	drawAxis(1000);
 	glPopMatrix();
 	glColor3f(1.0, 0, 0);
 
 	drawRobot();
 	drawPointCloud();
-
+	drawConstraintsMap();
 }
 
 void Viewer::init()
