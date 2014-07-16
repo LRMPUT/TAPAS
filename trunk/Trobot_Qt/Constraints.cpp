@@ -76,11 +76,17 @@ void Constraints::updateMapView(){
 	//cout << "updateMapView()" << endl;
 	Mat curPosImuMapCenter;
 	Mat pointCloudImuMapCenter = debug->getPointCloudImu(curPosImuMapCenter);
+	Mat constraintsMap = debug->getMovementConstraints();
 
+	stringstream tmp;
+	tmp.precision(3);
+	tmp << curPosImuMapCenter;
+	ui->constraintCurPosLabel->setText(QString(tmp.str().c_str()));
 	//cout << "curPosImuMapCenter.size() = " << curPosImuMapCenter.size() << endl;
 	if(!curPosImuMapCenter.empty() && !pointCloudImuMapCenter.empty()){
 		viewer->updatePointCloud(pointCloudImuMapCenter);
 		viewer->updateRobotPos(curPosImuMapCenter);
+		viewer->updateConstraintsMap(constraintsMap);
 		viewer->rysuj();
 	}
 }

@@ -68,7 +68,7 @@ class MovementConstraints {
 
 	cv::Mat posMapCenterGlobal;
 
-	cv::Mat pointCloudCameraMapCenter;
+	cv::Mat pointCloudImuMapCenter;
 
 	//Queue of points
 	std::queue<PointsPacket> pointsQueue;
@@ -95,9 +95,9 @@ class MovementConstraints {
 
 	cv::Mat readMatrixSettings(TiXmlElement* parent, const char* node, int rows, int cols);
 
-	void updateConstraintsMap(double curX, double curY, double curPhi);
+	void updateConstraintsMap();
 
-	void insertHokuyoConstraints(cv::Mat map, double curMapX, double curMapY, double curMapPhi);
+	void insertHokuyoConstraints(cv::Mat map);
 
 	cv::Mat compOrient(cv::Mat imuData);
 
