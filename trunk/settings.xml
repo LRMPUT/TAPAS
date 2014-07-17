@@ -105,6 +105,13 @@
 				<label text="asphalt" id="3"/>
 			</labels>
 
+			<imu_position_global>
+				1	0	0	-360
+				0	1	0	0
+				0	0	1	-830
+				0	0	0	1
+			</imu_position_global>
+
 			<sensor id="left">
 				<position_global>
 				 -0.0017   -0.5849    0.8111         0
@@ -112,6 +119,12 @@
 					0.0108   -0.8110   -0.5847  730.0000
 						   0         0         0    1.0000
 				</position_global>
+				<imu_position_camera>
+			 		0.0401    0.9992    0.0001	0
+					-0.6617    0.0265    0.7493	0
+					0.7487   -0.0302    0.6623	0
+					0	0	0	1
+				</imu_position_camera>
 				<position_laser>
 					1 0 0 0
 					0	1	0	0

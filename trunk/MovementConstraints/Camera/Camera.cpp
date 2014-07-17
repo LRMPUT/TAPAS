@@ -14,6 +14,7 @@
 #include <algorithm>
 //RobotsIntellect
 #include "Camera.h"
+#include "../../Robot/Robot.h"
 
 using namespace boost;
 using namespace std;
@@ -46,14 +47,15 @@ using namespace std;
 
 
 Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings) :
-		movementConstraints(imovementConstraints)
+		movementConstraints(imovementConstraints),
+		runThread(false)
 {
 	if(!settings){
 		throw "Bad settings file - entry Camera not found";
 	}
 	readSettings(settings);
 
-	computeImagePolygons();
+	//computeImagePolygons();
 
 #ifndef NO_CUDA
 	cout << "Available CUDA devices: " << getCudaEnabledDeviceCount() << endl;
@@ -65,14 +67,15 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 }
 
 Camera::~Camera(){
+	close();
 	for(int i = 0; i < hierClassifiers.size(); i++){
 		delete hierClassifiers[i];
 	}
 }
 
-void Camera::computeConstraints(std::vector<cv::Mat> image){
+void Camera::computeConstraints(cv::Mat curPosImuMapCenter, cv::Mat map){
 	cout << "Computing constraints" << endl;
-	constraints = Mat(X_RES, Y_RES, CV_32FC1, Scalar(0));
+	/*constraints = Mat(X_RES, Y_RES, CV_32FC1, Scalar(0));
 	Mat constrNorm(X_RES, Y_RES, CV_32FC1, Scalar(0));
 	namedWindow("original");
 	namedWindow("prob asphalt");
@@ -94,7 +97,7 @@ void Camera::computeConstraints(std::vector<cv::Mat> image){
 						probDriv += sum(tmp)[0];
 					}
 				}
-				constraints.at<float>(xInd, yInd) = probDriv;*/
+				constraints.at<float>(xInd, yInd) = probDriv;/
 			}
 		}
 		//cout << "adding probabilities, classRes.size() = " << classRes.size() << endl;
@@ -131,67 +134,43 @@ void Camera::computeConstraints(std::vector<cv::Mat> image){
 		imshow("prob asphalt", classRes[DRIVABLE_LABEL]);
 		imshow("constraints", test);
 		waitKey();
-	}
+	}*/
 }
 
-void Camera::computeImagePolygons(){
-	cout << "Computing image polygons" << endl;
+void Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
+	cout << "Computing map segments" << endl;
 	//namedWindow("test");
-	imagePolygons.clear();
-	imagePolygons.assign(numCameras,
-						vector<vector<vector<Point2f> > >(X_RES,
-							vector<vector<Point2f> >(Y_RES,
-									vector<Point2f>())));
+	mapSegments.clear();
+
 	for(int c = 0; c < numCameras; c++){
-		Mat rotVec;
-		Rodrigues(Mat(cameraOrigGlobal[c].inv(DECOMP_SVD), Rect(0, 0, 3, 3)), rotVec);
-		Mat transVec(cameraOrigGlobal[c].inv(DECOMP_SVD), Rect(3, 0, 1, 3));
+		mapSegments.push_back(Mat(classifiedImage[c].rows, classifiedImage[c].cols, CV_32SC1, Scalar(-1)));
 
-		//cout << "cameraOrigGlobal[c].inv(DECOMP_SVD) = " << cameraOrigGlobal[c].inv(DECOMP_SVD) << endl;
-		//cout << "rotVec = " << rotVec << endl;
-		//cout << "transVec = " << transVec << endl;
+		Mat curPosCameraMapCenter = curPosImuMapCenter*cameraOrigImu[c];
+		Mat invCameraMatrix = cameraMatrix[c].inv();
 
-		//from front left corner
-		float xStart = X_RES*X_STEP;
-		float xStep = -X_STEP;
-		float yStart = Y_RES*Y_STEP/2;
-		float yStep = -Y_STEP;
-		for(int xInd = 0; xInd < X_RES; xInd++){
-			for(int yInd = 0; yInd < Y_RES; yInd++){
-				vector<Point3f> points;
-				int ind[][2] = {{0, 0},
-								{1, 0},
-								{1, 1},
-								{0, 1}};
-				for(int i = 0; i < 4; i++){
-					points.push_back(Point3f(	xStart + (xInd + ind[i][0])*xStep,
-												yStart + (yInd + ind[i][1])*yStep,
-												PLANE_Z));
-				}
-				//cout << "Polygon glob: " << endl;
-				//for(int v = 0; v < points.size(); v++){
-				//	cout << points[v] << endl;
-				//}
-				vector<Point2f> ret;
-				projectPoints(	points,
-								rotVec,
-								transVec,
-								cameraMatrix[c],
-								distCoeffs[c],
-								ret);
-				//Mat test(480, 640, CV_8UC1, Scalar(0));
-				//cout << "Polygon image: " << endl;
-				//for(int v = 0; v < ret.size(); v++){
-				//	cout << ret[v] << endl;
-				//}
-				//selectPolygonPixels(ret, 1, test);
-				//imshow("test", hierClassifiers.front()->colorSegments(test));
-				//waitKey();
-				imagePolygons[c][xInd][yInd]= ret;
+		for(int r = 0; r < classifiedImage[c].rows; r++){
+			for(int c = 0; c < classifiedImage[c].cols; c++){
+				Mat pointIm(3, 1, CV_32FC1);
+				pointIm.at<float>(0) = c;
+				pointIm.at<float>(1) = r;
+				pointIm.at<float>(2) = 1;
+				Mat pointCamNN = invCameraMatrix*pointIm;
+				float t31 = curPosCameraMapCenter.at<float>(2, 0);
+				float t32 = curPosCameraMapCenter.at<float>(2, 1);
+				float t33 = curPosCameraMapCenter.at<float>(2, 2);
+				float t34 = curPosCameraMapCenter.at<float>(2, 3);
+				float s = -t34 / (t31 * pointCamNN.at<float>(0) + t32 * pointCamNN.at<float>(1) + t33 * pointCamNN.at<float>(2)); //at z_glob = 0
+				Mat pointCam(4, 1, CV_32FC1);
+				pointCam.at<float>(0) = pointCamNN.at<float>(0) * s;
+				pointCam.at<float>(1) = pointCamNN.at<float>(1) * s;
+				pointCam.at<float>(2) = pointCamNN.at<float>(2) * s;
+				pointCam.at<float>(3) = 1;
+				Mat pointMapCenter = curPosCameraMapCenter*pointCam;
+				mapSegments[c].at<int>(r, c) = pointMapCenter.at<float>(0)*MAP_SIZE + pointMapCenter.at<float>(1);
 			}
 		}
 	}
-	cout << "End computing image polygons" << endl;
+	cout << "End computing map segments" << endl;
 }
 
 std::vector<cv::Point2f> Camera::computePointProjection(const std::vector<cv::Point3f>& spPoints,
@@ -736,8 +715,10 @@ void Camera::GenerateColorHistHSVGpu(
 }*/
 
 //Run as separate thread
-void Camera::cameraThread(){
+void Camera::run(){
+	while(runThread){
 
+	}
 }
 
 
@@ -788,8 +769,10 @@ void Camera::readSettings(TiXmlElement* settings){
 		pLabel = pLabel->NextSiblingElement("label");
 	}
 
+	imuOrigGlobal = readMatrixSettings(settings, "imu_position_global", 4, 4);
+
 	pPtr = settings->FirstChildElement("sensor");
-	cameraOrigGlobal.resize(numCameras);
+	cameraOrigImu.resize(numCameras);
 	cameraOrigLaser.resize(numCameras);
 	cameraMatrix.resize(numCameras);
 	distCoeffs.resize(numCameras);
@@ -810,7 +793,7 @@ void Camera::readSettings(TiXmlElement* settings){
 			throw "Bad settings file - wrong camera id";
 		}
 
-		cameraOrigGlobal[idx] = readMatrixSettings(pPtr, "position_global", 4, 4);
+		cameraOrigImu[idx] = readMatrixSettings(pPtr, "imu_position_camera", 4, 4).t();
 		cameraOrigLaser[idx] = readMatrixSettings(pPtr, "position_laser", 4, 4);
 		cameraMatrix[idx] = readMatrixSettings(pPtr, "camera_matrix", 3, 3);
 		distCoeffs[idx] = readMatrixSettings(pPtr, "dist_coeffs", 1, 5);
@@ -914,8 +897,8 @@ void Camera::saveCache(boost::filesystem::path cacheFile){
 	}
 }
 
-//Returns constraints map and inserts time of data from cameras fetch
-const cv::Mat Camera::getConstraints(int* timestamp){
+//Inserts computed constraints into map
+void Camera::insertConstraints(cv::Mat map){
 
 }
 
@@ -943,10 +926,14 @@ void Camera::open(std::vector<std::string> device){
 			throw "Cannot open camera device";
 		}
 	}
+	runThread = true;
+	cameraThread = std::thread(&Camera::run, this);
 }
 
 void Camera::close(){
 	cout << "Closing cameras" << endl;
+	runThread = false;
+	cameraThread.join();
 	for(int i = 0; i < cameras.size(); i++){
 		cameras[i].release();
 	}

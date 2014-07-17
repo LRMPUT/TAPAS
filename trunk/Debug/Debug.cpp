@@ -130,7 +130,7 @@ void Debug::testConstraints(boost::filesystem::path dirTrain,
 				throw "Bad image file";
 			}
 			vector<Mat> data(1, image);
-			robot->movementConstraints->camera->computeConstraints(data);
+			//robot->movementConstraints->camera->computeConstraints(data);
 			waitKey();
 		}
 	}

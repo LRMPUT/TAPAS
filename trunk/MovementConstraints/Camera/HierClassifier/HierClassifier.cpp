@@ -756,7 +756,7 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image, int kCurSegment){
 	int nrows = imageFloat.rows;
 	int ncols = imageFloat.cols;
 
-	vector<Mat> segments;
+	Mat segments;
 
 	vector<Edge> edges;
 	for(int r = 0; r < nrows; r++){
@@ -783,54 +783,53 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image, int kCurSegment){
 
 	endSorting = high_resolution_clock::now();
 
-	{
-		//cout << "Channel " << ch << endl;
-		segments.push_back(Mat(nrows, ncols, CV_32SC1));
 
-		//cout << "Largest differece = " << edges[edges.size() - 1].weight <<
-		//		", between (" << edges[edges.size() - 1].i << ", " << edges[edges.size() - 1].j <<
-		//		")" << endl;
+	//cout << "Channel " << ch << endl;
 
-		UnionFind sets(nrows * ncols);
-		vector<float> intDiff;
-		intDiff.assign(nrows * ncols, 0);
-		for(vector<Edge>::iterator it = edges.begin(); it != edges.end(); it++){
-			int iRoot = sets.findSet(it->i);
-			int jRoot = sets.findSet(it->j);
-			//cout << "i = " << it->i << ", j = " << it->j << ", weight = " << it->weight << endl;
-			if(iRoot != jRoot){
-				//cout << "intDiff[iRoot] + (float)k/sizes[iRoot] = " << intDiff[iRoot] << " + " << (float)k/sizes[iRoot] << " = " << intDiff[iRoot] + (float)k/sizes[iRoot] << endl;
-				//cout << "intDiff[jRoot] + (float)k/sizes[jRoot] = " << intDiff[jRoot] << " + " << (float)k/sizes[jRoot] << " = " << intDiff[jRoot] + (float)k/sizes[jRoot] << endl;
-				if(min(intDiff[iRoot] + (float)kCurSegment/sets.size(iRoot), intDiff[jRoot] + (float)kCurSegment/sets.size(jRoot))
-						>=
-						it->weight)
-				{
-					//cout << "union " << min(intDiff[iRoot] + (float)k/sizes[iRoot], intDiff[jRoot] + (float)k/sizes[jRoot]) << " >= " << it->weight << endl;
-					int newRoot = sets.unionSets(iRoot, jRoot);
-					intDiff[newRoot] = it->weight;
-				}
+	//cout << "Largest differece = " << edges[edges.size() - 1].weight <<
+	//		", between (" << edges[edges.size() - 1].i << ", " << edges[edges.size() - 1].j <<
+	//		")" << endl;
+
+	UnionFind sets(nrows * ncols);
+	vector<float> intDiff;
+	intDiff.assign(nrows * ncols, 0);
+	for(vector<Edge>::iterator it = edges.begin(); it != edges.end(); it++){
+		int iRoot = sets.findSet(it->i);
+		int jRoot = sets.findSet(it->j);
+		//cout << "i = " << it->i << ", j = " << it->j << ", weight = " << it->weight << endl;
+		if(iRoot != jRoot){
+			//cout << "intDiff[iRoot] + (float)k/sizes[iRoot] = " << intDiff[iRoot] << " + " << (float)k/sizes[iRoot] << " = " << intDiff[iRoot] + (float)k/sizes[iRoot] << endl;
+			//cout << "intDiff[jRoot] + (float)k/sizes[jRoot] = " << intDiff[jRoot] << " + " << (float)k/sizes[jRoot] << " = " << intDiff[jRoot] + (float)k/sizes[jRoot] << endl;
+			if(min(intDiff[iRoot] + (float)kCurSegment/sets.size(iRoot), intDiff[jRoot] + (float)kCurSegment/sets.size(jRoot))
+					>=
+					it->weight)
+			{
+				//cout << "union " << min(intDiff[iRoot] + (float)k/sizes[iRoot], intDiff[jRoot] + (float)k/sizes[jRoot]) << " >= " << it->weight << endl;
+				int newRoot = sets.unionSets(iRoot, jRoot);
+				intDiff[newRoot] = it->weight;
 			}
 		}
-		for(vector<Edge>::iterator it = edges.begin(); it != edges.end(); it++){
-			int iRoot = sets.findSet(it->i);
-			int jRoot = sets.findSet(it->j);
-			if((iRoot != jRoot) && ((sets.size(iRoot) < minSizeSegment) || (sets.size(jRoot) < minSizeSegment))){
-				sets.unionSets(iRoot, jRoot);
-			}
-		}
-		set<int> numElements;
-		for(int r = 0; r < nrows; r++){
-			for(int c = 0; c < ncols; c++){
-				segments.back().at<int>(r, c) = sets.findSet(c + ncols*r);
-				numElements.insert(sets.findSet(c + ncols*r));
-			}
-		}
-		//cout << "number of elements = " << numElements.size() << endl;
 	}
+	for(vector<Edge>::iterator it = edges.begin(); it != edges.end(); it++){
+		int iRoot = sets.findSet(it->i);
+		int jRoot = sets.findSet(it->j);
+		if((iRoot != jRoot) && ((sets.size(iRoot) < minSizeSegment) || (sets.size(jRoot) < minSizeSegment))){
+			sets.unionSets(iRoot, jRoot);
+		}
+	}
+	set<int> numElements;
+	for(int r = 0; r < nrows; r++){
+		for(int c = 0; c < ncols; c++){
+			segments.at<int>(r, c) = sets.findSet(c + ncols*r);
+			numElements.insert(sets.findSet(c + ncols*r));
+		}
+	}
+	//cout << "number of elements = " << numElements.size() << endl;
+
 
 	endComp = high_resolution_clock::now();
 
-	Mat finSegments(nrows, ncols, CV_32SC1);
+	/*Mat finSegments(nrows, ncols, CV_32SC1);
 	UnionFind sets(nrows * ncols);
 
 	for(vector<Edge>::iterator it = edges.begin(); it != edges.end(); it++){
@@ -849,7 +848,7 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image, int kCurSegment){
 		for(int c = 0; c < ncols; c++){
 			finSegments.at<int>(r, c) = sets.findSet(c + ncols*r);
 		}
-	}
+	}*/
 
 	endMerging = high_resolution_clock::now();
 
@@ -871,7 +870,7 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image, int kCurSegment){
 	cout << "Segment Average whole time: " << wholeTime.count()/times << endl;
 
 
-	return finSegments;
+	return segments;
 }
 
 Mat HierClassifier::colorSegments(const Mat segments){
