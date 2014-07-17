@@ -11,6 +11,8 @@
 //STL
 #include <string>
 #include <vector>
+#include <chrono>
+#include <thread>
 //OpenCV
 #include <opencv2/opencv.hpp>
 //Boost
@@ -50,8 +52,10 @@ class Camera {
 	//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)
 	cv::Mat constraints;
 
-	//CV_32FC1 4x4: camera origin position and orientation w.r.t. global coordinate system
-	std::vector<cv::Mat> cameraOrigGlobal;
+	//CV_32FC1 4x4: camera origin position and orientation w.r.t. IMU coordinate system
+	std::vector<cv::Mat> cameraOrigImu;
+
+	cv::Mat imuOrigGlobal;
 
 	//CV_32FC1 4x4: camera origin position and orientation w.r.t. laser coordinate system
 	std::vector<cv::Mat> cameraOrigLaser;
@@ -65,9 +69,7 @@ class Camera {
 	//CV_32FC1 4x1: ground plane equation [A, B, C, D]'
 	cv::Mat groundPlane;
 
-	std::vector<std::vector<std::vector<std::vector<cv::Point2f> > > > imagePolygons;
-
-	int currentTimeStamp;
+	std::vector<cv::Mat> mapSegments;
 
 	//boost::filesystem::path settingsFile;
 
@@ -78,9 +80,9 @@ class Camera {
 	//array containing polygon vertices for all image regions
 	//std::vector<std::vector<std::vector<cv::Point*> > > groundPolygons;
 
-	void computeConstraints(std::vector<cv::Mat> image);
+	void computeConstraints(cv::Mat curPosImuMapCenter, cv::Mat map);
 
-	void computeImagePolygons();
+	void computeMapSegments(cv::Mat curPosImuMapCenter);
 
 	std::vector<cv::Point2f> computePointProjection(const std::vector<cv::Point3f>& imPoint,
 													int cameraInd);
@@ -127,8 +129,18 @@ class Camera {
 			cv::gpu::GpuMat& result,
 			cv::gpu::GpuMat& buf);*/
 
+	std::chrono::high_resolution_clock::time_point curTimestamp;
+
+	bool runThread;
+
+	std::thread cameraThread;
+
+	std::vector<std::mutex> mtx;
+
+	std::vector<cv::Mat> classifiedImage;
+
 	//Run as separate thread
-	void cameraThread();
+	void run();
 
 	void readSettings(TiXmlElement* settings);
 
@@ -141,8 +153,8 @@ public:
 	Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings);
 	virtual ~Camera();
 
-	//Returns constraints map and inserts time of data from cameras fetch
-	const cv::Mat getConstraints(int* timestamp);
+	//Inserts computed constraints into map
+	void insertConstraints(cv::Mat map);
 
 	//CV_8UC3 2x640x480: left, right image
 	const std::vector<cv::Mat> getData();

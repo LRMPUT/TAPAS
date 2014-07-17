@@ -108,24 +108,24 @@ void MovementConstraints::updateConstraintsMap(){
 		move = true;
 	}
 	if(move == true){
-		cout << "Moving map" << endl;
+		//cout << "Moving map" << endl;
 		std::chrono::high_resolution_clock::time_point imuTimestamp;
 		Mat imuCur = robot->getImuData(imuTimestamp);
-		cout << "updating cur pos" << endl;
+		//cout << "updating cur pos" << endl;
 		updateCurPosCloudMapCenter();
 
 		lckPointCloud.lock();
-		cout << "locked" << endl;
-		cout << "Calculating new coords" << endl;
+		//cout << "locked" << endl;
+		//cout << "Calculating new coords" << endl;
 		//Move points to new map center
 		Mat newPointCloudCoords = curPosCloudMapCenter.inv()*pointCloudImuMapCenter.rowRange(0, 4);
 		newPointCloudCoords.copyTo(pointCloudImuMapCenter.rowRange(0, 4));
 
-		cout << "Calculating new posMapCenterGlobal" << endl;
+		//cout << "Calculating new posMapCenterGlobal" << endl;
 		posMapCenterGlobal = compOrient(imuCur);
 		curPosCloudMapCenter = Mat::eye(4, 4, CV_32FC1);
 		lckPointCloud.unlock();
-		cout << "Map moved" << endl;
+		//cout << "Map moved" << endl;
 	}
 	std::unique_lock<std::mutex> lckMap(mtxMap);
 	constraintsMap = Scalar(0);
