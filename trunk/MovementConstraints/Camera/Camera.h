@@ -13,6 +13,7 @@
 #include <vector>
 #include <chrono>
 #include <thread>
+#include <mutex>
 //OpenCV
 #include <opencv2/opencv.hpp>
 //Boost
@@ -49,7 +50,7 @@ class Camera {
 
 	boost::filesystem::path learningDir;
 
-	//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)
+	//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied
 	cv::Mat constraints;
 
 	//CV_32FC1 4x4: camera origin position and orientation w.r.t. IMU coordinate system
@@ -80,7 +81,7 @@ class Camera {
 	//array containing polygon vertices for all image regions
 	//std::vector<std::vector<std::vector<cv::Point*> > > groundPolygons;
 
-	void computeConstraints(cv::Mat curPosImuMapCenter, cv::Mat map);
+	void computeConstraints(std::chrono::high_resolution_clock::time_point nextCurTimestamp);
 
 	void computeMapSegments(cv::Mat curPosImuMapCenter);
 
@@ -135,7 +136,7 @@ class Camera {
 
 	std::thread cameraThread;
 
-	std::vector<std::mutex> mtx;
+	std::mutex mtxConstr;
 
 	std::vector<cv::Mat> classifiedImage;
 

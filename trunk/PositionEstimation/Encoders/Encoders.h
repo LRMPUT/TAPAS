@@ -11,6 +11,7 @@
 #include <string>
 #include <chrono>
 #include <thread>
+#include <mutex>
 #include <opencv2/opencv.hpp>
 #include "../../Trobot/include/SerialPort.h"
 
