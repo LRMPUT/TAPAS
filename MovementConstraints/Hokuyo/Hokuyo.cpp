@@ -25,11 +25,12 @@ void Hokuyo::run(){
 		//cout << "status: " << hokuyo.status() << endl;
 		//1 measurement doesn't work with Distance_intensity
 		hokuyo.get_distance_intensity(distance, intensity);
-		curTimestamp = std::chrono::high_resolution_clock::now();
 		//hokuyo.get_distance_intensity(distance, intensity);
 		//cout << "distance.size() = " << distance.size() << ", intensity.size() = " << intensity.size() << endl;
 		//int count = 0;
 		std::unique_lock<std::mutex> lck(mtx);
+
+		curTimestamp = std::chrono::high_resolution_clock::now();
 		for(int i = 0; i < distance.size(); i++){
 			double angle = hokuyo.index2rad(i);
 			//cout << "Point " << i << " = " << distance[i] << ", " << intensity[i] << endl;

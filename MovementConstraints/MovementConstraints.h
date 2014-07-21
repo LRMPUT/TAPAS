@@ -122,6 +122,8 @@ public:
 
 	cv::Mat getPointCloud(cv::Mat& curPosMapCenter);
 
+	cv::Mat getPosImuMapCenter();
+
 	//----------------------MENAGMENT OF MovementConstraints DEVICES
 	//Hokuyo
 	void openHokuyo(std::string port);

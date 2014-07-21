@@ -26,12 +26,12 @@ using namespace std;
 #define ROWS 480
 #define COLS 640*/
 
-#define POLY_VERT 4
+/*#define POLY_VERT 4
 #define X_STEP 100
 #define Y_STEP 100
 #define X_RES 50
 #define Y_RES 50
-#define PLANE_Z -100
+#define PLANE_Z -100*/
 #define DRIVABLE_LABEL 3
 #define LEFT_CAMERA 0
 #define RIGHT_CAMERA 1
@@ -73,7 +73,7 @@ Camera::~Camera(){
 	}
 }
 
-void Camera::computeConstraints(cv::Mat curPosImuMapCenter, cv::Mat map){
+void Camera::computeConstraints(std::chrono::high_resolution_clock::time_point nextCurTimestamp){
 	cout << "Computing constraints" << endl;
 	/*constraints = Mat(X_RES, Y_RES, CV_32FC1, Scalar(0));
 	Mat constrNorm(X_RES, Y_RES, CV_32FC1, Scalar(0));
@@ -135,6 +135,34 @@ void Camera::computeConstraints(cv::Mat curPosImuMapCenter, cv::Mat map){
 		imshow("constraints", test);
 		waitKey();
 	}*/
+
+	Mat votes(MAP_SIZE, MAP_SIZE, CV_32SC1, Scalar(0));
+	Mat countVotes(MAP_SIZE, MAP_SIZE, CV_32SC1, Scalar(0));
+	for(int c = 0; c < numCameras; c++){
+		for(int r = 0; r < numRows; r++){
+			for(int c = 0; c < numCols; c++){
+				int x = mapSegments[c].at<int>(r, c) / MAP_SIZE;
+				int y = mapSegments[c].at<int>(r, c) % MAP_SIZE;
+				countVotes.at<int>(x, y)++;
+				if(classifiedImage[c].at<int>(r, c) != DRIVABLE_LABEL){
+					votes.at<int>(x, y)++;
+				}
+			}
+		}
+	}
+	std::unique_lock<std::mutex> lck(mtxConstr);
+	constraints = Mat(MAP_SIZE, MAP_SIZE, CV_32FC1, Scalar(0));
+	for(int c = 0; c < numCameras; c++){
+		for(int r = 0; r < numRows; r++){
+			for(int c = 0; c < numCols; c++){
+				int x = mapSegments[c].at<int>(r, c) / MAP_SIZE;
+				int y = mapSegments[c].at<int>(r, c) % MAP_SIZE;
+				constraints.at<float>(x, y) = (float)votes.at<int>(x, y)/countVotes.at<int>(x, y);
+			}
+		}
+	}
+	curTimestamp = nextCurTimestamp;
+	lck.unlock();
 }
 
 void Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
@@ -143,13 +171,13 @@ void Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 	mapSegments.clear();
 
 	for(int c = 0; c < numCameras; c++){
-		mapSegments.push_back(Mat(classifiedImage[c].rows, classifiedImage[c].cols, CV_32SC1, Scalar(-1)));
+		mapSegments.push_back(Mat(numRows, numCols, CV_32SC1, Scalar(-1)));
 
 		Mat curPosCameraMapCenter = curPosImuMapCenter*cameraOrigImu[c];
 		Mat invCameraMatrix = cameraMatrix[c].inv();
 
-		for(int r = 0; r < classifiedImage[c].rows; r++){
-			for(int c = 0; c < classifiedImage[c].cols; c++){
+		for(int r = 0; r < numRows; r++){
+			for(int c = 0; c < numCols; c++){
 				Mat pointIm(3, 1, CV_32FC1);
 				pointIm.at<float>(0) = c;
 				pointIm.at<float>(1) = r;
@@ -717,7 +745,22 @@ void Camera::GenerateColorHistHSVGpu(
 //Run as separate thread
 void Camera::run(){
 	while(runThread){
+		Mat curPosImuMapCenter;
+		Mat pointCloudImu = movementConstraints->getPointCloud(curPosImuMapCenter);
+		std::chrono::high_resolution_clock::time_point nextCurTimestamp = std::chrono::high_resolution_clock::now();
+		vector<Mat> cameraData = this->getData();
+		computeMapSegments(curPosImuMapCenter);
+		for(int c = 0; c < numCameras; c++){
+			Mat pointCloudCamera(pointCloudImu.rows, pointCloudImu.cols, CV_32FC1);
+			pointCloudImu.rowRange(4, 6).copyTo(pointCloudCamera.rowRange(4, 6));
+			Mat tmpPointCoords = cameraOrigImu[c] * pointCloudImu.rowRange(0, 4);
+			tmpPointCoords.copyTo(pointCloudCamera.rowRange(0, 4));
+			hierClassifiers[c]->classify(cameraData[c], pointCloudCamera);
+		}
+		computeConstraints(nextCurTimestamp);
 
+		std::chrono::milliseconds duration(200);
+		std::this_thread::sleep_for(duration);
 	}
 }
 

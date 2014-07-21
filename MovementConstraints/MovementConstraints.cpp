@@ -380,6 +380,14 @@ cv::Mat MovementConstraints::getPointCloud(cv::Mat& curPosMapCenter){
 	return ret;
 }
 
+cv::Mat MovementConstraints::getPosImuMapCenter(){
+	Mat ret;
+	std::unique_lock<std::mutex> lck(mtxPointCloud);
+	curPosCloudMapCenter.copyTo(ret);
+	lck.unlock();
+	return ret;
+}
+
 //----------------------MENAGMENT OF MovementConstraints DEVICES
 //Hokuyo
 void MovementConstraints::openHokuyo(std::string port){
