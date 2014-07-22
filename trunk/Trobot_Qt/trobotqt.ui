@@ -1900,7 +1900,7 @@
        <rect>
         <x>10</x>
         <y>10</y>
-        <width>321</width>
+        <width>322</width>
         <height>541</height>
        </rect>
       </property>
@@ -1921,6 +1921,12 @@
           </sizepolicy>
          </property>
          <property name="minimumSize">
+          <size>
+           <width>320</width>
+           <height>240</height>
+          </size>
+         </property>
+         <property name="maximumSize">
           <size>
            <width>320</width>
            <height>240</height>
@@ -1956,6 +1962,12 @@
           </sizepolicy>
          </property>
          <property name="minimumSize">
+          <size>
+           <width>320</width>
+           <height>240</height>
+          </size>
+         </property>
+         <property name="maximumSize">
           <size>
            <width>320</width>
            <height>240</height>
