@@ -91,6 +91,23 @@ void Constraints::updateMapView(){
 	}
 }
 
+void Constraints::updateClassificationView(){
+	Mat image = debug->getClassifiedImage();
+	QPixmap map;
+	double scaleX = 640 / ui->constraintClassificationViewLabel->width();
+	double scaleY = 480 / ui->constraintClassificationViewLabel->height();
+
+	if(!image.empty()){
+		cvtColor(image, image, CV_BGR2RGB);
+		Mat resizedImage;
+		cv::resize(image, resizedImage, cv::Size(ui->constraintClassificationViewLabel->width(), ui->constraintClassificationViewLabel->height()));
+		scaleX = (double)image.cols / ui->constraintClassificationViewLabel->width();
+		scaleY = (double)image.rows / ui->constraintClassificationViewLabel->height();
+		map = QPixmap::fromImage(QImage(resizedImage.ptr(), resizedImage.cols, resizedImage.rows, QImage::Format_RGB888));
+		ui->constraintCameraViewLabel->setPixmap(map);
+	}
+}
+
 void Constraints::updateViews(){
 	//cout << "Updating views" << endl;
 	if(ui->constraintCameraViewLabel->isVisible()){
@@ -98,5 +115,8 @@ void Constraints::updateViews(){
 	}
 	if(ui->constraintMapViewScrollArea->isVisible()){
 		updateMapView();
+	}
+	if(ui->constraintClassificationViewLabel->isVisible()){
+		updateClassificationView();
 	}
 }

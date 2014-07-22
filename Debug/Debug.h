@@ -65,6 +65,8 @@ public:
 
 	cv::Mat getPointCloudImu(cv::Mat& curPosImuMapCenter);
 
+	cv::Mat getClassifiedImage();
+
 	//----------------------ACCESS TO SETTINGS
 	void getTransformationMatrices(cv::Mat& retImuOrigGlobal,
 									cv::Mat& retCameraOrigLaser,

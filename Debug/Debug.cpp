@@ -107,13 +107,13 @@ void Debug::testSegmentation(boost::filesystem::path dir){
 }
 
 void Debug::testTraining(boost::filesystem::path dir){
-	robot->movementConstraints->camera->learnFromDir(dir);
+	//robot->movementConstraints->camera->learnFromDir(dir);
 }
 
 void Debug::testClassification(	boost::filesystem::path dirTrain,
 								boost::filesystem::path dirTest)
 {
-	robot->movementConstraints->camera->learnFromDir(dirTrain);
+	//robot->movementConstraints->camera->learnFromDir(dirTrain);
 	robot->movementConstraints->camera->classifyFromDir(dirTest);
 }
 
@@ -202,6 +202,10 @@ std::vector<cv::Point2f> Debug::getPointCloudCamera(cv::Mat& image){
 cv::Mat Debug::getPointCloudImu(cv::Mat& curPosImuMapCenter){
 	Mat pointCloudImuMapCenter = robot->movementConstraints->getPointCloud(curPosImuMapCenter);
 	return pointCloudImuMapCenter;
+}
+
+cv::Mat Debug::getClassifiedImage(){
+	return robot->movementConstraints->camera->getClassifiedImage();
 }
 
 void Debug::getTransformationMatrices(cv::Mat& retImuOrigGlobal,
