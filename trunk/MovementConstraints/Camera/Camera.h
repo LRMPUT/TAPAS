@@ -111,11 +111,23 @@ class Camera {
 							float regionId,
 							cv::Mat& regionsOnImage);
 
+	cv::Mat compOrient(cv::Mat imuData);
+
+	cv::Mat compTrans(	cv::Mat orient,
+						cv::Mat encodersDiff);
+
+	bool readLine(std::ifstream& stream, cv::Mat& data);
+
+	void processDir(boost::filesystem::path dir,
+							std::vector<cv::Mat>& images,
+							std::vector<cv::Mat>& manualRegionsOnImages,
+							std::vector<std::map<int, int> >& mapRegionIdToLabel,
+							std::vector<cv::Mat>& terrains);
 
 	/** \brief Funkcja ucząca klasyfikator danymi z katalogu.
 	 *
 	 */
-	void learnFromDir(boost::filesystem::path dir);
+	void learnFromDir(std::vector<boost::filesystem::path> dirs);
 
 	/** \brief Funkcja klasyfikująca dane z katalogu.
 	 *
@@ -140,6 +152,12 @@ class Camera {
 
 	std::vector<cv::Mat> classifiedImage;
 
+	cv::Mat sharedClassifiedImage;
+
+	cv::Mat sharedOriginalImage;
+
+	std::mutex mtxClassIm;
+
 	//Run as separate thread
 	void run();
 
@@ -159,6 +177,8 @@ public:
 
 	//CV_8UC3 2x640x480: left, right image
 	const std::vector<cv::Mat> getData();
+
+	cv::Mat getClassifiedImage();
 
 	void open(std::vector<std::string> device);
 
