@@ -12,7 +12,7 @@
 #include <cmath>
 #include <sstream>
 #include <algorithm>
-//RobotsIntellect
+//Robotour
 #include "Camera.h"
 #include "../../Robot/Robot.h"
 
@@ -1119,6 +1119,7 @@ void Camera::GenerateColorHistHSVGpu(
 //Run as separate thread
 void Camera::run(){
 	while(runThread){
+		cout << "Camera run" << endl;
 		Mat curPosImuMapCenter;
 		Mat pointCloudImu = movementConstraints->getPointCloud(curPosImuMapCenter);
 		std::chrono::high_resolution_clock::time_point nextCurTimestamp = std::chrono::high_resolution_clock::now();

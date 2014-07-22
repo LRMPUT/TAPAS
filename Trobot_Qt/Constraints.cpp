@@ -45,6 +45,8 @@ void Constraints::updateCameraView(){
 	double scaleY = 480 / ui->constraintCameraViewLabel->height();
 
 	if(!image.empty()){
+		//cout << "image.rows = " << image.rows << ", image.col = " << image.cols << endl;
+		//cout << ui->constraintCameraViewLabel->width() << ", " << ui->constraintCameraViewLabel->height() << endl;
 		cvtColor(image, image, CV_BGR2RGB);
 		Mat resizedImage;
 		cv::resize(image, resizedImage, cv::Size(ui->constraintCameraViewLabel->width(), ui->constraintCameraViewLabel->height()));
@@ -79,8 +81,15 @@ void Constraints::updateMapView(){
 	Mat constraintsMap = debug->getMovementConstraints();
 
 	stringstream tmp;
-	tmp.precision(3);
-	tmp << curPosImuMapCenter;
+	tmp.width(5);
+	tmp.setf(std::ios::right, std::ios::adjustfield);
+	for(int r = 0 ;r < curPosImuMapCenter.rows; r++){
+		for(int c = 0; c < curPosImuMapCenter.cols; c++){
+			tmp << curPosImuMapCenter.at<float>(r, c) << "\t";
+		}
+		tmp << endl;
+	}
+	//tmp << curPosImuMapCenter;
 	ui->constraintCurPosLabel->setText(QString(tmp.str().c_str()));
 	//cout << "curPosImuMapCenter.size() = " << curPosImuMapCenter.size() << endl;
 	if(!curPosImuMapCenter.empty() && !pointCloudImuMapCenter.empty()){
@@ -117,6 +126,6 @@ void Constraints::updateViews(){
 		updateMapView();
 	}
 	if(ui->constraintClassificationViewLabel->isVisible()){
-		updateClassificationView();
+		//updateClassificationView();
 	}
 }
