@@ -81,21 +81,23 @@ void Constraints::updateMapView(){
 	Mat constraintsMap = debug->getMovementConstraints();
 
 	stringstream tmp;
-	tmp.width(5);
+	tmp.width(4);
 	tmp.setf(std::ios::right, std::ios::adjustfield);
 	for(int r = 0 ;r < curPosImuMapCenter.rows; r++){
 		for(int c = 0; c < curPosImuMapCenter.cols; c++){
-			tmp << curPosImuMapCenter.at<float>(r, c) << "\t";
+			tmp << curPosImuMapCenter.at<float>(r, c) << " ";
 		}
 		tmp << endl;
 	}
 	//tmp << curPosImuMapCenter;
 	ui->constraintCurPosLabel->setText(QString(tmp.str().c_str()));
 	//cout << "curPosImuMapCenter.size() = " << curPosImuMapCenter.size() << endl;
-	if(!curPosImuMapCenter.empty() && !pointCloudImuMapCenter.empty()){
+	if(!pointCloudImuMapCenter.empty()){
 		viewer->updatePointCloud(pointCloudImuMapCenter);
-		viewer->updateRobotPos(curPosImuMapCenter);
 		viewer->updateConstraintsMap(constraintsMap);
+	}
+	if(!curPosImuMapCenter.empty()){
+		viewer->updateRobotPos(curPosImuMapCenter);
 		viewer->rysuj();
 	}
 }
@@ -113,7 +115,8 @@ void Constraints::updateClassificationView(){
 		scaleX = (double)image.cols / ui->constraintClassificationViewLabel->width();
 		scaleY = (double)image.rows / ui->constraintClassificationViewLabel->height();
 		map = QPixmap::fromImage(QImage(resizedImage.ptr(), resizedImage.cols, resizedImage.rows, QImage::Format_RGB888));
-		ui->constraintCameraViewLabel->setPixmap(map);
+		ui->constraintClassificationViewLabel->setPixmap(map);
+		ui->constraintClassificationViewLabel->update();
 	}
 }
 
@@ -126,6 +129,6 @@ void Constraints::updateViews(){
 		updateMapView();
 	}
 	if(ui->constraintClassificationViewLabel->isVisible()){
-		//updateClassificationView();
+		updateClassificationView();
 	}
 }
