@@ -59,7 +59,16 @@ cv::Mat MovementConstraints::readMatrixSettings(TiXmlElement* parent, const char
 
 // Main loop of MovementContraints thread.
 void MovementConstraints::run(){
-	//500 ms sleep
+
+	while(runThread){
+		if(robot->isEncodersOpen() && robot->isImuOpen()){
+			break;
+		}
+		std::chrono::milliseconds duration(100);
+		std::this_thread::sleep_for(duration);
+	}
+
+	//1000 ms sleep
 	std::chrono::milliseconds duration(1000);
 	std::this_thread::sleep_for(duration);
 
@@ -131,8 +140,8 @@ void MovementConstraints::updateConstraintsMap(){
 	constraintsMap = Scalar(0);
 
 	//polling each constraints module to update map
-	insertHokuyoConstraints(constraintsMap);
-	//camera->insertConstraints(constraintsMap);
+	//insertHokuyoConstraints(constraintsMap);
+	camera->insertConstraints(constraintsMap);
 	lckMap.unlock();
 	//cout << "End updateConstraintsMap()" << endl;
 }
@@ -345,7 +354,7 @@ void MovementConstraints::processPointCloud(){
 		lck.unlock();
 	}
 	else{
-		cout << "Hokuyo closed" << endl;
+		//cout << "Hokuyo closed" << endl;
 	}
 
 	//cout << "End processPointCloud()" << endl;

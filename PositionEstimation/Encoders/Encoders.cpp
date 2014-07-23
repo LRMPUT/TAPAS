@@ -84,10 +84,10 @@ while(runThread){
 			//throw "No encoders data received";
 		}
 		else{
-			curEnc.at<int>(0) = left;
+			curEnc.at<int>(0) = -left;	//rotates in an opposite direction
 			curEnc.at<int>(1) = right;
 		}
-		//std::cout<<"Circular buffer result : " << left << " " << right << std::endl;
+		//std::cout<<"Circular buffer result : " << -left << " " << right << std::endl;
 		lck.unlock();
 
 		std::chrono::milliseconds duration(20);

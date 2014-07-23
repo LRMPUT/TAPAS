@@ -238,7 +238,7 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 		cPtr = cPtr->NextSiblingElement("Classifier");
 	}
 
-	numIterations = 15;
+	numIterations = 1;
 }
 
 void HierClassifier::saveCache(boost::filesystem::path file){
@@ -260,13 +260,17 @@ void HierClassifier::saveCache(boost::filesystem::path file){
 
 		classifiers[c]->saveCache(pClassifier, file.string() + string(buffer));
 	}
-	doc.SaveFile(file.c_str());
+	if(!doc.SaveFile(file.c_str())){
+		cout << "Could not save cache" << endl;
+		throw "Could not save cache";
+	}
 }
 
 void HierClassifier::loadCache(boost::filesystem::path file){
 	cout << "Loading cache from file " << file.string() << endl;
 	TiXmlDocument doc(file.c_str());
 	if(!doc.LoadFile()){
+		cout << "Could not load cache file" << endl;
 		throw "Could not load cache file";
 	}
 	TiXmlElement* pWeakClassifiers = doc.FirstChildElement("weak_classifiers");
@@ -756,7 +760,7 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image, int kCurSegment){
 	int nrows = imageFloat.rows;
 	int ncols = imageFloat.cols;
 
-	Mat segments;
+	Mat segments(nrows, ncols, CV_32SC1);
 
 	vector<Edge> edges;
 	for(int r = 0; r < nrows; r++){
@@ -782,7 +786,7 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image, int kCurSegment){
 	sort(edges.begin(), edges.end()); //possible improvement by bin sorting
 
 	endSorting = high_resolution_clock::now();
-
+	cout << "End sorting" << endl;
 
 	//cout << "Channel " << ch << endl;
 
@@ -810,6 +814,7 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image, int kCurSegment){
 			}
 		}
 	}
+	cout << "Mergining small segments" << endl;
 	for(vector<Edge>::iterator it = edges.begin(); it != edges.end(); it++){
 		int iRoot = sets.findSet(it->i);
 		int jRoot = sets.findSet(it->j);
@@ -817,6 +822,7 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image, int kCurSegment){
 			sets.unionSets(iRoot, jRoot);
 		}
 	}
+	cout << "Counting elements" << endl;
 	set<int> numElements;
 	for(int r = 0; r < nrows; r++){
 		for(int c = 0; c < ncols; c++){
@@ -824,7 +830,7 @@ cv::Mat HierClassifier::segmentImage(cv::Mat image, int kCurSegment){
 			numElements.insert(sets.findSet(c + ncols*r));
 		}
 	}
-	//cout << "number of elements = " << numElements.size() << endl;
+	cout << "number of elements = " << numElements.size() << endl;
 
 
 	endComp = high_resolution_clock::now();

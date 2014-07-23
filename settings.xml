@@ -21,11 +21,11 @@
 		<ground_plane_global>
 			0	0	1 -30
 		</ground_plane_global>
-		<Camera number="1" rows="640" cols="480">
+		<Camera number="1" rows="480" cols="640">
 			<cache enabled="true" />
 			<HierClassifier>
 				<cache enabled="true" />
-				<segmentation k="50" min_size="200" />
+				<segmentation k="200" min_size="200" />
 				<descriptor>
 					<hist_HS len_H="4" len_S="4" />
 					<hist_V len="8" />
@@ -36,7 +36,7 @@
 					<kurt_laser len="2" />
 					<hist_DI len_D="5" len_I="5" />
 				</descriptor>
-				<Classifier type="SVM">
+				<!--<Classifier type="SVM">
 					<cache enabled="true" />
 					<svm type="C_SVC">
 						<kernelType value="RBF" />
@@ -65,7 +65,7 @@
 						<C value="16607.5" />
 					</svm>
 					<info desc_beg="2" desc_end="4" />
-				</Classifier>
+				</Classifier>-->
 				<!--<Classifier type="SVM">
 					<cache enabled="true" />
 					<svm type="C_SVC">
@@ -86,23 +86,21 @@
 					</svm>
 					<info desc_beg="7" desc_end="8" />
 				</Classifier>-->
-				<!--<Classifier type="SVM">
+				<Classifier type="SVM">
 					<cache enabled="true" />
 					<svm type="C_SVC">
 						<kernelType value="RBF" />
 						<gamma value="0.200226" />
 						<degree value="2" />
-						<C value="16607.5" />
+						<C value="10" />
 					</svm>
 					<info desc_beg="0" desc_end="8" />
-				</Classifier>-->
+				</Classifier>
 			</HierClassifier>
 			<learning dir="../../MovementConstraints/Camera/training_data" />
 			<labels>
 				<label text="grass" id="0"/>
-				<label text="wood" id="1"/>
-				<label text="ceramic" id="2"/>
-				<label text="asphalt" id="3"/>
+				<label text="pavement" id="1"/>
 			</labels>
 
 			<imu_position_global>
@@ -126,10 +124,10 @@
 					0	0	0	1
 				</imu_position_camera>
 				<position_laser>
-					1 0 0 0
-					0	1	0	0
-					0	0	1	0
-					0	0	0	1
+					0.9995    0.0205   -0.0250	61.3
+				 -0.0037    0.8406    0.5416	-482.9
+					0.0321   -0.5412    0.8403	-497.5
+				 0 0 0 1
 				</position_laser>
 				<camera_matrix>
 					646.345999973665580	0	312.531846659870780

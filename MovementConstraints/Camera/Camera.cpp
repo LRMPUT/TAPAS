@@ -58,6 +58,7 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 	std::vector<boost::filesystem::path> dirs;
 	dirs.push_back("../MovementConstraints/Camera/database/przejazd22");
 	//learnFromDir(dirs);
+	readCache("cache/cameraCache");
 	//computeImagePolygons();
 
 #ifndef NO_CUDA
@@ -141,27 +142,27 @@ void Camera::computeConstraints(std::chrono::high_resolution_clock::time_point n
 
 	Mat votes(MAP_SIZE, MAP_SIZE, CV_32SC1, Scalar(0));
 	Mat countVotes(MAP_SIZE, MAP_SIZE, CV_32SC1, Scalar(0));
-	for(int c = 0; c < numCameras; c++){
+	for(int cam = 0; cam < numCameras; cam++){
 		for(int r = 0; r < numRows; r++){
 			for(int c = 0; c < numCols; c++){
-				int x = mapSegments[c].at<int>(r, c) / MAP_SIZE;
-				int y = mapSegments[c].at<int>(r, c) % MAP_SIZE;
-				countVotes.at<int>(x, y)++;
-				if(classifiedImage[c].at<int>(r, c) != DRIVABLE_LABEL){
-					votes.at<int>(x, y)++;
+				int x = mapSegments[cam].at<int>(r, c) / MAP_SIZE;
+				int y = mapSegments[cam].at<int>(r, c) % MAP_SIZE;
+				if(x >= 0 && x < MAP_SIZE && y >= 0 && y < MAP_SIZE){
+					cout << "(" << x << ", " << y << ") = " << classifiedImage[cam].at<int>(r, c) << endl;
+					countVotes.at<int>(x, y)++;
+					if(classifiedImage[cam].at<int>(r, c) != DRIVABLE_LABEL){
+						votes.at<int>(x, y)++;
+					}
 				}
 			}
 		}
 	}
 	std::unique_lock<std::mutex> lck(mtxConstr);
 	constraints = Mat(MAP_SIZE, MAP_SIZE, CV_32FC1, Scalar(0));
-	for(int c = 0; c < numCameras; c++){
-		for(int r = 0; r < numRows; r++){
-			for(int c = 0; c < numCols; c++){
-				int x = mapSegments[c].at<int>(r, c) / MAP_SIZE;
-				int y = mapSegments[c].at<int>(r, c) % MAP_SIZE;
-				constraints.at<float>(x, y) = (float)votes.at<int>(x, y)/countVotes.at<int>(x, y);
-			}
+	for(int y = 0; y < MAP_SIZE; y++){
+		for(int x = 0; x < MAP_SIZE; x++){
+			cout << x << ":" << y << " = " << (float)votes.at<int>(x, y)/countVotes.at<int>(x, y) << endl;
+			constraints.at<float>(x, y) = (float)votes.at<int>(x, y)/countVotes.at<int>(x, y);
 		}
 	}
 	curTimestamp = nextCurTimestamp;
@@ -173,11 +174,12 @@ void Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 	//namedWindow("test");
 	mapSegments.clear();
 
-	for(int c = 0; c < numCameras; c++){
+	for(int cam = 0; cam < numCameras; cam++){
 		mapSegments.push_back(Mat(numRows, numCols, CV_32SC1, Scalar(-1)));
 
-		Mat curPosCameraMapCenter = curPosImuMapCenter*cameraOrigImu[c];
-		Mat invCameraMatrix = cameraMatrix[c].inv();
+		//cout << "curPosImuMapCenter*cameraOrigImu[cam]" << endl;
+		Mat curPosCameraMapCenter = curPosImuMapCenter*cameraOrigImu[cam];
+		Mat invCameraMatrix = cameraMatrix[cam].inv();
 
 		for(int r = 0; r < numRows; r++){
 			for(int c = 0; c < numCols; c++){
@@ -185,19 +187,34 @@ void Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 				pointIm.at<float>(0) = c;
 				pointIm.at<float>(1) = r;
 				pointIm.at<float>(2) = 1;
+				//cout << "invCameraMatrix*pointIm" << endl;
 				Mat pointCamNN = invCameraMatrix*pointIm;
 				float t31 = curPosCameraMapCenter.at<float>(2, 0);
 				float t32 = curPosCameraMapCenter.at<float>(2, 1);
 				float t33 = curPosCameraMapCenter.at<float>(2, 2);
 				float t34 = curPosCameraMapCenter.at<float>(2, 3);
-				float s = -t34 / (t31 * pointCamNN.at<float>(0) + t32 * pointCamNN.at<float>(1) + t33 * pointCamNN.at<float>(2)); //at z_glob = 0
+				float s = (830 - t34) / (t31 * pointCamNN.at<float>(0) + t32 * pointCamNN.at<float>(1) + t33 * pointCamNN.at<float>(2)); //at z_glob = 0
 				Mat pointCam(4, 1, CV_32FC1);
 				pointCam.at<float>(0) = pointCamNN.at<float>(0) * s;
 				pointCam.at<float>(1) = pointCamNN.at<float>(1) * s;
 				pointCam.at<float>(2) = pointCamNN.at<float>(2) * s;
 				pointCam.at<float>(3) = 1;
+				//cout << "curPosCameraMapCenter*pointCam" << endl;
 				Mat pointMapCenter = curPosCameraMapCenter*pointCam;
-				mapSegments[c].at<int>(r, c) = pointMapCenter.at<float>(0)*MAP_SIZE + pointMapCenter.at<float>(1);
+				//cout << "pointIm = " << pointIm << endl;
+				//cout << "pointCamNN = " << pointCamNN << endl;
+				//cout << "s = " << s << endl;
+				//cout << "curPosCameraMapCenter = " << curPosCameraMapCenter << endl;
+				//cout << "pointCam = " << pointCam << endl;
+				//cout << "pointMapCenter = " << pointMapCenter << endl;
+				//cout << "pointMapCenter.size() =" << pointMapCenter.size() << endl;
+				//cout << "mapSegments[cam].size() = " << mapSegments[cam].size() << endl;
+				int xSegm = pointMapCenter.at<float>(0)/MAP_RASTER_SIZE;
+				int ySegm = pointMapCenter.at<float>(1)/MAP_RASTER_SIZE;
+				//cout << r << ":" << c << " = (" << xSegm << ", " << ySegm << ")" << endl;
+				mapSegments[cam].at<int>(r, c) = xSegm*MAP_SIZE + ySegm;
+				//cout << "End mapSegments[c].at<int>(r, c) =" << endl;
+				//waitKey();
 			}
 		}
 	}
@@ -366,18 +383,22 @@ void Camera::processDir(boost::filesystem::path dir,
 	//cout << dir.string() + "/hokuyo.data" << endl;
 	ifstream hokuyoFile(dir.string() + "/hokuyo.data");
 	if(!hokuyoFile.is_open()){
+		cout << "Error - no hokuyo file" << endl;
 		throw "Error - no hokuyo file";
 	}
 	ifstream imuFile(dir.string() + "/imu.data");
 	if(!imuFile.is_open()){
+		cout << "Error - no imu file" << endl;
 		throw "Error - no imu file";
 	}
 	ifstream encodersFile(dir.string() + "/encoders.data");
 	if(!encodersFile.is_open()){
+		cout << "Error - no encoders file" << endl;
 		throw "Error - no encoders file";
 	}
 	ifstream cameraFile(dir.string() + "/camera.data");
 	if(!encodersFile.is_open()){
+		cout << "Error - no camera file" << endl;
 		throw "Error - no camera file";
 	}
 	Mat hokuyoAllPointsGlobal;
@@ -585,16 +606,17 @@ void Camera::processDir(boost::filesystem::path dir,
 		cout << "mean image = " << meanImage << endl;
 		cout << "covar image = " << covarImage << endl;
 
-		ofstream pointsFile("points/" + cameraImageFile.stem().string() + ".log");
-		if(!pointsFile.is_open()){
-			throw "pointsFile not opened";
-		}
-		cout << "points file opened" << endl;
+		//ofstream pointsFile("points/" + cameraImageFile.stem().string() + ".log");
+		//if(!pointsFile.is_open()){
+		//	cout << "pointsFile not opened" << endl;
+		//	throw "pointsFile not opened";
+		//}
+
 		for(int p = 0; p < pointsImage.size(); p++){
 			if(pointsImage[p].x >= 0 && pointsImage[p].x < image.cols &&
 				pointsImage[p].y >= 0 && pointsImage[p].y < image.rows)
 			{
-				pointsFile << pointsImage[p].x << " " << pointsImage[p].y << " " << hokuyoAllPointsGlobal.at<float>(5, p) << endl;
+				//pointsFile << pointsImage[p].x << " " << pointsImage[p].y << " " << hokuyoAllPointsGlobal.at<float>(5, p) << endl;
 				//image.at<Vec3b>(pointsImage[p].y, pointsImage[p].x) = Vec3b(0, 0, 255);
 				circle(image, Point(pointsImage[p].x, pointsImage[p].y), 2, Scalar(0, 0, 255), -1);
 				//int intensity = hokuyoAllPointsGlobal.at<float>(5, p);
@@ -614,14 +636,17 @@ void Camera::processDir(boost::filesystem::path dir,
 							cameraImageFile.stem().string() +
 							string(".xml"));
 		if(!data.LoadFile()){
+			cout << "Bad data file" << endl;
 			throw "Bad data file";
 		}
 		TiXmlElement* pAnnotation = data.FirstChildElement("annotation");
 		if(!pAnnotation){
+			cout << "Bad data file - no annotation entry" << endl;
 			throw "Bad data file - no annotation entry";
 		}
 		TiXmlElement* pFile = pAnnotation->FirstChildElement("filename");
 		if(!pFile){
+			cout << "Bad data file - no filename entry" << endl;
 			throw "Bad data file - no filename entry";
 		}
 
@@ -634,6 +659,7 @@ void Camera::processDir(boost::filesystem::path dir,
 
 			TiXmlElement* pPolygon = pObject->FirstChildElement("polygon");
 			if(!pPolygon){
+				cout << "Bad data file - no polygon inside object" << endl;
 				throw "Bad data file - no polygon inside object";
 			}
 			vector<Point2i> poly;
@@ -648,6 +674,7 @@ void Camera::processDir(boost::filesystem::path dir,
 
 			TiXmlElement* pAttributes = pObject->FirstChildElement("attributes");
 			if(!pAttributes){
+				cout << "Bad data file - no object attributes" << endl;
 				throw "Bad data file - no object attributes";
 			}
 			string labelText = pAttributes->GetText();
@@ -659,6 +686,7 @@ void Camera::processDir(boost::filesystem::path dir,
 				}
 			}
 			if(label == -1){
+				cout << "No such label found" << endl;
 				throw "No such label found";
 			}
 
@@ -1118,35 +1146,50 @@ void Camera::GenerateColorHistHSVGpu(
 
 //Run as separate thread
 void Camera::run(){
+
+	classifiedImage.resize(numCameras);
+
 	while(runThread){
 		cout << "Camera run" << endl;
 		Mat curPosImuMapCenter;
 		Mat pointCloudImu = movementConstraints->getPointCloud(curPosImuMapCenter);
-		std::chrono::high_resolution_clock::time_point nextCurTimestamp = std::chrono::high_resolution_clock::now();
-		vector<Mat> cameraData = this->getData();
-		computeMapSegments(curPosImuMapCenter);
-		for(int c = 0; c < numCameras; c++){
-			Mat pointCloudCamera(pointCloudImu.rows, pointCloudImu.cols, CV_32FC1);
-			pointCloudImu.rowRange(4, 6).copyTo(pointCloudCamera.rowRange(4, 6));
-			Mat tmpPointCoords = cameraOrigImu[c] * pointCloudImu.rowRange(0, 4);
-			tmpPointCoords.copyTo(pointCloudCamera.rowRange(0, 4));
-			vector<Mat> classRes = hierClassifiers[c]->classify(cameraData[c], pointCloudCamera);
-			Mat bestLabels(numRows, numCols, CV_32SC1, Scalar(0));
-			Mat bestScore(numRows, numCols, CV_32FC1, Scalar(-1));
-			for(int l = 0; l < labels.size(); l++){
-				Mat cmp;
-				compare(bestScore, classRes[l], cmp, CMP_LE);
-				bestLabels.setTo(l, cmp);
-				bestScore = max(bestScore, classRes[l]);
-			}
-			classifiedImage[c] = bestLabels;
+		if(!curPosImuMapCenter.empty()){
+			std::chrono::high_resolution_clock::time_point nextCurTimestamp = std::chrono::high_resolution_clock::now();
+			vector<Mat> cameraData = this->getData();
+			computeMapSegments(curPosImuMapCenter);
+			for(int c = 0; c < numCameras; c++){
+				Mat pointCloudCamera;
+				if(!pointCloudImu.empty()){
+					Mat pointCloudCamera(pointCloudImu.rows, pointCloudImu.cols, CV_32FC1);
+					pointCloudImu.rowRange(4, 6).copyTo(pointCloudCamera.rowRange(4, 6));
+					Mat tmpPointCoords = cameraOrigImu[c] * pointCloudImu.rowRange(0, 4);
+					tmpPointCoords.copyTo(pointCloudCamera.rowRange(0, 4));
+				}
+				cout << "Classification" << endl;
+				vector<Mat> classRes = hierClassifiers[c]->classify(cameraData[c], pointCloudCamera);
+				//cout << "End classification" << endl;
+				Mat bestLabels(numRows, numCols, CV_32SC1, Scalar(0));
+				Mat bestScore(numRows, numCols, CV_32FC1, Scalar(-1));
+				for(int l = 0; l < labels.size(); l++){
+					Mat cmp;
+					//cout << "classRes[l].size() = " << classRes[l].size() << endl;
+					//cout << "bestScore.rows = " << bestScore.rows << endl;
+					compare(bestScore, classRes[l], cmp, CMP_LE);
+					//cout << "bestLabels.size() = " << bestLabels.size() << endl;
+					bestLabels.setTo(l, cmp);
+					//cout << "max" << endl;
+					bestScore = max(bestScore, classRes[l]);
+				}
+				classifiedImage[c] = bestLabels;
 
-			std::unique_lock<std::mutex> lck(mtxClassIm);
-			classifiedImage[c].copyTo(sharedClassifiedImage);
-			cameraData[c].copyTo(sharedOriginalImage);
-			lck.unlock();
+				cout << "Copying classified image" << endl;
+				std::unique_lock<std::mutex> lck(mtxClassIm);
+				classifiedImage[c].copyTo(sharedClassifiedImage);
+				cameraData[c].copyTo(sharedOriginalImage);
+				lck.unlock();
+			}
+			computeConstraints(nextCurTimestamp);
 		}
-		computeConstraints(nextCurTimestamp);
 
 		std::chrono::milliseconds duration(200);
 		std::this_thread::sleep_for(duration);
@@ -1332,9 +1375,11 @@ void Camera::saveCache(boost::filesystem::path cacheFile){
 //Inserts computed constraints into map
 void Camera::insertConstraints(cv::Mat map){
 	std::unique_lock<std::mutex> lck(mtxConstr);
-	for(int x = 0; x < MAP_SIZE; x++){
-		for(int y = 0; y < MAP_SIZE; y++){
-			map.at<float>(x, y) = max(map.at<float>(x, y), constraints.at<float>(x, y));
+	if(!constraints.empty()){
+		for(int x = 0; x < MAP_SIZE; x++){
+			for(int y = 0; y < MAP_SIZE; y++){
+				map.at<float>(x, y) = max(map.at<float>(x, y), constraints.at<float>(x, y));
+			}
 		}
 	}
 	lck.unlock();
@@ -1385,7 +1430,7 @@ void Camera::open(std::vector<std::string> device){
 			throw "Cannot open camera device";
 		}
 	}
-	runThread = false;
+	runThread = true;
 	cameraThread = std::thread(&Camera::run, this);
 }
 
