@@ -28,8 +28,10 @@ MovementConstraints::MovementConstraints(Robot* irobot, TiXmlElement* settings) 
 }
 
 MovementConstraints::~MovementConstraints() {
+	cout << "~MovementConstraints()" << endl;
 	stopThread();
 	delete camera;
+	cout << "End ~MovementConstraints()" << endl;
 }
 
 void MovementConstraints::readSettings(TiXmlElement* settings){
@@ -126,9 +128,11 @@ void MovementConstraints::updateConstraintsMap(){
 		lckPointCloud.lock();
 		//cout << "locked" << endl;
 		//cout << "Calculating new coords" << endl;
-		//Move points to new map center
-		Mat newPointCloudCoords = curPosCloudMapCenter.inv()*pointCloudImuMapCenter.rowRange(0, 4);
-		newPointCloudCoords.copyTo(pointCloudImuMapCenter.rowRange(0, 4));
+		if(!pointCloudImuMapCenter.empty()){
+			//Move points to new map center
+			Mat newPointCloudCoords = curPosCloudMapCenter.inv()*pointCloudImuMapCenter.rowRange(0, 4);
+			newPointCloudCoords.copyTo(pointCloudImuMapCenter.rowRange(0, 4));
+		}
 
 		//cout << "Calculating new posMapCenterGlobal" << endl;
 		posMapCenterGlobal = compOrient(imuCur);
@@ -140,8 +144,9 @@ void MovementConstraints::updateConstraintsMap(){
 	constraintsMap = Scalar(0);
 
 	//polling each constraints module to update map
-	//insertHokuyoConstraints(constraintsMap);
-	camera->insertConstraints(constraintsMap);
+	this->insertHokuyoConstraints(constraintsMap);
+	//camera->insertConstraints(constraintsMap);
+	//cout << constraintsMap << endl;
 	lckMap.unlock();
 	//cout << "End updateConstraintsMap()" << endl;
 }

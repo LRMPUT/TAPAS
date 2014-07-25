@@ -145,10 +145,11 @@ void Camera::computeConstraints(std::chrono::high_resolution_clock::time_point n
 	for(int cam = 0; cam < numCameras; cam++){
 		for(int r = 0; r < numRows; r++){
 			for(int c = 0; c < numCols; c++){
+				//cout << mapSegments[cam].at<int>(r, c) << endl;
 				int x = mapSegments[cam].at<int>(r, c) / MAP_SIZE;
 				int y = mapSegments[cam].at<int>(r, c) % MAP_SIZE;
 				if(x >= 0 && x < MAP_SIZE && y >= 0 && y < MAP_SIZE){
-					cout << "(" << x << ", " << y << ") = " << classifiedImage[cam].at<int>(r, c) << endl;
+					//cout << "(" << x << ", " << y << "), label " << classifiedImage[cam].at<int>(r, c) << endl;
 					countVotes.at<int>(x, y)++;
 					if(classifiedImage[cam].at<int>(r, c) != DRIVABLE_LABEL){
 						votes.at<int>(x, y)++;
@@ -161,8 +162,13 @@ void Camera::computeConstraints(std::chrono::high_resolution_clock::time_point n
 	constraints = Mat(MAP_SIZE, MAP_SIZE, CV_32FC1, Scalar(0));
 	for(int y = 0; y < MAP_SIZE; y++){
 		for(int x = 0; x < MAP_SIZE; x++){
-			cout << x << ":" << y << " = " << (float)votes.at<int>(x, y)/countVotes.at<int>(x, y) << endl;
-			constraints.at<float>(x, y) = (float)votes.at<int>(x, y)/countVotes.at<int>(x, y);
+			//cout << x << ":" << y << " = " << (float)votes.at<int>(x, y)/countVotes.at<int>(x, y) << endl;
+			if(countVotes.at<int>(x, y) > 0){
+				constraints.at<float>(x, y) = (float)votes.at<int>(x, y)/countVotes.at<int>(x, y);
+			}
+			else{
+				constraints.at<float>(x, y) = 0;
+			}
 		}
 	}
 	curTimestamp = nextCurTimestamp;
@@ -209,10 +215,11 @@ void Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 				//cout << "pointMapCenter = " << pointMapCenter << endl;
 				//cout << "pointMapCenter.size() =" << pointMapCenter.size() << endl;
 				//cout << "mapSegments[cam].size() = " << mapSegments[cam].size() << endl;
-				int xSegm = pointMapCenter.at<float>(0)/MAP_RASTER_SIZE;
-				int ySegm = pointMapCenter.at<float>(1)/MAP_RASTER_SIZE;
+				int xSegm = pointMapCenter.at<float>(0)/MAP_RASTER_SIZE + MAP_SIZE/2;
+				int ySegm = pointMapCenter.at<float>(1)/MAP_RASTER_SIZE + MAP_SIZE/2;
 				//cout << r << ":" << c << " = (" << xSegm << ", " << ySegm << ")" << endl;
 				mapSegments[cam].at<int>(r, c) = xSegm*MAP_SIZE + ySegm;
+				//cout << "mapSegments[cam].at<int>(r, c) = " << mapSegments[cam].at<int>(r, c) << endl;
 				//cout << "End mapSegments[c].at<int>(r, c) =" << endl;
 				//waitKey();
 			}
@@ -1379,6 +1386,8 @@ void Camera::insertConstraints(cv::Mat map){
 		for(int x = 0; x < MAP_SIZE; x++){
 			for(int y = 0; y < MAP_SIZE; y++){
 				map.at<float>(x, y) = max(map.at<float>(x, y), constraints.at<float>(x, y));
+				//cout << "constraints.at<float>(x, y) = " << constraints.at<float>(x, y) << endl;
+				//cout << "map.at<float>(x, y) = " << map.at<float>(x, y) << endl;
 			}
 		}
 	}
@@ -1430,7 +1439,7 @@ void Camera::open(std::vector<std::string> device){
 			throw "Cannot open camera device";
 		}
 	}
-	runThread = true;
+	runThread = false;
 	cameraThread = std::thread(&Camera::run, this);
 }
 

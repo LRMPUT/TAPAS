@@ -82,6 +82,7 @@ void Constraints::updateMapView(){
 
 	stringstream tmp;
 	tmp.width(4);
+	tmp.precision(4);
 	tmp.setf(std::ios::right, std::ios::adjustfield);
 	for(int r = 0 ;r < curPosImuMapCenter.rows; r++){
 		for(int c = 0; c < curPosImuMapCenter.cols; c++){
@@ -94,10 +95,10 @@ void Constraints::updateMapView(){
 	//cout << "curPosImuMapCenter.size() = " << curPosImuMapCenter.size() << endl;
 	if(!pointCloudImuMapCenter.empty()){
 		viewer->updatePointCloud(pointCloudImuMapCenter);
-		viewer->updateConstraintsMap(constraintsMap);
 	}
 	if(!curPosImuMapCenter.empty()){
 		viewer->updateRobotPos(curPosImuMapCenter);
+		viewer->updateConstraintsMap(constraintsMap);
 		viewer->rysuj();
 	}
 }

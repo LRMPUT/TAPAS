@@ -40,6 +40,7 @@ PositionEstimation::PositionEstimation(Robot* irobot) :
 }
 
 PositionEstimation::~PositionEstimation() {
+	stopThread();
 	closeGps();
 	closeImu();
 	delete EKF;

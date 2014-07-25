@@ -8,11 +8,17 @@
 #ifndef GLOBALPLANNER_H_
 #define GLOBALPLANNER_H_
 
+//STL
+#include <thread>
+#include <mutex>
+#include <chrono>
+//OpenCV
 #include <opencv2/opencv.hpp>
 //Trobot
-#include "../Trobot/include/RobotDrive.h"
+//#include "../Trobot/include/RobotDrive.h"
+//TAPAS
 #include "RobotDrivers/robotDrivers.h"
-//Robots Intellect
+
 
 class Robot;
 class Debug;
@@ -29,16 +35,26 @@ class GlobalPlanner {
 	Robot* robot;
 
 	//Driver
-	trobot::RobotDrive* robotDrive;
+	//trobot::RobotDrive* robotDrive;
 
 	Drivers* robotDrive1;
 	Drivers* robotDrive2;
 
 	OperationMode currentMode;
+
+	bool startOperate;
+
+	bool runThread;
+	std::thread globalPlannerThread;
+
+	void run();
+
+	void processHomologation();
 public:
 	GlobalPlanner(Robot* irobot);
 	virtual ~GlobalPlanner();
 
+	void startHomologation();
 	//----------------------MODES OF OPERATION
 	void switchMode(OperationMode mode);
 

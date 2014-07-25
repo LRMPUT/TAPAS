@@ -29,8 +29,8 @@ class Debug;
 #include "../Planning/GlobalPlanner.h"
 
 #define MAP_RASTER_SIZE 200		//[mm]
-#define MAP_SIZE	10000/MAP_RASTER_SIZE	//[u] 10m
-#define MAP_MARGIN 2500/MAP_RASTER_SIZE	//[u] 2,5m margin
+#define MAP_SIZE	(10000/MAP_RASTER_SIZE)	//[u] 10m
+#define MAP_MARGIN (2500/MAP_RASTER_SIZE)	//[u] 2,5m margin
 
 #define PI 3.14159265359
 
@@ -57,6 +57,8 @@ public:
 		return std::chrono::duration_cast < std::chrono::milliseconds
 				> (std::chrono::high_resolution_clock::now() - startTime);
 	}
+
+	void homologation();
 
 	//----------------------MENAGMENT OF GlobalPlanner DEVICES
 	//Robots Drive
@@ -114,8 +116,10 @@ public:
 	//CV_32SC1 3x1: x, y, fi
 	const cv::Mat getEstimatedPosition();
 
-	//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)
-	const cv::Mat getMovementConstraints();
+	//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied
+	cv::Mat getMovementConstraints();
+
+	cv::Mat getPosImuConstraintsMapCenter();
 };
 
 #endif /* ROBOT_H_ */

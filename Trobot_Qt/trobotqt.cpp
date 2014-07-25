@@ -46,19 +46,27 @@ TrobotQt::TrobotQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
 	constr = new Constraints(&ui, &debug);
 
 	recording = new Recording(&ui, &robot, &debug);
+
+	QObject::connect(ui.homologationButton, SIGNAL(clicked()), this, SLOT(startHomologation()));
 	cout << "TrobotQt::TrobotQt end" << endl;
 
 	robot.openImu("/dev/robots/imu");
 	robot.openEncoders("/dev/robots/encoders");
 	robot.openHokuyo("/dev/robots/hokuyo");
 	robot.openCamera(vector<string>(1, "/dev/video0"));
-
+	robot.openRobotsDrive("/dev/robots/driverLeft", "/dev/robots/driverRight");
 }
 
 TrobotQt::~TrobotQt(){
+	cout << "~TrobotQt" << endl;
 	delete qtGps;
 	delete drive;
 	delete imuChart;
 	delete qtCamera;
 	delete recording;
+	cout << "End ~TrobotQt" << endl;
+}
+
+void TrobotQt::startHomologation(){
+	robot.homologation();
 }
