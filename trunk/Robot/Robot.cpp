@@ -26,7 +26,14 @@ Robot::Robot(boost::filesystem::path settingsFile) : globalPlanner(this), positi
 }
 
 Robot::~Robot() {
-	positionEstimation.stopThread();
+	cout << "~Robot()" << endl;
+	delete movementConstraints;
+	//positionEstimation.stopThread();
+	cout << "End ~Robot()" << endl;
+}
+
+void Robot::homologation(){
+	globalPlanner.startHomologation();
 }
 
 //----------------------MENAGMENT OF GlobalPlanner DEVICES
@@ -129,6 +136,11 @@ const cv::Mat Robot::getEstimatedPosition(){
 }
 
 //CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)
-const cv::Mat Robot::getMovementConstraints(){
+cv::Mat Robot::getMovementConstraints(){
 	return movementConstraints->getMovementConstraints();
+}
+
+
+cv::Mat Robot::getPosImuConstraintsMapCenter(){
+	return movementConstraints->getPosImuMapCenter();
 }
