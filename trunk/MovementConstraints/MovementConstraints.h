@@ -70,6 +70,8 @@ class MovementConstraints {
 
 	cv::Mat pointCloudImuMapCenter;
 
+	std::chrono::high_resolution_clock::time_point timestampMap;
+
 	//Queue of points
 	std::queue<PointsPacket> pointsQueue;
 

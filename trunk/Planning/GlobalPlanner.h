@@ -47,12 +47,16 @@ class GlobalPlanner {
 	bool runThread;
 	std::thread globalPlannerThread;
 
+	std::mutex driverMtx;
+
 	void run();
 
 	void processHomologation();
 public:
 	GlobalPlanner(Robot* irobot);
 	virtual ~GlobalPlanner();
+
+	void stopThread();
 
 	void startHomologation();
 	//----------------------MODES OF OPERATION

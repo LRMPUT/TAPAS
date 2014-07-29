@@ -68,6 +68,7 @@ cv::Mat IMU::getData(std::chrono::high_resolution_clock::time_point &timestamp){
 
 		//cout << (short)tmp*quantities[i].factor << " ";
 		ret.at<float>(i % 3, i / 3) = tmp;
+		//cout << ret.at<float>(i % 3, i / 3) << " ";
 	}
 	//cout << endl;
 	timestamp = imu->getTimestamp();

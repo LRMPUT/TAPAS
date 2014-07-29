@@ -40,10 +40,12 @@ PositionEstimation::PositionEstimation(Robot* irobot) :
 }
 
 PositionEstimation::~PositionEstimation() {
+	cout << "~PositionEstimation()" << endl;
 	stopThread();
 	closeGps();
 	closeImu();
 	delete EKF;
+	cout << "End ~PositionEstimation()" << endl;
 }
 
 void PositionEstimation::run() {
@@ -75,7 +77,9 @@ void PositionEstimation::run() {
 
 void PositionEstimation::stopThread() {
 	runThread = false;
-	estimationThread.join();
+	if(estimationThread.joinable()){
+		estimationThread.join();
+	}
 }
 
 void PositionEstimation::kalmanSetup() {
