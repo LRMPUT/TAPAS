@@ -32,9 +32,10 @@ GlobalPlanner::GlobalPlanner(Robot* irobot) :
 }
 
 GlobalPlanner::~GlobalPlanner(){
+	cout << "~GlobalPlanner()" << endl;
+	stopThread();
 	closeRobotsDrive();
-	runThread = false;
-	globalPlannerThread.join();
+	cout << "End ~GlobalPlanner()" << endl;
 }
 
 void GlobalPlanner::run(){
@@ -55,8 +56,8 @@ void GlobalPlanner::processHomologation(){
 	}
 	cout << "Pause" << endl;
 	//60 seconds pause
-	std::chrono::seconds duration(60);
-	//std::this_thread::sleep_for(duration);
+	std::chrono::seconds duration(10);
+	std::this_thread::sleep_for(duration);
 	cout << "Pause end" << endl;
 
 	bool runForward = true;
@@ -64,22 +65,27 @@ void GlobalPlanner::processHomologation(){
 	static const int motorsVel = 1000;
 	float prevDist = robot->getPosImuConstraintsMapCenter().at<float>(0, 3);
 	float distRun = 0;
-	while(runForward){
+	while(runForward && runThread){
 		Mat constraints = robot->getMovementConstraints();
 		Mat posImuMapCenter = robot->getPosImuConstraintsMapCenter();
 
 		bool wayBlocked = false;
 
+		float addX = posImuMapCenter.at<float>(0, 3)/MAP_RASTER_SIZE;
 		for(int x = MAP_SIZE/2; x < MAP_SIZE/2 + 10; x++){
 			for(int y = MAP_SIZE/2 - 3; y < MAP_SIZE/2 + 3; y++){
-				if(constraints.at<float>(x, y) > 0.5){
-					wayBlocked = true;
-					break;
+				if(x + addX >= 0 && x + addX < MAP_SIZE){
+					if(constraints.at<float>(x + addX, y) > 0.5){
+						wayBlocked = true;
+						break;
+					}
 				}
 			}
 		}
 
+		cout << "wayBlocked = " << wayBlocked << endl;
 		if(wayBlocked == false){
+			cout << "setting " << motorsVel << endl;
 			setMotorsVel(motorsVel, motorsVel);
 		}
 		else{
@@ -107,6 +113,13 @@ void GlobalPlanner::processHomologation(){
 	startOperate = false;
 }
 
+void GlobalPlanner::stopThread(){
+	runThread = false;
+	if(globalPlannerThread.joinable()){
+		globalPlannerThread.join();
+	}
+}
+
 void GlobalPlanner::startHomologation(){
 	startOperate = true;
 }
@@ -119,11 +132,15 @@ void GlobalPlanner::switchMode(OperationMode mode){
 
 void GlobalPlanner::setMotorsVel(float motLeft, float motRight){
 
-	robotDrive1->exitSafeStart();
-	robotDrive2->exitSafeStart();
+	std::unique_lock<std::mutex> lck(driverMtx);
+	if(robotDrive1 != NULL && robotDrive2 != NULL){
+		robotDrive1->exitSafeStart();
+		robotDrive2->exitSafeStart();
 
-	robotDrive1->setMotorSpeed(motLeft);
-	robotDrive2->setMotorSpeed(-motRight);
+		robotDrive1->setMotorSpeed(motLeft);
+		robotDrive2->setMotorSpeed(-motRight);
+	}
+	lck.unlock();
 }
 
 //----------------------MENAGMENT OF GlobalPlanner DEVICES
@@ -132,20 +149,33 @@ void GlobalPlanner::openRobotsDrive(std::string port1, std::string port2 ){
 	//closeRobotsDrive();
 	//robotDrive = new RobotDrive(port);
 	cout << "Left: " << port1 << ", right: " << port2 << endl;
+
+	closeRobotsDrive();
+	std::unique_lock<std::mutex> lck(driverMtx);
 	robotDrive1 = new Drivers(115200, port1);
 	robotDrive2 = new Drivers(115200, port2);
+	lck.unlock();
+
 	setMotorsVel(0, 0);
 }
 
 void GlobalPlanner::closeRobotsDrive(){
+	cout << "closeRobotsDrive()" << endl;
+	std::unique_lock<std::mutex> lck(driverMtx);
 	if(robotDrive1 != NULL){
+		robotDrive1->exitSafeStart();
+		robotDrive1->setMotorSpeed(0);
 		delete robotDrive1;
 		robotDrive1 = NULL;
 	}
 	if(robotDrive2 != NULL){
+		robotDrive2->exitSafeStart();
+		robotDrive2->setMotorSpeed(0);
 		delete robotDrive2;
 		robotDrive2 = NULL;
 	}
+	lck.unlock();
+	cout << "End closeRobotsDrive()" << endl;
 }
 
 bool GlobalPlanner::isRobotsDriveOpen(){

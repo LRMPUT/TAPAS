@@ -32,7 +32,7 @@ using namespace std;
 #define X_RES 50
 #define Y_RES 50
 #define PLANE_Z -100*/
-#define DRIVABLE_LABEL 3
+#define DRIVABLE_LABEL 1
 #define LEFT_CAMERA 0
 #define RIGHT_CAMERA 1
 
@@ -307,8 +307,8 @@ cv::Mat Camera::compOrient(cv::Mat imuData){
 
 	Mat ret(Mat::eye(4, 4, CV_32FC1));
 	float yaw = imuData.at<float>(11)*PI/180;
-	float pitch = imuData.at<float>(10)*PI/180;
-	float roll = imuData.at<float>(9)*PI/180;
+	float pitch = imuData.at<float>(7)*PI/180;
+	float roll = imuData.at<float>(3)*PI/180;
 	//cout << "Computing Rz, Ry, Rx, yaw = " << yaw << endl;
 	Matx33f Rz(	cos(yaw), -sin(yaw), 0,
 				sin(yaw), cos(yaw), 0,
@@ -322,7 +322,7 @@ cv::Mat Camera::compOrient(cv::Mat imuData){
 				0, cos(roll), sin(roll),
 				0, -sin(roll), cos(roll));
 	//cout << "Rx = " << Rx << endl;
-	Mat tmp(Rx*Ry*Rz);
+	Mat tmp(Rz*Ry*Rx);
 	tmp.copyTo(ret(Rect(0, 0, 3, 3)));
 
 	//cout << "End computing orientation from IMU" << endl;
@@ -1446,7 +1446,9 @@ void Camera::open(std::vector<std::string> device){
 void Camera::close(){
 	cout << "Closing cameras" << endl;
 	runThread = false;
-	cameraThread.join();
+	if(cameraThread.joinable()){
+		cameraThread.join();
+	}
 	for(int i = 0; i < cameras.size(); i++){
 		cameras[i].release();
 	}

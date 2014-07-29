@@ -27,6 +27,8 @@ Robot::Robot(boost::filesystem::path settingsFile) : globalPlanner(this), positi
 
 Robot::~Robot() {
 	cout << "~Robot()" << endl;
+	globalPlanner.stopThread();
+	positionEstimation.stopThread();
 	delete movementConstraints;
 	//positionEstimation.stopThread();
 	cout << "End ~Robot()" << endl;
