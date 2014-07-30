@@ -152,8 +152,8 @@ void MovementConstraints::updateConstraintsMap(){
 	constraintsMap = Scalar(0);
 
 	//polling each constraints module to update map
-	this->insertHokuyoConstraints(constraintsMap);
-	//camera->insertConstraints(constraintsMap);
+	//this->insertHokuyoConstraints(constraintsMap);
+	camera->insertConstraints(constraintsMap);
 	//cout << constraintsMap << endl;
 	lckMap.unlock();
 	//cout << "End updateConstraintsMap()" << endl;
