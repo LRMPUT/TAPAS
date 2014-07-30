@@ -308,8 +308,8 @@ cv::Mat Camera::compOrient(cv::Mat imuData){
 
 	Mat ret(Mat::eye(4, 4, CV_32FC1));
 	float yaw = imuData.at<float>(11)*PI/180;
-	float pitch = imuData.at<float>(7)*PI/180;
-	float roll = imuData.at<float>(3)*PI/180;
+	float pitch = imuData.at<float>(10)*PI/180;
+	float roll = imuData.at<float>(9)*PI/180;
 	//cout << "Computing Rz, Ry, Rx, yaw = " << yaw << endl;
 	Matx33f Rz(	cos(yaw), -sin(yaw), 0,
 				sin(yaw), cos(yaw), 0,
@@ -320,8 +320,8 @@ cv::Mat Camera::compOrient(cv::Mat imuData){
 				-sin(pitch), 0, cos(pitch));
 	//cout << "Ry = " << Ry << endl;
 	Matx33f Rx(	1, 0, 0,
-				0, cos(roll), sin(roll),
-				0, -sin(roll), cos(roll));
+				0, cos(roll), -sin(roll),
+				0, sin(roll), cos(roll));
 	//cout << "Rx = " << Rx << endl;
 	Mat tmp(Rz*Ry*Rx);
 	tmp.copyTo(ret(Rect(0, 0, 3, 3)));
@@ -637,7 +637,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			}
 		}
 		imshow("test", image);
-		waitKey(100);
+		waitKey(200);
 
 		TiXmlDocument data(	dir.string() +
 							string("/") +
@@ -1452,7 +1452,7 @@ void Camera::open(std::vector<std::string> device){
 			throw "Cannot open camera device";
 		}
 	}
-	runThread = true;
+	runThread = false;
 	cameraThread = std::thread(&Camera::run, this);
 }
 

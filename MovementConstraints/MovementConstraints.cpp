@@ -123,7 +123,7 @@ void MovementConstraints::updateConstraintsMap(){
 	static const float mapTimeout = 5000;
 	std::chrono::high_resolution_clock::time_point timestampMapCur = std::chrono::high_resolution_clock::now();
 	if(std::chrono::duration_cast<std::chrono::milliseconds>(timestampMapCur - timestampMap).count() > 5000){
-		move = true;
+		//move = true;
 	}
 	if(move == true){
 		//cout << "Moving map" << endl;
@@ -152,8 +152,8 @@ void MovementConstraints::updateConstraintsMap(){
 	constraintsMap = Scalar(0);
 
 	//polling each constraints module to update map
-	//this->insertHokuyoConstraints(constraintsMap);
-	camera->insertConstraints(constraintsMap);
+	this->insertHokuyoConstraints(constraintsMap);
+	//camera->insertConstraints(constraintsMap);
 	//cout << constraintsMap << endl;
 	lckMap.unlock();
 	//cout << "End updateConstraintsMap()" << endl;
@@ -217,8 +217,8 @@ cv::Mat MovementConstraints::compOrient(cv::Mat imuData){
 				-sin(pitch), 0, cos(pitch));
 	//cout << "Ry = " << Ry << endl;
 	Matx33f Rx(	1, 0, 0,
-				0, cos(roll), sin(roll),
-				0, -sin(roll), cos(roll));
+				0, cos(roll), -sin(roll),
+				0, sin(roll), cos(roll));
 	//cout << "Rx = " << Rx << endl;
 	Mat tmp(Rz*Ry*Rx);
 	tmp.copyTo(ret(Rect(0, 0, 3, 3)));
