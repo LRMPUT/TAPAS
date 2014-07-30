@@ -1,0 +1,158 @@
+<Robot>
+	<MovementConstraints>
+		<camera_position_laser>
+			0.9995    0.0205   -0.0250	61.3
+		 -0.0037    0.8406    0.5416	-482.9
+			0.0321   -0.5412    0.8403	-497.5
+		 0 0 0 1
+		</camera_position_laser>
+		<imu_position_camera>
+   		0.0401    0.9992    0.0001	0
+			-0.6617    0.0265    0.7493	0
+			0.7487   -0.0302    0.6623	0
+			0	0	0	1
+		</imu_position_camera>
+		<imu_position_global>
+			1	0	0	-360
+			0	1	0	0
+			0	0	1	-830
+			0	0	0	1
+		</imu_position_global>
+		<ground_plane_global>
+			0	0	1 -30
+		</ground_plane_global>
+		<Camera number="1" rows="480" cols="640">
+			<cache enabled="true" />
+			<HierClassifier>
+				<cache enabled="true" />
+				<segmentation k="200" min_size="200" />
+				<descriptor>
+					<hist_HS len_H="4" len_S="4" />
+					<hist_V len="8" />
+					<covar_HSV len="9" />
+					<mean_HSV len="3" />
+					<covar_laser len="4" />
+					<mean_laser len="2" />
+					<kurt_laser len="2" />
+					<hist_DI len_D="5" len_I="5" />
+				</descriptor>
+				<!--<Classifier type="SVM">
+					<cache enabled="true" />
+					<svm type="C_SVC">
+						<kernelType value="RBF" />
+						<gamma value="5.4061" />
+						<degree value="2" />
+						<C value="5535.84" />
+					</svm>
+					<info desc_beg="0" desc_end="1" />
+				</Classifier>
+				<Classifier type="SVM">
+					<cache enabled="true" />
+					<svm type="C_SVC">
+						<kernelType value="RBF" />
+						<gamma value="5.4061" />
+						<degree value="2" />
+						<C value="5535.84" />
+					</svm>
+					<info desc_beg="1" desc_end="2" />
+				</Classifier>
+				<Classifier type="SVM">
+					<cache enabled="true" />
+					<svm type="C_SVC">
+						<kernelType value="RBF" />
+						<gamma value="5.4061" />
+						<degree value="2" />
+						<C value="16607.5" />
+					</svm>
+					<info desc_beg="2" desc_end="4" />
+				</Classifier>-->
+				<!--<Classifier type="SVM">
+					<cache enabled="true" />
+					<svm type="C_SVC">
+						<kernelType value="RBF" />
+						<gamma value="5.4061" />
+						<degree value="2" />
+						<C value="16607.5" />
+					</svm>
+					<info desc_beg="4" desc_end="7" />
+				</Classifier>
+				<Classifier type="SVM">
+					<cache enabled="true" />
+					<svm type="C_SVC">
+						<kernelType value="RBF" />
+						<gamma value="1.80203" />
+						<degree value="2" />
+						<C value="16607.5" />
+					</svm>
+					<info desc_beg="7" desc_end="8" />
+				</Classifier>-->
+				<Classifier type="SVM">
+					<cache enabled="true" />
+					<svm type="C_SVC">
+						<kernelType value="RBF" />
+						<gamma value="0.200226" />
+						<degree value="2" />
+						<C value="10" />
+					</svm>
+					<info desc_beg="0" desc_end="8" />
+				</Classifier>
+			</HierClassifier>
+			<learning dir="../../MovementConstraints/Camera/training_data" />
+			<labels>
+				<label text="grass" id="0"/>
+				<label text="pavement" id="1"/>
+			</labels>
+
+			<imu_position_global>
+				1	0	0	-360
+				0	1	0	0
+				0	0	1	-830
+				0	0	0	1
+			</imu_position_global>
+
+			<sensor id="left">
+				<imu_position_camera>
+			 		0.0401    0.9992    0.0001	0
+					-0.6617    0.0265    0.7493	0
+					0.7487   -0.0302    0.6623	0
+					0	0	0	1
+				</imu_position_camera>
+				<position_laser>
+					0.9995    0.0205   -0.0250	61.3
+				 -0.0037    0.8406    0.5416	-482.9
+					0.0321   -0.5412    0.8403	-497.5
+				 0 0 0 1
+				</position_laser>
+				<camera_matrix>
+					646.345999973665580	0	312.531846659870780
+        	0	645.650527914581740	244.961100510703430
+        	0	0	1.0000
+				</camera_matrix>
+				<dist_coeffs>
+					-0.002321429512793 0.042019134230480 -0.000280334014614 0.001284356067402 0.000000000000000 
+				</dist_coeffs>
+			</sensor>
+				<!-- <sensor id="right">
+				<position>
+					1 0 0 0
+					0	1	0	0
+					0	0	1	0
+					0	0	0	1
+				</position>
+				<position_laser>
+
+				</position_laser>
+				<camera_matrix>
+
+				</camera_matrix>
+				<dist_fact>
+
+				</dist_fact>
+			</sensor> -->
+			<ground_plane_global>
+				0	0	1 -30
+			</ground_plane_global>
+		</Camera>
+	</MovementConstraints>
+</Robot>
+
