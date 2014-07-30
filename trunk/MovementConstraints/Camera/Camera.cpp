@@ -184,7 +184,7 @@ void Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 		mapSegments.push_back(Mat(numRows, numCols, CV_32SC1, Scalar(-1)));
 
 		//cout << "curPosImuMapCenter*cameraOrigImu[cam]" << endl;
-		Mat curPosCameraMapCenter = curPosImuMapCenter*cameraOrigImu[cam];
+		Mat curPosCameraMapCenterGlobal = imuOrigGlobal*curPosImuMapCenter*cameraOrigImu[cam];
 		Mat invCameraMatrix = cameraMatrix[cam].inv();
 
 		for(int r = 0; r < numRows; r++){
@@ -195,18 +195,19 @@ void Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 				pointIm.at<float>(2) = 1;
 				//cout << "invCameraMatrix*pointIm" << endl;
 				Mat pointCamNN = invCameraMatrix*pointIm;
-				float t31 = curPosCameraMapCenter.at<float>(2, 0);
-				float t32 = curPosCameraMapCenter.at<float>(2, 1);
-				float t33 = curPosCameraMapCenter.at<float>(2, 2);
-				float t34 = curPosCameraMapCenter.at<float>(2, 3);
-				float s = (830 - t34) / (t31 * pointCamNN.at<float>(0) + t32 * pointCamNN.at<float>(1) + t33 * pointCamNN.at<float>(2)); //at z_glob = 0
+				float t31 = curPosCameraMapCenterGlobal.at<float>(2, 0);
+				float t32 = curPosCameraMapCenterGlobal.at<float>(2, 1);
+				float t33 = curPosCameraMapCenterGlobal.at<float>(2, 2);
+				float t34 = curPosCameraMapCenterGlobal.at<float>(2, 3);
+				//z coordinate == 0
+				float s = (-t34) / (t31 * pointCamNN.at<float>(0) + t32 * pointCamNN.at<float>(1) + t33 * pointCamNN.at<float>(2)); //at z_glob = 0
 				Mat pointCam(4, 1, CV_32FC1);
 				pointCam.at<float>(0) = pointCamNN.at<float>(0) * s;
 				pointCam.at<float>(1) = pointCamNN.at<float>(1) * s;
 				pointCam.at<float>(2) = pointCamNN.at<float>(2) * s;
 				pointCam.at<float>(3) = 1;
 				//cout << "curPosCameraMapCenter*pointCam" << endl;
-				Mat pointMapCenter = curPosCameraMapCenter*pointCam;
+				Mat pointMapCenter = curPosImuMapCenter*cameraOrigImu[cam]*pointCam;
 				//cout << "pointIm = " << pointIm << endl;
 				//cout << "pointCamNN = " << pointCamNN << endl;
 				//cout << "s = " << s << endl;
@@ -1158,12 +1159,18 @@ void Camera::run(){
 
 	while(runThread){
 		cout << "Camera run" << endl;
+		std::chrono::high_resolution_clock::time_point timeBegin;
+		std::chrono::high_resolution_clock::time_point timeEndMapSegments;
+		std::chrono::high_resolution_clock::time_point timeEndClassification;
+		std::chrono::high_resolution_clock::time_point timeEndConstraints;
 		Mat curPosImuMapCenter;
 		Mat pointCloudImu = movementConstraints->getPointCloud(curPosImuMapCenter);
 		if(!curPosImuMapCenter.empty()){
 			std::chrono::high_resolution_clock::time_point nextCurTimestamp = std::chrono::high_resolution_clock::now();
+			timeBegin = std::chrono::high_resolution_clock::now();
 			vector<Mat> cameraData = this->getData();
 			computeMapSegments(curPosImuMapCenter);
+			timeEndMapSegments = std::chrono::high_resolution_clock::now();
 			for(int c = 0; c < numCameras; c++){
 				Mat pointCloudCamera;
 				if(!pointCloudImu.empty()){
@@ -1174,6 +1181,7 @@ void Camera::run(){
 				}
 				cout << "Classification" << endl;
 				vector<Mat> classRes = hierClassifiers[c]->classify(cameraData[c], pointCloudCamera);
+				timeEndClassification = std::chrono::high_resolution_clock::now();
 				//cout << "End classification" << endl;
 				Mat bestLabels(numRows, numCols, CV_32SC1, Scalar(0));
 				Mat bestScore(numRows, numCols, CV_32FC1, Scalar(-1));
@@ -1196,7 +1204,12 @@ void Camera::run(){
 				lck.unlock();
 			}
 			computeConstraints(nextCurTimestamp);
+			timeEndConstraints = std::chrono::high_resolution_clock::now();
 		}
+		cout << "Map segments time: " << chrono::duration_cast<chrono::milliseconds>(timeEndMapSegments - timeBegin).count() << " ms" << endl;
+		cout << "Classification time: " << chrono::duration_cast<chrono::milliseconds>(timeEndClassification - timeEndMapSegments).count() << " ms" << endl;
+		cout << "Constraints time: " << chrono::duration_cast<chrono::milliseconds>(timeEndConstraints - timeEndClassification).count() << " ms" << endl;
+
 
 		std::chrono::milliseconds duration(200);
 		std::this_thread::sleep_for(duration);
@@ -1439,7 +1452,7 @@ void Camera::open(std::vector<std::string> device){
 			throw "Cannot open camera device";
 		}
 	}
-	runThread = false;
+	runThread = true;
 	cameraThread = std::thread(&Camera::run, this);
 }
 
