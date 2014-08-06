@@ -85,6 +85,8 @@ class Camera {
 
 	void computeMapSegments(cv::Mat curPosImuMapCenter);
 
+	void computeMapSegmentsGpu(cv::Mat curPosImuMapCenter);
+
 	std::vector<cv::Point2f> computePointProjection(const std::vector<cv::Point3f>& imPoint,
 													int cameraInd);
 

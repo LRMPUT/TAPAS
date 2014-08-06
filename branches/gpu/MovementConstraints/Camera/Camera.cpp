@@ -12,6 +12,8 @@
 #include <cmath>
 #include <sstream>
 #include <algorithm>
+//CUDA
+#include <cuda_runtime.h>
 //Robotour
 #include "Camera.h"
 #include "../../Robot/Robot.h"
@@ -39,10 +41,10 @@ using namespace std;
 #define CHANNELS_USED 2
 #define SAMPLE_PACK 1500
 
-#define NO_CUDA
+//#define NO_CUDA
 
 using namespace cv;
-using namespace gpu;
+//using namespace gpu;
 using namespace std;
 
 
@@ -62,11 +64,14 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 	//computeImagePolygons();
 
 #ifndef NO_CUDA
-	cout << "Available CUDA devices: " << getCudaEnabledDeviceCount() << endl;
-	setDevice(0);
-	DeviceInfo gpuInfo;
-	cout << "Version: " << gpuInfo.majorVersion() << "." << gpuInfo.minorVersion() << endl;
-	cout << "Number of processors: " << gpuInfo.multiProcessorCount() << endl;
+	int devCount;
+	cudaGetDeviceCount(&devCount);
+	cout << "Available CUDA devices: " <<  devCount << endl;
+	cudaDeviceProp prop;
+	cudaGetDeviceProperties(&prop, 0);
+	cout << "Version: " << prop.major << "." << prop.minor << endl;
+	cout << "Number of processors: " << prop.multiProcessorCount << endl;
+	cout << "Unified addressing: " << prop.unifiedAddressing << endl;
 #endif //NO_CUDA
 }
 
@@ -227,6 +232,48 @@ void Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 		}
 	}
 	cout << "End computing map segments" << endl;
+}
+
+extern "C" void reprojectCameraPoints(float* invCameraMatrix,
+		float* distCoeffs,
+		float* curPosCameraMapCenterGlobal,
+		float* curPosCameraMapCenterImu,
+		int numRows,
+		int numCols,
+		int* segments,
+		int mapSize,
+		int rasterSize);
+
+void Camera::computeMapSegmentsGpu(cv::Mat curPosImuMapCenter){
+	cout << "Computing map segments" << endl;
+	//namedWindow("test");
+	mapSegments.clear();
+
+	for(int cam = 0; cam < numCameras; cam++){
+		mapSegments.push_back(Mat(numRows, numCols, CV_32SC1, Scalar(-1)));
+
+		//cout << "curPosImuMapCenter*cameraOrigImu[cam]" << endl;
+		Mat curPosCameraMapCenterGlobal = imuOrigGlobal*curPosImuMapCenter*cameraOrigImu[cam];
+		Mat curPosCameraMapCenterImu = curPosImuMapCenter*cameraOrigImu[cam];
+		Mat invCameraMatrix = cameraMatrix[cam].inv();
+
+		if(mapSegments[cam].isContinuous() &&
+				curPosCameraMapCenterGlobal.isContinuous() &&
+				curPosCameraMapCenterImu.isContinuous() &&
+				invCameraMatrix.isContinuous())
+		{
+			reprojectCameraPoints((float*)invCameraMatrix.data,
+									(float*)NULL,
+									(float*)curPosCameraMapCenterGlobal.data,
+									(float*)curPosCameraMapCenterImu.data,
+									numRows,
+									numCols,
+									(int*)mapSegments[cam].data,
+									MAP_SIZE,
+									MAP_RASTER_SIZE);
+
+		}
+	}
 }
 
 std::vector<cv::Point2f> Camera::computePointProjection(const std::vector<cv::Point3f>& spPoints,
@@ -1206,9 +1253,9 @@ void Camera::run(){
 			computeConstraints(nextCurTimestamp);
 			timeEndConstraints = std::chrono::high_resolution_clock::now();
 		}
-		cout << "Map segments time: " << chrono::duration_cast<chrono::milliseconds>(timeEndMapSegments - timeBegin).count() << " ms" << endl;
-		cout << "Classification time: " << chrono::duration_cast<chrono::milliseconds>(timeEndClassification - timeEndMapSegments).count() << " ms" << endl;
-		cout << "Constraints time: " << chrono::duration_cast<chrono::milliseconds>(timeEndConstraints - timeEndClassification).count() << " ms" << endl;
+		cout << "Map segments time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndMapSegments - timeBegin).count() << " ms" << endl;
+		cout << "Classification time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndClassification - timeEndMapSegments).count() << " ms" << endl;
+		cout << "Constraints time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndConstraints - timeEndClassification).count() << " ms" << endl;
 
 
 		std::chrono::milliseconds duration(200);
