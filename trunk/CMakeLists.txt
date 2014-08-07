@@ -11,8 +11,16 @@ set(urg_LIBRARIES urg_cpp)
 set(TinyXML_LIBRARIES tinyxml)
 
 find_package(OpenCV REQUIRED)
+
 find_package(Boost COMPONENTS system filesystem thread REQUIRED)
+
+find_package(CUDA REQUIRED)
+# Pass options to NVCC
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3 -gencode arch=compute_20,code=sm_21)
+SET( CUDA_PROPAGATE_HOST_FLAGS OFF )
+
 link_directories(${URG_LIBRARIES_DIR})
+
 set(RobotsIntellect_SOURCES
 	Debug/Debug.cpp
 	MechanicalGrabber/MechanicalGrabber.cpp
@@ -55,8 +63,13 @@ set(RobotsIntellect_SOURCES
 	Trobot/source/SerialPort.cpp
 )
 
-add_executable (RobotsIntellect 
+set(RobotsIntellect_CUDA_SOURCES
+	MovementConstraints/Camera/Camera.cu
+)
+
+cuda_add_executable (RobotsIntellect 
 	${RobotsIntellect_SOURCES}
+	${RobotsIntellect_CUDA_SOURCES}
 	main.cpp
 )
 
@@ -106,8 +119,9 @@ qt4_wrap_cpp(trobotQt_HEADERS_MOC ${trobotQt_HEADERS} OPTIONS -DBOOST_TT_HAS_OPE
 qt4_wrap_ui(trobotQt_FORMS_HEADERS ${trobotQt_FORMS})
 include(${QT_USE_FILE})
 add_definitions(${QT_DEFINITIONS})
-add_executable(Trobot_Qt/gui
+cuda_add_executable(Trobot_Qt/gui
 	${RobotsIntellect_SOURCES}
+	${RobotsIntellect_CUDA_SOURCES}
 	${trobotQt_SOURCES}
 	${trobotQt_HEADERS_MOC}
 	${trobotQt_FORMS_HEADERS})

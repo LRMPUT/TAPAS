@@ -12,6 +12,8 @@
 #include <cmath>
 #include <sstream>
 #include <algorithm>
+//CUDA
+#include <cuda_runtime.h>
 //Robotour
 #include "Camera.h"
 #include "../../Robot/Robot.h"
@@ -39,10 +41,8 @@ using namespace std;
 #define CHANNELS_USED 2
 #define SAMPLE_PACK 1500
 
-#define NO_CUDA
-
 using namespace cv;
-using namespace gpu;
+//using namespace gpu;
 using namespace std;
 
 
@@ -62,11 +62,14 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 	//computeImagePolygons();
 
 #ifndef NO_CUDA
-	cout << "Available CUDA devices: " << getCudaEnabledDeviceCount() << endl;
-	setDevice(0);
-	DeviceInfo gpuInfo;
-	cout << "Version: " << gpuInfo.majorVersion() << "." << gpuInfo.minorVersion() << endl;
-	cout << "Number of processors: " << gpuInfo.multiProcessorCount() << endl;
+	int devCount;
+	cudaGetDeviceCount(&devCount);
+	cout << "Available CUDA devices: " <<  devCount << endl;
+	cudaDeviceProp prop;
+	cudaGetDeviceProperties(&prop, 0);
+	cout << "Version: " << prop.major << "." << prop.minor << endl;
+	cout << "Number of processors: " << prop.multiProcessorCount << endl;
+	cout << "Unified addressing: " << prop.unifiedAddressing << endl;
 #endif //NO_CUDA
 }
 
@@ -162,9 +165,9 @@ void Camera::computeConstraints(std::chrono::high_resolution_clock::time_point n
 	constraints = Mat(MAP_SIZE, MAP_SIZE, CV_32FC1, Scalar(0));
 	for(int y = 0; y < MAP_SIZE; y++){
 		for(int x = 0; x < MAP_SIZE; x++){
-			//cout << x << ":" << y << " = " << (float)votes.at<int>(x, y)/countVotes.at<int>(x, y) << endl;
 			if(countVotes.at<int>(x, y) > 0){
 				constraints.at<float>(x, y) = (float)votes.at<int>(x, y)/countVotes.at<int>(x, y);
+				//cout << x << ":" << y << " = " << (float)votes.at<int>(x, y)/countVotes.at<int>(x, y) << endl;
 			}
 			else{
 				constraints.at<float>(x, y) = 0;
@@ -177,6 +180,7 @@ void Camera::computeConstraints(std::chrono::high_resolution_clock::time_point n
 
 void Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 	cout << "Computing map segments" << endl;
+	//cout << "curPosMapCenter = " << curPosImuMapCenter << endl;
 	//namedWindow("test");
 	mapSegments.clear();
 
@@ -227,6 +231,48 @@ void Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 		}
 	}
 	cout << "End computing map segments" << endl;
+}
+
+extern "C" void reprojectCameraPoints(float* invCameraMatrix,
+		float* distCoeffs,
+		float* curPosCameraMapCenterGlobal,
+		float* curPosCameraMapCenterImu,
+		int numRows,
+		int numCols,
+		int* segments,
+		int mapSize,
+		int rasterSize);
+
+void Camera::computeMapSegmentsGpu(cv::Mat curPosImuMapCenter){
+	cout << "Computing map segments" << endl;
+	//namedWindow("test");
+	mapSegments.clear();
+
+	for(int cam = 0; cam < numCameras; cam++){
+		mapSegments.push_back(Mat(numRows, numCols, CV_32SC1, Scalar(-1)));
+
+		//cout << "curPosImuMapCenter*cameraOrigImu[cam]" << endl;
+		Mat curPosCameraMapCenterGlobal = imuOrigGlobal*curPosImuMapCenter*cameraOrigImu[cam];
+		Mat curPosCameraMapCenterImu = curPosImuMapCenter*cameraOrigImu[cam];
+		Mat invCameraMatrix = cameraMatrix[cam].inv();
+
+		if(mapSegments[cam].isContinuous() &&
+				curPosCameraMapCenterGlobal.isContinuous() &&
+				curPosCameraMapCenterImu.isContinuous() &&
+				invCameraMatrix.isContinuous())
+		{
+			reprojectCameraPoints((float*)invCameraMatrix.data,
+									(float*)NULL,
+									(float*)curPosCameraMapCenterGlobal.data,
+									(float*)curPosCameraMapCenterImu.data,
+									numRows,
+									numCols,
+									(int*)mapSegments[cam].data,
+									MAP_SIZE,
+									MAP_RASTER_SIZE);
+
+		}
+	}
 }
 
 std::vector<cv::Point2f> Camera::computePointProjection(const std::vector<cv::Point3f>& spPoints,
@@ -1169,46 +1215,54 @@ void Camera::run(){
 			std::chrono::high_resolution_clock::time_point nextCurTimestamp = std::chrono::high_resolution_clock::now();
 			timeBegin = std::chrono::high_resolution_clock::now();
 			vector<Mat> cameraData = this->getData();
+#ifdef NO_CUDA
 			computeMapSegments(curPosImuMapCenter);
+#else
+			computeMapSegmentsGpu(curPosImuMapCenter);
+#endif
 			timeEndMapSegments = std::chrono::high_resolution_clock::now();
 			for(int c = 0; c < numCameras; c++){
-				Mat pointCloudCamera;
-				if(!pointCloudImu.empty()){
-					Mat pointCloudCamera(pointCloudImu.rows, pointCloudImu.cols, CV_32FC1);
-					pointCloudImu.rowRange(4, 6).copyTo(pointCloudCamera.rowRange(4, 6));
-					Mat tmpPointCoords = cameraOrigImu[c] * pointCloudImu.rowRange(0, 4);
-					tmpPointCoords.copyTo(pointCloudCamera.rowRange(0, 4));
-				}
-				cout << "Classification" << endl;
-				vector<Mat> classRes = hierClassifiers[c]->classify(cameraData[c], pointCloudCamera);
-				timeEndClassification = std::chrono::high_resolution_clock::now();
-				//cout << "End classification" << endl;
-				Mat bestLabels(numRows, numCols, CV_32SC1, Scalar(0));
-				Mat bestScore(numRows, numCols, CV_32FC1, Scalar(-1));
-				for(int l = 0; l < labels.size(); l++){
-					Mat cmp;
-					//cout << "classRes[l].size() = " << classRes[l].size() << endl;
-					//cout << "bestScore.rows = " << bestScore.rows << endl;
-					compare(bestScore, classRes[l], cmp, CMP_LE);
-					//cout << "bestLabels.size() = " << bestLabels.size() << endl;
-					bestLabels.setTo(l, cmp);
-					//cout << "max" << endl;
-					bestScore = max(bestScore, classRes[l]);
-				}
-				classifiedImage[c] = bestLabels;
+				if(!cameraData[c].empty()){
+					Mat pointCloudCamera;
+					if(!pointCloudImu.empty()){
+						Mat pointCloudCamera(pointCloudImu.rows, pointCloudImu.cols, CV_32FC1);
+						pointCloudImu.rowRange(4, 6).copyTo(pointCloudCamera.rowRange(4, 6));
+						Mat tmpPointCoords = cameraOrigImu[c] * pointCloudImu.rowRange(0, 4);
+						tmpPointCoords.copyTo(pointCloudCamera.rowRange(0, 4));
+					}
+					cout << "Classification" << endl;
+					vector<Mat> classRes = hierClassifiers[c]->classify(cameraData[c], pointCloudCamera);
+					timeEndClassification = std::chrono::high_resolution_clock::now();
+					//cout << "End classification" << endl;
+					Mat bestLabels(numRows, numCols, CV_32SC1, Scalar(0));
+					Mat bestScore(numRows, numCols, CV_32FC1, Scalar(-1));
+					for(int l = 0; l < labels.size(); l++){
+						Mat cmp;
+						//cout << "classRes[l].size() = " << classRes[l].size() << endl;
+						//cout << "bestScore.rows = " << bestScore.rows << endl;
+						compare(bestScore, classRes[l], cmp, CMP_LE);
+						//cout << "bestLabels.size() = " << bestLabels.size() << endl;
+						bestLabels.setTo(l, cmp);
+						//cout << "max" << endl;
+						bestScore = max(bestScore, classRes[l]);
+					}
+					//TODO undo
+					//classifiedImage[c] = bestLabels;
+					classifiedImage[c] = Mat(numRows, numCols, CV_32SC1, Scalar(0));
 
-				cout << "Copying classified image" << endl;
-				std::unique_lock<std::mutex> lck(mtxClassIm);
-				classifiedImage[c].copyTo(sharedClassifiedImage);
-				cameraData[c].copyTo(sharedOriginalImage);
-				lck.unlock();
+					cout << "Copying classified image" << endl;
+					std::unique_lock<std::mutex> lck(mtxClassIm);
+					classifiedImage[c].copyTo(sharedClassifiedImage);
+					cameraData[c].copyTo(sharedOriginalImage);
+					lck.unlock();
+				}
 			}
 			computeConstraints(nextCurTimestamp);
 			timeEndConstraints = std::chrono::high_resolution_clock::now();
 		}
-		cout << "Map segments time: " << chrono::duration_cast<chrono::milliseconds>(timeEndMapSegments - timeBegin).count() << " ms" << endl;
-		cout << "Classification time: " << chrono::duration_cast<chrono::milliseconds>(timeEndClassification - timeEndMapSegments).count() << " ms" << endl;
-		cout << "Constraints time: " << chrono::duration_cast<chrono::milliseconds>(timeEndConstraints - timeEndClassification).count() << " ms" << endl;
+		cout << "Map segments time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndMapSegments - timeBegin).count() << " ms" << endl;
+		cout << "Classification time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndClassification - timeEndMapSegments).count() << " ms" << endl;
+		cout << "Constraints time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndConstraints - timeEndClassification).count() << " ms" << endl;
 
 
 		std::chrono::milliseconds duration(200);
@@ -1417,6 +1471,12 @@ const std::vector<cv::Mat> Camera::getData(){
 	for(int i = 0; i < cameras.size(); i++){
 		Mat tmp;
 		cameras[i].retrieve(tmp);
+		//cout << "tmp.cols: " << tmp.cols << ", tmp.rows: " << tmp.rows << endl;
+		if(!tmp.empty() && (tmp.rows != numRows || tmp.cols != numCols)){
+			Mat tmpResized;
+			resize(tmp, tmpResized, Size(numCols, numRows));
+			tmp = tmpResized;
+		}
 		ret.push_back(tmp);
 	}
 	return ret;
@@ -1452,7 +1512,7 @@ void Camera::open(std::vector<std::string> device){
 			throw "Cannot open camera device";
 		}
 	}
-	runThread = false;
+	runThread = true;
 	cameraThread = std::thread(&Camera::run, this);
 }
 
@@ -1466,6 +1526,7 @@ void Camera::close(){
 		cameras[i].release();
 	}
 	cameras.clear();
+	cout << "End closing cameras" << endl;
 }
 
 bool Camera::isOpen(){

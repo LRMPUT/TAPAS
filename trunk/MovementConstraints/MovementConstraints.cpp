@@ -62,6 +62,7 @@ cv::Mat MovementConstraints::readMatrixSettings(TiXmlElement* parent, const char
 // Main loop of MovementContraints thread.
 void MovementConstraints::run(){
 
+#ifndef ROBOT_OFFLINE
 	while(runThread){
 		if(robot->isEncodersOpen() && robot->isImuOpen()){
 			break;
@@ -69,6 +70,7 @@ void MovementConstraints::run(){
 		std::chrono::milliseconds duration(100);
 		std::this_thread::sleep_for(duration);
 	}
+#endif
 
 	//1000 ms sleep
 	std::chrono::milliseconds duration(1000);
@@ -152,8 +154,8 @@ void MovementConstraints::updateConstraintsMap(){
 	constraintsMap = Scalar(0);
 
 	//polling each constraints module to update map
-	this->insertHokuyoConstraints(constraintsMap);
-	//camera->insertConstraints(constraintsMap);
+	//this->insertHokuyoConstraints(constraintsMap);
+	camera->insertConstraints(constraintsMap);
 	//cout << constraintsMap << endl;
 	lckMap.unlock();
 	//cout << "End updateConstraintsMap()" << endl;
@@ -254,6 +256,7 @@ cv::Mat MovementConstraints::compTrans(	cv::Mat orient,
 }
 
 void MovementConstraints::updateCurPosCloudMapCenter(){
+#ifndef ROBOT_OFFLINE
 	if(robot->isImuOpen() && robot->isEncodersOpen()){
 		std::chrono::high_resolution_clock::time_point imuTimestamp;
 		Mat encodersCur = robot->getEncoderData();
@@ -301,6 +304,11 @@ void MovementConstraints::updateCurPosCloudMapCenter(){
 		imuCur.copyTo(imuPrev);
 		encodersCur.copyTo(encodersPrev);
 	}
+#else
+	std::unique_lock<std::mutex> lck(mtxPointCloud);
+	curPosCloudMapCenter = Mat::eye(4, 4, CV_32FC1);
+	lck.unlock();
+#endif
 }
 
 void MovementConstraints::processPointCloud(){
