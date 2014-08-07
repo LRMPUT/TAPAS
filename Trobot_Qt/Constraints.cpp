@@ -97,6 +97,7 @@ void Constraints::updateMapView(){
 		viewer->updatePointCloud(pointCloudImuMapCenter);
 	}
 	if(!curPosImuMapCenter.empty()){
+		//cout << "Updating constraintsMap" << endl;
 		viewer->updateRobotPos(curPosImuMapCenter);
 		viewer->updateConstraintsMap(constraintsMap);
 		viewer->rysuj();

@@ -75,7 +75,9 @@ void Hokuyo::openPort(std::string port){
 
 void Hokuyo::closePort(){
 	runThread = false;
-	readingThread.join();
+	if(readingThread.joinable()){
+		readingThread.join();
+	}
 	cout << "Closing hokuyo" << endl;
 	hokuyo.close();
 }
