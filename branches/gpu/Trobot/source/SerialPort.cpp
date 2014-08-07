@@ -231,7 +231,7 @@ namespace trobot {
 		}
 #else
 		vector<string> names;
-		filesystem::path dirPath("/dev/robots");
+		/*filesystem::path dirPath("/dev/robots");
 		names.push_back(string("gps"));
 		names.push_back(string("imu"));
 		names.push_back(string("driver"));
@@ -239,15 +239,15 @@ namespace trobot {
 		names.push_back(string("hokuyo"));
 		names.push_back(string("encoders"));
 		names.push_back(string("driverLeft"));
-		names.push_back(string("driverRight"));
-		/*filesystem::path dirPath("/dev");
+		names.push_back(string("driverRight"));*/
+		filesystem::path dirPath("/dev");
 		names.push_back(string("ttyACM"));
 		names.push_back(string("ttyUSB"));
-		names.push_back(string("video"));*/
+		names.push_back(string("video"));
 		filesystem::directory_iterator endIt;
 		for(filesystem::directory_iterator dirIt(dirPath); dirIt != endIt; dirIt++){
 			for(int i = 0; i < names.size(); i++){
-				if(string(dirIt->path().filename().c_str()).length() == names[i].length()){
+				if(string(dirIt->path().filename().c_str()).length() <= names[i].length() + 1){
 					if(string(dirIt->path().filename().c_str()).find(names[i]) == 0){
 						ports.push_back(dirIt->path().c_str());
 					}

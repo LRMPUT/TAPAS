@@ -13,6 +13,7 @@
 //#include <vector_types.h>
 
 #include <cstdio>
+#include <iostream>
 
 // This will output the proper CUDA error strings in the event that a CUDA host call returns an error
 #define checkCudaErrors(err)  __checkCudaErrors (err, __FILE__, __LINE__)
@@ -30,11 +31,12 @@ inline void __checkCudaErrors(cudaError err, const char *file, const int line )
 
 void cudaAllocateAndCopyToDevice(void** d_dst, void* src, int size){
 	checkCudaErrors(cudaMalloc(d_dst, size));
+	//std::cout << "*d_dst = " << *d_dst << ", src = " << src << ", size = " << size << std::endl;
 	checkCudaErrors(cudaMemcpy(*d_dst, src, size, cudaMemcpyHostToDevice));
 }
 
 void cudaCopyFromDeviceAndFree(void* dst, void* d_src, int size){
-	checkCudaErrors(cudaMemcpy(dst, d_src, size, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpy(dst, d_src, size, cudaMemcpyDeviceToHost));
 	checkCudaErrors(cudaFree(d_src));
 }
 
@@ -57,9 +59,9 @@ extern "C" void reprojectCameraPoints(float* invCameraMatrix,
 	cudaAllocateAndCopyToDevice((void**)&d_invCameraMatrix,
 								invCameraMatrix,
 								3*3*sizeof(float));
-	cudaAllocateAndCopyToDevice((void**)&d_distCoeffs,
-								distCoeffs,
-								5*sizeof(float));
+	//cudaAllocateAndCopyToDevice((void**)&d_distCoeffs,
+	//							distCoeffs,
+	//							5*sizeof(float));
 	cudaAllocateAndCopyToDevice((void**)&d_curPosCameraMapCenterGlobal,
 								curPosCameraMapCenterGlobal,
 								4*4*sizeof(float));

@@ -103,7 +103,9 @@ void Encoders::openPort(const std::string& device, unsigned int baud){
 
 void Encoders::closePort(){
 	runThread = false;
-	readingThread.join();
+	if(readingThread.joinable()){
+		readingThread.join();
+	}
 	serialPort.close();
 }
 

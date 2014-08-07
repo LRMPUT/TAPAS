@@ -51,6 +51,7 @@ void Viewer::drawPointCloud(){
 void Viewer::drawConstraintsMap(){
 	//cout << "drawConstraintsMap()" << endl;
 	if(!constraintsMap.empty()){
+		//cout << "drawing" << endl;
 		glPushMatrix();
 		multCurMatrix(imuOrigGlobal.inv());
 
