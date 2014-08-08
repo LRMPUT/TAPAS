@@ -16,6 +16,7 @@
 #include <cuda_runtime.h>
 //Robotour
 #include "Camera.h"
+#include "CameraCuda.h"
 #include "../../Robot/Robot.h"
 
 using namespace boost;
@@ -67,7 +68,9 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 	cout << "Available CUDA devices: " <<  devCount << endl;
 	cudaDeviceProp prop;
 	cudaGetDeviceProperties(&prop, 0);
-	cout << "Version: " << prop.major << "." << prop.minor << endl;
+	cout << "Computing capability: " << prop.major << "." << prop.minor << endl;
+	cout << "Max threads per block: " << prop.maxThreadsPerBlock << endl;
+	cout << "Max grid dim: " << prop.maxGridSize[0] << "x" << prop.maxGridSize[1] << "x" << prop.maxGridSize[2] << endl;
 	cout << "Number of processors: " << prop.multiProcessorCount << endl;
 	cout << "Unified addressing: " << prop.unifiedAddressing << endl;
 #endif //NO_CUDA
@@ -232,16 +235,6 @@ void Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 	}
 	cout << "End computing map segments" << endl;
 }
-
-extern "C" void reprojectCameraPoints(float* invCameraMatrix,
-		float* distCoeffs,
-		float* curPosCameraMapCenterGlobal,
-		float* curPosCameraMapCenterImu,
-		int numRows,
-		int numCols,
-		int* segments,
-		int mapSize,
-		int rasterSize);
 
 void Camera::computeMapSegmentsGpu(cv::Mat curPosImuMapCenter){
 	cout << "Computing map segments" << endl;
@@ -1231,7 +1224,7 @@ void Camera::run(){
 						tmpPointCoords.copyTo(pointCloudCamera.rowRange(0, 4));
 					}
 					cout << "Classification" << endl;
-					vector<Mat> classRes = hierClassifiers[c]->classify(cameraData[c], pointCloudCamera);
+					vector<Mat> classRes = hierClassifiers[c]->classify(cameraData[c], pointCloudCamera, mapSegments[c]);
 					timeEndClassification = std::chrono::high_resolution_clock::now();
 					//cout << "End classification" << endl;
 					Mat bestLabels(numRows, numCols, CV_32SC1, Scalar(0));
@@ -1247,8 +1240,8 @@ void Camera::run(){
 						bestScore = max(bestScore, classRes[l]);
 					}
 					//TODO undo
-					//classifiedImage[c] = bestLabels;
-					classifiedImage[c] = Mat(numRows, numCols, CV_32SC1, Scalar(0));
+					classifiedImage[c] = bestLabels;
+					//classifiedImage[c] = Mat(numRows, numCols, CV_32SC1, Scalar(0));
 
 					cout << "Copying classified image" << endl;
 					std::unique_lock<std::mutex> lck(mtxClassIm);

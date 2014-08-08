@@ -230,8 +230,9 @@ namespace trobot {
 			}
 		}
 #else
+#ifndef ROBOT_OFFLINE
 		vector<string> names;
-		/*filesystem::path dirPath("/dev/robots");
+		filesystem::path dirPath("/dev/robots");
 		names.push_back(string("gps"));
 		names.push_back(string("imu"));
 		names.push_back(string("driver"));
@@ -239,11 +240,13 @@ namespace trobot {
 		names.push_back(string("hokuyo"));
 		names.push_back(string("encoders"));
 		names.push_back(string("driverLeft"));
-		names.push_back(string("driverRight"));*/
+		names.push_back(string("driverRight"));
+#else
 		filesystem::path dirPath("/dev");
 		names.push_back(string("ttyACM"));
 		names.push_back(string("ttyUSB"));
 		names.push_back(string("video"));
+#endif
 		filesystem::directory_iterator endIt;
 		for(filesystem::directory_iterator dirIt(dirPath); dirIt != endIt; dirIt++){
 			for(int i = 0; i < names.size(); i++){
