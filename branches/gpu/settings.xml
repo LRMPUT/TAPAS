@@ -29,12 +29,12 @@
 				<descriptor>
 					<hist_HS len_H="4" len_S="4" />
 					<hist_V len="8" />
-					<covar_HSV len="9" />
 					<mean_HSV len="3" />
-					<covar_laser len="4" />
-					<mean_laser len="2" />
-					<kurt_laser len="2" />
+					<covar_HSV len="9" />
 					<hist_DI len_D="5" len_I="5" />
+					<mean_laser len="2" />
+					<covar_laser len="4" />
+					<!--kurt_laser len="2" />-->
 				</descriptor>
 				<!--<Classifier type="SVM">
 					<cache enabled="true" />
@@ -94,7 +94,7 @@
 						<degree value="2" />
 						<C value="10" />
 					</svm>
-					<info desc_beg="0" desc_end="8" />
+					<info desc_beg="0" desc_end="7" />
 				</Classifier>
 			</HierClassifier>
 			<learning dir="../../MovementConstraints/Camera/training_data" />

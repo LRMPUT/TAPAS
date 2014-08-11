@@ -52,7 +52,7 @@ TrobotQt::TrobotQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
 
 	robot.openImu("/dev/robots/imu");
 	robot.openEncoders("/dev/robots/encoders");
-	//robot.openHokuyo("/dev/robots/hokuyo");
+	robot.openHokuyo("/dev/robots/hokuyo");
 	robot.openCamera(vector<string>(1, "/dev/video0"));
 	robot.openRobotsDrive("/dev/robots/driverLeft", "/dev/robots/driverRight");
 }

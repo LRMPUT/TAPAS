@@ -192,6 +192,10 @@ public:
 										cv::Mat terrain,
 										cv::Mat regionsOnImage);
 
+	std::vector<Entry> extractEntriesGPU(cv::Mat imageBGR,
+										cv::Mat terrain,
+										cv::Mat regionsOnImage);
+
 	/** \brief Funkcja segmentująca obraz używając danych RGB.
 	 * 	@return Macierz z id segmentu dla każdego piksela na obrazie.
 	 */

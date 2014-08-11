@@ -58,8 +58,8 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 
 	std::vector<boost::filesystem::path> dirs;
 	dirs.push_back("../MovementConstraints/Camera/database/przejazd22");
-	//learnFromDir(dirs);
-	readCache("cache/cameraCache");
+	learnFromDir(dirs);
+	//readCache("cache/cameraCache");
 	//computeImagePolygons();
 
 #ifndef NO_CUDA
@@ -85,66 +85,6 @@ Camera::~Camera(){
 
 void Camera::computeConstraints(std::chrono::high_resolution_clock::time_point nextCurTimestamp){
 	cout << "Computing constraints" << endl;
-	/*constraints = Mat(X_RES, Y_RES, CV_32FC1, Scalar(0));
-	Mat constrNorm(X_RES, Y_RES, CV_32FC1, Scalar(0));
-	namedWindow("original");
-	namedWindow("prob asphalt");
-	namedWindow("constraints");
-	for(int c = 0; c < image.size(); c++){
-		vector<Mat> classRes = hierClassifiers[c]->classify(image[c]);
-		//cout << "Drawing polygons" << endl;
-		Mat regions(image[c].rows, image[c].cols, CV_32SC1, Scalar(-1));
-		for(int xInd = 0; xInd < X_RES; xInd++){
-			for(int yInd = 0; yInd < Y_RES; yInd++){
-				selectPolygonPixels(imagePolygons[c][xInd][yInd],
-									xInd*X_RES + yInd,
-									regions);
-				/*float probDriv = 0;
-				for(int l = 0; l < classRes.size(); l++){
-					if(l == DRIVABLE_LABEL){
-						Mat tmp(classRes[l].rows, classRes[l].rows, CV_32FC1, Scalar(0));
-						classRes[l].copyTo(tmp, mask);
-						probDriv += sum(tmp)[0];
-					}
-				}
-				constraints.at<float>(xInd, yInd) = probDriv;/
-			}
-		}
-		//cout << "adding probabilities, classRes.size() = " << classRes.size() << endl;
-		for(int row = 0; row < image[c].rows; row++){
-			for(int col = 0; col < image[c].cols; col++){
-				if(regions.at<int>(row, col) != -1){
-					int xInd = regions.at<int>(row, col) / X_RES;
-					int yInd = regions.at<int>(row, col) % X_RES;
-					//cout << "adding " << classRes[DRIVABLE_LABEL].at<float>(row, col) << endl;
-					constraints.at<float>(yInd, xInd) += classRes[DRIVABLE_LABEL].at<float>(row, col);
-					constrNorm.at<float>(yInd, xInd) += 1;
-				}
-			}
-		}
-		//cout << "normalizing constraints" << endl;
-		for(int xInd = 0; xInd < X_RES; xInd++){
-			for(int yInd = 0; yInd < Y_RES; yInd++){
-				if(constrNorm.at<float>(yInd, xInd) != 0){
-					constraints.at<float>(yInd, xInd) /= constrNorm.at<float>(yInd, xInd);
-				}
-			}
-		}
-
-		//cout << "building test image" << endl;
-		Mat test(image[c].rows, image[c].cols, CV_32FC1);
-		for(int xInd = 0; xInd < X_RES; xInd++){
-			for(int yInd = 0; yInd < Y_RES; yInd++){
-				selectPolygonPixels(imagePolygons[c][xInd][yInd],
-									constraints.at<float>(yInd, xInd),
-									test);
-			}
-		}
-		imshow("original", image[c]);
-		imshow("prob asphalt", classRes[DRIVABLE_LABEL]);
-		imshow("constraints", test);
-		waitKey();
-	}*/
 
 	Mat votes(MAP_SIZE, MAP_SIZE, CV_32SC1, Scalar(0));
 	Mat countVotes(MAP_SIZE, MAP_SIZE, CV_32SC1, Scalar(0));

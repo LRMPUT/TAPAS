@@ -12,9 +12,11 @@
 #include <algorithm>
 #include <chrono>
 //RobotsIntellect
+#include "../../Robot/Robot.h"
 #include "HierClassifier.h"
 #include "UnionFind.h"
 #include "ClassifierSVM.h"
+#include "../CameraCuda.h"
 
 /*#define HIST_SIZE_H 4
 #define HIST_SIZE_S 4
@@ -157,26 +159,27 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 			}
 			descLen[1] = histVLen;
 		}
-		else if(dPtr->Value() == string("covar_HSV")){
-			dPtr->QueryIntAttribute("len", &covarHSVLen);
+		else if(dPtr->Value() == string("mean_HSV")){
+			dPtr->QueryIntAttribute("len", &meanHSVLen);
 			if(descLen.size() < 3){
 				descLen.resize(3);
 			}
-			descLen[2] = covarHSVLen;
+			descLen[2] = meanHSVLen;
 		}
-		else if(dPtr->Value() == string("mean_HSV")){
-			dPtr->QueryIntAttribute("len", &meanHSVLen);
+		else if(dPtr->Value() == string("covar_HSV")){
+			dPtr->QueryIntAttribute("len", &covarHSVLen);
 			if(descLen.size() < 4){
 				descLen.resize(4);
 			}
-			descLen[3] = meanHSVLen;
+			descLen[3] = covarHSVLen;
 		}
-		else if(dPtr->Value() == string("covar_laser")){
-			dPtr->QueryIntAttribute("len", &covarLaserLen);
+		else if(dPtr->Value() == string("hist_DI")){
+			dPtr->QueryIntAttribute("len_D", &histDLen);
+			dPtr->QueryIntAttribute("len_I", &histILen);
 			if(descLen.size() < 5){
 				descLen.resize(5);
 			}
-			descLen[4] = covarLaserLen;
+			descLen[4] = histDLen*histILen;
 		}
 		else if(dPtr->Value() == string("mean_laser")){
 			dPtr->QueryIntAttribute("len", &meanLaserLen);
@@ -185,21 +188,20 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 			}
 			descLen[5] = meanLaserLen;
 		}
-		else if(dPtr->Value() == string("kurt_laser")){
-			dPtr->QueryIntAttribute("len", &kurtLaserLen);
+		else if(dPtr->Value() == string("covar_laser")){
+			dPtr->QueryIntAttribute("len", &covarLaserLen);
 			if(descLen.size() < 7){
 				descLen.resize(7);
 			}
-			descLen[6] = kurtLaserLen;
+			descLen[6] = covarLaserLen;
 		}
-		else if(dPtr->Value() == string("hist_DI")){
-			dPtr->QueryIntAttribute("len_D", &histDLen);
-			dPtr->QueryIntAttribute("len_I", &histILen);
-			if(descLen.size() < 8){
-				descLen.resize(8);
-			}
-			descLen[7] = histDLen*histILen;
-		}
+		//else if(dPtr->Value() == string("kurt_laser")){
+		//	dPtr->QueryIntAttribute("len", &kurtLaserLen);
+		//	if(descLen.size() < 7){
+		//		descLen.resize(7);
+		//	}
+		//	descLen[6] = kurtLaserLen;
+		//}
 		else{
 			throw "Bad settings file - no such descriptor";
 		}
@@ -681,18 +683,19 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		begCol += histHLen*histSLen;
 		histogramV.copyTo(tmp.descriptor.colRange(begCol, begCol + histVLen));
 		begCol += histVLen;
-		covarHSV.copyTo(tmp.descriptor.colRange(begCol, begCol + covarHSVLen));
-		begCol += covarHSVLen;
 		meanHSV.copyTo(tmp.descriptor.colRange(begCol, begCol + meanHSVLen));
 		begCol += meanHSVLen;
-		covarLaser.copyTo(tmp.descriptor.colRange(begCol, begCol + covarLaserLen));
-		begCol += covarLaserLen;
-		meanLaser.copyTo(tmp.descriptor.colRange(begCol, begCol + meanLaserLen));
-		begCol += meanLaserLen;
-		kurtLaser.copyTo(tmp.descriptor.colRange(begCol, begCol + kurtLaserLen));
-		begCol += kurtLaserLen;
+		covarHSV.copyTo(tmp.descriptor.colRange(begCol, begCol + covarHSVLen));
+		begCol += covarHSVLen;
 		histogramDI.copyTo(tmp.descriptor.colRange(begCol, begCol + histDLen*histILen));
 		begCol += histDLen*histILen;
+		meanLaser.copyTo(tmp.descriptor.colRange(begCol, begCol + meanLaserLen));
+		begCol += meanLaserLen;
+		covarLaser.copyTo(tmp.descriptor.colRange(begCol, begCol + covarLaserLen));
+		begCol += covarLaserLen;
+		//kurtLaser.copyTo(tmp.descriptor.colRange(begCol, begCol + kurtLaserLen));
+		//begCol += kurtLaserLen;
+
 
 		ret.push_back(tmp);
 	}
@@ -712,6 +715,124 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 	cout << "Extract Average computing time: " << compTime.count()/times << endl;
 	cout << "Extract Average whole time: " << wholeTime.count()/times << endl;
 
+	return ret;
+}
+
+std::vector<Entry> HierClassifier::extractEntriesGPU(cv::Mat imageBGR,
+													cv::Mat terrain,
+													cv::Mat regionsOnImage)
+{
+	using namespace std::chrono;
+	high_resolution_clock::time_point start = high_resolution_clock::now();
+
+	vector<Entry> ret;
+
+	Mat imageHSV, imageH, imageS, imageV;
+	Mat sepChannels[] = {imageH, imageS, imageV};
+	cvtColor(imageBGR, imageHSV, CV_BGR2HSV);
+	split(imageHSV, sepChannels);
+
+	Mat cudaRegionsOnImage(regionsOnImage.rows, regionsOnImage.cols, CV_32SC1);
+
+	static const int maxSegments = 1000;
+	vector<bool> isPresent(maxSegments, false);
+	vector<int> newNumber(maxSegments, -1);
+	for(int r = 0; r < regionsOnImage.rows; r++){
+		for(int c = 0; c < regionsOnImage.cols; c++){
+			int region = regionsOnImage.at<int>(r, c);
+			if(region >= 0 && region < maxSegments){
+				isPresent[region] = true;
+			}
+		}
+	}
+	int numEntries = 0;
+	for(int s = 0; s < maxSegments; s++){
+		if(isPresent[s] == true){
+			newNumber[s] = numEntries;
+			numEntries++;
+		}
+	}
+	for(int r = 0; r < regionsOnImage.rows; r++){
+		for(int c = 0; c < regionsOnImage.cols; c++){
+			int region = regionsOnImage.at<int>(r, c);
+			if(region >= 0 && region < maxSegments){
+				cudaRegionsOnImage.at<int>(r, c) = newNumber[region];
+			}
+			else{
+				cudaRegionsOnImage.at<int>(r, c) = -1;
+			}
+		}
+	}
+	if(imageH.isContinuous() &&
+		imageS.isContinuous() &&
+		imageV.isContinuous() &&
+		terrain.isContinuous() &&
+		regionsOnImage.isContinuous() &&
+		cameraMatrix.isContinuous())
+	{
+		int descLen = 0;
+		FeatParams params;
+		params.histHLen = histHLen;
+		params.histHRangeMin = 0;
+		params.histHRangeMin = 60;
+		params.histSLen = histSLen;
+		params.histSRangeMin = 0;
+		params.histSRangeMin = 256;
+		descLen += histHLen*histSLen;
+
+		params.histVLen = histVLen;
+		params.histVRangeMin = 0;
+		params.histVRangeMin = 256;
+		descLen += histVLen;
+
+		descLen += 3 + 9; //mean HSV + covar HSV
+
+		params.histDLen = histDLen;
+		params.histDRangeMin = 2000;
+		params.histDRangeMin = 3000;
+		params.histILen = histILen;
+		params.histIRangeMin = 800;
+		params.histIRangeMin = 2500;
+		descLen += histDLen*histILen;
+
+		descLen += 2 + 4; //mean DI + covar DI
+
+		float *feat = new float[numEntries*descLen];
+		unsigned int *countPixelsEntries = new unsigned int[numEntries];
+		unsigned int *countPointsEntries = new unsigned int[numEntries];
+
+		extractEntries(imageH.data,
+						imageS.data,
+						imageV.data,
+						terrain.data,
+						cudaRegionsOnImage.data,
+						feat,
+						countPixelsEntries,
+						countPointsEntries,
+						cameraMatrix.data,
+						NULL,
+						imageBGR.rows,
+						imageBGR.cols,
+						terrain.cols,
+						numEntries,
+						descLen,
+						params);
+
+		for(int e = 0; e < numEntries; e++){
+			Mat descTmp(descLen, 1, CV_32FC1, feat + e, numEntries*sizeof(float));
+			Entry tmp;
+			//TODO insert imageId
+			tmp.imageId = -1;
+			tmp.weight = countPixelsEntries[e] + countPointsEntries[e];
+			descTmp = descTmp.t();
+			descTmp.copyTo(tmp.descriptor);
+			ret.push_back(tmp);
+		}
+
+		delete[] feat;
+		delete[] countPixelsEntries;
+		delete[] countPointsEntries;
+	}
 	return ret;
 }
 

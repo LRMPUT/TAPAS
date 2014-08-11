@@ -25,7 +25,7 @@ __device__ __forceinline__ void multMat(const float* const d_A,
 }
 
 
-__device__ float atomicAddOwn(float* address, float val)
+__device__ float atomicAddFloat(float* address, float val)
 {
     unsigned int* address_as_uint =
                               (unsigned int*)address;
@@ -93,9 +93,9 @@ __global__ void countSegmentPixels(const int* const d_segments,
 	int idx1d = idxY * numCols + idxX;
 
 	if(idxX < numCols && idxY < numRows){
-		int segment = d_segments[idx1d];
-		if(segment >= 0){
-			atomicInc(&d_countSegments[segment], 0xffffffff);
+		int entry = d_segments[idx1d];
+		if(entry >= 0){
+			atomicInc(&d_countSegments[entry], 0xffffffff);
 		}
 	}
 }
@@ -133,16 +133,16 @@ __global__ void compPointProjection(const float* const d_terrain,
 	}
 }
 
-__global__ void countTerrainPixels(const int* const d_segments,
+__global__ void countSegmentPoints(const int* const d_segments,
 								unsigned int* const d_countSegments,
 								int numPoints)
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
 	if(idx < numPoints){
-		int segment = d_segments[idx];
-		if(segment >= 0){
-			atomicInc(&d_countSegments[segment], 0xffffffff);
+		int entry = d_segments[idx];
+		if(entry >= 0){
+			atomicInc(&d_countSegments[entry], 0xffffffff);
 		}
 	}
 }
@@ -174,13 +174,13 @@ __global__ void compImageHistHSV(const unsigned char* const d_h,
 					(d_featParams->histHRangeMax - d_featParams->histHRangeMin) * d_featParams->histHLen;
 			int sBin = (d_s[idx1d] - d_featParams->histSRangeMin) /
 							(d_featParams->histSRangeMax - d_featParams->histSRangeMin) * d_featParams->histSLen;
-			atomicAddOwn(&d_feat[(startRow + sBin * d_featParams->histHLen + hBin)* numEntries + entry], 1.0/entryCount);
+			atomicAddFloat(&d_feat[(startRow + sBin * d_featParams->histHLen + hBin)* numEntries + entry], 1.0/entryCount);
 			startRow += d_featParams->histHLen * d_featParams->histSLen;
 
 			//histV
 			int vBin  = (d_v[idx1d] - d_featParams->histVRangeMin) /
 					(d_featParams->histVRangeMax - d_featParams->histVRangeMin) * d_featParams->histVLen;
-			atomicAddOwn(&d_feat[(startRow + vBin) * numEntries + entry], 1.0/entryCount);
+			atomicAddFloat(&d_feat[(startRow + vBin) * numEntries + entry], 1.0/entryCount);
 			startRow += d_featParams->histVLen;
 		}
 	}
@@ -208,9 +208,9 @@ __global__ void compImageMeanHSV(const unsigned char* const d_h,
 
 			int startRow = 0;
 			//meanHSV
-			atomicAddOwn(&d_feat[(startRow + 0) * numEntries + entry], (float)d_h[idx1d]/entryCount);
-			atomicAddOwn(&d_feat[(startRow + 1) * numEntries + entry], (float)d_s[idx1d]/entryCount);
-			atomicAddOwn(&d_feat[(startRow + 2) * numEntries + entry], (float)d_v[idx1d]/entryCount);
+			atomicAddFloat(&d_feat[(startRow + 0) * numEntries + entry], (float)d_h[idx1d]/entryCount);
+			atomicAddFloat(&d_feat[(startRow + 1) * numEntries + entry], (float)d_s[idx1d]/entryCount);
+			atomicAddFloat(&d_feat[(startRow + 2) * numEntries + entry], (float)d_v[idx1d]/entryCount);
 			startRow += 3;
 		}
 	}
@@ -245,51 +245,104 @@ __global__ void compImageCovarHSV(const unsigned char* const d_h,
 			float c22 = ((float)d_s[idx1d] -  d_means[1 * numEntries + entry])*((float)d_s[idx1d] -  d_means[1 * numEntries + entry])/entryCount;
 			float c23 = ((float)d_s[idx1d] -  d_means[1 * numEntries + entry])*((float)d_v[idx1d] -  d_means[2 * numEntries + entry])/entryCount;
 			float c33 = ((float)d_v[idx1d] -  d_means[2 * numEntries + entry])*((float)d_v[idx1d] -  d_means[2 * numEntries + entry])/entryCount;
-			atomicAddOwn(&d_feat[(startRow + 0) * numEntries + entry], c11);
-			atomicAddOwn(&d_feat[(startRow + 1) * numEntries + entry], c12);
-			atomicAddOwn(&d_feat[(startRow + 2) * numEntries + entry], c13);
-			atomicAddOwn(&d_feat[(startRow + 3) * numEntries + entry], c12);
-			atomicAddOwn(&d_feat[(startRow + 4) * numEntries + entry], c22);
-			atomicAddOwn(&d_feat[(startRow + 5) * numEntries + entry], c23);
-			atomicAddOwn(&d_feat[(startRow + 6) * numEntries + entry], c12);
-			atomicAddOwn(&d_feat[(startRow + 7) * numEntries + entry], c23);
-			atomicAddOwn(&d_feat[(startRow + 8) * numEntries + entry], c33);
+			atomicAddFloat(&d_feat[(startRow + 0) * numEntries + entry], c11);
+			atomicAddFloat(&d_feat[(startRow + 1) * numEntries + entry], c12);
+			atomicAddFloat(&d_feat[(startRow + 2) * numEntries + entry], c13);
+			atomicAddFloat(&d_feat[(startRow + 3) * numEntries + entry], c12);
+			atomicAddFloat(&d_feat[(startRow + 4) * numEntries + entry], c22);
+			atomicAddFloat(&d_feat[(startRow + 5) * numEntries + entry], c23);
+			atomicAddFloat(&d_feat[(startRow + 6) * numEntries + entry], c12);
+			atomicAddFloat(&d_feat[(startRow + 7) * numEntries + entry], c23);
+			atomicAddFloat(&d_feat[(startRow + 8) * numEntries + entry], c33);
 			startRow += 9;
 		}
 	}
 }
 
-__global__ void compTerrainHistDI(const int* const d_terrain,
+__global__ void compTerrainHistDI(const float* const d_terrain,
 								const int* const d_segments,
-								const unsigned int* const countSegments,
+								const unsigned int* const d_countSegments,
 								float* const d_feat,
 								int numPoints,
 								int numEntries,
 								const FeatParams* const d_featParams)
 {
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
+	if(idx < numPoints){
+		int entry = d_segments[idx];
+		if(entry >= 0){
+			int entryCount = d_countSegments[entry];
+			//distance - 4th row
+			int dBin = (d_terrain[4 * numPoints + idx] - d_featParams->histDRangeMin) /
+								(d_featParams->histDRangeMax - d_featParams->histDRangeMin) * d_featParams->histDLen;
+			//intensity - 5th row
+			int iBin = (d_terrain[5 * numPoints + idx] - d_featParams->histIRangeMin) /
+											(d_featParams->histIRangeMax - d_featParams->histIRangeMin) * d_featParams->histILen;
+
+			int startRow = 0;
+			int bin1d = iBin*d_featParams->histDLen + dBin;
+			atomicAddFloat(&d_feat[(startRow + bin1d) * numEntries + entry], (float)1.0/entryCount);
+			startRow += d_featParams->histDLen * d_featParams->histILen;
+		}
+	}
 }
 
-__global__ void compTerrainMeanDI(const int* const d_terrain,
+__global__ void compTerrainMeanDI(const float* const d_terrain,
 								const int* const d_segments,
-								const unsigned int* const countSegments,
+								const unsigned int* const d_countSegments,
 								float* const d_feat,
 								int numPoints,
 								int numEntries,
 								const FeatParams* const d_featParams)
 {
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
+	if(idx < numPoints){
+		int entry = d_segments[idx];
+		if(entry >= 0){
+			int entryCount = d_countSegments[entry];
+
+			int startRow = 0;
+			//meanDI
+			atomicAddFloat(&d_feat[(startRow + 0) * numEntries + entry], (float)d_terrain[4 * numPoints + idx]/entryCount);
+			atomicAddFloat(&d_feat[(startRow + 1) * numEntries + entry], (float)d_terrain[5 * numPoints + idx]/entryCount);
+			startRow += 2;
+		}
+	}
 }
 
-__global__ void compTerrainCovarDI(const int* const d_terrain,
+__global__ void compTerrainCovarDI(const float* const d_terrain,
 								const int* const d_segments,
-								const unsigned int* const countSegments,
+								const unsigned int* const d_countSegments,
+								const float* const d_means,
 								float* const d_feat,
 								int numPoints,
 								int numEntries,
 								const FeatParams* const d_featParams)
 {
+	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 
+	if(idx < numPoints){
+		int entry = d_segments[idx];
+		if(entry >= 0){
+			int entryCount = d_countSegments[entry];
+
+			int startRow = 0;
+			//covar DI
+			float c11 = (d_terrain[0 * numPoints + idx] - d_means[0 * numEntries + entry]) *
+							(d_terrain[0 * numPoints + idx] - d_means[0 * numEntries + entry])/entryCount;
+			float c12 = (d_terrain[0 * numPoints + idx] - d_means[0 * numEntries + entry]) *
+							(d_terrain[1 * numPoints + idx] - d_means[1 * numEntries + entry])/entryCount;
+			float c22 = (d_terrain[1 * numPoints + idx] - d_means[1 * numEntries + entry]) *
+							(d_terrain[1 * numPoints + idx] - d_means[1 * numEntries + entry])/entryCount;
+			atomicAddFloat(&d_feat[0 * numEntries + entry], c11);
+			atomicAddFloat(&d_feat[1 * numEntries + entry], c12);
+			atomicAddFloat(&d_feat[2 * numEntries + entry], c12);
+			atomicAddFloat(&d_feat[3 * numEntries + entry], c22);
+			startRow += 4;
+		}
+	}
 }
 
 __global__ void classifySVM(const float* const d_feat,
