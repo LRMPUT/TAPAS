@@ -28,6 +28,7 @@ inline void __checkCudaErrors(cudaError err, const char *file, const int line )
 }
 
 #include "CameraKernels.cu"
+#include "cuPrintf.cu"
 
 void cudaAllocateAndCopyToDevice(void** d_dst, void* src, int size){
 	checkCudaErrors(cudaMalloc(d_dst, size));
@@ -121,6 +122,9 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 	unsigned int *d_countSegmentsIm, *d_countSegmentsPoints;
 	FeatParams *d_featParams;
 
+	printf("cudaPrintfInit\n");
+	cudaPrintfInit();
+	printf("End cudaPrintfInit\n");
 
 	cudaAllocateAndCopyToDevice((void**)&d_featParams,
 									(void*)featParams,
@@ -157,9 +161,11 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 	dim3 blockSizeIm(32, 16, 1);
 	dim3 gridSizeIm((numCols + blockSizeIm.x - 1) / blockSizeIm.x,
 					(numRows + blockSizeIm.y - 1) / blockSizeIm.y);
+	printf("gridSizeIm = (%d, %d, %d)\n", gridSizeIm.x, gridSizeIm.y, gridSizeIm.z);
 
 	dim3 blockSizePoints(512, 1, 1);
 	dim3 gridSizePoints((numPoints + blockSizePoints.x - 1) / blockSizePoints.x, 1, 1);
+	printf("gridSizePoints = (%d, %d, %d)\n", gridSizePoints.x, gridSizePoints.y, gridSizePoints.z);
 
 	//precomputing
 	countSegmentPixels<<<gridSizeIm, blockSizeIm>>>(d_segmentsIm,
@@ -167,6 +173,9 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 													numRows,
 													numCols,
 													numEntries);
+
+	cudaPrintfDisplay(stdout, true);
+	printf("End displaying cuPrintf\n");
 	cudaDeviceSynchronize();
 	checkCudaErrors(cudaGetLastError());
 
@@ -268,6 +277,8 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 	cudaDeviceSynchronize();
 	checkCudaErrors(cudaGetLastError());
 	startRow += 4;
+
+	cudaPrintfEnd();
 
 	checkCudaErrors(cudaFree(d_featParams));
 	checkCudaErrors(cudaFree(d_cameraMatrix));

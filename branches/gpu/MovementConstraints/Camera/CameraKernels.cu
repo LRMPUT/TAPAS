@@ -3,6 +3,7 @@
 #define CAMERA_KERNELS_CU
 
 #include "CameraCuda.h"
+#include "cuPrintf.cu"
 
 __device__ __forceinline__ void multMat(const float* const d_A,
 										const float* const d_B,
@@ -92,8 +93,10 @@ __global__ void countSegmentPixels(const int* const d_segments,
 	int idxY = (blockIdx.y * blockDim.y) + threadIdx.y;
 	int idx1d = idxY * numCols + idxX;
 
+	cuPrintf("idx1d = %d\n", idx1d);
 	if(idxX < numCols && idxY < numRows){
 		int entry = d_segments[idx1d];
+		cuPrintf("entry = %d\n", entry);
 		if(entry >= 0){
 			atomicInc(&d_countSegments[entry], 0xffffffff);
 		}

@@ -12,7 +12,7 @@
 #include <algorithm>
 #include <chrono>
 //RobotsIntellect
-#include "../../Robot/Robot.h"
+//#include "../../Robot/Robot.h"
 #include "HierClassifier.h"
 #include "UnionFind.h"
 #include "ClassifierSVM.h"
@@ -411,7 +411,7 @@ std::vector<cv::Mat> HierClassifier::classify(cv::Mat image,
 	else{
 		regionsOnImage = segmentation;
 	}
-	vector<Entry> entries = extractEntries(image, terrain, regionsOnImage);
+	vector<Entry> entries = extractEntriesGPU(image, terrain, regionsOnImage);
 
 	using namespace std::chrono;
 	high_resolution_clock::time_point start = high_resolution_clock::now();
@@ -723,23 +723,33 @@ std::vector<Entry> HierClassifier::extractEntriesGPU(cv::Mat imageBGR,
 													cv::Mat regionsOnImage)
 {
 	using namespace std::chrono;
-	high_resolution_clock::time_point start = high_resolution_clock::now();
+	high_resolution_clock::time_point startTime = high_resolution_clock::now();
 
 	vector<Entry> ret;
 
-	Mat imageHSV, imageH, imageS, imageV;
-	Mat sepChannels[] = {imageH, imageS, imageV};
+	Mat imageHSV;
 	cvtColor(imageBGR, imageHSV, CV_BGR2HSV);
-	split(imageHSV, sepChannels);
 
-	Mat cudaRegionsOnImage(regionsOnImage.rows, regionsOnImage.cols, CV_32SC1);
+	Mat imageH(imageHSV.rows, imageHSV.cols, CV_8UC1);
+	Mat imageS(imageHSV.rows, imageHSV.cols, CV_8UC1);
+	Mat imageV(imageHSV.rows, imageHSV.cols, CV_8UC1);
+	Mat sepChannels[] = {imageH, imageS, imageV};
+	int fromTo[] = {0,0, 1,1, 2,2};
+	//split(imageHSV, sepChannels);
+	//cout << "Mixing channels" << endl;
+	mixChannels(&imageHSV, 1, sepChannels, 3, fromTo, 3);
+	//cout << "End mixing channels" << endl;
 
-	static const int maxSegments = 1000;
+	Mat gpuRegionsOnImage(regionsOnImage.rows, regionsOnImage.cols, CV_32SC1);
+
+	/*static const int maxSegments = 1000;
 	vector<bool> isPresent(maxSegments, false);
 	vector<int> newNumber(maxSegments, -1);
+	vector<int> oldNumber(maxSegments, -1);
 	for(int r = 0; r < regionsOnImage.rows; r++){
 		for(int c = 0; c < regionsOnImage.cols; c++){
 			int region = regionsOnImage.at<int>(r, c);
+			cout << "region at (" << c << ", " << r << ") = " << region << endl;
 			if(region >= 0 && region < maxSegments){
 				isPresent[region] = true;
 			}
@@ -748,6 +758,7 @@ std::vector<Entry> HierClassifier::extractEntriesGPU(cv::Mat imageBGR,
 	int numEntries = 0;
 	for(int s = 0; s < maxSegments; s++){
 		if(isPresent[s] == true){
+			oldNumber[numEntries] = s;
 			newNumber[s] = numEntries;
 			numEntries++;
 		}
@@ -756,18 +767,44 @@ std::vector<Entry> HierClassifier::extractEntriesGPU(cv::Mat imageBGR,
 		for(int c = 0; c < regionsOnImage.cols; c++){
 			int region = regionsOnImage.at<int>(r, c);
 			if(region >= 0 && region < maxSegments){
-				cudaRegionsOnImage.at<int>(r, c) = newNumber[region];
+				gpuRegionsOnImage.at<int>(r, c) = newNumber[region];
 			}
 			else{
-				cudaRegionsOnImage.at<int>(r, c) = -1;
+				gpuRegionsOnImage.at<int>(r, c) = -1;
+			}
+		}
+	}*/
+	int numEntries = 0;
+	map<int, int> segmentIdToGpuSegmentId;
+	map<int, int> gpuSegmentIdToSegmentId;
+	segmentIdToGpuSegmentId[-1] = -1;
+	for(int r = 0; r < regionsOnImage.rows; r++){
+		for(int c = 0; c < regionsOnImage.cols; c++){
+			int region = regionsOnImage.at<int>(r, c);
+			//cout << "region at (" << c << ", " << r << ") = " << region << endl;
+			if(region >= 0){
+				if(segmentIdToGpuSegmentId.count(region) == 0){
+					segmentIdToGpuSegmentId[region] = numEntries;
+					gpuSegmentIdToSegmentId[numEntries] = region;
+					numEntries++;
+				}
 			}
 		}
 	}
+
+	high_resolution_clock::time_point endConvertingTime = high_resolution_clock::now();
+	cout << "Checking if is contnuous" << endl;
+	cout << "imageH.isContinuous() = " << imageH.isContinuous()  << endl;
+	cout << "imageS.isContinuous() = " << imageS.isContinuous() << endl;
+	cout << "imageV.isContinuous() = " <<  imageV.isContinuous() << endl;
+	cout << "terrain.isContinuous() = " <<  terrain.isContinuous() << endl;
+	cout << "gpuRegionsOnImage.isContinuous() = " <<  gpuRegionsOnImage.isContinuous() << endl;
+	cout << "cameraMatrix.isContinuous() = " <<  cameraMatrix.isContinuous() << endl;
 	if(imageH.isContinuous() &&
 		imageS.isContinuous() &&
 		imageV.isContinuous() &&
 		terrain.isContinuous() &&
-		regionsOnImage.isContinuous() &&
+		gpuRegionsOnImage.isContinuous() &&
 		cameraMatrix.isContinuous())
 	{
 		int descLen = 0;
@@ -797,35 +834,39 @@ std::vector<Entry> HierClassifier::extractEntriesGPU(cv::Mat imageBGR,
 
 		descLen += 2 + 4; //mean DI + covar DI
 
+		cout << "numEntries = " << numEntries << ", descLen = " << descLen << endl;
+
 		float *feat = new float[numEntries*descLen];
 		unsigned int *countPixelsEntries = new unsigned int[numEntries];
 		unsigned int *countPointsEntries = new unsigned int[numEntries];
 
-		extractEntries(imageH.data,
+		::extractEntries(imageH.data,
 						imageS.data,
 						imageV.data,
-						terrain.data,
-						cudaRegionsOnImage.data,
+						(float*)terrain.data,
+						(int*)gpuRegionsOnImage.data,
 						feat,
 						countPixelsEntries,
 						countPointsEntries,
-						cameraMatrix.data,
+						(float*)cameraMatrix.data,
 						NULL,
 						imageBGR.rows,
 						imageBGR.cols,
 						terrain.cols,
 						numEntries,
 						descLen,
-						params);
+						&params);
 
 		for(int e = 0; e < numEntries; e++){
 			Mat descTmp(descLen, 1, CV_32FC1, feat + e, numEntries*sizeof(float));
 			Entry tmp;
-			//TODO insert imageId
-			tmp.imageId = -1;
+			tmp.imageId = gpuSegmentIdToSegmentId[e];
 			tmp.weight = countPixelsEntries[e] + countPointsEntries[e];
 			descTmp = descTmp.t();
 			descTmp.copyTo(tmp.descriptor);
+			cout << "imageId = " << tmp.imageId << endl;
+			cout << "weight = " << tmp.weight << endl;
+			cout << "descriptor = " << tmp.descriptor << endl;
 			ret.push_back(tmp);
 		}
 
@@ -833,6 +874,10 @@ std::vector<Entry> HierClassifier::extractEntriesGPU(cv::Mat imageBGR,
 		delete[] countPixelsEntries;
 		delete[] countPointsEntries;
 	}
+
+	high_resolution_clock::time_point endTime = high_resolution_clock::now();
+	cout << "Extract convert time: " << duration_cast<std::chrono::milliseconds>(endConvertingTime - startTime).count() << endl;
+	cout << "Extract gpu time: " << duration_cast<std::chrono::milliseconds>(endTime - endConvertingTime).count() << endl;
 	return ret;
 }
 
