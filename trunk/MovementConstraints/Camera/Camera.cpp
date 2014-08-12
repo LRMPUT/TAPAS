@@ -13,7 +13,10 @@
 #include <sstream>
 #include <algorithm>
 //CUDA
-#include <cuda_runtime.h>
+#ifndef NO_CUDA
+	#include <cuda_runtime.h>
+#endif
+
 //Robotour
 #include "Camera.h"
 #include "../../Robot/Robot.h"
@@ -243,6 +246,7 @@ extern "C" void reprojectCameraPoints(float* invCameraMatrix,
 		int mapSize,
 		int rasterSize);
 
+#ifndef NO_CUDA
 void Camera::computeMapSegmentsGpu(cv::Mat curPosImuMapCenter){
 	cout << "Computing map segments" << endl;
 	//namedWindow("test");
@@ -274,6 +278,7 @@ void Camera::computeMapSegmentsGpu(cv::Mat curPosImuMapCenter){
 		}
 	}
 }
+#endif
 
 std::vector<cv::Point2f> Camera::computePointProjection(const std::vector<cv::Point3f>& spPoints,
 														int cameraInd)
