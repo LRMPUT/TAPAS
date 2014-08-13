@@ -740,7 +740,7 @@ std::vector<Entry> HierClassifier::extractEntriesGPU(cv::Mat imageBGR,
 	mixChannels(&imageHSV, 1, sepChannels, 3, fromTo, 3);
 	//cout << "End mixing channels" << endl;
 
-	Mat gpuRegionsOnImage(regionsOnImage.rows, regionsOnImage.cols, CV_32SC1);
+	Mat gpuRegionsOnImage(regionsOnImage.rows, regionsOnImage.cols, CV_32SC1, Scalar(-1));
 
 	/*static const int maxSegments = 1000;
 	vector<bool> isPresent(maxSegments, false);
@@ -789,6 +789,12 @@ std::vector<Entry> HierClassifier::extractEntriesGPU(cv::Mat imageBGR,
 					numEntries++;
 				}
 			}
+			gpuRegionsOnImage.at<int>(r, c) = segmentIdToGpuSegmentId[region];
+		}
+	}
+	for(int r = 0; r < regionsOnImage.rows; r++){
+		for(int c = 0; c < regionsOnImage.cols; c++){
+			int region = regionsOnImage.at<int>(r, c);
 		}
 	}
 
@@ -803,7 +809,7 @@ std::vector<Entry> HierClassifier::extractEntriesGPU(cv::Mat imageBGR,
 	if(imageH.isContinuous() &&
 		imageS.isContinuous() &&
 		imageV.isContinuous() &&
-		terrain.isContinuous() &&
+		(terrain.isContinuous() || terrain.empty()) &&
 		gpuRegionsOnImage.isContinuous() &&
 		cameraMatrix.isContinuous())
 	{
@@ -811,30 +817,31 @@ std::vector<Entry> HierClassifier::extractEntriesGPU(cv::Mat imageBGR,
 		FeatParams params;
 		params.histHLen = histHLen;
 		params.histHRangeMin = 0;
-		params.histHRangeMin = 60;
+		params.histHRangeMax = 60;
 		params.histSLen = histSLen;
 		params.histSRangeMin = 0;
-		params.histSRangeMin = 256;
+		params.histSRangeMax = 256;
 		descLen += histHLen*histSLen;
 
 		params.histVLen = histVLen;
 		params.histVRangeMin = 0;
-		params.histVRangeMin = 256;
+		params.histVRangeMax = 256;
 		descLen += histVLen;
 
 		descLen += 3 + 9; //mean HSV + covar HSV
 
 		params.histDLen = histDLen;
 		params.histDRangeMin = 2000;
-		params.histDRangeMin = 3000;
+		params.histDRangeMax = 3000;
 		params.histILen = histILen;
 		params.histIRangeMin = 800;
-		params.histIRangeMin = 2500;
+		params.histIRangeMax = 2500;
 		descLen += histDLen*histILen;
 
 		descLen += 2 + 4; //mean DI + covar DI
 
 		cout << "numEntries = " << numEntries << ", descLen = " << descLen << endl;
+		cout << "histHLen = " << histHLen << ", histSLen = " << histSLen << ", histVLen = " << histVLen << endl;
 
 		float *feat = new float[numEntries*descLen];
 		unsigned int *countPixelsEntries = new unsigned int[numEntries];

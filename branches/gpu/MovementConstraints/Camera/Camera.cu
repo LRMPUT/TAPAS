@@ -30,7 +30,7 @@ inline void __checkCudaErrors(cudaError err, const char *file, const int line )
 #include "CameraKernels.cu"
 #include "cuPrintf.cu"
 
-void cudaAllocateAndCopyToDevice(void** d_dst, void* src, int size){
+void cudaAllocateAndCopyToDevice(void** d_dst, const void* src, int size){
 	checkCudaErrors(cudaMalloc(d_dst, size));
 	//std::cout << "*d_dst = " << *d_dst << ", src = " << src << ", size = " << size << std::endl;
 	checkCudaErrors(cudaMemcpy(*d_dst, src, size, cudaMemcpyHostToDevice));
@@ -119,105 +119,129 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 	unsigned char *d_h, *d_s, *d_v;
 	float *d_terrain, *d_feat, *d_cameraMatrix, *d_distCoeffs;
 	int *d_segmentsIm, *d_segmentsPoints;
+	int* d_featInt;
 	unsigned int *d_countSegmentsIm, *d_countSegmentsPoints;
 	FeatParams *d_featParams;
 
 	printf("cudaPrintfInit\n");
-	cudaPrintfInit();
+	cudaPrintfInit(10*1024*1024);
 	printf("End cudaPrintfInit\n");
 
 	cudaAllocateAndCopyToDevice((void**)&d_featParams,
-									(void*)featParams,
+									featParams,
 									sizeof(FeatParams));
 	cudaAllocateAndCopyToDevice((void**)&d_cameraMatrix,
-								(void*)cameraMatrix,
+								cameraMatrix,
 								3*3*sizeof(float));
 	//cudaAllocateAndCopyToDevice((void**)&d_distCoeffs,
 	//							distCoeffs,
 	//							5*sizeof(float));
 	cudaAllocateAndCopyToDevice((void**)&d_h,
-								(void*)imageH,
+								imageH,
 								numRows*numCols*sizeof(unsigned char));
 	cudaAllocateAndCopyToDevice((void**)&d_s,
-									(void*)imageS,
+									imageS,
 									numRows*numCols*sizeof(unsigned char));
 	cudaAllocateAndCopyToDevice((void**)&d_v,
-									(void*)imageV,
+									imageV,
 									numRows*numCols*sizeof(unsigned char));
 	cudaAllocateAndCopyToDevice((void**)&d_terrain,
 									(void*)terrain,
 									numPoints*sizeof(float));
 	cudaAllocateAndCopyToDevice((void**)&d_segmentsIm,
-									(void*)regionsOnImage,
+									regionsOnImage,
 									numRows*numCols*sizeof(int));
 	checkCudaErrors(cudaMalloc((void**)&d_segmentsPoints, numPoints*sizeof(int)));
+
 	checkCudaErrors(cudaMalloc((void**)&d_feat, numEntries*descLen*sizeof(float)));
 	checkCudaErrors(cudaMemset(d_feat, 0, numEntries*descLen*sizeof(float)));
+
+	checkCudaErrors(cudaMalloc((void**)&d_featInt, numEntries*descLen*sizeof(int)));
+	checkCudaErrors(cudaMemset(d_featInt, 0, numEntries*descLen*sizeof(int)));
+
 	checkCudaErrors(cudaMalloc((void**)&d_countSegmentsIm, numEntries*sizeof(unsigned int)));
 	checkCudaErrors(cudaMemset(d_countSegmentsIm, 0, numEntries*sizeof(unsigned int)));
+
 	checkCudaErrors(cudaMalloc((void**)&d_countSegmentsPoints, numEntries*sizeof(unsigned int)));
 	checkCudaErrors(cudaMemset(d_countSegmentsPoints, 0, numEntries*sizeof(unsigned int)));
 
 	dim3 blockSizeIm(32, 16, 1);
 	dim3 gridSizeIm((numCols + blockSizeIm.x - 1) / blockSizeIm.x,
 					(numRows + blockSizeIm.y - 1) / blockSizeIm.y);
-	printf("gridSizeIm = (%d, %d, %d)\n", gridSizeIm.x, gridSizeIm.y, gridSizeIm.z);
+	//printf("gridSizeIm = (%d, %d, %d)\n", gridSizeIm.x, gridSizeIm.y, gridSizeIm.z);
 
 	dim3 blockSizePoints(512, 1, 1);
 	dim3 gridSizePoints((numPoints + blockSizePoints.x - 1) / blockSizePoints.x, 1, 1);
-	printf("gridSizePoints = (%d, %d, %d)\n", gridSizePoints.x, gridSizePoints.y, gridSizePoints.z);
 
+	dim3 blockSizeEntries(512, 1, 1);
+	dim3 gridSizeEntries((numEntries + blockSizeEntries.x - 1) / blockSizeEntries.x, 1, 1);
+	//printf("gridSizePoints = (%d, %d, %d)\n", gridSizePoints.x, gridSizePoints.y, gridSizePoints.z);
+
+	//printf("d_segmentsIm = %p, d_countSegmentsIm = %p, numRows = %d, numCols = %d, numEntries = %d\n", d_segmentsIm, d_countSegmentsIm, numRows, numCols, numEntries);
+	//printf("d_terrain = %p, d_segmentsPoints = %p\n", d_terrain, d_segmentsPoints);
 	//precomputing
+	printf("countSegmentPixels\n");
 	countSegmentPixels<<<gridSizeIm, blockSizeIm>>>(d_segmentsIm,
 													d_countSegmentsIm,
 													numRows,
 													numCols,
 													numEntries);
-
-	cudaPrintfDisplay(stdout, true);
-	printf("End displaying cuPrintf\n");
 	cudaDeviceSynchronize();
 	checkCudaErrors(cudaGetLastError());
 
-	compPointProjection<<<gridSizePoints, blockSizePoints>>>(d_terrain,
-															d_segmentsIm,
-															d_segmentsPoints,
-															d_cameraMatrix,
-															d_distCoeffs,
-															numPoints,
-															numRows,
-															numCols);
-	cudaDeviceSynchronize();
-	checkCudaErrors(cudaGetLastError());
+	if(numPoints > 0){
+		printf("compPointProjection\n");
+		compPointProjection<<<gridSizePoints, blockSizePoints>>>(d_terrain,
+																d_segmentsIm,
+																d_segmentsPoints,
+																d_cameraMatrix,
+																d_distCoeffs,
+																numPoints,
+																numRows,
+																numCols);
+		cudaDeviceSynchronize();
+		checkCudaErrors(cudaGetLastError());
 
-	countSegmentPoints<<<gridSizePoints, blockSizePoints>>>(d_segmentsPoints,
-															d_countSegmentsPoints,
-															numPoints);
-	cudaDeviceSynchronize();
-	checkCudaErrors(cudaGetLastError());
+		printf("countSegmentPoints\n");
+		countSegmentPoints<<<gridSizePoints, blockSizePoints>>>(d_segmentsPoints,
+																d_countSegmentsPoints,
+																numPoints);
+		cudaDeviceSynchronize();
+		checkCudaErrors(cudaGetLastError());
+	}
 
 	//extracting features
 	int startRow = 0;
 
+	printf("compImageHistHSV\n");
 	compImageHistHSV<<<gridSizeIm, blockSizeIm>>>(d_h,
 												d_s,
 												d_v,
 												d_countSegmentsIm,
-												d_feat + startRow*numEntries,
+												d_featInt + startRow*numEntries,
 												d_segmentsIm,
 												numRows,
 												numCols,
 												numEntries,
 												d_featParams);
+
+	scaleData<<<gridSizeEntries, blockSizeEntries>>>(d_featInt + startRow*numEntries,
+													d_feat + startRow*numEntries,
+													d_countSegmentsIm,
+													featParams->histHLen * featParams->histSLen + featParams->histVLen,
+													numEntries);
+	cudaPrintfDisplay(stdout, true);
+	printf("End displaying cuPrintf\n");
 	cudaDeviceSynchronize();
 	checkCudaErrors(cudaGetLastError());
 	startRow += featParams->histHLen * featParams->histSLen + featParams->histVLen;
 
+	printf("compImageMeanHSV\n");
 	compImageMeanHSV<<<gridSizeIm, blockSizeIm>>>(d_h,
 												d_s,
 												d_v,
 												d_countSegmentsIm,
-												d_feat + startRow*numEntries,
+												d_featInt + startRow*numEntries,
 												d_segmentsIm,
 												numRows,
 												numCols,
@@ -228,12 +252,13 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 	int meanHSVStartRow = startRow;
 	startRow += 3;
 
+	printf("compImageCovarHSV\n");
 	compImageCovarHSV<<<gridSizeIm, blockSizeIm>>>(d_h,
 													d_s,
 													d_v,
 													d_countSegmentsIm,
 													d_feat + meanHSVStartRow*numEntries,
-													d_feat + startRow*numEntries,
+													d_featInt + startRow*numEntries,
 													d_segmentsIm,
 													numRows,
 													numCols,
@@ -243,39 +268,50 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 	checkCudaErrors(cudaGetLastError());
 	startRow += 9;
 
-	compTerrainHistDI<<<gridSizePoints, blockSizePoints>>>(d_terrain,
-															d_segmentsPoints,
-															d_countSegmentsPoints,
-															d_feat + startRow*numEntries,
-															numPoints,
-															numEntries,
-															d_featParams);
-	cudaDeviceSynchronize();
-	checkCudaErrors(cudaGetLastError());
+	if(numPoints > 0){
+		printf("compTerrainHistDI");
+		compTerrainHistDI<<<gridSizePoints, blockSizePoints>>>(d_terrain,
+																d_segmentsPoints,
+																d_countSegmentsPoints,
+																d_feat + startRow*numEntries,
+																numPoints,
+																numEntries,
+																d_featParams);
+		cudaPrintfDisplay(stdout, true);
+		printf("End displaying cuPrintf\n");
+		cudaDeviceSynchronize();
+		checkCudaErrors(cudaGetLastError());
+	}
 	startRow += featParams->histDLen * featParams->histILen;
 
-	compTerrainMeanDI<<<gridSizePoints, blockSizePoints>>>(d_terrain,
-															d_segmentsPoints,
-															d_countSegmentsPoints,
-															d_feat + startRow*numEntries,
-															numPoints,
-															numEntries,
-															d_featParams);
-	cudaDeviceSynchronize();
-	checkCudaErrors(cudaGetLastError());
+	if(numPoints > 0){
+		printf("compTerrainMeanDI\n");
+		compTerrainMeanDI<<<gridSizePoints, blockSizePoints>>>(d_terrain,
+																d_segmentsPoints,
+																d_countSegmentsPoints,
+																d_feat + startRow*numEntries,
+																numPoints,
+																numEntries,
+																d_featParams);
+		cudaDeviceSynchronize();
+		checkCudaErrors(cudaGetLastError());
+	}
 	int meanDIStartRow = startRow;
 	startRow += 2;
 
-	compTerrainCovarDI<<<gridSizePoints, blockSizePoints>>>(d_terrain,
-															d_segmentsPoints,
-															d_countSegmentsPoints,
-															d_feat + meanDIStartRow * numEntries,
-															d_feat + startRow*numEntries,
-															numPoints,
-															numEntries,
-															d_featParams);
-	cudaDeviceSynchronize();
-	checkCudaErrors(cudaGetLastError());
+	if(numPoints > 0){
+		printf("compTerrainCovarDI");
+		compTerrainCovarDI<<<gridSizePoints, blockSizePoints>>>(d_terrain,
+																d_segmentsPoints,
+																d_countSegmentsPoints,
+																d_feat + meanDIStartRow * numEntries,
+																d_feat + startRow*numEntries,
+																numPoints,
+																numEntries,
+																d_featParams);
+		cudaDeviceSynchronize();
+		checkCudaErrors(cudaGetLastError());
+	}
 	startRow += 4;
 
 	cudaPrintfEnd();

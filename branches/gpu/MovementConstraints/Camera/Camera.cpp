@@ -58,9 +58,8 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 
 	std::vector<boost::filesystem::path> dirs;
 	dirs.push_back("../MovementConstraints/Camera/database/przejazd22");
-	learnFromDir(dirs);
-	//readCache("cache/cameraCache");
-	//computeImagePolygons();
+	//learnFromDir(dirs);
+	readCache("cache/cameraCache");
 
 #ifndef NO_CUDA
 	int devCount;
@@ -616,7 +615,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			}
 		}
 		imshow("test", image);
-		waitKey(200);
+		waitKey(100);
 
 		TiXmlDocument data(	dir.string() +
 							string("/") +
@@ -739,7 +738,7 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 				break;
 			}
 		}
-		vector<Entry> newData = hierClassifiers.front()->extractEntriesGPU(images[i], terrains[i], autoRegionsOnImage);
+		vector<Entry> newData = hierClassifiers.front()->extractEntries(images[i], terrains[i], autoRegionsOnImage);
 		for(int e = 0; e < newData.size(); e++){
 			if(mapRegionIdToLabel[i].count(assignedManualId[newData[e].imageId]) > 0){
 				newData[e].label = mapRegionIdToLabel[i][assignedManualId[newData[e].imageId]];
