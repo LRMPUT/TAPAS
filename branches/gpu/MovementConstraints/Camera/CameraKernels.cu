@@ -117,7 +117,6 @@ __global__ void compPointReprojection(float* d_invCameraMatrix,
 	}
 }
 
-
 __global__ void countSegmentPixels(const int* const d_segments,
 									unsigned int* const d_countSegments,
 									int numRows,
@@ -232,14 +231,14 @@ __global__ void compImageHistHSV(const unsigned char* const d_h,
 					 d_featParams->histSLen / (d_featParams->histSRangeMax - d_featParams->histSRangeMin);
 			hBin = max(min(hBin, d_featParams->histHLen - 1), 0);
 			sBin = max(min(sBin, d_featParams->histSLen - 1), 0);
-			//atomicAdd(&d_hist[(startRow + sBin * d_featParams->histHLen + hBin)* numEntries + entry], 1);
+			atomicInc((unsigned int*)&d_hist[(startRow + sBin * d_featParams->histHLen + hBin)* numEntries + entry], 0x8fffff);
 			startRow += d_featParams->histHLen * d_featParams->histSLen;
 
 			//histV
 			int vBin  = (vVal - d_featParams->histVRangeMin) *
 					d_featParams->histVLen / (d_featParams->histVRangeMax - d_featParams->histVRangeMin);
 			vBin = max(min(vBin, d_featParams->histVLen - 1), 0);
-			//atomicAdd(&d_hist[(startRow + vBin) * numEntries + entry], 1.0);
+			atomicInc((unsigned int*)&d_hist[(startRow + vBin) * numEntries + entry], 0x8fffff);
 			startRow += d_featParams->histVLen;
 
 			//cuPrintf("entry = %d, entryCount = %d, 1.0/entryCount = %f\n", entry, entryCount, (float)1.0/entryCount);

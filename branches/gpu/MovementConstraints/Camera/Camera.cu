@@ -7,13 +7,23 @@
 //#include <opencv2/opencv.hpp>
 
 #include <cuda_runtime.h>
-//#include <cutil.h>
-//#include <helper_cuda.h>
-//#include <helper_functions.h>
-//#include <vector_types.h>
 
 #include <cstdio>
 #include <iostream>
+
+#include <thrust/host_vector.h>
+#include <thrust/device_vector.h>
+#include <thrust/sort.h>
+#include <thrust/scan.h>
+#include <thrust/transform.h>
+#include <thrust/sequence.h>
+#include <thrust/copy.h>
+#include <thrust/fill.h>
+#include <thrust/replace.h>
+#include <thrust/functional.h>
+#include <thrust/iterator/zip_iterator.h>
+
+
 
 // This will output the proper CUDA error strings in the event that a CUDA host call returns an error
 #define checkCudaErrors(err)  __checkCudaErrors (err, __FILE__, __LINE__)
@@ -180,6 +190,18 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 	//printf("d_segmentsIm = %p, d_countSegmentsIm = %p, numRows = %d, numCols = %d, numEntries = %d\n", d_segmentsIm, d_countSegmentsIm, numRows, numCols, numEntries);
 	//printf("d_terrain = %p, d_segmentsPoints = %p\n", d_terrain, d_segmentsPoints);
 	//precomputing
+	thrust::device_ptr<int> d_segmentsImPtr(d_segmentsIm);
+	thrust::device_ptr<unsigned char> d_hPtr(d_h);
+	thrust::device_ptr<unsigned char> d_sPtr(d_s);
+	thrust::device_ptr<unsigned char> d_vPtr(d_v);
+
+	uchar3Iterator imBegin = thrust::make_zip_iterator(thrust::make_tuple(d_hPtr, d_sPtr, d_vPtr));
+	uchar3Iterator imEnd = thrust::make_zip_iterator(thrust::make_tuple(d_hPtr + numCols*numRows,
+																		d_sPtr + numCols*numRows,
+																		d_vPtr + numCols*numRows));
+
+	thrust::sort_by_key(d_segmentsImPtr, d_segmentsImPtr + numRows*numCols, imBegin);
+
 	printf("countSegmentPixels\n");
 	countSegmentPixels<<<gridSizeIm, blockSizeIm>>>(d_segmentsIm,
 													d_countSegmentsIm,
