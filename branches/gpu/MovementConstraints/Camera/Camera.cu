@@ -22,7 +22,11 @@
 #include <thrust/replace.h>
 #include <thrust/functional.h>
 #include <thrust/iterator/zip_iterator.h>
-
+#include <thrust/iterator/transform_iterator.h>
+#include <thrust/binary_search.h>
+#include <thrust/adjacent_difference.h>
+#include <thrust/iterator/constant_iterator.h>
+#include <thrust/iterator/counting_iterator.h>
 
 
 // This will output the proper CUDA error strings in the event that a CUDA host call returns an error
@@ -109,6 +113,66 @@ extern "C" void reprojectCameraPoints(float* invCameraMatrix,
 
 }
 
+typedef thrust::device_vector<unsigned char>::iterator ucharIter;
+typedef thrust::tuple<ucharIter, ucharIter> uchar2IterTuple;
+typedef thrust::zip_iterator<uchar2IterTuple> uchar2Tuple;
+
+typedef thrust::device_vector<int>::iterator intIter;
+typedef thrust::tuple<intIter, ucharIter> intUcharIterTuple;
+typedef thrust::tuple<intIter, ucharIter, ucharIter> intUcharUcharIterTuple;
+typedef thrust::zip_iterator<intUcharIterTuple> intUcharTuple;
+typedef thrust::zip_iterator<intUcharUcharIterTuple> intUcharUcharTuple;
+
+struct intUcharTupleMin{
+  __host__ __device__
+  const intUcharIterTuple& operator()(const intUcharIterTuple& lhs,
+                  const intUcharIterTuple& rhs)
+  {
+	  if(thrust::get<0>(lhs) == thrust::get<0>(rhs)){
+	  	if(thrust::get<1>(lhs) < thrust::get<1>(rhs)){
+	    	return lhs;
+	    }
+	    else{
+	    	return rhs;
+	    }
+	  }
+	  else if(thrust::get<0>(lhs) < thrust::get<0>(rhs)){
+		  return lhs;
+	  }
+	  else{
+		  return rhs;
+	  }
+  }
+};
+
+//https://code.google.com/p/thrust/source/browse/examples/histogram.cu
+
+void calcDenseHistograms(const int* const d_segments,
+						const unsigned char* const d_bins,
+						const unsigned int* d_segBeg,
+						float* const d_histogram,
+						int numBins,
+						int numEntries)
+{
+
+  // find the end of each bin of values
+
+  thrust::counting_iterator<int> search_begin(0);
+
+  thrust::upper_bound(data.begin(), data.end(),
+                      search_begin, search_begin + num_bins,
+                      histogram.begin());
+
+  // print the cumulative histogram
+  print_vector("cumulative histogram", histogram);
+
+  // compute the histogram by taking differences of the cumulative histogram
+  thrust::adjacent_difference(histogram.begin(), histogram.end(),
+                              histogram.begin());
+
+
+}
+
 extern "C" void extractEntries(const unsigned char* const imageH,
 								const unsigned char* const imageS,
 								const unsigned char* const imageV,
@@ -126,7 +190,7 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 								int descLen,
 								const FeatParams* const featParams)
 {
-	unsigned char *d_h, *d_s, *d_v;
+	unsigned char *d_h, *d_s, *d_v, *d_hsBin, d_vBin;
 	float *d_terrain, *d_feat, *d_cameraMatrix, *d_distCoeffs;
 	int *d_segmentsIm, *d_segmentsPoints;
 	int* d_featInt;
@@ -161,6 +225,9 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 	cudaAllocateAndCopyToDevice((void**)&d_segmentsIm,
 									regionsOnImage,
 									numRows*numCols*sizeof(int));
+	checkCudaErrors(cudaMalloc((void**)&d_hsBin, numRows*numCols*sizeof(unsigned char)));
+	checkCudaErrors(cudaMalloc((void**)&d_vBin, numRows*numCols*sizeof(unsigned char)));
+
 	checkCudaErrors(cudaMalloc((void**)&d_segmentsPoints, numPoints*sizeof(int)));
 
 	checkCudaErrors(cudaMalloc((void**)&d_feat, numEntries*descLen*sizeof(float)));
@@ -189,18 +256,38 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 
 	//printf("d_segmentsIm = %p, d_countSegmentsIm = %p, numRows = %d, numCols = %d, numEntries = %d\n", d_segmentsIm, d_countSegmentsIm, numRows, numCols, numEntries);
 	//printf("d_terrain = %p, d_segmentsPoints = %p\n", d_terrain, d_segmentsPoints);
+
 	//precomputing
 	thrust::device_ptr<int> d_segmentsImPtr(d_segmentsIm);
+	thrust::device_vector<int> d_segmentsImHS(d_segmentsImPtr, d_segmentsImPtr + numRows*numCols);
+	thrust::device_vector<int> d_segmentsImV(d_segmentsImPtr, d_segmentsImPtr + numRows*numCols);
 	thrust::device_ptr<unsigned char> d_hPtr(d_h);
 	thrust::device_ptr<unsigned char> d_sPtr(d_s);
 	thrust::device_ptr<unsigned char> d_vPtr(d_v);
 
-	uchar3Iterator imBegin = thrust::make_zip_iterator(thrust::make_tuple(d_hPtr, d_sPtr, d_vPtr));
-	uchar3Iterator imEnd = thrust::make_zip_iterator(thrust::make_tuple(d_hPtr + numCols*numRows,
-																		d_sPtr + numCols*numRows,
-																		d_vPtr + numCols*numRows));
+	thrust::device_ptr<unsigned char> d_hsBinPtr(d_hsBin);
+	thrust::device_ptr<unsigned char> d_vBinPtr(d_vBin);
 
-	thrust::sort_by_key(d_segmentsImPtr, d_segmentsImPtr + numRows*numCols, imBegin);
+	intUcharTuple d_segHSBegin = thrust::make_zip_iterator(thrust::make_tuple(d_segmentsImHS, d_hsBinPtr));
+	intUcharTuple d_segHSEnd = thrust::make_zip_iterator(thrust::make_tuple(d_segmentsImHS + numRows*numCols,
+																			d_hsBinPtr + numRows*numCols));
+
+	intUcharTuple d_segVBegin = thrust::make_zip_iterator(thrust::make_tuple(d_segmentsImV, d_vBinPtr));
+	intUcharTuple d_segVEnd = thrust::make_zip_iterator(thrust::make_tuple(d_segmentsImV + numRows*numCols, d_vBinPtr + numRows*numCols));
+
+	printf("compImageHistBinsHSV\n");
+	compImageHistBinsHSV<<<gridSizeIm, blockSizeIm>>>(d_h,
+												d_s,
+												d_v,
+												d_hsBins,
+												d_vBins,
+												numRows,
+												numCols,
+												d_featParams);
+
+	//thrust::sort_by_key(d_segmentsImPtr, d_segmentsImPtr + numRows*numCols, d_imBegin);
+	thrust::sort_by_key(d_segHSBegin, d_segHSEnd, d_hsBinPtr, d_hsBinPtr + numRows*numCols);
+	thrust::sort_by_key(d_segVBegin, d_segVEnd, d_vBinPtr, d_vBinPtr + numRows*numCols);
 
 	printf("countSegmentPixels\n");
 	countSegmentPixels<<<gridSizeIm, blockSizeIm>>>(d_segmentsIm,
@@ -224,117 +311,9 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 		cudaDeviceSynchronize();
 		checkCudaErrors(cudaGetLastError());
 
-		printf("countSegmentPoints\n");
-		countSegmentPoints<<<gridSizePoints, blockSizePoints>>>(d_segmentsPoints,
-																d_countSegmentsPoints,
-																numPoints);
-		cudaDeviceSynchronize();
-		checkCudaErrors(cudaGetLastError());
 	}
 
-	//extracting features
-	int startRow = 0;
 
-	printf("compImageHistHSV\n");
-	compImageHistHSV<<<gridSizeIm, blockSizeIm>>>(d_h,
-												d_s,
-												d_v,
-												d_countSegmentsIm,
-												d_featInt + startRow*numEntries,
-												d_segmentsIm,
-												numRows,
-												numCols,
-												numEntries,
-												d_featParams);
-
-	scaleData<<<gridSizeEntries, blockSizeEntries>>>(d_featInt + startRow*numEntries,
-													d_feat + startRow*numEntries,
-													d_countSegmentsIm,
-													featParams->histHLen * featParams->histSLen + featParams->histVLen,
-													numEntries);
-	cudaPrintfDisplay(stdout, true);
-	printf("End displaying cuPrintf\n");
-	cudaDeviceSynchronize();
-	checkCudaErrors(cudaGetLastError());
-	startRow += featParams->histHLen * featParams->histSLen + featParams->histVLen;
-
-	printf("compImageMeanHSV\n");
-	compImageMeanHSV<<<gridSizeIm, blockSizeIm>>>(d_h,
-												d_s,
-												d_v,
-												d_countSegmentsIm,
-												d_featInt + startRow*numEntries,
-												d_segmentsIm,
-												numRows,
-												numCols,
-												numEntries,
-												d_featParams);
-	cudaDeviceSynchronize();
-	checkCudaErrors(cudaGetLastError());
-	int meanHSVStartRow = startRow;
-	startRow += 3;
-
-	printf("compImageCovarHSV\n");
-	compImageCovarHSV<<<gridSizeIm, blockSizeIm>>>(d_h,
-													d_s,
-													d_v,
-													d_countSegmentsIm,
-													d_feat + meanHSVStartRow*numEntries,
-													d_featInt + startRow*numEntries,
-													d_segmentsIm,
-													numRows,
-													numCols,
-													numEntries,
-													d_featParams);
-	cudaDeviceSynchronize();
-	checkCudaErrors(cudaGetLastError());
-	startRow += 9;
-
-	if(numPoints > 0){
-		printf("compTerrainHistDI");
-		compTerrainHistDI<<<gridSizePoints, blockSizePoints>>>(d_terrain,
-																d_segmentsPoints,
-																d_countSegmentsPoints,
-																d_feat + startRow*numEntries,
-																numPoints,
-																numEntries,
-																d_featParams);
-		cudaPrintfDisplay(stdout, true);
-		printf("End displaying cuPrintf\n");
-		cudaDeviceSynchronize();
-		checkCudaErrors(cudaGetLastError());
-	}
-	startRow += featParams->histDLen * featParams->histILen;
-
-	if(numPoints > 0){
-		printf("compTerrainMeanDI\n");
-		compTerrainMeanDI<<<gridSizePoints, blockSizePoints>>>(d_terrain,
-																d_segmentsPoints,
-																d_countSegmentsPoints,
-																d_feat + startRow*numEntries,
-																numPoints,
-																numEntries,
-																d_featParams);
-		cudaDeviceSynchronize();
-		checkCudaErrors(cudaGetLastError());
-	}
-	int meanDIStartRow = startRow;
-	startRow += 2;
-
-	if(numPoints > 0){
-		printf("compTerrainCovarDI");
-		compTerrainCovarDI<<<gridSizePoints, blockSizePoints>>>(d_terrain,
-																d_segmentsPoints,
-																d_countSegmentsPoints,
-																d_feat + meanDIStartRow * numEntries,
-																d_feat + startRow*numEntries,
-																numPoints,
-																numEntries,
-																d_featParams);
-		cudaDeviceSynchronize();
-		checkCudaErrors(cudaGetLastError());
-	}
-	startRow += 4;
 
 	cudaPrintfEnd();
 

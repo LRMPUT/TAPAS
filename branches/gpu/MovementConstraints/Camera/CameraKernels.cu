@@ -5,6 +5,7 @@
 #include "CameraCuda.h"
 #include "cuPrintf.cu"
 
+
 __device__ __forceinline__ void multMat(const float* const d_A,
 										const float* const d_B,
 										float* const d_C,
@@ -199,52 +200,41 @@ __global__ void scaleData(const int* const d_hist,
 	}
 }
 
-__global__ void compImageHistHSV(const unsigned char* const d_h,
-								const unsigned char* const d_s,
-								const unsigned char* const d_v,
-								const unsigned int* const d_countSegments,
-								int* const d_hist,
-								const int* const d_segments,
-								int numRows,
-								int numCols,
-								int numEntries,
-								const FeatParams* const d_featParams)
+__global__ void compImageHistBinsHSV(const unsigned char* const d_h,
+									const unsigned char* const d_s,
+									const unsigned char* const d_v,
+									unsigned char* const d_hsBin,
+									unsigned char* const d_vBin,
+									int numRows,
+									int numCols,
+									const FeatParams* const d_featParams)
 {
 	int idxX = (blockIdx.x * blockDim.x) + threadIdx.x;
 	int idxY = (blockIdx.y * blockDim.y) + threadIdx.y;
 	int idx1d = idxY * numCols + idxX;
 
 	if(idxX < numCols && idxY < numRows){
-		int entry = d_segments[idx1d];
-		if(entry >= 0){
-			//int entryCount = d_countSegments[entry];
+		//histHS
+		int hVal = (d_h[idx1d] & 0xff);
+		int sVal = (d_s[idx1d] & 0xff);
+		int vVal = (d_v[idx1d] & 0xff);
+		unsigned char hBin = (hVal - d_featParams->histHRangeMin) *
+							d_featParams->histHLen /(d_featParams->histHRangeMax - d_featParams->histHRangeMin);
+		unsigned char sBin = (sVal - d_featParams->histSRangeMin) *
+							d_featParams->histSLen / (d_featParams->histSRangeMax - d_featParams->histSRangeMin);
+		hBin = max(min(hBin, d_featParams->histHLen - 1), 0);
+		sBin = max(min(sBin, d_featParams->histSLen - 1), 0);
+		d_hsBin[idx1d] = sBin * d_featParams->histHLen + hBin;
 
-			int startRow = 0;
+		//histV
+		unsigned char vBin = (vVal - d_featParams->histVRangeMin) *
+							d_featParams->histVLen / (d_featParams->histVRangeMax - d_featParams->histVRangeMin);
+		vBin = max(min(vBin, d_featParams->histVLen - 1), 0);
+		d_vBin[idx1d] =  vBin;
 
-			//histHS
-			int hVal = (d_h[idx1d] & 0xff);
-			int sVal = (d_s[idx1d] & 0xff);
-			int vVal = (d_v[idx1d] & 0xff);
-			int hBin = (hVal - d_featParams->histHRangeMin) *
-					 d_featParams->histHLen /(d_featParams->histHRangeMax - d_featParams->histHRangeMin);
-			int sBin = (sVal - d_featParams->histSRangeMin) *
-					 d_featParams->histSLen / (d_featParams->histSRangeMax - d_featParams->histSRangeMin);
-			hBin = max(min(hBin, d_featParams->histHLen - 1), 0);
-			sBin = max(min(sBin, d_featParams->histSLen - 1), 0);
-			atomicInc((unsigned int*)&d_hist[(startRow + sBin * d_featParams->histHLen + hBin)* numEntries + entry], 0x8fffff);
-			startRow += d_featParams->histHLen * d_featParams->histSLen;
-
-			//histV
-			int vBin  = (vVal - d_featParams->histVRangeMin) *
-					d_featParams->histVLen / (d_featParams->histVRangeMax - d_featParams->histVRangeMin);
-			vBin = max(min(vBin, d_featParams->histVLen - 1), 0);
-			atomicInc((unsigned int*)&d_hist[(startRow + vBin) * numEntries + entry], 0x8fffff);
-			startRow += d_featParams->histVLen;
-
-			//cuPrintf("entry = %d, entryCount = %d, 1.0/entryCount = %f\n", entry, entryCount, (float)1.0/entryCount);
-			//cuPrintf("hBin = %d, sBin = %d, vBin = %d, hVal = %d, sVal = %d, vVal = %d, hLen = %d, hMax = %f\n",
-			//		hBin, sBin, vBin, hVal, sVal, vVal, d_featParams->histHLen, d_featParams->histHRangeMax);
-		}
+		//cuPrintf("entry = %d, entryCount = %d, 1.0/entryCount = %f\n", entry, entryCount, (float)1.0/entryCount);
+		//cuPrintf("hBin = %d, sBin = %d, vBin = %d, hVal = %d, sVal = %d, vVal = %d, hLen = %d, hMax = %f\n",
+		//		hBin, sBin, vBin, hVal, sVal, vVal, d_featParams->histHLen, d_featParams->histHRangeMax);
 	}
 }
 
