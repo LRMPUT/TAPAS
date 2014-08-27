@@ -789,14 +789,15 @@ std::vector<Entry> HierClassifier::extractEntriesGPU(cv::Mat imageBGR,
 					numEntries++;
 				}
 			}
-			gpuRegionsOnImage.at<int>(r, c) = segmentIdToGpuSegmentId[region];
+			//gpuRegionsOnImage.at<int>(r, c) = segmentIdToGpuSegmentId[region];
+			gpuRegionsOnImage.at<int>(r, c) = region;
 		}
 	}
-	for(int r = 0; r < regionsOnImage.rows; r++){
+	/*for(int r = 0; r < regionsOnImage.rows; r++){
 		for(int c = 0; c < regionsOnImage.cols; c++){
 			int region = regionsOnImage.at<int>(r, c);
 		}
-	}
+	}*/
 
 	high_resolution_clock::time_point endConvertingTime = high_resolution_clock::now();
 	cout << "Checking if is contnuous" << endl;

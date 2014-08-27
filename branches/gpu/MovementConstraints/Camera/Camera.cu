@@ -9,6 +9,7 @@
 
 #include <cstdio>
 #include <iostream>
+#include <iomanip>
 
 #include <thrust/host_vector.h>
 #include <thrust/device_vector.h>
@@ -114,6 +115,7 @@ extern "C" void reprojectCameraPoints(float* invCameraMatrix,
 }
 
 typedef thrust::device_vector<unsigned char>::iterator ucharIter;
+typedef thrust::tuple<unsigned char, unsigned char, unsigned char> uchar3Tuple;
 typedef thrust::tuple<ucharIter, ucharIter> uchar2IterTuple;
 typedef thrust::zip_iterator<uchar2IterTuple> uchar2Zip;
 typedef thrust::tuple<ucharIter, ucharIter, ucharIter> uchar3IterTuple;
@@ -178,6 +180,14 @@ void transpose(size_t m, size_t n, thrust::device_ptr<T>& src, thrust::device_pt
 }
 
 //https://code.google.com/p/thrust/source/browse/examples/histogram.cu
+
+template <class InputIterator>
+void printVector(const std::string& name, InputIterator vBeg, InputIterator vEnd)
+{
+	std::cout << " " << std::setw(20) << name << " ";
+	thrust::copy(vBeg, vEnd, std::ostream_iterator<int>(std::cout, " "));
+	std::cout << std::endl;
+}
 
 void calcDenseHists(int2Zip d_vals,
 						float* const d_histogram,
@@ -291,8 +301,7 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 
 	//precomputing
 	thrust::device_ptr<int> d_segmentsImPtr(d_segmentsIm);
-	thrust::device_vector<int> d_segmentsImHS(d_segmentsImPtr, d_segmentsImPtr + numRows*numCols);
-	thrust::device_vector<int> d_segmentsImV(d_segmentsImPtr, d_segmentsImPtr + numRows*numCols);
+	thrust::device_ptr<int> d_segmentsImUniqPtr(d_segmentsImUniq);
 	thrust::device_ptr<unsigned char> d_hPtr(d_h);
 	thrust::device_ptr<unsigned char> d_sPtr(d_s);
 	thrust::device_ptr<unsigned char> d_vPtr(d_v);
@@ -301,13 +310,34 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 	thrust::device_ptr<int> d_vBinPtr(d_vBin);
 
 	//sort
+	printf("Sorting\n");
 	uchar3Zip d_hsvIterBeg = thrust::make_zip_iterator(thrust::make_tuple(d_hPtr, d_sPtr, d_vPtr));
 	uchar3Zip d_hsvIterEnd = thrust::make_zip_iterator(thrust::make_tuple(d_hPtr + numRows*numCols, d_sPtr + numRows*numCols, d_vPtr + numRows*numCols));
+
+	for(int i = 0; i < 100; i++){
+		uchar3Tuple tmp;
+		uchar3Zip iter = d_hsvIterBeg + i;
+		thrust::copy(iter, iter + 1, &tmp);
+		thrust::device_reference<unsigned char> val0 = thrust::get<0>(*(d_hsvIterBeg + i));
+		thrust::device_reference<unsigned char> val1 = thrust::get<1>(*(d_hsvIterBeg + i));
+		std::cout << "(" << (int)val0 << ", " << (int)val1 << ") ";
+		//std::cout << "(" << tmp << ") ";
+	}
+	std::cout << std::endl;
+
 	thrust::sort_by_key(d_segmentsImPtr, d_segmentsImPtr + numRows*numCols, d_hsvIterBeg);
 
 	//unique
-	int *d_segmentsImUniqEnd = thrust::unique_copy(d_segmentsIm, d_segmentsIm + numRows*numCols, d_segmentsImUniq);
-	int numEntries = d_segmentsImUniqEnd - d_segmentsImUniq;
+	printf("Unique\n");
+	//printVector("d_segmentsIm", d_segmentsImPtr, d_segmentsImPtr + 6000);
+	thrust::device_ptr<int> d_segmentsImUniqPtrEnd = thrust::unique_copy(d_segmentsImPtr,
+																	d_segmentsImPtr + numRows*numCols,
+																	d_segmentsImUniqPtr);
+	printf("end unique_copy()\n");
+	int numEntries = d_segmentsImUniqPtrEnd - d_segmentsImUniqPtr;
+	printf("numEntries = %d\n", numEntries);
+	printVector("d_segmentsImUniq", d_segmentsImUniqPtr,
+									d_segmentsImUniqPtr + numEntries);
 
 	checkCudaErrors(cudaMalloc((void**)&d_feat, numEntries*descLen*sizeof(float)));
 	checkCudaErrors(cudaMemset(d_feat, 0, numEntries*descLen*sizeof(float)));
@@ -321,15 +351,19 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 	checkCudaErrors(cudaMalloc((void**)&d_segmentsPointsEnds, numEntries*sizeof(unsigned int)));
 	checkCudaErrors(cudaMemset(d_segmentsPointsEnds, 0, numEntries*sizeof(unsigned int)));
 
-	thrust::upper_bound(d_segmentsIm, d_segmentsIm + numRows*numCols, d_segmentsImUniq, d_segmentsImUniq + numEntries, d_segmentsImEnds);
-	thrust::lower_bound(d_segmentsImEnds, d_segmentsImEnds + numEntries, d_segmentsIm, d_segmentsIm + numRows*numCols, d_segmentsIm);
+	thrust::device_ptr<unsigned int> d_segmentsImEndsPtr(d_segmentsImEnds);
 
-	int2Zip d_segHSBegin = thrust::make_zip_iterator(thrust::make_tuple(d_segmentsImHS.begin(), d_hsBinPtr));
-	int2Zip d_segHSEnd = thrust::make_zip_iterator(thrust::make_tuple(d_segmentsImHS.begin() + numRows*numCols,
-																			d_hsBinPtr + numRows*numCols));
+	printf("upper_bound\n");
+	thrust::upper_bound(d_segmentsImPtr, d_segmentsImPtr + numRows*numCols,
+						d_segmentsImUniqPtr, d_segmentsImUniqPtr + numEntries,
+						d_segmentsImEndsPtr);
+	printVector("d_segmentsImEnds", d_segmentsImEndsPtr, d_segmentsImEndsPtr + numEntries);
+	printf("lower_bound\n");
+	thrust::lower_bound(d_segmentsImUniqPtr, d_segmentsImUniqPtr + numEntries,
+						d_segmentsImPtr, d_segmentsImPtr + numRows*numCols,
+						d_segmentsImPtr);
 
-	int2Zip d_segVBegin = thrust::make_zip_iterator(thrust::make_tuple(d_segmentsImV.begin(), d_vBinPtr));
-	int2Zip d_segVEnd = thrust::make_zip_iterator(thrust::make_tuple(d_segmentsImV.begin() + numRows*numCols, d_vBinPtr + numRows*numCols));
+	//printVector("d_segmentsIm", d_segmentsImPtr, d_segmentsImPtr + 6000);
 
 	printf("compImageHistBinsHSV\n");
 	compImageHistBinsHSV<<<gridSizeIm, blockSizeIm>>>(d_h,
@@ -341,10 +375,40 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 												numCols,
 												d_featParams);
 
-	//thrust::sort_by_key(d_segmentsImPtr, d_segmentsImPtr + numRows*numCols, d_imBegin);
-	thrust::sort_by_key(d_segHSBegin, d_segHSEnd, d_hsBinPtr, int2TupleMin());
-	thrust::sort_by_key(d_segVBegin, d_segVEnd, d_vBinPtr, int2TupleMin());
 
+	thrust::device_vector<int> d_segmentsImHS(d_segmentsImPtr, d_segmentsImPtr + numRows*numCols);
+	thrust::device_vector<int> d_segmentsImV(d_segmentsImPtr, d_segmentsImPtr + numRows*numCols);
+
+	int2Zip d_segHSBegin = thrust::make_zip_iterator(thrust::make_tuple(d_segmentsImHS.begin(), d_hsBinPtr));
+	int2Zip d_segHSEnd = thrust::make_zip_iterator(thrust::make_tuple(d_segmentsImHS.begin() + numRows*numCols,
+																			d_hsBinPtr + numRows*numCols));
+
+	int2Zip d_segVBegin = thrust::make_zip_iterator(thrust::make_tuple(d_segmentsImV.begin(), d_vBinPtr));
+	int2Zip d_segVEnd = thrust::make_zip_iterator(thrust::make_tuple(d_segmentsImV.begin() + numRows*numCols,
+																		d_vBinPtr + numRows*numCols));
+
+	printVector("d_segmentsImHS", d_segmentsImHS.begin(), d_segmentsImHS.begin() + 100);
+	printVector("d_hsBin", d_hsBinPtr, d_hsBinPtr + 100);
+	printVector("d_h", d_hPtr, d_hPtr + 100);
+	printVector("d_s", d_sPtr, d_sPtr + 100);
+	//thrust::sort_by_key(d_segmentsImPtr, d_segmentsImPtr + numRows*numCols, d_imBegin);
+	for(int i = 0; i < 100; i++){
+		//int2Tuple tmp;
+		//int2Zip iter = d_segHSBegin + i;
+		//thrust::copy(iter, iter + 1, &tmp);
+		thrust::device_reference<int> val0 = thrust::get<0>(*(d_segHSBegin + i));
+		thrust::device_reference<int> val1 = thrust::get<1>(*(d_segHSBegin + i));
+		std::cout << "(" << val0 << ", " << val1 << ") ";
+		//std::cout << "(" << tmp << ") ";
+	}
+	std::cout << std::endl;
+
+	printf("sort HS\n");
+	//thrust::sort(d_segHSBegin, d_segHSEnd);
+	printf("sort V\n");
+	thrust::sort(d_segVBegin, d_segVEnd);
+
+	printf("calcDenseHists\n");
 	calcDenseHists(d_segHSBegin,
 						d_feat,
 						numRows*numCols,
