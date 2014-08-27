@@ -16,7 +16,7 @@ find_package(Boost COMPONENTS system filesystem thread REQUIRED)
 
 find_package(CUDA REQUIRED)
 # Pass options to NVCC
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3 -gencode arch=compute_12,code=sm_12)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3 -gencode arch=compute_20,code=sm_21)
 SET( CUDA_PROPAGATE_HOST_FLAGS OFF )
 
 link_directories(${URG_LIBRARIES_DIR})

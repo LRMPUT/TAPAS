@@ -4,7 +4,6 @@
  *  Created on: Jul 30, 2014
  *      Author: robots
  */
-//#include <opencv2/opencv.hpp>
 
 #include <cuda_runtime.h>
 
@@ -20,6 +19,7 @@
 #include <thrust/copy.h>
 #include <thrust/fill.h>
 #include <thrust/replace.h>
+#include <thrust/unique.h>
 #include <thrust/functional.h>
 #include <thrust/iterator/zip_iterator.h>
 #include <thrust/iterator/transform_iterator.h>
@@ -115,63 +115,107 @@ extern "C" void reprojectCameraPoints(float* invCameraMatrix,
 
 typedef thrust::device_vector<unsigned char>::iterator ucharIter;
 typedef thrust::tuple<ucharIter, ucharIter> uchar2IterTuple;
-typedef thrust::zip_iterator<uchar2IterTuple> uchar2Tuple;
+typedef thrust::zip_iterator<uchar2IterTuple> uchar2Zip;
+typedef thrust::tuple<ucharIter, ucharIter, ucharIter> uchar3IterTuple;
+typedef thrust::zip_iterator<uchar3IterTuple> uchar3Zip;
 
 typedef thrust::device_vector<int>::iterator intIter;
-typedef thrust::tuple<intIter, ucharIter> intUcharIterTuple;
-typedef thrust::tuple<intIter, ucharIter, ucharIter> intUcharUcharIterTuple;
-typedef thrust::zip_iterator<intUcharIterTuple> intUcharTuple;
-typedef thrust::zip_iterator<intUcharUcharIterTuple> intUcharUcharTuple;
+typedef thrust::tuple<int, int> int2Tuple;
+typedef thrust::tuple<intIter, intIter> int2IterTuple;
+typedef thrust::zip_iterator<int2IterTuple> int2Zip;
 
-struct intUcharTupleMin{
+struct int2TupleMin{
   __host__ __device__
-  const intUcharIterTuple& operator()(const intUcharIterTuple& lhs,
-                  const intUcharIterTuple& rhs)
+  bool operator()(const int2Tuple& lhs,
+                  const int2Tuple& rhs)
   {
 	  if(thrust::get<0>(lhs) == thrust::get<0>(rhs)){
 	  	if(thrust::get<1>(lhs) < thrust::get<1>(rhs)){
-	    	return lhs;
+	    	return true;
 	    }
 	    else{
-	    	return rhs;
+	    	return false;
 	    }
 	  }
 	  else if(thrust::get<0>(lhs) < thrust::get<0>(rhs)){
-		  return lhs;
+		  return true;
 	  }
 	  else{
-		  return rhs;
+		  return false;
 	  }
   }
 };
 
+//https://code.google.com/p/thrust/source/browse/examples/summed_area_table.cu
+
+// convert a linear index to a linear index in the transpose
+struct transpose_index : public thrust::unary_function<size_t,size_t>
+{
+    size_t m, n;
+
+    __host__ __device__
+    transpose_index(size_t _m, size_t _n) : m(_m), n(_n) {}
+
+    __host__ __device__
+    size_t operator()(size_t linear_index)
+    {
+        size_t i = linear_index / n;
+        size_t j = linear_index % n;
+
+        return m * j + i;
+    }
+};
+
+// transpose an M-by-N array
+template <typename T>
+void transpose(size_t m, size_t n, thrust::device_ptr<T>& src, thrust::device_ptr<T>& dst)
+{
+    thrust::counting_iterator<size_t> indices(0);
+
+    thrust::gather(dst, dst + n*m,
+                   thrust::make_transform_iterator(indices, transpose_index(n, m)),
+                   src);
+}
+
 //https://code.google.com/p/thrust/source/browse/examples/histogram.cu
 
-void calcDenseHistograms(const int* const d_segments,
-						const unsigned char* const d_bins,
-						const unsigned int* d_segBeg,
+void calcDenseHists(int2Zip d_vals,
 						float* const d_histogram,
+						int numVals,
 						int numBins,
 						int numEntries)
 {
 
   // find the end of each bin of values
 
-  thrust::counting_iterator<int> search_begin(0);
+	thrust::constant_iterator<int> numBinsIter;
+	thrust::counting_iterator<int> sequence(0);
 
-  thrust::upper_bound(data.begin(), data.end(),
-                      search_begin, search_begin + num_bins,
-                      histogram.begin());
+	thrust::device_vector<int> d_entriesVal(numVals);
+	thrust::device_vector<int> d_binsVal(numVals);
+	thrust::device_ptr<float> d_histPtr(d_histogram);
 
-  // print the cumulative histogram
-  print_vector("cumulative histogram", histogram);
+	thrust::transform(sequence, sequence + numVals, numBinsIter, d_entriesVal.begin(), thrust::modulus<int>());
+	thrust::transform(sequence, sequence + numVals, numBinsIter, d_binsVal.begin(), thrust::divides<int>());
 
-  // compute the histogram by taking differences of the cumulative histogram
-  thrust::adjacent_difference(histogram.begin(), histogram.end(),
-                              histogram.begin());
+	int2Zip d_searchValsBeg = thrust::make_zip_iterator(thrust::make_tuple(d_entriesVal.begin(), d_binsVal.begin()));
+	int2Zip d_searchValsEnd = thrust::make_zip_iterator(thrust::make_tuple(d_entriesVal.end(), d_binsVal.end()));
+	thrust::upper_bound(d_vals, d_vals + numVals,
+					  d_searchValsBeg, d_searchValsEnd,
+					  d_histPtr,
+					  int2TupleMin());
 
+	// print the cumulative histogram
+	//print_vector("cumulative histogram", d_histogram);
 
+	// compute the histogram by taking differences of the cumulative histogram
+	thrust::adjacent_difference(d_histPtr, d_histPtr + numEntries*numBins,
+							  d_histPtr);
+
+	//transpose
+	transpose(numEntries, numBins, d_histPtr, d_histPtr);
 }
+
 
 extern "C" void extractEntries(const unsigned char* const imageH,
 								const unsigned char* const imageS,
@@ -186,15 +230,14 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 								int numRows,
 								int numCols,
 								int numPoints,
-								int numEntries,
 								int descLen,
 								const FeatParams* const featParams)
 {
-	unsigned char *d_h, *d_s, *d_v, *d_hsBin, d_vBin;
+	unsigned char *d_h, *d_s, *d_v;
 	float *d_terrain, *d_feat, *d_cameraMatrix, *d_distCoeffs;
-	int *d_segmentsIm, *d_segmentsPoints;
-	int* d_featInt;
-	unsigned int *d_countSegmentsIm, *d_countSegmentsPoints;
+	int *d_segmentsIm, *d_segmentsImUniq, *d_segmentsPoints, *d_hsBin, *d_vBin;
+	//int* d_featInt;
+	unsigned int *d_segmentsImEnds, *d_segmentsPointsEnds;
 	FeatParams *d_featParams;
 
 	printf("cudaPrintfInit\n");
@@ -225,22 +268,11 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 	cudaAllocateAndCopyToDevice((void**)&d_segmentsIm,
 									regionsOnImage,
 									numRows*numCols*sizeof(int));
+	checkCudaErrors(cudaMalloc((void**)&d_segmentsImUniq, numRows*numCols*sizeof(int)));
 	checkCudaErrors(cudaMalloc((void**)&d_hsBin, numRows*numCols*sizeof(unsigned char)));
 	checkCudaErrors(cudaMalloc((void**)&d_vBin, numRows*numCols*sizeof(unsigned char)));
 
 	checkCudaErrors(cudaMalloc((void**)&d_segmentsPoints, numPoints*sizeof(int)));
-
-	checkCudaErrors(cudaMalloc((void**)&d_feat, numEntries*descLen*sizeof(float)));
-	checkCudaErrors(cudaMemset(d_feat, 0, numEntries*descLen*sizeof(float)));
-
-	checkCudaErrors(cudaMalloc((void**)&d_featInt, numEntries*descLen*sizeof(int)));
-	checkCudaErrors(cudaMemset(d_featInt, 0, numEntries*descLen*sizeof(int)));
-
-	checkCudaErrors(cudaMalloc((void**)&d_countSegmentsIm, numEntries*sizeof(unsigned int)));
-	checkCudaErrors(cudaMemset(d_countSegmentsIm, 0, numEntries*sizeof(unsigned int)));
-
-	checkCudaErrors(cudaMalloc((void**)&d_countSegmentsPoints, numEntries*sizeof(unsigned int)));
-	checkCudaErrors(cudaMemset(d_countSegmentsPoints, 0, numEntries*sizeof(unsigned int)));
 
 	dim3 blockSizeIm(32, 16, 1);
 	dim3 gridSizeIm((numCols + blockSizeIm.x - 1) / blockSizeIm.x,
@@ -250,8 +282,8 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 	dim3 blockSizePoints(512, 1, 1);
 	dim3 gridSizePoints((numPoints + blockSizePoints.x - 1) / blockSizePoints.x, 1, 1);
 
-	dim3 blockSizeEntries(512, 1, 1);
-	dim3 gridSizeEntries((numEntries + blockSizeEntries.x - 1) / blockSizeEntries.x, 1, 1);
+	//dim3 blockSizeEntries(512, 1, 1);
+	//dim3 gridSizeEntries((numEntries + blockSizeEntries.x - 1) / blockSizeEntries.x, 1, 1);
 	//printf("gridSizePoints = (%d, %d, %d)\n", gridSizePoints.x, gridSizePoints.y, gridSizePoints.z);
 
 	//printf("d_segmentsIm = %p, d_countSegmentsIm = %p, numRows = %d, numCols = %d, numEntries = %d\n", d_segmentsIm, d_countSegmentsIm, numRows, numCols, numEntries);
@@ -265,38 +297,59 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 	thrust::device_ptr<unsigned char> d_sPtr(d_s);
 	thrust::device_ptr<unsigned char> d_vPtr(d_v);
 
-	thrust::device_ptr<unsigned char> d_hsBinPtr(d_hsBin);
-	thrust::device_ptr<unsigned char> d_vBinPtr(d_vBin);
+	thrust::device_ptr<int> d_hsBinPtr(d_hsBin);
+	thrust::device_ptr<int> d_vBinPtr(d_vBin);
 
-	intUcharTuple d_segHSBegin = thrust::make_zip_iterator(thrust::make_tuple(d_segmentsImHS, d_hsBinPtr));
-	intUcharTuple d_segHSEnd = thrust::make_zip_iterator(thrust::make_tuple(d_segmentsImHS + numRows*numCols,
+	//sort
+	uchar3Zip d_hsvIterBeg = thrust::make_zip_iterator(thrust::make_tuple(d_hPtr, d_sPtr, d_vPtr));
+	uchar3Zip d_hsvIterEnd = thrust::make_zip_iterator(thrust::make_tuple(d_hPtr + numRows*numCols, d_sPtr + numRows*numCols, d_vPtr + numRows*numCols));
+	thrust::sort_by_key(d_segmentsImPtr, d_segmentsImPtr + numRows*numCols, d_hsvIterBeg);
+
+	//unique
+	int *d_segmentsImUniqEnd = thrust::unique_copy(d_segmentsIm, d_segmentsIm + numRows*numCols, d_segmentsImUniq);
+	int numEntries = d_segmentsImUniqEnd - d_segmentsImUniq;
+
+	checkCudaErrors(cudaMalloc((void**)&d_feat, numEntries*descLen*sizeof(float)));
+	checkCudaErrors(cudaMemset(d_feat, 0, numEntries*descLen*sizeof(float)));
+
+	//checkCudaErrors(cudaMalloc((void**)&d_featInt, numEntries*descLen*sizeof(int)));
+	//checkCudaErrors(cudaMemset(d_featInt, 0, numEntries*descLen*sizeof(int)));
+
+	checkCudaErrors(cudaMalloc((void**)&d_segmentsImEnds, numEntries*sizeof(unsigned int)));
+	checkCudaErrors(cudaMemset(d_segmentsImEnds, 0, numEntries*sizeof(unsigned int)));
+
+	checkCudaErrors(cudaMalloc((void**)&d_segmentsPointsEnds, numEntries*sizeof(unsigned int)));
+	checkCudaErrors(cudaMemset(d_segmentsPointsEnds, 0, numEntries*sizeof(unsigned int)));
+
+	thrust::upper_bound(d_segmentsIm, d_segmentsIm + numRows*numCols, d_segmentsImUniq, d_segmentsImUniq + numEntries, d_segmentsImEnds);
+	thrust::lower_bound(d_segmentsImEnds, d_segmentsImEnds + numEntries, d_segmentsIm, d_segmentsIm + numRows*numCols, d_segmentsIm);
+
+	int2Zip d_segHSBegin = thrust::make_zip_iterator(thrust::make_tuple(d_segmentsImHS.begin(), d_hsBinPtr));
+	int2Zip d_segHSEnd = thrust::make_zip_iterator(thrust::make_tuple(d_segmentsImHS.begin() + numRows*numCols,
 																			d_hsBinPtr + numRows*numCols));
 
-	intUcharTuple d_segVBegin = thrust::make_zip_iterator(thrust::make_tuple(d_segmentsImV, d_vBinPtr));
-	intUcharTuple d_segVEnd = thrust::make_zip_iterator(thrust::make_tuple(d_segmentsImV + numRows*numCols, d_vBinPtr + numRows*numCols));
+	int2Zip d_segVBegin = thrust::make_zip_iterator(thrust::make_tuple(d_segmentsImV.begin(), d_vBinPtr));
+	int2Zip d_segVEnd = thrust::make_zip_iterator(thrust::make_tuple(d_segmentsImV.begin() + numRows*numCols, d_vBinPtr + numRows*numCols));
 
 	printf("compImageHistBinsHSV\n");
 	compImageHistBinsHSV<<<gridSizeIm, blockSizeIm>>>(d_h,
 												d_s,
 												d_v,
-												d_hsBins,
-												d_vBins,
+												d_hsBin,
+												d_vBin,
 												numRows,
 												numCols,
 												d_featParams);
 
 	//thrust::sort_by_key(d_segmentsImPtr, d_segmentsImPtr + numRows*numCols, d_imBegin);
-	thrust::sort_by_key(d_segHSBegin, d_segHSEnd, d_hsBinPtr, d_hsBinPtr + numRows*numCols);
-	thrust::sort_by_key(d_segVBegin, d_segVEnd, d_vBinPtr, d_vBinPtr + numRows*numCols);
+	thrust::sort_by_key(d_segHSBegin, d_segHSEnd, d_hsBinPtr, int2TupleMin());
+	thrust::sort_by_key(d_segVBegin, d_segVEnd, d_vBinPtr, int2TupleMin());
 
-	printf("countSegmentPixels\n");
-	countSegmentPixels<<<gridSizeIm, blockSizeIm>>>(d_segmentsIm,
-													d_countSegmentsIm,
-													numRows,
-													numCols,
-													numEntries);
-	cudaDeviceSynchronize();
-	checkCudaErrors(cudaGetLastError());
+	calcDenseHists(d_segHSBegin,
+						d_feat,
+						numRows*numCols,
+						featParams->histHLen * featParams->histSLen,
+						numEntries);
 
 	if(numPoints > 0){
 		printf("compPointProjection\n");
@@ -327,6 +380,6 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 	checkCudaErrors(cudaFree(d_segmentsIm));
 	checkCudaErrors(cudaFree(d_segmentsPoints));
 	cudaCopyFromDeviceAndFree(feat, d_feat, numEntries*descLen*sizeof(float));
-	cudaCopyFromDeviceAndFree(countPixelsEntries, d_countSegmentsIm, numEntries*sizeof(unsigned int));
-	cudaCopyFromDeviceAndFree(countPointsEntries, d_countSegmentsPoints, numEntries*sizeof(unsigned int));
+	cudaCopyFromDeviceAndFree(countPixelsEntries, d_segmentsImEnds, numEntries*sizeof(unsigned int));
+	cudaCopyFromDeviceAndFree(countPointsEntries, d_segmentsPointsEnds, numEntries*sizeof(unsigned int));
 }

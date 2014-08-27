@@ -203,8 +203,8 @@ __global__ void scaleData(const int* const d_hist,
 __global__ void compImageHistBinsHSV(const unsigned char* const d_h,
 									const unsigned char* const d_s,
 									const unsigned char* const d_v,
-									unsigned char* const d_hsBin,
-									unsigned char* const d_vBin,
+									int* const d_hsBin,
+									int* const d_vBin,
 									int numRows,
 									int numCols,
 									const FeatParams* const d_featParams)
@@ -218,16 +218,16 @@ __global__ void compImageHistBinsHSV(const unsigned char* const d_h,
 		int hVal = (d_h[idx1d] & 0xff);
 		int sVal = (d_s[idx1d] & 0xff);
 		int vVal = (d_v[idx1d] & 0xff);
-		unsigned char hBin = (hVal - d_featParams->histHRangeMin) *
+		int hBin = (hVal - d_featParams->histHRangeMin) *
 							d_featParams->histHLen /(d_featParams->histHRangeMax - d_featParams->histHRangeMin);
-		unsigned char sBin = (sVal - d_featParams->histSRangeMin) *
+		int sBin = (sVal - d_featParams->histSRangeMin) *
 							d_featParams->histSLen / (d_featParams->histSRangeMax - d_featParams->histSRangeMin);
 		hBin = max(min(hBin, d_featParams->histHLen - 1), 0);
 		sBin = max(min(sBin, d_featParams->histSLen - 1), 0);
 		d_hsBin[idx1d] = sBin * d_featParams->histHLen + hBin;
 
 		//histV
-		unsigned char vBin = (vVal - d_featParams->histVRangeMin) *
+		int vBin = (vVal - d_featParams->histVRangeMin) *
 							d_featParams->histVLen / (d_featParams->histVRangeMax - d_featParams->histVRangeMin);
 		vBin = max(min(vBin, d_featParams->histVLen - 1), 0);
 		d_vBin[idx1d] =  vBin;

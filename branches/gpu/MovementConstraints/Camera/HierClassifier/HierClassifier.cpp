@@ -860,7 +860,6 @@ std::vector<Entry> HierClassifier::extractEntriesGPU(cv::Mat imageBGR,
 						imageBGR.rows,
 						imageBGR.cols,
 						terrain.cols,
-						numEntries,
 						descLen,
 						&params);
 

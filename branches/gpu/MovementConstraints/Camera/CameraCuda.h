@@ -38,7 +38,6 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 								int numRows,
 								int numCols,
 								int numPoints,
-								int numEntries,
 								int descLen,
 								const FeatParams* const featParams);
 
