@@ -863,14 +863,15 @@ std::vector<Entry> HierClassifier::extractEntriesGPU(cv::Mat imageBGR,
 						terrain.cols,
 						descLen,
 						&params);
-
+		Mat featMat(descLen, numEntries, CV_32FC1, feat);
 		for(int e = 0; e < numEntries; e++){
-			Mat descTmp(descLen, 1, CV_32FC1, feat + e, numEntries*sizeof(float));
+			//Mat descTmp(featMat, Re);
 			Entry tmp;
-			tmp.imageId = gpuSegmentIdToSegmentId[e];
+			tmp.imageId = e;
 			tmp.weight = countPixelsEntries[e] + countPointsEntries[e];
-			descTmp = descTmp.t();
-			descTmp.copyTo(tmp.descriptor);
+			//descTmp = descTmp.t();
+			featMat.colRange(e, e + 1).copyTo(tmp.descriptor);
+			tmp.descriptor = tmp.descriptor.t();
 			cout << "imageId = " << tmp.imageId << endl;
 			cout << "weight = " << tmp.weight << endl;
 			cout << "descriptor = " << tmp.descriptor << endl;

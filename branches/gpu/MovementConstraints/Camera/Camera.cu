@@ -148,15 +148,25 @@ struct int2TupleMin{
   }
 };
 
+//https://code.google.com/p/thrust/source/browse/examples/histogram.cu
+
+template <typename T, class InputIterator>
+void printVector(const std::string& name, InputIterator vBeg, InputIterator vEnd)
+{
+	std::cout << " " << std::setw(20) << name << " ";
+	thrust::copy(vBeg, vEnd, std::ostream_iterator<T>(std::cout, " "));
+	std::cout << std::endl;
+}
+
 //https://code.google.com/p/thrust/source/browse/examples/summed_area_table.cu
 
 // convert a linear index to a linear index in the transpose
 struct transpose_index : public thrust::unary_function<size_t,size_t>
 {
-    size_t m, n;
+    size_t n, m;
 
     __host__ __device__
-    transpose_index(size_t _m, size_t _n) : m(_m), n(_n) {}
+    transpose_index(size_t _n, size_t _m) :  n(_n), m(_m) {}
 
     __host__ __device__
     size_t operator()(size_t linear_index)
@@ -168,62 +178,98 @@ struct transpose_index : public thrust::unary_function<size_t,size_t>
     }
 };
 
+struct modulusUnary : public thrust::unary_function<int, int>
+{
+    int mod;
+
+    __host__ __device__
+    modulusUnary(int imod) :  mod(imod) {}
+
+    __host__ __device__
+    int operator()(int x)
+    {
+        return x % mod;
+    }
+};
+
 // transpose an M-by-N array
-template <typename T>
-void transpose(size_t m, size_t n, thrust::device_ptr<T>& src, thrust::device_ptr<T>& dst)
+template <typename InputIterator, typename OutputIterator>
+void transpose(size_t m, size_t n, InputIterator src, OutputIterator dst)
 {
     thrust::counting_iterator<size_t> indices(0);
 
-    thrust::gather(dst, dst + n*m,
+    //printVector<size_t>("gather inices",
+    //					thrust::make_transform_iterator(indices, transpose_index(n, m)),
+    //					thrust::make_transform_iterator(indices, transpose_index(n, m)) + n*m);
+    thrust::scatter(src, src + n*m,
                    thrust::make_transform_iterator(indices, transpose_index(n, m)),
-                   src);
+                   dst);
 }
 
 //https://code.google.com/p/thrust/source/browse/examples/histogram.cu
 
-template <class InputIterator>
-void printVector(const std::string& name, InputIterator vBeg, InputIterator vEnd)
-{
-	std::cout << " " << std::setw(20) << name << " ";
-	thrust::copy(vBeg, vEnd, std::ostream_iterator<int>(std::cout, " "));
-	std::cout << std::endl;
-}
-
 void calcDenseHists(int2Zip d_vals,
+						const unsigned int* const d_segmentsEnds,
 						float* const d_histogram,
 						int numVals,
 						int numBins,
 						int numEntries)
 {
 
-  // find the end of each bin of values
+	// find the end of each bin of values
 
-	thrust::constant_iterator<int> numBinsIter;
-	thrust::counting_iterator<int> sequence(0);
+	thrust::constant_iterator<int> numBinsIter(numBins);
+	thrust::counting_iterator<int> sequenceIter(0);
 
-	thrust::device_vector<int> d_entriesVal(numVals);
-	thrust::device_vector<int> d_binsVal(numVals);
+	thrust::device_vector<int> d_entriesVal(numBins*numEntries);
+	thrust::device_vector<int> d_binsVal(numBins*numEntries);
+	thrust::device_vector<int> d_segmentsCount(numBins*numEntries);
 	thrust::device_ptr<float> d_histPtr(d_histogram);
+	thrust::device_ptr<const unsigned int> d_segmentsEndsPtr(d_segmentsEnds);
 
-	thrust::transform(sequence, sequence + numVals, numBinsIter, d_entriesVal.begin(), thrust::modulus<int>());
-	thrust::transform(sequence, sequence + numVals, numBinsIter, d_binsVal.begin(), thrust::divides<int>());
+	thrust::transform(sequenceIter, sequenceIter + numBins*numEntries, numBinsIter, d_entriesVal.begin(), thrust::divides<int>());
+	thrust::transform(sequenceIter, sequenceIter + numBins*numEntries, numBinsIter, d_binsVal.begin(), thrust::modulus<int>());
 
 	int2Zip d_searchValsBeg = thrust::make_zip_iterator(thrust::make_tuple(d_entriesVal.begin(), d_binsVal.begin()));
 	int2Zip d_searchValsEnd = thrust::make_zip_iterator(thrust::make_tuple(d_entriesVal.end(), d_binsVal.end()));
 	thrust::upper_bound(d_vals, d_vals + numVals,
 					  d_searchValsBeg, d_searchValsEnd,
-					  d_histPtr,
-					  int2TupleMin());
+					  d_histPtr);
 
 	// print the cumulative histogram
-	//print_vector("cumulative histogram", d_histogram);
+	//printVector<int>("d_searchVals entries", d_entriesVal.begin(), d_entriesVal.end());
+	//printVector<int>("d_searchVals bins", d_binsVal.begin(), d_binsVal.end());
+	//printVector<float>("cumulative histogram", d_histPtr, d_histPtr + numBins*numEntries);
 
 	// compute the histogram by taking differences of the cumulative histogram
-	thrust::adjacent_difference(d_histPtr, d_histPtr + numEntries*numBins,
-							  d_histPtr);
+	thrust::adjacent_difference(d_histPtr, d_histPtr + numBins*numEntries,
+								d_histPtr);
 
+
+	//printVector<float>("histogram", d_histPtr, d_histPtr + numBins*numEntries);
 	//transpose
 	transpose(numEntries, numBins, d_histPtr, d_histPtr);
+
+	//printVector<float>("transposed histogram", d_histTmp.begin(), d_histTmp.end());
+	//printVector<float>("transposed histogram", d_histPtr, d_histPtr + numBins*numEntries);
+
+	thrust::adjacent_difference(d_segmentsEndsPtr, d_segmentsEndsPtr + numEntries,
+								d_segmentsCount.begin());
+
+	typedef thrust::device_vector<int>::iterator IntIter;
+	typedef thrust::transform_iterator<modulusUnary, thrust::counting_iterator<int> > TransIter;
+
+	TransIter indicesIter(sequenceIter, modulusUnary(numEntries));
+	thrust::permutation_iterator<IntIter, TransIter> permIterSegCount(d_segmentsCount.begin(), indicesIter);
+
+	//printVector<int>("d_segmentsEnd", d_segmentsEndsPtr, d_segmentsEndsPtr + numEntries);
+	//printVector<int>("permIterSegCount", permIterSegCount, permIterSegCount + numBins*numEntries);
+	thrust::transform(d_histPtr, d_histPtr + numBins*numEntries,
+						permIterSegCount,
+						d_histPtr,
+						thrust::divides<float>());
+
+	//printVector<float>("normalized histogram", d_histPtr, d_histPtr + numBins*numEntries);
 }
 
 
@@ -279,8 +325,8 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 									regionsOnImage,
 									numRows*numCols*sizeof(int));
 	checkCudaErrors(cudaMalloc((void**)&d_segmentsImUniq, numRows*numCols*sizeof(int)));
-	checkCudaErrors(cudaMalloc((void**)&d_hsBin, numRows*numCols*sizeof(unsigned char)));
-	checkCudaErrors(cudaMalloc((void**)&d_vBin, numRows*numCols*sizeof(unsigned char)));
+	checkCudaErrors(cudaMalloc((void**)&d_hsBin, numRows*numCols*sizeof(int)));
+	checkCudaErrors(cudaMalloc((void**)&d_vBin, numRows*numCols*sizeof(int)));
 
 	checkCudaErrors(cudaMalloc((void**)&d_segmentsPoints, numPoints*sizeof(int)));
 
@@ -336,8 +382,9 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 	printf("end unique_copy()\n");
 	int numEntries = d_segmentsImUniqPtrEnd - d_segmentsImUniqPtr;
 	printf("numEntries = %d\n", numEntries);
-	printVector("d_segmentsImUniq", d_segmentsImUniqPtr,
-									d_segmentsImUniqPtr + numEntries);
+	//int numEntries = 87;
+	//printVector<int>("d_segmentsImUniq", d_segmentsImUniqPtr,
+	//								d_segmentsImUniqPtr + numEntries);
 
 	checkCudaErrors(cudaMalloc((void**)&d_feat, numEntries*descLen*sizeof(float)));
 	checkCudaErrors(cudaMemset(d_feat, 0, numEntries*descLen*sizeof(float)));
@@ -357,13 +404,15 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 	thrust::upper_bound(d_segmentsImPtr, d_segmentsImPtr + numRows*numCols,
 						d_segmentsImUniqPtr, d_segmentsImUniqPtr + numEntries,
 						d_segmentsImEndsPtr);
-	printVector("d_segmentsImEnds", d_segmentsImEndsPtr, d_segmentsImEndsPtr + numEntries);
+	//printVector<unsigned int>("d_segmentsImEnds", d_segmentsImEndsPtr, d_segmentsImEndsPtr + numEntries);
 	printf("lower_bound\n");
 	thrust::lower_bound(d_segmentsImUniqPtr, d_segmentsImUniqPtr + numEntries,
 						d_segmentsImPtr, d_segmentsImPtr + numRows*numCols,
 						d_segmentsImPtr);
 
 	//printVector("d_segmentsIm", d_segmentsImPtr, d_segmentsImPtr + 6000);
+
+	int startRow = 0;
 
 	printf("compImageHistBinsHSV\n");
 	compImageHistBinsHSV<<<gridSizeIm, blockSizeIm>>>(d_h,
@@ -387,33 +436,46 @@ extern "C" void extractEntries(const unsigned char* const imageH,
 	int2Zip d_segVEnd = thrust::make_zip_iterator(thrust::make_tuple(d_segmentsImV.begin() + numRows*numCols,
 																		d_vBinPtr + numRows*numCols));
 
-	printVector("d_segmentsImHS", d_segmentsImHS.begin(), d_segmentsImHS.begin() + 100);
-	printVector("d_hsBin", d_hsBinPtr, d_hsBinPtr + 100);
-	printVector("d_h", d_hPtr, d_hPtr + 100);
-	printVector("d_s", d_sPtr, d_sPtr + 100);
+	//printVector<int>("d_segmentsImHS", d_segmentsImHS.begin(), d_segmentsImHS.end());
+	//printVector<int>("d_hsBin", d_hsBinPtr, d_hsBinPtr + numRows*numCols);
+	//printVector<int>("d_h", d_hPtr, d_hPtr + 100);
+	//printVector<int>("d_s", d_sPtr, d_sPtr + 100);
 	//thrust::sort_by_key(d_segmentsImPtr, d_segmentsImPtr + numRows*numCols, d_imBegin);
-	for(int i = 0; i < 100; i++){
+	/*for(int i = 0; i < 100; i++){
 		//int2Tuple tmp;
 		//int2Zip iter = d_segHSBegin + i;
 		//thrust::copy(iter, iter + 1, &tmp);
 		thrust::device_reference<int> val0 = thrust::get<0>(*(d_segHSBegin + i));
 		thrust::device_reference<int> val1 = thrust::get<1>(*(d_segHSBegin + i));
-		std::cout << "(" << val0 << ", " << val1 << ") ";
+		std::cout << i << ":(" << val0 << ", " << val1 << ") ";
 		//std::cout << "(" << tmp << ") ";
 	}
-	std::cout << std::endl;
+	std::cout << std::endl;*/
 
 	printf("sort HS\n");
-	//thrust::sort(d_segHSBegin, d_segHSEnd);
+	thrust::sort(d_segHSBegin, d_segHSEnd);
 	printf("sort V\n");
 	thrust::sort(d_segVBegin, d_segVEnd);
 
 	printf("calcDenseHists\n");
 	calcDenseHists(d_segHSBegin,
-						d_feat,
+						d_segmentsImEnds,
+						d_feat + startRow,
 						numRows*numCols,
 						featParams->histHLen * featParams->histSLen,
 						numEntries);
+
+	startRow += featParams->histHLen * featParams->histSLen;
+
+	printf("calcDenseHists\n");
+	calcDenseHists(d_segVBegin,
+						d_segmentsImEnds,
+						d_feat + startRow,
+						numRows*numCols,
+						featParams->histVLen,
+						numEntries);
+
+	startRow += featParams->histVLen;
 
 	if(numPoints > 0){
 		printf("compPointProjection\n");
