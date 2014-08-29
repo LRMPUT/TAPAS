@@ -1,10 +1,15 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
+set(CUDA 1)
 set(CMAKE_BUILD_TYPE "Release")
 
 project(RobotsIntellect)
 
 SET(CMAKE_CXX_FLAGS "-std=c++0x")
+
+IF (CUDA EQUAL 0)
+	add_definitions(-DNO_CUDA)
+ENDIF (CUDA EQUAL 0)
 
 set(urg_LIBRARIES_DIR /usr/local/lib)
 set(urg_LIBRARIES urg_cpp)
@@ -14,11 +19,12 @@ find_package(OpenCV REQUIRED)
 
 find_package(Boost COMPONENTS system filesystem thread REQUIRED)
 
-find_package(CUDA REQUIRED)
-# Pass options to NVCC
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3 -gencode arch=compute_12,code=sm_12)
-SET( CUDA_PROPAGATE_HOST_FLAGS OFF )
-
+IF (CUDA GREATER 0)
+	find_package(CUDA REQUIRED)
+	# Pass options to NVCC
+	set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3 -gencode arch=compute_20,code=sm_21)
+	SET( CUDA_PROPAGATE_HOST_FLAGS OFF )
+ENDIF (CUDA GREATER 0)
 link_directories(${URG_LIBRARIES_DIR})
 
 set(RobotsIntellect_SOURCES
@@ -63,15 +69,21 @@ set(RobotsIntellect_SOURCES
 	Trobot/source/SerialPort.cpp
 )
 
-set(RobotsIntellect_CUDA_SOURCES
-	MovementConstraints/Camera/Camera.cu
-)
-
-cuda_add_executable (RobotsIntellect 
-	${RobotsIntellect_SOURCES}
-	${RobotsIntellect_CUDA_SOURCES}
-	main.cpp
-)
+IF( CUDA GREATER 0)
+	set(RobotsIntellect_CUDA_SOURCES
+		MovementConstraints/Camera/Camera.cu
+	)
+	cuda_add_executable (RobotsIntellect 
+		${RobotsIntellect_SOURCES}
+		${RobotsIntellect_CUDA_SOURCES}
+		main.cpp
+	)
+ELSEIF ( CUDA EQUAL 0)
+	add_executable (RobotsIntellect 
+		${RobotsIntellect_SOURCES}
+		main.cpp
+	)
+ENDIF( CUDA GREATER 0)
 
 target_link_libraries(RobotsIntellect
 	${OpenCV_LIBS}
@@ -119,12 +131,22 @@ qt4_wrap_cpp(trobotQt_HEADERS_MOC ${trobotQt_HEADERS} OPTIONS -DBOOST_TT_HAS_OPE
 qt4_wrap_ui(trobotQt_FORMS_HEADERS ${trobotQt_FORMS})
 include(${QT_USE_FILE})
 add_definitions(${QT_DEFINITIONS})
-cuda_add_executable(Trobot_Qt/gui
-	${RobotsIntellect_SOURCES}
-	${RobotsIntellect_CUDA_SOURCES}
-	${trobotQt_SOURCES}
-	${trobotQt_HEADERS_MOC}
-	${trobotQt_FORMS_HEADERS})
+
+IF (CUDA GREATER 0)
+	cuda_add_executable(Trobot_Qt/gui
+		${RobotsIntellect_SOURCES}
+		${RobotsIntellect_CUDA_SOURCES}
+		${trobotQt_SOURCES}
+		${trobotQt_HEADERS_MOC}
+		${trobotQt_FORMS_HEADERS})
+ELSEIF (CUDA EQUAL 0)
+	add_executable(Trobot_Qt/gui
+		${RobotsIntellect_SOURCES}
+		${trobotQt_SOURCES}
+		${trobotQt_HEADERS_MOC}
+		${trobotQt_FORMS_HEADERS})
+ENDIF (CUDA GREATER 0)	
+
 message("Copying generated ui headers")
 foreach(file ${trobotQt_FORMS_HEADERS})
 	get_filename_component(filename ${file} NAME)
