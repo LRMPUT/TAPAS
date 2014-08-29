@@ -411,7 +411,7 @@ std::vector<cv::Mat> HierClassifier::classify(cv::Mat image,
 	else{
 		regionsOnImage = segmentation;
 	}
-	vector<Entry> entries = extractEntriesGPU(image, terrain, regionsOnImage);
+	vector<Entry> entries = extractEntries(image, terrain, regionsOnImage);
 
 	using namespace std::chrono;
 	high_resolution_clock::time_point start = high_resolution_clock::now();
@@ -428,8 +428,10 @@ std::vector<cv::Mat> HierClassifier::classify(cv::Mat image,
 	}
 	Mat result(entries.size(), numLabels, CV_32FC1, Scalar(0));
 	for(int c = 0; c < classifiers.size(); c++){
-		//cout << "Classifing using classifier " << c << endl;
+		cout << "Classifing using classifier " << c << endl;
 		for(int e = 0; e < entries.size(); e++){
+			//cout << "classInfo.descBeg = " << classifiersInfo[c].descBeg << ", descEnd = " << classifiersInfo[c].descEnd << endl;
+			//cout << "descriptor.numCols = " << entries[e].descriptor.cols << endl;
 			Mat desc = entries[e].descriptor.colRange(
 													classifiersInfo[c].descBeg,
 													classifiersInfo[c].descEnd);
@@ -521,7 +523,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 	}
 
 	high_resolution_clock::time_point endSorting = high_resolution_clock::now();
-	cout << "End sorting terrain" << endl;
+	cout << "End sorting terrain, terrainRegion.size() = " << terrainRegion.size() << endl;
 
 	vector<Entry> ret;
 	int endIm = 0;
@@ -576,8 +578,8 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 			//waitKey();
 		}
 		else{
-			//cout << "Warning - no terrain values for imageId " << pixels[begIm].imageId << endl;
-			valuesTer = Mat(5, 1, CV_32FC1, Scalar(0));
+			cout << "Warning - no terrain values for imageId " << pixels[begIm].imageId << endl;
+			valuesTer = Mat(6, 1, CV_32FC1, Scalar(0));
 		}
 
 		int channelsHS[] = {0, 1};
@@ -614,7 +616,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		//normalize(meanHSV, meanHSV);
 
 		Mat covarLaser, meanLaser;
-		calcCovarMatrix(valuesTer.rowRange(3, 5),
+		calcCovarMatrix(valuesTer.rowRange(4, 6),
 						covarLaser,
 						meanLaser,
 						CV_COVAR_NORMAL | CV_COVAR_SCALE | CV_COVAR_COLS,
@@ -623,7 +625,8 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		meanLaser = meanLaser.reshape(0, 1);
 		//normalize(covarLaser, covarLaser);
 		//normalize(meanLaser, meanLaser);
-		//cout << covarLaser << endl << meanLaser << endl;
+		//cout << "covarLaser = " << covarLaser << endl;
+		//cout << "meanLaser = " << meanLaser << endl;
 
 		//cout << "Entry " << ret.size() << endl;
 		//cout << "histHS = " << histogramHS << endl;
@@ -633,7 +636,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 
 		Mat kurtLaser(1, 2, CV_32FC1);
 		Mat tmpVal;
-		valuesTer.rowRange(3, 5).copyTo(tmpVal);
+		valuesTer.rowRange(4, 6).copyTo(tmpVal);
 		//cout << "tmpVal = " << tmpVal << endl;
 		//cout << "mean(0) = " << meanLaser.at<float>(0) << ", mean(1) = " << meanLaser.at<float>(1) << endl;
 		//cout << "stdDev^4(0) = " << pow(covarLaser.at<float>(0), 2) << ", stdDev^4(3) = " << pow(covarLaser.at<float>(3), 2) << endl;
@@ -652,30 +655,29 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 
 		Mat histogramDI;
 		int channelsDI[] = {0, 1};
-		float rangeD[] = {2000, 3000};
-		float rangeI[] = {800, 2500};
+		float rangeD[] = {1500, 2500};
+		float rangeI[] = {1800, 4000};
 		const float* rangesDI[] = {rangeD, rangeI};
 		int sizeDI[] = {histDLen, histILen};
-		Mat valHistD = valuesTer.rowRange(3, 4);
-		Mat valHistI = valuesTer.rowRange(4, 5);
+		Mat valHistD = valuesTer.rowRange(4, 5);
+		Mat valHistI = valuesTer.rowRange(5, 6);
 		Mat valuesHistDI[] = {valHistD, valHistI};
 		calcHist(valuesHistDI, 2, channelsDI, Mat(), histogramDI, 2, sizeDI, rangesDI);
 		histogramDI = histogramDI.reshape(0, 1);
 		normalize(histogramDI, histogramDI);
 
-
+		//cout << "histogramDI = " << histogramDI << endl;
 
 		Entry tmp;
 		tmp.imageId = pixels[begIm].imageId;
 		tmp.weight = (endIm - begIm) + (endTer - begTer);
 		tmp.descriptor = Mat(1, histHLen*histSLen +
 							histVLen +
-							covarHSVLen +
 							meanHSVLen +
-							covarLaserLen +
+							covarHSVLen +
+							histDLen*histILen +
 							meanLaserLen +
-							kurtLaserLen +
-							histDLen*histILen,
+							covarLaserLen,
 							CV_32FC1);
 
 		int begCol = 0;
@@ -695,7 +697,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		begCol += covarLaserLen;
 		//kurtLaser.copyTo(tmp.descriptor.colRange(begCol, begCol + kurtLaserLen));
 		//begCol += kurtLaserLen;
-
+		//cout << "descriptor = " << tmp.descriptor << endl;
 
 		ret.push_back(tmp);
 	}

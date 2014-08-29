@@ -31,7 +31,7 @@
 					<hist_V len="8" />
 					<mean_HSV len="3" />
 					<covar_HSV len="9" />
-					<hist_DI len_D="5" len_I="5" />
+					<hist_DI len_D="1" len_I="25" />
 					<mean_laser len="2" />
 					<covar_laser len="4" />
 					<!--kurt_laser len="2" />-->
