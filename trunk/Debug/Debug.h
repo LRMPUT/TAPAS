@@ -9,6 +9,7 @@
 #define DEBUG_H_
 
 #include "../Robot/Robot.h"
+#include "../Planning/GlobalPlanner.h"
 
 class Debug{
 	Robot* robot;
@@ -66,6 +67,8 @@ public:
 	cv::Mat getPointCloudImu(cv::Mat& curPosImuMapCenter);
 
 	cv::Mat getClassifiedImage();
+
+	GlobalPlanner::GlobalPlanInfo getGlobalPlan();
 
 	//----------------------ACCESS TO SETTINGS
 	void getTransformationMatrices(cv::Mat& retImuOrigGlobal,

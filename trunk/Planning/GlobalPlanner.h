@@ -12,6 +12,7 @@
 #include <thread>
 #include <mutex>
 #include <chrono>
+#include <vector>
 //OpenCV
 #include <opencv2/opencv.hpp>
 //Trobot
@@ -28,9 +29,34 @@ enum OperationMode{
 	Autonomous
 };
 
+
+
 class GlobalPlanner {
 	friend class Debug;
 
+public:
+	struct Edge{
+		float x1, y1, x2, y2;
+		bool isChoosen;
+		Edge() {}
+		Edge(float ix1, float iy1, float ix2, float iy2, float iisChoosen):
+			x1(ix1),
+			y1(iy1),
+			x2(ix2),
+			y2(iy2),
+			isChoosen(iisChoosen)
+		{}
+	};
+
+	struct GlobalPlanInfo {
+		std::vector<GlobalPlanner::Edge> edges;
+		float minX, maxX;
+		float minY, maxY;
+		float robotX, robotY;
+		int curEdge;
+	};
+
+private:
 	//parent class robot
 	Robot* robot;
 
@@ -59,10 +85,14 @@ public:
 	void stopThread();
 
 	void startHomologation();
+
 	//----------------------MODES OF OPERATION
 	void switchMode(OperationMode mode);
 
 	void setMotorsVel(float motLeft, float motRight);
+
+	//----------------------ACCESS TO COMPUTED DATA
+	GlobalPlanInfo getGlobalPlan();
 
 	//----------------------MENAGMENT OF GlobalPlanner DEVICES
 	//Robots Drive

@@ -208,6 +208,10 @@ cv::Mat Debug::getClassifiedImage(){
 	return robot->movementConstraints->camera->getClassifiedImage();
 }
 
+GlobalPlanner::GlobalPlanInfo Debug::getGlobalPlan(){
+	return robot->globalPlanner.getGlobalPlan();
+}
+
 void Debug::getTransformationMatrices(cv::Mat& retImuOrigGlobal,
 									cv::Mat& retCameraOrigLaser,
 									cv::Mat& retCameraOrigImu)

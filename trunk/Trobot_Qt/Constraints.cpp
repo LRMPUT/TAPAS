@@ -122,6 +122,39 @@ void Constraints::updateClassificationView(){
 	}
 }
 
+void Constraints::updateGlobalPlanView(){
+	GlobalPlanner::GlobalPlanInfo globalPlan = debug->getGlobalPlan();
+	QPixmap map(ui->constraintClassificationViewLabel->width(), ui->constraintClassificationViewLabel->height());
+	double scaleX = (globalPlan.maxX - globalPlan.minX)/ui->planningGlobalViewLabel->width();
+	double scaleY = (globalPlan.maxY - globalPlan.minY)/ui->planningGlobalViewLabel->height();
+	QPainter painter(&map);
+	for(int e = 0; e < globalPlan.edges.size(); e++){
+		int x1 = (globalPlan.edges[e].x1 - globalPlan.minX)/scaleX;
+		int y1 = (globalPlan.edges[e].y1 - globalPlan.minY)/scaleY;
+		int x2 = (globalPlan.edges[e].x2 - globalPlan.minX)/scaleX;
+		int y2 = (globalPlan.edges[e].y2 - globalPlan.minY)/scaleY;
+		if(globalPlan.edges[e].isChoosen == true){
+			painter.setPen(Qt::red);
+		}
+		else if(e == globalPlan.curEdge){
+			painter.setPen(Qt::green);
+		}
+		else{
+			painter.setPen(Qt::blue);
+		}
+		painter.drawLine(x1, y1, x2, y2);
+		painter.setPen(Qt::black);
+		painter.drawEllipse(x1, y1, 2, 2);
+		painter.drawEllipse(x2, y2, 2, 2);
+	}
+	painter.setPen(Qt::green);
+	int rX = (globalPlan.robotX - globalPlan.minX)/scaleX;
+	int rY = (globalPlan.robotY - globalPlan.minY)/scaleY;
+	painter.drawEllipse(rX, rY, 2, 2);
+	ui->constraintClassificationViewLabel->setPixmap(map);
+	ui->constraintClassificationViewLabel->update();
+}
+
 void Constraints::updateViews(){
 	//cout << "Updating views" << endl;
 	if(ui->constraintCameraViewLabel->isVisible()){
@@ -132,5 +165,8 @@ void Constraints::updateViews(){
 	}
 	if(ui->constraintClassificationViewLabel->isVisible()){
 		updateClassificationView();
+	}
+	if(ui->planningGlobalViewLabel->isVisible()){
+		updateGlobalPlanView();
 	}
 }

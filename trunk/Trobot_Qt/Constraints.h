@@ -31,6 +31,7 @@ class Constraints : public QObject
 	void updateCameraView();
 	void updateMapView();
 	void updateClassificationView();
+	void updateGlobalPlanView();
 public:
 	Constraints(Ui::TrobotQtClass* iui, Debug* idebug);
 	virtual ~Constraints();
