@@ -262,7 +262,8 @@ cv::Mat MovementConstraints::compNewPos(cv::Mat lprevImu, cv::Mat lcurImu,
 {
 	Mat ret = Mat::eye(4, 4, CV_32FC1);
 	if(!lposMapCenter.empty() && !lmapCenterGlobal.empty()){
-		//cout << "compOrient(imuCur) = " << compOrient(imuCur) << endl;
+		//cout << "compOrient(lcurImu) = " << compOrient(lcurImu) << endl;
+		//cout << "lmapCenterGlobal = " << lmapCenterGlobal << endl;
 		//cout << "Computing curPos" << endl;
 		//cout << "encodersCur - encodersPrev = " << encodersCur - encodersPrev << endl;
 		Mat trans = lmapCenterGlobal.inv()*compTrans(compOrient(lprevImu), lcurEnc - lprevEnc);
@@ -272,6 +273,7 @@ cv::Mat MovementConstraints::compNewPos(cv::Mat lprevImu, cv::Mat lcurImu,
 		//cout << "Computing curRot" << endl;
 
 		Mat curRot = lmapCenterGlobal.inv()*compOrient(lcurImu);
+		//cout << "curRot = " << curRot << endl;
 
 		curRot.copyTo(ret);
 		curTrans.copyTo(Mat(ret, Rect(3, 0, 1, 4)));

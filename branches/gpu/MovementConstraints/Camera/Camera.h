@@ -113,10 +113,10 @@ class Camera {
 							float regionId,
 							cv::Mat& regionsOnImage);
 
-	cv::Mat compOrient(cv::Mat imuData);
+	/*cv::Mat compOrient(cv::Mat imuData);
 
 	cv::Mat compTrans(	cv::Mat orient,
-						cv::Mat encodersDiff);
+						cv::Mat encodersDiff);*/
 
 	bool readLineFloat(std::ifstream& stream, cv::Mat& data);
 

@@ -280,7 +280,7 @@ int Camera::selectPolygonPixels(std::vector<cv::Point2f> polygon, float regionId
 	return selectPolygonPixels(tmp, regionId, regionsOnImage);
 }
 
-cv::Mat Camera::compOrient(cv::Mat imuData){
+/*cv::Mat Camera::compOrient(cv::Mat imuData){
 	//cout << "Computing orientation from IMU" << endl;
 	//cout << "imuData = " << imuData << endl;
 
@@ -332,7 +332,7 @@ cv::Mat Camera::compTrans(	cv::Mat orient,
 	//cout << trans << endl << orient << endl;
 	trans = orient*trans;
 	return trans;
-}
+}*/
 
 bool Camera::readLineFloat(std::ifstream& stream, Mat& data){
 	data = Mat(0, 1, CV_32FC1);
@@ -418,7 +418,7 @@ void Camera::processDir(boost::filesystem::path dir,
 	Mat hokuyoAllPointsGlobal;
 	Mat imuPrev, encodersPrev;
 	Mat imuPosGlobal, curPos;
-	Mat prevRot;
+
 	int hokuyoCurTime;
 	hokuyoFile >> hokuyoCurTime;
 	int imuCurTime;
@@ -498,8 +498,6 @@ void Camera::processDir(boost::filesystem::path dir,
 
 			if(imuPrev.empty()){
 				readLineFloat(imuFile, imuPrev);
-				imuPosGlobal = compOrient(imuPrev);
-				imuPosGlobal.copyTo(curPos);
 				imuFile >> imuCurTime;
 			}
 			if(encodersPrev.empty()){
@@ -507,8 +505,14 @@ void Camera::processDir(boost::filesystem::path dir,
 				encodersFile >> encodersCurTime;
 			}
 			if(!imuPrev.empty()){
-				cout << "imuPrev.size() = " << imuPrev.size() << endl;
-				imuPrev = imuPrev.reshape(1, 3);
+				//cout << "imuPrev.size() = " << imuPrev.size() << endl;
+				//TODO Poprawić po zmianie plików z danymi (były błędnie zapisane)
+				imuPrev = imuPrev.reshape(1, 4);
+				imuPrev = imuPrev.t();
+			}
+			if(imuPosGlobal.empty()){
+				imuPosGlobal = movementConstraints->compOrient(imuPrev);
+				curPos = Mat::eye(4, 4, CV_32FC1);
 			}
 			Mat imuCur, encodersCur;
 
@@ -526,8 +530,10 @@ void Camera::processDir(boost::filesystem::path dir,
 				encodersFile >> encodersCurTime;
 			}
 			if(!imuCur.empty()){
-				cout << "imuCur.size() = " << imuCur.size() << endl;
-				imuCur = imuCur.reshape(1, 3);
+				//cout << "imuCur.size() = " << imuCur.size() << endl;
+				//TODO Poprawić po zmianie plików z danymi (były błędnie zapisane)
+				imuCur = imuCur.reshape(1, 4);
+				imuCur = imuCur.t();
 			}
 			if(imuCur.empty()){
 				imuPrev.copyTo(imuCur);
@@ -539,7 +545,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			//cout << "encodersCur = " << encodersCur << endl << "encodersPrev = " << encodersPrev << endl;
 			curPos = movementConstraints->compNewPos(imuPrev, imuCur,
 														encodersPrev, encodersCur,
-														curPos, Mat::eye(4, 4, CV_32FC1));
+														curPos, imuPosGlobal);
 
 
 			/*Mat trans = compTrans(compOrient(imuPrev), encodersCur - encodersPrev);
@@ -554,7 +560,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			//cout << "trans = " << trans << endl;
 			//cout << "curTrans = " << curTrans << endl;
 			//cout << "curRot = " << curRot << endl;
-			cout << "imuPosGlobal.inv()*curPos*cameraOrigImu.inv() = " << endl << imuPosGlobal.inv()*curPos*cameraOrigImu.front().inv() << endl;
+			cout << "curPos = " << endl << curPos << endl;
 			//cout << "globalPos.inv()*curPos = " << globalPos.inv()*curPos << endl;
 
 			//cout << "Moving hokuyoAllPointsGlobal" << endl;
@@ -564,7 +570,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			}
 			//cout << "Addding hokuyoCurPoints" << endl;
 			Mat hokuyoCurPointsGlobal(hokuyoCurPoints.rows, hokuyoCurPoints.cols, CV_32FC1);
-			Mat tmpCurPoints = curPos*hokuyoCurPoints.rowRange(0, 4);
+			Mat tmpCurPoints = curPos*cameraOrigImu.front()*hokuyoCurPoints.rowRange(0, 4);
 			tmpCurPoints.copyTo(hokuyoCurPointsGlobal.rowRange(0, 4));
 			hokuyoCurPoints.rowRange(4, 6).copyTo(hokuyoCurPointsGlobal.rowRange(4, 6));
 			//cout << hokuyoCurPointsGlobal.channels() << ", " << hokuyoAllPointsGlobal.channels() << endl;
@@ -589,7 +595,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			//curRot.copyTo(prevRot);
 		}
 		Mat terrain = hokuyoAllPointsGlobal.clone();
-		terrain.rowRange(0, 4) = curPos.inv()*hokuyoAllPointsGlobal.rowRange(0, 4);
+		terrain.rowRange(0, 4) = (curPos*cameraOrigImu.front()).inv()*hokuyoAllPointsGlobal.rowRange(0, 4);
 		terrains.push_back(terrain);
 
 		//cout << "Displaying test image from file: " << dir.string() + string("/") + cameraImageFile.string() << endl;
@@ -599,7 +605,7 @@ void Camera::processDir(boost::filesystem::path dir,
 		if(image.data == NULL){
 			throw "Bad image file";
 		}
-		Mat hokuyoAllPointsCamera = curPos.inv()*hokuyoAllPointsGlobal.rowRange(0, 4);
+		Mat hokuyoAllPointsCamera = (curPos*cameraOrigImu.front()).inv()*hokuyoAllPointsGlobal.rowRange(0, 4);
 		//cout << "Computing point projection" << endl;
 		vector<Point2f> pointsImage;
 		projectPoints(	hokuyoAllPointsCamera.rowRange(0, 3).t(),
@@ -655,7 +661,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			}
 		}
 		imshow("test", image);
-		waitKey(100);
+		waitKey(500);
 
 		TiXmlDocument data(	dir.string() +
 							string("/") +
