@@ -255,6 +255,30 @@ cv::Mat MovementConstraints::compTrans(	cv::Mat orient,
 	return trans;
 }
 
+cv::Mat MovementConstraints::compNewPos(cv::Mat lprevImu, cv::Mat lcurImu,
+									cv::Mat lprevEnc, cv::Mat lcurEnc,
+									cv::Mat lposMapCenter,
+									cv::Mat lmapCenterGlobal)
+{
+	Mat ret = Mat::eye(4, 4, CV_32FC1);
+	if(!lposMapCenter.empty() && !lmapCenterGlobal.empty()){
+		//cout << "compOrient(imuCur) = " << compOrient(imuCur) << endl;
+		//cout << "Computing curPos" << endl;
+		//cout << "encodersCur - encodersPrev = " << encodersCur - encodersPrev << endl;
+		Mat trans = lmapCenterGlobal.inv()*compTrans(compOrient(lprevImu), lcurEnc - lprevEnc);
+		//cout << "trans = " << trans << endl;
+		//cout << "Computing curTrans" << endl;
+		Mat curTrans = Mat(lposMapCenter, Rect(3, 0, 1, 4)) + trans;
+		//cout << "Computing curRot" << endl;
+
+		Mat curRot = lmapCenterGlobal.inv()*compOrient(lcurImu);
+
+		curRot.copyTo(ret);
+		curTrans.copyTo(Mat(ret, Rect(3, 0, 1, 4)));
+	}
+	return ret;
+}
+
 void MovementConstraints::updateCurPosCloudMapCenter(){
 #ifndef ROBOT_OFFLINE
 	if(robot->isImuOpen() && robot->isEncodersOpen()){
@@ -280,18 +304,10 @@ void MovementConstraints::updateCurPosCloudMapCenter(){
 		if(curPosCloudMapCenter.empty()){
 			curPosCloudMapCenter = Mat::eye(4, 4, CV_32FC1);
 		}
-		//cout << "compOrient(imuCur) = " << compOrient(imuCur) << endl;
-		//cout << "Computing curPos" << endl;
-		//cout << "encodersCur - encodersPrev = " << encodersCur - encodersPrev << endl;
-		Mat trans = posMapCenterGlobal.inv()*compTrans(compOrient(imuPrev), encodersCur - encodersPrev);
-		//cout << "trans = " << trans << endl;
-		//cout << "Computing curTrans" << endl;
-		Mat curTrans = Mat(curPosCloudMapCenter, Rect(3, 0, 1, 4)) + trans;
-		//cout << "Computing curRot" << endl;
-
-		Mat curRot = posMapCenterGlobal.inv()*compOrient(imuCur);
-		curRot.copyTo(curPosCloudMapCenter);
-		curTrans.copyTo(Mat(curPosCloudMapCenter, Rect(3, 0, 1, 4)));
+		curPosCloudMapCenter = compNewPos(imuPrev, imuCur,
+											encodersPrev, encodersCur,
+											curPosCloudMapCenter,
+											posMapCenterGlobal);
 		lck.unlock();
 		//cout << "trans = " << trans << endl;
 		//cout << "posMapCenterGlobal = " << posMapCenterGlobal << endl;

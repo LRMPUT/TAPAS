@@ -114,6 +114,11 @@ public:
 	MovementConstraints(Robot* irobot, TiXmlElement* settings);
 	virtual ~MovementConstraints();
 
+	cv::Mat compNewPos(cv::Mat prevImu, cv::Mat curImu,
+						cv::Mat prevEnc, cv::Mat curEnc,
+						cv::Mat curPosMapCenter,
+						cv::Mat curPosMapCenterGlobal);
+
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
 	//CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right
 	const cv::Mat getHokuyoData();
