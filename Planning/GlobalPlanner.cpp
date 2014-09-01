@@ -142,6 +142,12 @@ void GlobalPlanner::setMotorsVel(float motLeft, float motRight){
 	}
 	lck.unlock();
 }
+//----------------------ACCESS TO COMPUTED DATA
+
+GlobalPlanner::GlobalPlanInfo GlobalPlanner::getGlobalPlan(){
+	GlobalPlanInfo info;
+	return info;
+}
 
 //----------------------MENAGMENT OF GlobalPlanner DEVICES
 //Robots Drive

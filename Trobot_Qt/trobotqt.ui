@@ -27,7 +27,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>9</number>
+     <number>10</number>
     </property>
     <widget class="QWidget" name="cameraTab">
      <attribute name="title">
@@ -1367,7 +1367,7 @@
       </widget>
      </widget>
     </widget>
-    <widget class="QWidget" name="DevicesTab">
+    <widget class="QWidget" name="devicesTab">
      <attribute name="title">
       <string>Devices</string>
      </attribute>
@@ -1763,7 +1763,7 @@
       </property>
      </widget>
     </widget>
-    <widget class="QWidget" name="CalibrationTab">
+    <widget class="QWidget" name="calibrationTab">
      <attribute name="title">
       <string>Calibration</string>
      </attribute>
@@ -1852,7 +1852,7 @@
       </property>
      </widget>
     </widget>
-    <widget class="QWidget" name="tab">
+    <widget class="QWidget" name="constraintsTab">
      <attribute name="title">
       <string>Constraints</string>
      </attribute>
@@ -1994,6 +1994,43 @@
       </property>
       <property name="text">
        <string>Homologation</string>
+      </property>
+     </widget>
+    </widget>
+    <widget class="QWidget" name="planningTab">
+     <property name="accessibleName">
+      <string/>
+     </property>
+     <attribute name="title">
+      <string>Planning</string>
+     </attribute>
+     <widget class="QLabel" name="planningGlobalViewLabel">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>30</y>
+        <width>400</width>
+        <height>400</height>
+       </rect>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::Box</enum>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_38">
+      <property name="geometry">
+       <rect>
+        <x>10</x>
+        <y>10</y>
+        <width>91</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Global Map:</string>
       </property>
      </widget>
     </widget>
