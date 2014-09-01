@@ -118,7 +118,9 @@ class Camera {
 	cv::Mat compTrans(	cv::Mat orient,
 						cv::Mat encodersDiff);
 
-	bool readLine(std::ifstream& stream, cv::Mat& data);
+	bool readLineFloat(std::ifstream& stream, cv::Mat& data);
+
+	bool readLineInt(std::ifstream& stream, cv::Mat& data);
 
 	void processDir(boost::filesystem::path dir,
 							std::vector<cv::Mat>& images,

@@ -58,8 +58,8 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 
 	std::vector<boost::filesystem::path> dirs;
 	dirs.push_back("../MovementConstraints/Camera/database/przejazd22");
-	//learnFromDir(dirs);
-	readCache("cache/cameraCache");
+	learnFromDir(dirs);
+	//readCache("cache/cameraCache");
 
 #ifndef NO_CUDA
 	int devCount;
@@ -334,7 +334,7 @@ cv::Mat Camera::compTrans(	cv::Mat orient,
 	return trans;
 }
 
-bool Camera::readLine(std::ifstream& stream, Mat& data){
+bool Camera::readLineFloat(std::ifstream& stream, Mat& data){
 	data = Mat(0, 1, CV_32FC1);
 	string line;
 	getline(stream, line);
@@ -348,9 +348,37 @@ bool Camera::readLine(std::ifstream& stream, Mat& data){
 	while(!tmp.eof()){
 		float val;
 		tmp >> val;
+		if(tmp.fail()){
+			break;
+		}
 		data.push_back(val);
 	}
 	data = data.reshape(0, 1);
+	//cout << "returning matrix: " << data << endl;
+	return true;
+}
+
+bool Camera::readLineInt(std::ifstream& stream, Mat& data){
+	data = Mat(0, 1, CV_32SC1);
+	string line;
+	getline(stream, line);
+	//cout << "Got line: " << line << endl;
+	if(stream.eof()){
+		return false;
+	}
+	stringstream tmp(line);
+	//double time;
+	//tmp >> time;
+	while(!tmp.eof()){
+		int val;
+		tmp >> val;
+		if(tmp.fail()){
+			break;
+		}
+		data.push_back(val);
+	}
+	data = data.reshape(0, 1);
+	//cout << "returning matrix: " << data << endl;
 	return true;
 }
 
@@ -440,9 +468,9 @@ void Camera::processDir(boost::filesystem::path dir,
 			Mat hokuyoCurPoints, hokuyoCurPointsDist, hokuyoCurPointsInt;
 			char tmpChar;
 			hokuyoFile >> tmpChar;
-			readLine(hokuyoFile, hokuyoCurPointsDist);
+			readLineFloat(hokuyoFile, hokuyoCurPointsDist);
 			hokuyoFile >> tmpChar;
-			readLine(hokuyoFile, hokuyoCurPointsInt);
+			readLineFloat(hokuyoFile, hokuyoCurPointsInt);
 			//hokuyoCurPoints = Mat(6, hokuyoCurPointsDist.cols, CV_32FC1, Scalar(1));
 			hokuyoCurPoints = Mat(0, 6, CV_32FC1);
 
@@ -469,29 +497,37 @@ void Camera::processDir(boost::filesystem::path dir,
 			//hokuyoCurPoints = hokuyoCurPoints.colRange(400, 681);
 
 			if(imuPrev.empty()){
-				readLine(imuFile, imuPrev);
+				readLineFloat(imuFile, imuPrev);
 				imuPosGlobal = compOrient(imuPrev);
 				imuPosGlobal.copyTo(curPos);
 				imuFile >> imuCurTime;
 			}
 			if(encodersPrev.empty()){
-				readLine(encodersFile, encodersPrev);
+				readLineInt(encodersFile, encodersPrev);
 				encodersFile >> encodersCurTime;
+			}
+			if(!imuPrev.empty()){
+				cout << "imuPrev.size() = " << imuPrev.size() << endl;
+				imuPrev = imuPrev.reshape(1, 3);
 			}
 			Mat imuCur, encodersCur;
 
 			while(imuCurTime <= hokuyoCurTime && !imuFile.eof()){
 				//cout << "Imu time: " << imuCurTime << endl;
-				readLine(imuFile, imuCur);
+				readLineFloat(imuFile, imuCur);
 
 				imuFile >> imuCurTime;
 			}
 
 			while(encodersCurTime <= hokuyoCurTime && !encodersFile.eof()){
 				//cout << "Encoders time: " << encodersCurTime << endl;
-				readLine(encodersFile, encodersCur);
+				readLineInt(encodersFile, encodersCur);
 
 				encodersFile >> encodersCurTime;
+			}
+			if(!imuCur.empty()){
+				cout << "imuCur.size() = " << imuCur.size() << endl;
+				imuCur = imuCur.reshape(1, 3);
 			}
 			if(imuCur.empty()){
 				imuPrev.copyTo(imuCur);
@@ -499,10 +535,14 @@ void Camera::processDir(boost::filesystem::path dir,
 			if(encodersCur.empty()){
 				encodersPrev.copyTo(encodersCur);
 			}
-
 			//cout << "Computing curPos" << endl;
 			//cout << "encodersCur = " << encodersCur << endl << "encodersPrev = " << encodersPrev << endl;
-			Mat trans = compTrans(compOrient(imuPrev), encodersCur - encodersPrev);
+			curPos = movementConstraints->compNewPos(imuPrev, imuCur,
+														encodersPrev, encodersCur,
+														curPos, Mat::eye(4, 4, CV_32FC1));
+
+
+			/*Mat trans = compTrans(compOrient(imuPrev), encodersCur - encodersPrev);
 			cout << "trans = " << trans << endl;
 			//cout << "Computing curTrans" << endl;
 			Mat curTrans = Mat(curPos, Rect(3, 0, 1, 4)) + trans;
@@ -510,7 +550,7 @@ void Camera::processDir(boost::filesystem::path dir,
 
 			Mat curRot = compOrient(imuCur)*cameraOrigImu.front();
 			curRot.copyTo(curPos);
-			curTrans.copyTo(Mat(curPos, Rect(3, 0, 1, 4)));
+			curTrans.copyTo(Mat(curPos, Rect(3, 0, 1, 4)));*/
 			//cout << "trans = " << trans << endl;
 			//cout << "curTrans = " << curTrans << endl;
 			//cout << "curRot = " << curRot << endl;
@@ -546,7 +586,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			encodersCur.copyTo(encodersPrev);
 			hokuyoFile >> hokuyoCurTime;
 
-			curRot.copyTo(prevRot);
+			//curRot.copyTo(prevRot);
 		}
 		Mat terrain = hokuyoAllPointsGlobal.clone();
 		terrain.rowRange(0, 4) = curPos.inv()*hokuyoAllPointsGlobal.rowRange(0, 4);

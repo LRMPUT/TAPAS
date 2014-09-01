@@ -125,7 +125,7 @@ void MovementConstraints::updateConstraintsMap(){
 	static const float mapTimeout = 5000;
 	std::chrono::high_resolution_clock::time_point timestampMapCur = std::chrono::high_resolution_clock::now();
 	if(std::chrono::duration_cast<std::chrono::milliseconds>(timestampMapCur - timestampMap).count() > 5000){
-		//move = true;
+		move = true;
 	}
 	if(move == true){
 		//cout << "Moving map" << endl;

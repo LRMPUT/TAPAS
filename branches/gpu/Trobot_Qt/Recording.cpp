@@ -67,8 +67,8 @@ void Recording::getDataImu() {
 	Mat imuData = debug->getImuData();
 
 	imuStream << time.elapsed() << " ";
-	for (int val = 0; val < 4; val++) {
-		for (int i = 0; i < 3; i++) {
+	for (int i = 0; i < 3; i++) {
+		for (int val = 0; val < 4; val++) {
 			imuStream << imuData.at<float>(i, val) << " ";
 		}
 	}
