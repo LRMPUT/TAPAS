@@ -146,3 +146,7 @@ cv::Mat Robot::getMovementConstraints(){
 cv::Mat Robot::getPosImuConstraintsMapCenter(){
 	return movementConstraints->getPosImuMapCenter();
 }
+
+cv::Mat Robot::getLocalMapPosInGlobalMap(){
+	return movementConstraints->getPosGlobalMap();
+}

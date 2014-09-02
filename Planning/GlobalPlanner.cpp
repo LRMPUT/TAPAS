@@ -39,9 +39,12 @@ GlobalPlanner::~GlobalPlanner(){
 }
 
 void GlobalPlanner::run(){
+
 	while(runThread){
 		if(startOperate){
-			processHomologation();
+			localPlanner = new LocalPlanner(robot, this);
+			//processHomologation();
+			localPlanner->localPlanerTest();
 		}
 		std::chrono::milliseconds duration(50);
 		std::this_thread::sleep_for(duration);
@@ -61,8 +64,8 @@ void GlobalPlanner::processHomologation(){
 	cout << "Pause end" << endl;
 
 	bool runForward = true;
-	static const float distance = 10000;
-	static const int motorsVel = 1000;
+	static const float distance = 500000;
+	static const int motorsVel = 700;
 	float prevDist = robot->getPosImuConstraintsMapCenter().at<float>(0, 3);
 	float distRun = 0;
 	while(runForward && runThread){
@@ -75,7 +78,7 @@ void GlobalPlanner::processHomologation(){
 		for(int x = MAP_SIZE/2; x < MAP_SIZE/2 + 10; x++){
 			for(int y = MAP_SIZE/2 - 3; y < MAP_SIZE/2 + 3; y++){
 				if(x + addX >= 0 && x + addX < MAP_SIZE){
-					if(constraints.at<float>(x + addX, y) > 0.5){
+				if(constraints.at<float>(x + addX, y) > 0.5){
 						wayBlocked = true;
 						break;
 					}
@@ -89,7 +92,7 @@ void GlobalPlanner::processHomologation(){
 			setMotorsVel(motorsVel, motorsVel);
 		}
 		else{
-			setMotorsVel(0, 0);
+			setMotorsVel(1800, -1800);
 		}
 
 		float curDist = posImuMapCenter.at<float>(0, 3);
@@ -187,3 +190,12 @@ void GlobalPlanner::closeRobotsDrive(){
 bool GlobalPlanner::isRobotsDriveOpen(){
 	return (robotDrive1 != NULL) && (robotDrive2 != NULL) ;
 }
+
+float GlobalPlanner::getHeadingToGoal(){
+
+	// indicate: go straight ahead
+	currentGoal = 90.0;
+
+	return currentGoal;
+}
+

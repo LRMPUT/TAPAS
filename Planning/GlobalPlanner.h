@@ -19,10 +19,12 @@
 //#include "../Trobot/include/RobotDrive.h"
 //TAPAS
 #include "RobotDrivers/robotDrivers.h"
+//#include "LocalPlanner.h"
 
 
 class Robot;
 class Debug;
+class LocalPlanner;
 
 enum OperationMode{
 	Manual,
@@ -66,6 +68,8 @@ private:
 	Drivers* robotDrive1;
 	Drivers* robotDrive2;
 
+	LocalPlanner* localPlanner;
+
 	OperationMode currentMode;
 
 	bool startOperate;
@@ -74,6 +78,8 @@ private:
 	std::thread globalPlannerThread;
 
 	std::mutex driverMtx;
+
+	float currentGoal;
 
 	void run();
 
@@ -85,6 +91,9 @@ public:
 	void stopThread();
 
 	void startHomologation();
+
+
+	float getHeadingToGoal();
 
 	//----------------------MODES OF OPERATION
 	void switchMode(OperationMode mode);

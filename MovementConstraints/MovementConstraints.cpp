@@ -154,8 +154,8 @@ void MovementConstraints::updateConstraintsMap(){
 	constraintsMap = Scalar(0);
 
 	//polling each constraints module to update map
-	//this->insertHokuyoConstraints(constraintsMap);
-	camera->insertConstraints(constraintsMap);
+	this->insertHokuyoConstraints(constraintsMap);
+	//camera->insertConstraints(constraintsMap);
 	//cout << constraintsMap << endl;
 	lckMap.unlock();
 	//cout << "End updateConstraintsMap()" << endl;
@@ -425,6 +425,14 @@ cv::Mat MovementConstraints::getPosImuMapCenter(){
 	Mat ret;
 	std::unique_lock<std::mutex> lck(mtxPointCloud);
 	curPosCloudMapCenter.copyTo(ret);
+	lck.unlock();
+	return ret;
+}
+
+cv::Mat MovementConstraints::getPosGlobalMap(){
+	Mat ret;
+	std::unique_lock<std::mutex> lck(mtxPointCloud);
+	posMapCenterGlobal.copyTo(ret);
 	lck.unlock();
 	return ret;
 }

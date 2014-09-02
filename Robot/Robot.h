@@ -27,12 +27,15 @@ class Debug;
 #include "../PositionEstimation/PositionEstimation.h"
 #include "../MovementConstraints/MovementConstraints.h"
 #include "../Planning/GlobalPlanner.h"
+#include "../Planning/LocalPlanner.h"
+
+
 
 #define MAP_RASTER_SIZE 200		//[mm]
 #define MAP_SIZE	(10000/MAP_RASTER_SIZE)	//[u] 10m
 #define MAP_MARGIN (2500/MAP_RASTER_SIZE)	//[u] 2,5m margin
 
-//#define NO_CUDA
+#define NO_CUDA
 //#define ROBOT_OFFLINE
 
 #define PI 3.14159265359
@@ -123,6 +126,8 @@ public:
 	cv::Mat getMovementConstraints();
 
 	cv::Mat getPosImuConstraintsMapCenter();
+
+	cv::Mat getLocalMapPosInGlobalMap();
 };
 
 #endif /* ROBOT_H_ */
