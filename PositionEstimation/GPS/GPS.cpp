@@ -107,15 +107,37 @@ double GPS::getPosX(){
 	return PosX;
 }
 
+double GPS::getPosX(double longitude)
+{
+	return (nmea_ndeg2radian(longitude - StartPosLon))*Radius;
+}
+
+double GPS::getPosLongitude(double X)
+{
+	return (nmea_radian2ndeg(X/Radius) + StartPosLon);
+}
+
+
 double GPS::getPosY(){
 	newMeasurement = false;
 	PosY = (nmea_ndeg2radian(Info.lat - StartPosLat))*Radius;
 	return PosY;
 }
 
+double GPS::getPosY(double latitude)
+{
+	return (nmea_ndeg2radian(latitude - StartPosLat))*Radius;
+}
+
+double GPS::getPosLatitude(double Y)
+{
+	return (nmea_radian2ndeg(Y/Radius) + StartPosLat);
+}
+
 double GPS::getLat(){
 	return Info.lat;
 }
+
 
 double GPS::getLon(){
 	return Info.lon;

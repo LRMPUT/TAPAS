@@ -18,7 +18,7 @@ using namespace std;
 
 PositionEstimation::PositionEstimation(Robot* irobot) :
 		robot(irobot), imu(irobot), gps(irobot), encoders(irobot) {
-
+	std::cout<<"PositionEstimation::PositionEstimation" << std::endl;
 	ENCODER_TICK_PER_REV = 300;
 	WHEEL_DIAMETER = 178.0/1000;
 	WHEEL_BASE = 432.0/1000;
@@ -37,6 +37,8 @@ PositionEstimation::PositionEstimation(Robot* irobot) :
 	lastImuTimestamp = std::chrono::high_resolution_clock::now();
 	runThread = false;
 	estimationThread = std::thread(&PositionEstimation::run, this);
+
+	std::cout<<"End PositionEstimation::PositionEstimation" << std::endl;
 }
 
 PositionEstimation::~PositionEstimation() {
@@ -267,6 +269,26 @@ bool PositionEstimation::isGpsOpen() {
 	return gps.isOpen();
 }
 
+double PositionEstimation::getPosX(double longitude)
+{
+	return gps.getPosX(longitude);
+}
+
+double PositionEstimation::getPosLongitude(double X)
+{
+	return gps.getPosLongitude(X);
+}
+
+double PositionEstimation::getPosY(double latitude)
+{
+	return gps.getPosY(latitude);
+}
+
+double PositionEstimation::getPosLatitude(double X)
+{
+	return gps.getPosLatitude(X);
+}
+
 //Imu
 void PositionEstimation::openImu(std::string port) {
 	imu.openPort(port);
@@ -279,6 +301,20 @@ void PositionEstimation::closeImu() {
 bool PositionEstimation::isImuOpen() {
 	return imu.isPortOpen();
 }
+
+//Imu2
+void PositionEstimation::openImu2(std::string port) {
+	imu2.openPort(port);
+}
+
+void PositionEstimation::closeImu2() {
+//	imu2.closePort();
+}
+
+bool PositionEstimation::isImuOpen2() {
+//	return imu2.isPortOpen();
+}
+
 
 //Encoders
 void PositionEstimation::openEncoders(std::string port) {

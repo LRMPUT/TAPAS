@@ -50,13 +50,12 @@ TrobotQt::TrobotQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
 	QObject::connect(ui.homologationButton, SIGNAL(clicked()), this, SLOT(startHomologation()));
 	cout << "TrobotQt::TrobotQt end" << endl;
 
-#ifndef ROBOT_OFFLINE
-	robot.openImu("/dev/robots/imu");
-	robot.openEncoders("/dev/robots/encoders");
-	robot.openHokuyo("/dev/robots/hokuyo");
-	robot.openRobotsDrive("/dev/robots/driverLeft", "/dev/robots/driverRight");
-#endif
-	robot.openCamera(vector<string>(1, "/dev/video0"));
+	//robot.openImu("/dev/robots/imu");
+	//robot.openImu2("/dev/robots/imu2");
+	//robot.openEncoders("/dev/robots/encoders");
+	//robot.openHokuyo("/dev/robots/hokuyo");
+	//robot.openCamera(vector<string>(1, "/dev/video0"));
+	cout << "End TrobotQt::TrobotQt" << endl;
 }
 
 TrobotQt::~TrobotQt(){

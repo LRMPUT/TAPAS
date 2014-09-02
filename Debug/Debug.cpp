@@ -27,7 +27,7 @@ using namespace std;
 using namespace boost;
 
 Debug::Debug(Robot* irobot) : robot(irobot){
-
+	cout << "Debug::Debug" << endl;
 }
 
 //----------------------MODES OF OPERATION

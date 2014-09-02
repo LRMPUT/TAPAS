@@ -13,6 +13,8 @@ using namespace cv;
 using namespace std;
 
 MovementConstraints::MovementConstraints(Robot* irobot, TiXmlElement* settings) : robot(irobot) {
+	cout << "MovementConstraints::MovementConstraints" << endl;
+
 	if(!settings){
 		throw "Bad settings file - entry MovementConstraints not found";
 	}
@@ -25,6 +27,7 @@ MovementConstraints::MovementConstraints(Robot* irobot, TiXmlElement* settings) 
 	runThread = true;
 	movementConstraintsThread = std::thread(&MovementConstraints::run, this);
 
+	cout << "End MovementConstraints::MovementConstraints" << endl;
 }
 
 MovementConstraints::~MovementConstraints() {

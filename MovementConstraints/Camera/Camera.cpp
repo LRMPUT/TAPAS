@@ -61,7 +61,7 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 	std::vector<boost::filesystem::path> dirs;
 	dirs.push_back("../MovementConstraints/Camera/database/przejazd22");
 	//learnFromDir(dirs);
-	readCache("cache/cameraCache");
+	//readCache("cache/cameraCache");
 	//computeImagePolygons();
 
 #ifndef NO_CUDA

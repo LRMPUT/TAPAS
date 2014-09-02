@@ -10,6 +10,7 @@
 using namespace std;
 
 Robot::Robot(boost::filesystem::path settingsFile) : globalPlanner(this), positionEstimation(this) {
+	cout << "Robot()" << endl;
 	TiXmlDocument settings(settingsFile.c_str());
 	if(!settings.LoadFile()){
 		throw settings.ErrorDesc();
@@ -23,6 +24,7 @@ Robot::Robot(boost::filesystem::path settingsFile) : globalPlanner(this), positi
 	movementConstraints = new MovementConstraints(this, pMovementConstraints);
 
 	startTime = std::chrono::high_resolution_clock::now();
+	cout << "End Robot()" << endl;
 }
 
 Robot::~Robot() {
@@ -66,9 +68,33 @@ bool Robot::isGpsOpen(){
 	return positionEstimation.isGpsOpen();
 }
 
+double Robot::getPosX(double longitude)
+{
+	return positionEstimation.getPosX(longitude);
+}
+
+double Robot::getPosLongitude(double X)
+{
+	return positionEstimation.getPosLongitude(X);
+}
+
+double Robot::getPosY(double latitude)
+{
+	return positionEstimation.getPosY(latitude);
+}
+
+double Robot::getPosLatitude(double Y)
+{
+	return positionEstimation.getPosLatitude(Y);
+}
+
 //Imu
 void Robot::openImu(std::string port){
 	positionEstimation.openImu(port);
+}
+
+void Robot::openImu2(std::string port){
+	positionEstimation.openImu2(port);
 }
 
 void Robot::closeImu(){

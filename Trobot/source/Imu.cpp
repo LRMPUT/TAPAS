@@ -12,6 +12,7 @@ namespace trobot
 {
 	Imu::Imu(unsigned int baud, const string& device)
 	{
+		std::cout<<"Trobot :: IMU"<<std::endl;
 		device_ = device;
 		try {
 			serial_port = new SerialPort(baud, device);

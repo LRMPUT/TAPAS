@@ -45,6 +45,7 @@ private:
 
 	// IMU
 	IMU imu;
+	IMU_driver imu2;
 
 	// Encoders
 	int lastLeft, lastRight;
@@ -102,12 +103,20 @@ public:
 
 	bool isGpsOpen();
 
+	double getPosX(double longitude);
+	double getPosLongitude(double X);
+
+	double getPosY(double latitude);
+	double getPosLatitude(double Y);
+
 	//Imu
 	void openImu(std::string port);
-
 	void closeImu();
-
 	bool isImuOpen();
+
+	void openImu2(std::string port);
+	void closeImu2();
+	bool isImuOpen2();
 
 	//Encoders
 	void openEncoders(std::string port);
