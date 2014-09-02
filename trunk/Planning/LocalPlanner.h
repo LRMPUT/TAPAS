@@ -23,7 +23,7 @@ class Debug;
 using namespace std;
 using namespace cv;
 
-#define HIST_ALPHA 5
+#define HIST_ALPHA 18
 #define HIST_SECTORS 360/HIST_ALPHA
 #define HIST_THRESHOLD 10
 

@@ -46,7 +46,7 @@ void LocalPlanner::executeVFH(){
 	updateHistogram();
 	findFreeSectors();
 	// smoothHistogram();
-
+	setGoalDirection();
 	/// goal direction in the local map coordiantes
 	determineGoalInLocalMap();
 	/// optimal direction in the local map - nearest to the goal
@@ -123,11 +123,13 @@ void LocalPlanner::updateHistogram(){
 
 	int curRobCellX = MAP_SIZE/2 + addX;
 	int curRobCellY = MAP_SIZE/2 + addY;
-
+	int sector = 0;
+	cout<<"RobotX"<<curRobCellX<<endl;
+	cout<<"RobotY"<<curRobCellY<<endl;
 
 	/// for each cell of the raster map
 	for(int x = MAP_SIZE/2; x < MAP_SIZE ; x++){
-		for(int y = 0; y < MAP_SIZE; y++){
+		for(int y = MAP_SIZE; y > 0; y--){
 			///angular position
 			angPosition = 180/PI*atan2(float(x - curRobCellX), y - curRobCellY);
 			cout<<"angPosition"<<angPosition<<endl;
@@ -137,7 +139,7 @@ void LocalPlanner::updateHistogram(){
 					+ pow((float)(y - curRobCellY), 2)));
 
 			/// update proper sector of histogram
-			histSectors.at(floor(angPosition/HIST_ALPHA)) += density;
+			histSectors.at(floor((angPosition/10))) += density;
 		}
 	}
 
@@ -173,6 +175,8 @@ void LocalPlanner::smoothHistogram(){
 
 void LocalPlanner::findFreeSectors(){
 
+	freeSectors.clear();
+
 	bool begOfFreeSec = false;
 
 	for (int sec = 0; sec < HIST_SECTORS; sec++){
@@ -188,12 +192,15 @@ void LocalPlanner::findFreeSectors(){
 				}
 
 	}
+	cout<<"Wolne sektory:"<<endl;
+	for (int i = 0; i < freeSectors.size(); i++){
+	cout<<freeSectors.at(i)<<endl;
+	}
 }
 
 void LocalPlanner::determineGoalInLocalMap(){
 
 	float globalYaw;
-	float localYaw;
 	float goalAngle;
 
 	// get current orientation
@@ -205,21 +212,31 @@ void LocalPlanner::determineGoalInLocalMap(){
 	//slocalYaw = RotMatToEulerYaw(posImuMapCenter);
 	//convert local best direction from static map to global best direction
 	//goalAngle
-	goalDirection = goalDirection + globalYaw;
+
+	cout<<"GlobalYaw"<<globalYaw<<endl;
+
+	cout<<"goalDirection"<<goalDirection<<endl;
+
+	goalDirection = goalDirection + 180/PI*globalYaw;
 	cout<<"Kierunek"<<endl;
 	cout<<goalDirection<<endl;
+
+	///return 90 only for test purposes until global planner will
+	/// be integrated. 90.0 means: go straight ahead
+	goalDirection = 90.0;
 
 }
 
 void LocalPlanner::calculateLocalDirection(){
 
+	cout<<"Poczatek kalkulacji"<<endl;
 	int goalSector = goalDirection/HIST_ALPHA;
 	int foundSector = -1;
 	int selectedSector = 0;
 	// remove previous free sectors
-	freeSectors.clear();
 
-	for (int i = 0; i < freeSectors.size()-1; i+2){
+
+	for (int i = 0; i < freeSectors.size()-3; i = i+2){
 		if (goalSector >= freeSectors.at(i) && goalSector <= freeSectors.at(i+1)){
 			/// go through the middle of the set of free sectors
 			selectedSector = (freeSectors.at(i) + freeSectors.at(i+1))/2;
@@ -237,6 +254,8 @@ void LocalPlanner::calculateLocalDirection(){
 		}
 	}
 	bestDirection = foundSector*HIST_ALPHA;
+
+	cout<<"Koniec kalkulacji"<<endl;
 }
 
 
@@ -245,13 +264,15 @@ void LocalPlanner::determineDriversCommand(){
 	Mat posImuMapCenter = robot->getPosImuConstraintsMapCenter();
 	float localYaw = RotMatToEulerYaw(posImuMapCenter);
 
-	// if we achieve set point direction then go straight ahead
+	cout<<"Sterowanie"<<endl;
+
+/*	// if we achieve set point direction then go straight ahead
 	if ((bestDirection - localYaw)*(bestDirection - localYaw) < 100 )
 		return globalPlanner->setMotorsVel(1000,-1000);
 	else if (bestDirection > localYaw)
 		return globalPlanner->setMotorsVel(1000,-1000);
 	else
-		return globalPlanner->setMotorsVel(1000,-1000);
+		return globalPlanner->setMotorsVel(1000,-1000);*/
 }
 
 

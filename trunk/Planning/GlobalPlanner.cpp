@@ -38,11 +38,12 @@ GlobalPlanner::~GlobalPlanner() {
 	cout << "End ~GlobalPlanner()" << endl;
 }
 
-void GlobalPlanner::run() {
-	while (runThread) {
-		readOpenStreetMap("robotourMap.osm");
-		if (startOperate) {
-			localPlanner = new LocalPlanner(robot, this);
+
+void GlobalPlanner::run(){
+	localPlanner = new LocalPlanner(robot, this);
+	while(runThread){
+		//readOpenStreetMap("robotourMap.osm");
+		if(startOperate){
 			//processHomologation();
 			localPlanner->localPlanerTest();
 		}
@@ -347,11 +348,12 @@ void GlobalPlanner::setMotorsVel(float motLeft, float motRight) {
 	}
 	lck.unlock();
 }
-//----------------------ACCESS TO COMPUTED DATA
 
-GlobalPlanner::GlobalPlanInfo GlobalPlanner::getGlobalPlan(){
-	GlobalPlanInfo info;
-	return info;
+//----------------------ACCESS TO COMPUTED DATA
+GlobalPlanner::GlobalPlanInfo GlobalPlanner::getGlobalPlan()
+{
+	GlobalPlanInfo x;
+	return x;
 }
 
 //----------------------MENAGMENT OF GlobalPlanner DEVICES
