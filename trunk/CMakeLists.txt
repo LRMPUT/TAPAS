@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
-set(CUDA 0)
+set(CUDA 1)
 set(CMAKE_BUILD_TYPE "Debug")
 
 project(RobotsIntellect)
@@ -44,6 +44,7 @@ set(RobotsIntellect_SOURCES
 	#Planning/PlanningWithGold/LocalPlannerWithGold.cpp
 	Planning/RobotDrivers/robotDrivers.cpp
 	Planning/GlobalPlanner.cpp
+	Planning/LocalPlanner.cpp
 	PositionEstimation/Util/ExtendedKalmanFilter.cpp
 	PositionEstimation/Encoders/Encoders.cpp
 	PositionEstimation/GPS/src/context.c

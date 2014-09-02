@@ -126,6 +126,8 @@ public:
 
 	cv::Mat getPosImuMapCenter();
 
+	cv::Mat getPosGlobalMap();
+
 	//----------------------MENAGMENT OF MovementConstraints DEVICES
 	//Hokuyo
 	void openHokuyo(std::string port);

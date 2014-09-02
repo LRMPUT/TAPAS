@@ -1517,7 +1517,7 @@ void Camera::open(std::vector<std::string> device){
 			throw "Cannot open camera device";
 		}
 	}
-	runThread = true;
+	runThread = false;
 	cameraThread = std::thread(&Camera::run, this);
 }
 

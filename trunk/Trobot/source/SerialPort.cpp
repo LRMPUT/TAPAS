@@ -16,6 +16,7 @@
 #include <sys/types.h>
 
 #include "../include/SerialPort.h"
+#include "../../Robot/Robot.h"
 
 using namespace std;
 using namespace boost;
@@ -231,7 +232,8 @@ namespace trobot {
 		}
 #else
 		vector<string> names;
-		/*filesystem::path dirPath("/dev/robots");
+#ifndef ROBOT_OFFLINE
+		filesystem::path dirPath("/dev/robots");
 		names.push_back(string("gps"));
 		names.push_back(string("imu"));
 		names.push_back(string("driver"));
@@ -239,11 +241,13 @@ namespace trobot {
 		names.push_back(string("hokuyo"));
 		names.push_back(string("encoders"));
 		names.push_back(string("driverLeft"));
-		names.push_back(string("driverRight"));*/
+		names.push_back(string("driverRight"));
+#else
 		filesystem::path dirPath("/dev");
 		names.push_back(string("ttyACM"));
 		names.push_back(string("ttyUSB"));
 		names.push_back(string("video"));
+#endif
 		filesystem::directory_iterator endIt;
 		for(filesystem::directory_iterator dirIt(dirPath); dirIt != endIt; dirIt++){
 			for(int i = 0; i < names.size(); i++){
@@ -274,7 +278,7 @@ namespace trobot {
 		serialPort_.set_option(baud_option); // set the baud rate after the port has been opened
 		readStart();
 		io_service_.reset();
-		thread_ = thread(bind(&asio::io_service::run, &io_service_));
+		thread_ = boost::thread(bind(&asio::io_service::run, &io_service_));
 		counting = false;
 		active_ = true;
 	}
