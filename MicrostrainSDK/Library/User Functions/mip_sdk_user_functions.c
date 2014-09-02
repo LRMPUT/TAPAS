@@ -107,7 +107,7 @@ u16 mip_sdk_port_open(void **port_handle, char *port_name, int baudrate)
  struct termios options;
 
  //construct port filename address string
- printf("Attempting to open port: |%s|, %d\n",port_name, baudrate);
+// printf("Attempting to open port: |%s|, %d\n",port_name, baudrate);
  //Attempt to open the specified port
  local_port_handle = open(port_name, O_RDWR | O_NOCTTY);
 
@@ -118,7 +118,7 @@ u16 mip_sdk_port_open(void **port_handle, char *port_name, int baudrate)
 
   return MIP_USER_FUNCTION_ERROR;
  }
- printf("Port: %s opened successfully.\n",port_name);
+ printf("Port: %s opened successfully with baudrate %d.\n",port_name, baudrate);
 
  //Convert specified baud to hardware specific value
  switch (baudrate)

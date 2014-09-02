@@ -25,8 +25,8 @@ int main()
 
 		//debug.testEncoders();
 
-		//robot.openImu2("/dev/ttyACM0");
-		cout << "IMU has been opened!" << endl;
+//		robot.openImu("/dev/ttyACM0");
+//		cout << "IMU has been opened!" << endl;
 
 		char a;
 		while(1)

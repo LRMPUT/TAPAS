@@ -27,10 +27,19 @@ struct Quantity {
 };
 
 class IMU {
+
+	enum IMU_TYPE {IMU_UM6, IMU_MICROSTRAIN_GX4_25};
+
+	IMU_TYPE usedIMUType;
+
 	friend class Debug;
 
+	IMU_driver* imuNew;
 	trobot::Imu* imu;
 	Robot *robot;
+
+	cv::Mat getUM6Data(std::chrono::high_resolution_clock::time_point &timestamp);
+	cv::Mat getGX4Data(std::chrono::high_resolution_clock::time_point &timestamp);
 
 public:
 	IMU();
@@ -43,6 +52,8 @@ public:
 
 	//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
 	cv::Mat getData(std::chrono::high_resolution_clock::time_point &timestamp);
+
+
 };
 
 #endif /* IMU_H_ */
