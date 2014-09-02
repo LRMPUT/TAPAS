@@ -302,19 +302,6 @@ bool PositionEstimation::isImuOpen() {
 	return imu.isPortOpen();
 }
 
-//Imu2
-void PositionEstimation::openImu2(std::string port) {
-	imu2.openPort(port);
-}
-
-void PositionEstimation::closeImu2() {
-//	imu2.closePort();
-}
-
-bool PositionEstimation::isImuOpen2() {
-//	return imu2.isPortOpen();
-}
-
 
 //Encoders
 void PositionEstimation::openEncoders(std::string port) {

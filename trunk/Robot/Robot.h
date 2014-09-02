@@ -93,9 +93,6 @@ public:
 	void closeImu();
 	bool isImuOpen();
 
-	void openImu2(std::string port);
-	void closeImu2();
-	bool isImuOpen2();
 
 	//Encoders
 	void openEncoders(std::string port);

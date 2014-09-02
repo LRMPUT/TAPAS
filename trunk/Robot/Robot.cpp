@@ -93,9 +93,6 @@ void Robot::openImu(std::string port){
 	positionEstimation.openImu(port);
 }
 
-void Robot::openImu2(std::string port){
-	positionEstimation.openImu2(port);
-}
 
 void Robot::closeImu(){
 	positionEstimation.closeImu();
