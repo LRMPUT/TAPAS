@@ -17,6 +17,8 @@
 #include <opencv2/opencv.hpp>
 //Trobot
 //#include "../Trobot/include/RobotDrive.h"
+//TinyXML
+#include <tinyxml.h>
 //TAPAS
 #include "RobotDrivers/robotDrivers.h"
 //#include "LocalPlanner.h"
@@ -84,6 +86,15 @@ private:
 	void run();
 
 	void processHomologation();
+
+
+	// Global planner variables
+	std::vector<std::pair<double, double>> nodePosition;
+	std::vector< std::list<int> > edges;
+
+	void readOpenStreetMap(char *mapName);
+	int findDistances(double X, double Y);
+
 public:
 	GlobalPlanner(Robot* irobot);
 	virtual ~GlobalPlanner();

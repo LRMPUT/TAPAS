@@ -16,6 +16,7 @@ using namespace boost;
 int main()
 {
 	try{
+		cout<<"Starting program" << endl;
 		Robot robot("../settings.xml");
 		cout << "Robot created" << endl;
 		//Debug debug(&robot);
@@ -23,6 +24,9 @@ int main()
 		//						filesystem::path("../MovementConstraints/Camera/database/classify"));
 
 		//debug.testEncoders();
+
+		robot.openImu2("/dev/ttyACM0");
+		cout << "IMU has been opened!" << endl;
 
 		char a;
 		while(1)

@@ -36,7 +36,7 @@ class Debug;
 #define MAP_MARGIN (2500/MAP_RASTER_SIZE)	//[u] 2,5m margin
 
 #define NO_CUDA
-//#define ROBOT_OFFLINE
+#define ROBOT_OFFLINE
 
 #define PI 3.14159265359
 
@@ -82,12 +82,20 @@ public:
 
 	bool isGpsOpen();
 
+	double getPosX(double longitude);
+	double getPosLongitude(double X);
+
+	double getPosY(double latitude);
+	double getPosLatitude(double Y);
+
 	//Imu
 	void openImu(std::string port);
-
 	void closeImu();
-
 	bool isImuOpen();
+
+	void openImu2(std::string port);
+	void closeImu2();
+	bool isImuOpen2();
 
 	//Encoders
 	void openEncoders(std::string port);

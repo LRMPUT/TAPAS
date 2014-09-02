@@ -5,7 +5,7 @@ set(CMAKE_BUILD_TYPE "Debug")
 
 project(RobotsIntellect)
 
-SET(CMAKE_CXX_FLAGS "-std=c++0x")
+SET(CMAKE_CXX_FLAGS "-std=c++0x -DUSE_USB_CONNECTION")
 
 IF (CUDA EQUAL 0)
 	add_definitions(-DNO_CUDA)
@@ -27,7 +27,53 @@ IF (CUDA GREATER 0)
 ENDIF (CUDA GREATER 0)
 link_directories(${URG_LIBRARIES_DIR})
 
+
+include_directories(MicrostrainSDK/Library/Include)
+include_directories(MicrostrainSDK/Utilities/Include)
+include_directories(MicrostrainSDK/Library/User\ Functions)
+set(MicrostrainSDK_SOURCES
+	MicrostrainSDK/Library/Source/mip_sdk_system.c 
+	MicrostrainSDK/Library/Source/mip_sdk_base.c 
+	MicrostrainSDK/Library/Source/mip_sdk_gps.c 
+	MicrostrainSDK/Library/Source/mip.c 
+    MicrostrainSDK/Library/Source/mip_sdk_3dm.c 
+	MicrostrainSDK/Library/Source/ring_buffer.c 
+	MicrostrainSDK/Library/Source/mip_sdk_inteface.c 
+	MicrostrainSDK/Library/Source/mip_sdk_filter.c
+    MicrostrainSDK/Library/Source/mip_sdk_ahrs.c
+	MicrostrainSDK/Library/Include/mainpage.h    
+	MicrostrainSDK/Library/Include/mip_gx4_imu.h   
+	MicrostrainSDK/Library/Include/mip_sdk_base.h       
+	MicrostrainSDK/Library/Include/mip_sdk_system.h
+	MicrostrainSDK/Library/Include/mip_gx3_35.h  
+	MicrostrainSDK/Library/Include/mip.h           
+	MicrostrainSDK/Library/Include/mip_sdk_config.h     
+	MicrostrainSDK/Library/Include/mip_types.h
+	MicrostrainSDK/Library/Include/mip_gx3_45.h  
+	MicrostrainSDK/Library/Include/mip_rq1.h       
+	MicrostrainSDK/Library/Include/mip_sdk_filter.h     
+	MicrostrainSDK/Library/Include/ring_buffer.h
+	MicrostrainSDK/Library/Include/mip_gx4_15.h  
+	MicrostrainSDK/Library/Include/mip_rq1_imu.h   
+	MicrostrainSDK/Library/Include/mip_sdk_gps.h
+	MicrostrainSDK/Library/Include/mip_gx4_25.h  
+	MicrostrainSDK/Library/Include/mip_sdk_3dm.h   
+	MicrostrainSDK/Library/Include/mip_sdk.h
+	MicrostrainSDK/Library/Include/mip_gx4_45.h  
+	MicrostrainSDK/Library/Include/mip_sdk_ahrs.h  
+	MicrostrainSDK/Library/Include/mip_sdk_interface.h
+	MicrostrainSDK/Library/User\ Functions/mip_sdk_user_functions.c
+	MicrostrainSDK/Library/User\ Functions/mip_sdk_user_functions.h
+)
+
+
+set(MicrostrainSDK_UTIL_SOURCES
+	MicrostrainSDK/Utilities/Source/byteswap_utilities.c)
+
+
 set(RobotsIntellect_SOURCES
+	${MicrostrainSDK_SOURCES}
+	${MicrostrainSDK_UTIL_SOURCES}
 	Debug/Debug.cpp
 	MechanicalGrabber/MechanicalGrabber.cpp
 	MovementConstraints/Hokuyo/Hokuyo.cpp
@@ -58,6 +104,7 @@ set(RobotsIntellect_SOURCES
 	PositionEstimation/GPS/src/time.c
 	PositionEstimation/GPS/src/tok.c
 	PositionEstimation/GPS/GPS.cpp
+	PositionEstimation/IMU/src/IMU_driver.cpp
 	PositionEstimation/IMU/IMU.cpp
 	PositionEstimation/PositionEstimation.cpp
 	Robot/Robot.cpp

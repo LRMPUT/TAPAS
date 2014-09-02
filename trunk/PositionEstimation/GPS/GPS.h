@@ -71,10 +71,14 @@ public:
 	 * @return Distance from Zero Point measured in meters, X (longitude - rownoleznikowo).
 	 */
 	double getPosX();
+	double getPosX(double longitude);
+	double getPosLongitude(double X);
 	/*
 	 * @return Distance from Zero Point measured in meters, Y (latitude - poludnikowo).
 	 */
 	double getPosY();
+	double getPosY(double latitude);
+	double getPosLatitude(double Y);
 	/*
 	 * @return Current Latitude in degrees. GPS format is translated from +-[DDD][MM].[S].
 	 */

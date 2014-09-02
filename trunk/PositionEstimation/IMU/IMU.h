@@ -9,6 +9,7 @@
 
 #include <opencv2/opencv.hpp>
 #include "../../Trobot/include/Imu.h"
+#include "include/IMU_driver.h"
 
 class Debug;
 class Robot;
