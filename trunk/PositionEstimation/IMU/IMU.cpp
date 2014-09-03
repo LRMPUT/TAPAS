@@ -29,10 +29,10 @@ Quantity quantities[NUM_VALUES] = {
 	Quantity(4*trobot::EULER_PSI + 2,			0.0109863)
 };
 
-IMU::IMU() : imu(NULL), imuNew(NULL), usedIMUType(IMU_MICROSTRAIN_GX4_25) {
+IMU::IMU() : imu(NULL), imuNew(NULL), usedIMUType(IMU_UM6) {
 }
 
-IMU::IMU(Robot* irobot) : imu(NULL), imuNew(NULL), robot(irobot), usedIMUType(IMU_MICROSTRAIN_GX4_25) {
+IMU::IMU(Robot* irobot) : imu(NULL), imuNew(NULL), robot(irobot), usedIMUType(IMU_UM6) {
 
 }
 
@@ -50,10 +50,11 @@ void IMU::openPort(std::string port){
 		imuNew = new IMU_driver();
 		imuNew->openPort(port);
 	}
+	std::cout<<"IMU opened"<<std::endl;
 }
 
 void IMU::closePort(){
-	if(imu != NULL){
+	if(imu != NULL || (imuNew != NULL)){
 		if ( usedIMUType == IMU_UM6)
 			delete imu;
 		else if ( usedIMUType == IMU_MICROSTRAIN_GX4_25)
@@ -70,8 +71,10 @@ bool IMU::isPortOpen(){
 cv::Mat IMU::getUM6Data(std::chrono::high_resolution_clock::time_point &timestamp){
 	Mat ret(3, 4, CV_32FC1);
 	for(int i = 0; i < NUM_VALUES; i++){
+
 		float tmp = (short)((imu->Register[quantities[i].address / 4]._int >> 8*(quantities[i].address % 4)) & 0xffff);
 		tmp *= quantities[i].factor;
+
 		//uint32 tmp = (imu->Register[quantities[i].address / 4]._int);
 		//tmp >>= 8*(quantities[i].address % 4);
 		//tmp &= 0xffff;

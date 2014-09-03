@@ -24,7 +24,7 @@ MovementConstraints::MovementConstraints(Robot* irobot, TiXmlElement* settings) 
 
 	constraintsMap = Mat(MAP_SIZE, MAP_SIZE, CV_32FC1, Scalar(0));
 
-	runThread = true;
+	runThread = false;
 	movementConstraintsThread = std::thread(&MovementConstraints::run, this);
 
 	cout << "End MovementConstraints::MovementConstraints" << endl;
@@ -287,6 +287,8 @@ void MovementConstraints::updateCurPosCloudMapCenter(){
 		//cout << "Computing curPos" << endl;
 		//cout << "encodersCur - encodersPrev = " << encodersCur - encodersPrev << endl;
 		Mat trans = posMapCenterGlobal.inv()*compTrans(compOrient(imuPrev), encodersCur - encodersPrev);
+		cout<<posMapCenterGlobal.at<float>(0,0)<<endl;
+		cout<<"Test"<<endl;
 		//cout << "trans = " << trans << endl;
 		//cout << "Computing curTrans" << endl;
 		Mat curTrans = Mat(curPosCloudMapCenter, Rect(3, 0, 1, 4)) + trans;
@@ -436,6 +438,8 @@ cv::Mat MovementConstraints::getPosGlobalMap(){
 	Mat ret;
 	std::unique_lock<std::mutex> lck(mtxPointCloud);
 	posMapCenterGlobal.copyTo(ret);
+	cout<<"HERE"<<endl;
+	cout<<posMapCenterGlobal.at<float>(0,0)<<endl;
 	lck.unlock();
 	return ret;
 }

@@ -31,11 +31,14 @@ PositionEstimation::PositionEstimation(Robot* irobot) :
 	 */
 	kalmanSetup();
 
+
+
+
 	lastUpdateTimestamp = std::chrono::high_resolution_clock::now();
 	lastEncoderTimestamp = std::chrono::high_resolution_clock::now();
 	lastGpsTimestamp = std::chrono::high_resolution_clock::now();
 	lastImuTimestamp = std::chrono::high_resolution_clock::now();
-	runThread = true;
+	runThread = false;
 	estimationThread = std::thread(&PositionEstimation::run, this);
 
 	std::cout << "End PositionEstimation::PositionEstimation" << std::endl;
@@ -51,6 +54,14 @@ PositionEstimation::~PositionEstimation() {
 }
 
 void PositionEstimation::run() {
+	while(!gps.isOpen()) usleep(200);
+	while (gps.getFixStatus() == 1 || (fabs(gps.getLat()) < 0.00001
+			|| fabs(gps.getLon()) < 0.000001)) {
+		usleep(200);
+	};
+
+
+	gps.setZeroXY(gps.getLat(), gps.getLon());
 
 	struct timeval start, end;
 	while (runThread) {
@@ -60,7 +71,7 @@ void PositionEstimation::run() {
 
 		// Thread sleep, so that the position is not updated too often
 		// Right now 1 ms as Robot Drive has it's own sleep
-		std::chrono::milliseconds duration(50);
+		std::chrono::milliseconds duration(200);
 		std::this_thread::sleep_for(duration);
 
 		gettimeofday(&end, NULL);
@@ -95,6 +106,7 @@ void PositionEstimation::kalmanSetup() {
 
 void PositionEstimation::KalmanLoop() {
 
+
 	// Local variables
 	std::chrono::high_resolution_clock::time_point encoderTimestamp,
 			gpsTimestamp, imuTimestamp;
@@ -126,10 +138,13 @@ void PositionEstimation::KalmanLoop() {
 
 			// Correct with GPS
 			lastGpsTimestamp = gpsTimestamp;
-			Mat gps_data = Mat(2, 1, CV_32FC1);
-			gps_data.at<float>(0, 0) = this->gps.getPosX();
-			gps_data.at<float>(1, 0) = this->gps.getPosY();
-
+			Mat gps_data = Mat(2, 1, CV_64FC1);
+			gps_data.at<double>(0, 0) = this->gps.getPosX()/1000;
+			gps_data.at<double>(1, 0) = this->gps.getPosY()/1000;
+			printf("\n\n GPS : %f %f\n", gps.getLat(), gps.getLon());
+			printf("GPS pos : %f %f\n", gps.getPosX()/1000, gps.getPosY()/1000);
+			printf("Gps update --> values %f %f\n", gps_data.at<double>(0, 0),
+					gps_data.at<double>(1, 0));
 			state = EKF->correctGPS(gps_data);
 
 		}
@@ -141,6 +156,8 @@ void PositionEstimation::KalmanLoop() {
 	if (isEncodersOpen()) {
 		printf("Encoders are open and will be used in update!\n");
 		cv::Mat enc_data = this->getEncoderData(encoderTimestamp);
+		printf("Encoder data: %d %d\n", enc_data.at<int>(0) - lastLeft,
+							enc_data.at<int>(1) - lastRight);
 
 		float encoder_dt = std::chrono::duration_cast
 				< std::chrono::milliseconds
@@ -193,13 +210,14 @@ void PositionEstimation::KalmanLoop() {
 	if (isImuOpen()) {
 		printf("IMU is online and will be used\n");
 		cv::Mat imuData = this->imu.getData(imuTimestamp);
+		printf("IMU data : %f\n", imuData.at<float>(11));
 
 		float imu_dt = std::chrono::duration_cast < std::chrono::milliseconds
 				> (imuTimestamp - lastImuTimestamp).count();
 
 		// Starting imu angle
 		if (imuStart) {
-			imuZeroAngle = imuData.at<float>(11);
+			imuZeroAngle = 0;
 			imuStart = false;
 		}
 

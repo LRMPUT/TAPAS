@@ -46,10 +46,14 @@ void LocalPlanner::executeVFH(){
 	updateHistogram();
 	findFreeSectors();
 	// smoothHistogram();
+
 	setGoalDirection();
+
 	/// goal direction in the local map coordiantes
+
 	determineGoalInLocalMap();
 	/// optimal direction in the local map - nearest to the goal
+
 	calculateLocalDirection();
 
 	determineDriversCommand();
@@ -205,9 +209,13 @@ void LocalPlanner::determineGoalInLocalMap(){
 
 	// get current orientation
 	Mat posImuMapCenter = robot->getPosImuConstraintsMapCenter();
+	cout<<"GlobalYaw"<<posImuMapCenter.at<float>(0,0)<<endl;
 	Mat posLocalToGlobalMap = robot->getLocalMapPosInGlobalMap();
-
+	//cout<<"GlobalYaw"<<posLocalToGlobalMap.at<float>(0,0)<<endl;
 	//determine Euler Yaw
+
+	cout<<"GlobalYaw"<<posLocalToGlobalMap.at<float>(0,0)<<endl;
+
 	globalYaw = RotMatToEulerYaw(posLocalToGlobalMap);
 	//slocalYaw = RotMatToEulerYaw(posImuMapCenter);
 	//convert local best direction from static map to global best direction
