@@ -64,13 +64,15 @@ Hokuyo::~Hokuyo() {
 }
 
 void Hokuyo::openPort(std::string port){
-	cout << hokuyo.open(port.c_str(), qrk::Urg_driver::Default_baudrate, qrk::Urg_driver::Serial) << endl;
-
-	cout << hokuyo.product_type() << endl;
-	//cout << hokuyo.deg2index(-135) << " " << hokuyo.deg2index(135) << endl;
-	hokuyo.set_scanning_parameter(hokuyo.deg2index(-135), hokuyo.deg2index(135));
-	runThread = true;
-	readingThread = std::thread(&Hokuyo::run, this);
+	cout << "Hokuyo open status: " << hokuyo.open(port.c_str(), qrk::Urg_driver::Default_baudrate, qrk::Urg_driver::Serial) << endl;
+	if (hokuyo.is_open())
+	{
+		cout << "Hokuyo product type : "<<hokuyo.product_type() << endl;
+		//cout << hokuyo.deg2index(-135) << " " << hokuyo.deg2index(135) << endl;
+		hokuyo.set_scanning_parameter(hokuyo.deg2index(-135), hokuyo.deg2index(135));
+		runThread = true;
+		readingThread = std::thread(&Hokuyo::run, this);
+	}
 }
 
 void Hokuyo::closePort(){

@@ -52,7 +52,17 @@ GlobalPlanner::~GlobalPlanner() {
 void GlobalPlanner::run() {
 //	localPlanner = new LocalPlanner(robot, this);
 
-	readOpenStreetMap("robotourMap.osm");
+//<<<<<<< .mine
+//void GlobalPlanner::run(){
+//
+//	while(runThread){
+//		//readOpenStreetMap("robotourMap.osm");
+//		if(startOperate){
+//			localPlanner = new LocalPlanner(robot, this);
+//			//processHomologation();
+//			localPlanner->localPlanerTest();
+//=======
+	//readOpenStreetMap("robotourMap.osm");
 	while (runThread) {
 
 		if (startOperate || true) {
