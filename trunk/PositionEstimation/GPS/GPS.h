@@ -68,17 +68,17 @@ public:
 	*/
 	bool getNewMeasurement();
 	/*
-	 * @return Distance from Zero Point measured in meters, X (longitude - rownoleznikowo).
+	 * @return Distance from Zero Point measured in meters, X (latitude - poludnikowo - szerokosc geograficzna).
 	 */
 	double getPosX();
-	double getPosX(double longitude);
-	double getPosLongitude(double X);
+	double getPosX(double latitude);
+	double getPosLatitude(double X);
 	/*
-	 * @return Distance from Zero Point measured in meters, Y (latitude - poludnikowo).
+	 * @return Distance from Zero Point measured in meters, Y (longitude - rownoleznikowo - dlugosc geograficzna).
 	 */
 	double getPosY();
-	double getPosY(double latitude);
-	double getPosLatitude(double Y);
+	double getPosY(double longitude);
+	double getPosLongitude(double Y);
 	/*
 	 * @return Current Latitude in degrees. GPS format is translated from +-[DDD][MM].[S].
 	 */
