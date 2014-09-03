@@ -123,11 +123,18 @@ void Constraints::updateClassificationView(){
 }
 
 void Constraints::updateGlobalPlanView(){
+//	printf("Update Global Plan View\n");
 	GlobalPlanner::GlobalPlanInfo globalPlan = debug->getGlobalPlan();
-	QPixmap map(ui->constraintClassificationViewLabel->width(), ui->constraintClassificationViewLabel->height());
+	QPixmap map(ui->planningGlobalViewLabel->width(), ui->planningGlobalViewLabel->height());
+
+
+	map.fill(Qt::white);
+
 	double scaleX = (globalPlan.maxX - globalPlan.minX)/ui->planningGlobalViewLabel->width();
 	double scaleY = (globalPlan.maxY - globalPlan.minY)/ui->planningGlobalViewLabel->height();
+//	printf("Scales: %f %f\n", scaleX, scaleY);
 	QPainter painter(&map);
+//	printf("Edges size: %d \n", globalPlan.edges.size());
 	for(int e = 0; e < globalPlan.edges.size(); e++){
 		int x1 = (globalPlan.edges[e].x1 - globalPlan.minX)/scaleX;
 		int y1 = (globalPlan.edges[e].y1 - globalPlan.minY)/scaleY;
@@ -142,6 +149,7 @@ void Constraints::updateGlobalPlanView(){
 		else{
 			painter.setPen(Qt::blue);
 		}
+//		printf("drawLine: %d %d %d %d \n", x1, y1, x2, y2);
 		painter.drawLine(x1, y1, x2, y2);
 		painter.setPen(Qt::black);
 		painter.drawEllipse(x1, y1, 2, 2);
@@ -151,8 +159,9 @@ void Constraints::updateGlobalPlanView(){
 	int rX = (globalPlan.robotX - globalPlan.minX)/scaleX;
 	int rY = (globalPlan.robotY - globalPlan.minY)/scaleY;
 	painter.drawEllipse(rX, rY, 2, 2);
-	ui->constraintClassificationViewLabel->setPixmap(map);
-	ui->constraintClassificationViewLabel->update();
+	painter.end();
+	ui->planningGlobalViewLabel->setPixmap(map);
+	ui->planningGlobalViewLabel->update();
 }
 
 void Constraints::updateViews(){

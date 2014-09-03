@@ -79,6 +79,11 @@ private:
 	bool runThread;
 	std::thread globalPlannerThread;
 
+
+
+
+
+
 	std::mutex driverMtx;
 
 	float currentGoal;
@@ -91,12 +96,20 @@ private:
 	// Global planner variables
 	std::vector<std::pair<double, double>> nodePosition;
 	std::vector< std::list<int> > edges;
+	GlobalPlanInfo globalPlanInfo;
+	double goalX, goalY, goalId;
+	double robotX, robotY, robotTheta;
+	double startingNodeIndex[2], startingNodeDist[2];
+	void updateRobotPosition();
+	void findClosestStartingEdge(double X, double Y);
+	void computeGlobalPlan();
+
 
 	void readOpenStreetMap(char *mapName);
-	std::pair<int,int> findDistances(double X, double Y);
+//	std::pair<int,int> findDistances(double X, double Y);
 
-	double goalX, goalY;
-	void setCurrentGoal(double X, double Y);
+
+	void setGoal(double X, double Y);
 
 public:
 	GlobalPlanner(Robot* irobot);
