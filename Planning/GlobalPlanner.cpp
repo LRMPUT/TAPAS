@@ -22,6 +22,17 @@ using namespace std;
 #define LEFT_CHANNEL 2
 #define RIGHT_CHANNEL 1
 
+class myPQueueComparison {
+public:
+	myPQueueComparison() {
+	}
+	bool operator()(const std::pair<double, int>& lhs,
+			const std::pair<double, int>&rhs) const {
+		return (lhs.first < rhs.second);
+	}
+};
+
+
 GlobalPlanner::GlobalPlanner(Robot* irobot) :
 		robot(irobot), robotDrive1(NULL), robotDrive2(NULL), startOperate(false) {
 	cout << "GlobalPlanner()" << endl;
@@ -38,18 +49,119 @@ GlobalPlanner::~GlobalPlanner() {
 	cout << "End ~GlobalPlanner()" << endl;
 }
 
-
-void GlobalPlanner::run(){
+void GlobalPlanner::run() {
 //	localPlanner = new LocalPlanner(robot, this);
-	while(runThread){
-		readOpenStreetMap("robotourMap.osm");
-		if(startOperate){
-			//processHomologation();
+
+	readOpenStreetMap("robotourMap.osm");
+	while (runThread) {
+
+		if (startOperate || true) {
+
+			updateRobotPosition();
+			findClosestStartingEdge(robotX, robotY);
+			setGoal(5,5);
+			computeGlobalPlan();
+//			chooseNextSubGoal();
+//			updateHeadingGoal();
+
+//processHomologation();
 //			localPlanner->localPlanerTest();
 		}
-		std::chrono::milliseconds duration(50);
+		std::chrono::milliseconds duration(500);
 		std::this_thread::sleep_for(duration);
 	}
+}
+
+void GlobalPlanner::computeGlobalPlan() {
+	// Finding shortest path using Dijkstra
+
+	// Containers for Dijkstra
+	std::vector<double> distance(edges.size(), -1.0);
+	std::vector<int> previous(edges.size(), -1.0);
+	std::priority_queue<std::pair<double, int>,
+			std::vector<std::pair<double, int>>, myPQueueComparison> pqueue;
+
+	// Going through nodes
+	distance[ startingNodeIndex[0] ] = 0;
+	distance[ startingNodeIndex[1] ] = 0;
+
+	previous[ startingNodeIndex[0] ] = -2.0;
+	previous[ startingNodeIndex[1] ] = -2.0;
+
+	pqueue.push(std::make_pair(startingNodeDist[0],  startingNodeIndex[0]));
+	pqueue.push(std::make_pair(startingNodeDist[1],  startingNodeIndex[1]));
+
+	while (!pqueue.empty()) {
+		std::pair<double, int> tmp = pqueue.top();
+		pqueue.pop();
+		int idToProcess = tmp.second;
+
+		// Looking at neighbours
+		for (std::list<int>::iterator listIter = edges[idToProcess].begin();
+				listIter != edges[idToProcess].end(); ++listIter) {
+
+			// Computing distance
+			double x = nodePosition[idToProcess].first;
+			double y = nodePosition[idToProcess].second;
+			double x2 = nodePosition[*listIter].first;
+			double y2 = nodePosition[*listIter].second;
+			double additionalDistance = sqrt(
+					(x - x2) * (x - x2) + (y - y2) * (y - y2));
+
+			if (distance[*listIter] == -1
+					|| distance[*listIter]
+							> distance[idToProcess] + additionalDistance) {
+				distance[*listIter] = distance[idToProcess]
+						+ additionalDistance;
+				previous[*listIter] = idToProcess;
+				pqueue.push(std::make_pair(distance[*listIter], *listIter));
+			}
+		}
+
+	}
+
+//	// Conclusions
+//	std::cout << "Ended computation from nodes : " << closestEdge.first << " "
+//			<< closestEdge.second << std::endl;
+//	int ile = 0, ogolem = 0;
+//	for (int i = 0; i < edges.size(); i++) {
+//		if (edges[i].size() != 0) {
+//			ogolem++;
+//			std::cout << "Distance to " << i << " is equal to " << distance[i]
+//					<< std::endl;
+//			if (distance[i] > 0)
+//				ile++;
+//		}
+//	}
+//	std::cout << "Possiblity to access " << ile * 100.0 / ogolem
+//			<< "% of all nodes" << std::endl;
+//
+
+	std::cout << "Printing ids from backward to get to id=" << goalId
+			<< " from ids=" << startingNodeIndex[0] << " or "
+			<< startingNodeIndex[1] << std::endl;
+	int i = goalId;
+	while( true )
+	{
+		int k = previous[i];
+		std::cout<<"From "<<i<<" to " << k << std::endl;
+		i = k;
+
+		Edge edge;
+		edge.isChoosen = true;
+		edge.x1 = nodePosition[i].first;
+		edge.y1 = nodePosition[i].second;
+		edge.x2 = nodePosition[k].first;
+		edge.y2 = nodePosition[k].second;
+		globalPlanInfo.edges.push_back(edge);
+
+		if(distance[i] == -2)
+		{
+			break;
+		}
+	}
+
+
 }
 
 void GlobalPlanner::processHomologation() {
@@ -116,15 +228,17 @@ void GlobalPlanner::processHomologation() {
 	startOperate = false;
 }
 
-class myPQueueComparison {
-public:
-	myPQueueComparison() {
-	}
-	bool operator()(const std::pair<double, int>& lhs,
-			const std::pair<double, int>&rhs) const {
-		return (lhs.first < rhs.second);
-	}
-};
+
+
+void GlobalPlanner::updateRobotPosition() {
+	cv::Mat robotPosition = robot->getEstimatedPosition();
+	robotX = robotPosition.at<float>(0);
+	robotY = robotPosition.at<float>(1);
+	robotTheta = robotPosition.at<float>(2);
+
+	globalPlanInfo.robotX = robotX;
+	globalPlanInfo.robotY = robotY;
+}
 
 void GlobalPlanner::readOpenStreetMap(char *mapName) {
 	std::cout << "Reading OpenStreetMap" << std::endl;
@@ -150,7 +264,9 @@ void GlobalPlanner::readOpenStreetMap(char *mapName) {
 			char *end;
 			idConversion.insert(std::make_pair(strtol(pId, &end, 10), i));
 
-			nodePosition.push_back(std::make_pair(robot->getPosX(atof(pLat)),robot->getPosY(atof(pLon))));
+			nodePosition.push_back(
+					std::make_pair(robot->getPosX(atof(pLat)),
+							robot->getPosY(atof(pLon))));
 		}
 		i++;
 	}
@@ -206,76 +322,52 @@ void GlobalPlanner::readOpenStreetMap(char *mapName) {
 	std::cout << "Edges counter : " << edges.size() << std::endl;
 
 
-	cv::Mat robotPosition = robot->getEstimatedPosition();
-	float robotX = robotPosition.at<float>(0), robotY = robotPosition.at<float>(
-			1), robotTheta = robotPosition.at<float>(2);
-	std::pair<int,int> closestEdge = findDistances(robotX,robotY);
+	bool start = true;
+	int minX, maxX, minY, maxY;
+	for (int i = 0; i < nodePosition.size();i++)
+	{
+		if ( start )
+		{
+			minX = maxX = nodePosition[i].first;
+			minY = maxY = nodePosition[i].second;
+			start = false;
+		}
+		else
+		{
+			if ( nodePosition[i].first > maxX)
+				maxX = nodePosition[i].first;
+			if ( nodePosition[i].first < minX)
+				minX = nodePosition[i].first;
 
-	// Finding shortest path using Dijkstra
-
-	// Containers for Dijkstra
-	std::vector<double> distance(edges.size(), -1.0);
-	std::priority_queue<std::pair<double, int>,
-			std::vector<std::pair<double, int>>, myPQueueComparison> pqueue;
-
-	// Going through nodes
-	distance[closestEdge.second] = 0;
-	distance[closestEdge.first] = 0;
-
-	pqueue.push(std::make_pair(0, closestEdge.first));
-	pqueue.push(std::make_pair(0, closestEdge.second));
-
-	while (!pqueue.empty()) {
-		std::pair<double, int> tmp = pqueue.top();
-		pqueue.pop();
-		int idToProcess = tmp.second;
-
-		// Looking at neighbours
-		for (std::list<int>::iterator listIter = edges[idToProcess].begin();
-				listIter != edges[idToProcess].end(); ++listIter) {
-
-			// Computing distance
-			double x = nodePosition[idToProcess].first;
-			double y = nodePosition[idToProcess].second;
-			double x2 = nodePosition[*listIter].first;
-			double y2 = nodePosition[*listIter].second;
-			double additionalDistance = sqrt(
-					(x - x2) * (x - x2) + (y - y2) * (y - y2));
-
-			if (distance[*listIter] == -1
-					|| distance[*listIter]
-							> distance[idToProcess] + additionalDistance) {
-				distance[*listIter] = distance[idToProcess]
-						+ additionalDistance;
-				pqueue.push(std::make_pair(distance[*listIter], *listIter));
-			}
+			if ( nodePosition[i].second > maxY)
+				maxY = nodePosition[i].second;
+			if ( nodePosition[i].second < minY)
+				minY = nodePosition[i].second;
 		}
 
 	}
 
-	// Conclusions
-	std::cout << "Ended computation from nodes : " << closestEdge.first << " " << closestEdge.second << std::endl;
-	int ile = 0, ogolem = 0;
-	for (int i = 0; i < edges.size(); i++) {
-		if (edges[i].size() != 0) {
-			ogolem++;
-			std::cout << "Distance to " << i << " is equal to " << distance[i]
-					<< std::endl;
-			if (distance[i] > 0)
-				ile++;
-		}
-	}
-	std::cout << "Possiblity to access " << ile * 100.0 / ogolem
-			<< "% of all nodes" << std::endl;
+	if ( robotX > maxX)
+		maxX = robotX;
+	else if (robotX < minX)
+		minX = robotX;
 
-	findDistances(0, 0);
+	if (robotY > maxY)
+		maxY = robotY;
+	else if (robotY < minY)
+		minY = robotY;
 
-	while (runThread) {
+	globalPlanInfo.robotX = robotX;
+	globalPlanInfo.robotY = robotY;
 
-	}
+	globalPlanInfo.minX = minX;
+	globalPlanInfo.maxX = maxX;
+	globalPlanInfo.minY = minY;
+	globalPlanInfo.maxY = maxY;
+
 }
 
-std::pair<int,int> GlobalPlanner::findDistances(double X, double Y) {
+void GlobalPlanner::findClosestStartingEdge(double X, double Y) {
 
 	double minDist = -1;
 	int save1, save2;
@@ -317,13 +409,29 @@ std::pair<int,int> GlobalPlanner::findDistances(double X, double Y) {
 			<< save2 << std::endl;
 	std::cout << "Distances " << distance1 << " and " << distance2 << std::endl;
 
-	return std::make_pair(save1, save2);
+	startingNodeIndex[0] = save1;
+	startingNodeIndex[1] = save2;
+	startingNodeDist[0] = distance1;
+	startingNodeDist[1] = distance2;
+
 }
 
-void GlobalPlanner::setCurrentGoal(double X, double Y)
-{
+void GlobalPlanner::setGoal(double X, double Y) {
 	goalX = X;
 	goalY = Y;
+	double bestDistance = -1;
+	int bestId = -1;
+	for (int i=0;i<nodePosition.size();i++)
+	{
+		std::pair<double, double> tmp = nodePosition[i];
+		double dist = (tmp.first - X) * (tmp.first - X) + (tmp.second - X) * (tmp.second - Y);
+		if (dist > bestDistance || bestDistance == -1)
+		{
+			bestDistance = dist;
+			bestId = i;
+		}
+	}
+	goalId = bestId;
 }
 
 void GlobalPlanner::stopThread() {
@@ -357,10 +465,25 @@ void GlobalPlanner::setMotorsVel(float motLeft, float motRight) {
 }
 
 //----------------------ACCESS TO COMPUTED DATA
-GlobalPlanner::GlobalPlanInfo GlobalPlanner::getGlobalPlan()
-{
-	GlobalPlanInfo x;
-	return x;
+GlobalPlanner::GlobalPlanInfo GlobalPlanner::getGlobalPlan() {
+//	x.minX = 0;
+//	x.maxX = 5;
+//	x.minY = 0;
+//	x.maxY = 5;
+//	x.robotX = 2;
+//	x.robotY = 2;
+//	x.curEdge = 0;
+//
+//	GlobalPlanner::Edge tmpEdge;
+//	tmpEdge.isChoosen = 1;
+//	tmpEdge.x1 = 0.5;
+//	tmpEdge.y1 = 0.5;
+//	tmpEdge.x2 = 2.5;
+//	tmpEdge.y2 = 2.5;
+//
+//	x.edges.push_back(tmpEdge);
+
+	return globalPlanInfo;
 }
 
 //----------------------MENAGMENT OF GlobalPlanner DEVICES
@@ -402,7 +525,7 @@ bool GlobalPlanner::isRobotsDriveOpen() {
 	return (robotDrive1 != NULL) && (robotDrive2 != NULL);
 }
 
-float GlobalPlanner::getHeadingToGoal(){
+float GlobalPlanner::getHeadingToGoal() {
 
 	// indicate: go straight ahead
 	currentGoal = 90.0;
