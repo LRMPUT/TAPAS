@@ -101,30 +101,13 @@ std::chrono::high_resolution_clock::time_point GPS::getTimestamp() {
 
 double GPS::getPosX(){
 	newMeasurement = false;
-	PosX = (nmea_ndeg2radian(Info.lon - StartPosLon))*Radius;
+	PosX = (nmea_ndeg2radian(Info.lat - StartPosLat))*Radius;
 	//cout << "Angular difference X = " << Info.lon << " - " << StartPosLon << " = " <<
 	//		 nmea_ndeg2radian(Info.lon - StartPosLon) << endl;
 	return PosX;
 }
 
-double GPS::getPosX(double longitude)
-{
-	return (nmea_ndeg2radian(longitude - StartPosLon))*Radius;
-}
-
-double GPS::getPosLongitude(double X)
-{
-	return (nmea_radian2ndeg(X/Radius) + StartPosLon);
-}
-
-
-double GPS::getPosY(){
-	newMeasurement = false;
-	PosY = (nmea_ndeg2radian(Info.lat - StartPosLat))*Radius;
-	return PosY;
-}
-
-double GPS::getPosY(double latitude)
+double GPS::getPosX(double latitude)
 {
 	return (nmea_ndeg2radian(latitude - StartPosLat))*Radius;
 }
@@ -132,6 +115,23 @@ double GPS::getPosY(double latitude)
 double GPS::getPosLatitude(double Y)
 {
 	return (nmea_radian2ndeg(Y/Radius) + StartPosLat);
+}
+
+
+double GPS::getPosY(){
+	newMeasurement = false;
+	PosY = (nmea_ndeg2radian(Info.lon - StartPosLon))*Radius;
+	return PosY;
+}
+
+double GPS::getPosY(double longitude)
+{
+	return (nmea_ndeg2radian(longitude - StartPosLon))*Radius;
+}
+
+double GPS::getPosLongitude(double Y)
+{
+	return (nmea_radian2ndeg(Y/Radius) + StartPosLon);
 }
 
 double GPS::getLat(){

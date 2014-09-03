@@ -28,10 +28,6 @@ class PositionEstimation {
 private:
 	// unique pointer to the PositionEstimation thread
 	std::thread estimationThread;
-	//TODO Chyba powinno być volatile
-	// Nope. Volatile nie działa tak jak myśli 80% programistów ;d. Wydaje mi się, że fakt, ze x86/x64 wykonuja
-	// operacje w sposob atomowy na bool(intcie) jest wystarczajacy. W takim wypadku moze byc problem z inwalidacja
-	// wpisow w linii cache, ale to dzieje sie raz na instacje
 	bool runThread;
 
 	// Kalman filter to gather position information
@@ -59,13 +55,14 @@ private:
 	double WHEEL_DIAMETER;
 	double WHEEL_BASE;
 
+	// The cycle of the position estimation thread
+	void run();
+
 public:
 	PositionEstimation(Robot* irobot);
 	virtual ~PositionEstimation();
 
-	// The cycle of the position estimation thread
-	//TODO Przemyśleć przeniesienie tego do private
-	void run();
+;
 
 	// Stopping the position estimation thread
 	void stopThread();

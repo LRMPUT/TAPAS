@@ -29,10 +29,10 @@ Quantity quantities[NUM_VALUES] = {
 	Quantity(4*trobot::EULER_PSI + 2,			0.0109863)
 };
 
-IMU::IMU() : imu(NULL), usedIMUType(IMU_MICROSTRAIN_GX4_25) {
+IMU::IMU() : imu(NULL), imuNew(NULL), usedIMUType(IMU_MICROSTRAIN_GX4_25) {
 }
 
-IMU::IMU(Robot* irobot) : imu(NULL), robot(irobot), usedIMUType(IMU_MICROSTRAIN_GX4_25) {
+IMU::IMU(Robot* irobot) : imu(NULL), imuNew(NULL), robot(irobot), usedIMUType(IMU_MICROSTRAIN_GX4_25) {
 
 }
 

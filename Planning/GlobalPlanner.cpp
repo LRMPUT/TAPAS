@@ -40,12 +40,12 @@ GlobalPlanner::~GlobalPlanner() {
 
 
 void GlobalPlanner::run(){
-	localPlanner = new LocalPlanner(robot, this);
+//	localPlanner = new LocalPlanner(robot, this);
 	while(runThread){
-		//readOpenStreetMap("robotourMap.osm");
+		readOpenStreetMap("robotourMap.osm");
 		if(startOperate){
 			//processHomologation();
-			localPlanner->localPlanerTest();
+//			localPlanner->localPlanerTest();
 		}
 		std::chrono::milliseconds duration(50);
 		std::this_thread::sleep_for(duration);
@@ -149,12 +149,8 @@ void GlobalPlanner::readOpenStreetMap(char *mapName) {
 		if (pId && pLat && pLon) {
 			char *end;
 			idConversion.insert(std::make_pair(strtol(pId, &end, 10), i));
-//			std::cout<<i << ": OSM - " << atof(pLon) << " " << atof(pLat) << std::endl;
-//			std::cout<<i << ": OSM - " << robot->getPosX(atof(pLon)) << " " << robot->getPosY(atof(pLat)) << std::endl;
 
-// Using Lon i Lat -> later change to robot's global map
-
-			nodePosition.push_back(std::make_pair(atof(pLon), atof(pLat)));
+			nodePosition.push_back(std::make_pair(robot->getPosX(atof(pLat)),robot->getPosY(atof(pLon))));
 		}
 		i++;
 	}
@@ -209,12 +205,13 @@ void GlobalPlanner::readOpenStreetMap(char *mapName) {
 	std::cout << "Ways found counter : " << i << std::endl;
 	std::cout << "Edges counter : " << edges.size() << std::endl;
 
-	// Finding shortest path using Dijkstra
-	int startingID = 0;
 
-	// Temporal starting node using the first node with some neighbours
-	while (edges[startingID].size() == 0)
-		startingID++;
+	cv::Mat robotPosition = robot->getEstimatedPosition();
+	float robotX = robotPosition.at<float>(0), robotY = robotPosition.at<float>(
+			1), robotTheta = robotPosition.at<float>(2);
+	std::pair<int,int> closestEdge = findDistances(robotX,robotY);
+
+	// Finding shortest path using Dijkstra
 
 	// Containers for Dijkstra
 	std::vector<double> distance(edges.size(), -1.0);
@@ -222,8 +219,12 @@ void GlobalPlanner::readOpenStreetMap(char *mapName) {
 			std::vector<std::pair<double, int>>, myPQueueComparison> pqueue;
 
 	// Going through nodes
-	distance[startingID] = 0;
-	pqueue.push(std::make_pair(0, startingID));
+	distance[closestEdge.second] = 0;
+	distance[closestEdge.first] = 0;
+
+	pqueue.push(std::make_pair(0, closestEdge.first));
+	pqueue.push(std::make_pair(0, closestEdge.second));
+
 	while (!pqueue.empty()) {
 		std::pair<double, int> tmp = pqueue.top();
 		pqueue.pop();
@@ -253,7 +254,7 @@ void GlobalPlanner::readOpenStreetMap(char *mapName) {
 	}
 
 	// Conclusions
-	std::cout << "Ended computation from node : " << startingID << std::endl;
+	std::cout << "Ended computation from nodes : " << closestEdge.first << " " << closestEdge.second << std::endl;
 	int ile = 0, ogolem = 0;
 	for (int i = 0; i < edges.size(); i++) {
 		if (edges[i].size() != 0) {
@@ -274,7 +275,7 @@ void GlobalPlanner::readOpenStreetMap(char *mapName) {
 	}
 }
 
-int GlobalPlanner::findDistances(double X, double Y) {
+std::pair<int,int> GlobalPlanner::findDistances(double X, double Y) {
 
 	double minDist = -1;
 	int save1, save2;
@@ -316,7 +317,13 @@ int GlobalPlanner::findDistances(double X, double Y) {
 			<< save2 << std::endl;
 	std::cout << "Distances " << distance1 << " and " << distance2 << std::endl;
 
-	return 0;
+	return std::make_pair(save1, save2);
+}
+
+void GlobalPlanner::setCurrentGoal(double X, double Y)
+{
+	goalX = X;
+	goalY = Y;
 }
 
 void GlobalPlanner::stopThread() {

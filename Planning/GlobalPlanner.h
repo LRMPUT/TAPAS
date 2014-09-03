@@ -93,7 +93,10 @@ private:
 	std::vector< std::list<int> > edges;
 
 	void readOpenStreetMap(char *mapName);
-	int findDistances(double X, double Y);
+	std::pair<int,int> findDistances(double X, double Y);
+
+	double goalX, goalY;
+	void setCurrentGoal(double X, double Y);
 
 public:
 	GlobalPlanner(Robot* irobot);
