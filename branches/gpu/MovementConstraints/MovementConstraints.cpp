@@ -80,7 +80,7 @@ void MovementConstraints::run(){
 	while (runThread) {
 		//cout << "Processing points cloud" << endl;
 		//updateConstraintsMap(0, 0, 0);
-		processPointCloud();
+		updatePointCloud();
 
 		if(i >= 25){
 			updateConstraintsMap();
@@ -135,6 +135,7 @@ void MovementConstraints::updateConstraintsMap(){
 		updateCurPosCloudMapCenter();
 
 		lckPointCloud.lock();
+		std::unique_lock<std::mutex> lckMap(mtxMap);
 		//cout << "locked" << endl;
 		//cout << "Calculating new coords" << endl;
 		if(!pointCloudImuMapCenter.empty()){
@@ -146,23 +147,26 @@ void MovementConstraints::updateConstraintsMap(){
 		//cout << "Calculating new posMapCenterGlobal" << endl;
 		posMapCenterGlobal = compOrient(imuCur);
 		curPosCloudMapCenter = Mat::eye(4, 4, CV_32FC1);
-		lckPointCloud.unlock();
 		//cout << "Map moved" << endl;
 		timestampMap = timestampMapCur;
+		lckMap.unlock();
+		lckPointCloud.unlock();
 	}
 	std::unique_lock<std::mutex> lckMap(mtxMap);
 	constraintsMap = Scalar(0);
 
 	//polling each constraints module to update map
 	//this->insertHokuyoConstraints(constraintsMap);
-	camera->insertConstraints(constraintsMap);
+	camera->insertConstraints(constraintsMap, );
 	//cout << constraintsMap << endl;
 	lckMap.unlock();
 	//cout << "End updateConstraintsMap()" << endl;
 }
 
 
-void MovementConstraints::insertHokuyoConstraints(cv::Mat map){
+void MovementConstraints::insertHokuyoConstraints(cv::Mat map,
+													std::chrono::high_resolution_clock::time_point curTimestampMap)
+{
 	//cout << "insertHokuyoConstraints()" << endl;
 	std::unique_lock<std::mutex> lckPointCloud(mtxPointCloud);
 	//Mat pointCloudImu = pointCloudImuMapCenter.rowRange(0, 4);
@@ -199,6 +203,79 @@ void MovementConstraints::insertHokuyoConstraints(cv::Mat map){
 		}
 	}
 	//cout << "End insertHokuyoConstraints()" << endl;
+}
+
+void MovementConstraints::updateCurPosCloudMapCenter(){
+#ifndef ROBOT_OFFLINE
+	if(robot->isImuOpen() && robot->isEncodersOpen()){
+		std::chrono::high_resolution_clock::time_point imuTimestamp;
+		Mat encodersCur = robot->getEncoderData();
+		Mat imuCur = robot->getImuData(imuTimestamp);
+
+		//cout << "Euler angles: " << imuCur.at<float>(2, 3) << " " << imuCur.at<float>(1, 3) << " " << imuCur.at<float>(0, 3) << endl;
+		//cout << "imuCur = " << imuCur << endl;
+		//cout << "encodersCur = " << encodersCur << endl;
+
+		if(imuPrev.empty()){
+			imuCur.copyTo(imuPrev);
+		}
+		if(encodersPrev.empty()){
+			encodersCur.copyTo(encodersPrev);
+		}
+
+		std::unique_lock<std::mutex> lck(mtxPointCloud);
+		if(posMapCenterGlobal.empty()){
+			posMapCenterGlobal = compOrient(imuCur);
+		}
+		if(curPosCloudMapCenter.empty()){
+			curPosCloudMapCenter = Mat::eye(4, 4, CV_32FC1);
+		}
+		curPosCloudMapCenter = compNewPos(imuPrev, imuCur,
+											encodersPrev, encodersCur,
+											curPosCloudMapCenter,
+											posMapCenterGlobal);
+		lck.unlock();
+		//cout << "trans = " << trans << endl;
+		//cout << "posMapCenterGlobal = " << posMapCenterGlobal << endl;
+		//cout << "curPosCloudMapCenter = " << curPosCloudMapCenter << endl;
+		//cout << "curTrans = " << curTrans << endl;
+		//cout << "curRot = " << curRot << endl;
+		//cout << "imuPosGlobal.inv()*curPos*cameraOrigImu.inv() = " << endl << imuPosGlobal.inv()*curPos*cameraOrigImu.front().inv() << endl;
+		//cout << "globalPos.inv()*curPos = " << globalPos.inv()*curPos << endl;
+
+		imuCur.copyTo(imuPrev);
+		encodersCur.copyTo(encodersPrev);
+	}
+#else
+	std::unique_lock<std::mutex> lck(mtxPointCloud);
+	curPosCloudMapCenter = Mat::eye(4, 4, CV_32FC1);
+	lck.unlock();
+#endif
+}
+
+void MovementConstraints::updatePointCloud(){
+	//cout << "processPointCloud()" << endl;
+
+	updateCurPosCloudMapCenter();
+
+	if(hokuyo.isOpen()){
+		std::chrono::high_resolution_clock::time_point hokuyoTimestamp;
+		Mat hokuyoData = hokuyo.getData(hokuyoTimestamp);
+		processPointCloud(hokuyoData,
+						pointCloudImuMapCenter,
+						pointsQueue,
+						hokuyoTimestamp,
+						std::chrono::high_resolution_clock::now(),
+						curPosCloudMapCenter,
+						mtxPointCloud,
+						cameraOrigLaser,
+						cameraOrigImu);
+	}
+	else{
+		//cout << "Hokuyo closed" << endl;
+	}
+
+	//cout << "End processPointCloud()" << endl;
 }
 
 cv::Mat MovementConstraints::compOrient(cv::Mat imuData){
@@ -255,7 +332,7 @@ cv::Mat MovementConstraints::compTrans(	cv::Mat orient,
 	return trans;
 }
 
-cv::Mat MovementConstraints::compNewPos(cv::Mat lprevImu, cv::Mat lcurImu,
+static cv::Mat MovementConstraints::compNewPos(cv::Mat lprevImu, cv::Mat lcurImu,
 									cv::Mat lprevEnc, cv::Mat lcurEnc,
 									cv::Mat lposMapCenter,
 									cv::Mat lmapCenterGlobal)
@@ -281,132 +358,78 @@ cv::Mat MovementConstraints::compNewPos(cv::Mat lprevImu, cv::Mat lcurImu,
 	return ret;
 }
 
-void MovementConstraints::updateCurPosCloudMapCenter(){
-#ifndef ROBOT_OFFLINE
-	if(robot->isImuOpen() && robot->isEncodersOpen()){
-		std::chrono::high_resolution_clock::time_point imuTimestamp;
-		Mat encodersCur = robot->getEncoderData();
-		Mat imuCur = robot->getImuData(imuTimestamp);
-
-		//cout << "Euler angles: " << imuCur.at<float>(2, 3) << " " << imuCur.at<float>(1, 3) << " " << imuCur.at<float>(0, 3) << endl;
-		//cout << "imuCur = " << imuCur << endl;
-		//cout << "encodersCur = " << encodersCur << endl;
-
-		if(imuPrev.empty()){
-			imuCur.copyTo(imuPrev);
+static void MovementConstraints::processPointCloud(cv::Mat hokuyoData,
+											cv::Mat& pointCloudImuMapCenter,
+											std::queue<PointsPacket>& pointsInfo,
+											std::chrono::high_resolution_clock::time_point hokuyoTimestamp,
+											std::chrono::high_resolution_clock::time_point curTimestamp,
+											cv::Mat curPosCloudMapCenter,
+											std::mutex& mtxPointCloud,
+											cv::Mat cameraOrigLaser,
+											cv::Mat cameraOrigImu)
+{
+	Mat hokuyoCurPoints(6, hokuyoData.cols, CV_32FC1);
+	//cout << "Copying hokuyo data" << endl;
+	int countPoints = 0;
+	for(int c = 0; c < hokuyoData.cols; c++){
+		//cout << hokuyoData.at<int>(2, c) << endl;
+		if(hokuyoData.at<int>(2, c) > 500){
+			hokuyoCurPoints.at<float>(0, countPoints) = -hokuyoData.at<int>(1, c);
+			hokuyoCurPoints.at<float>(1, countPoints) = 0.0;
+			hokuyoCurPoints.at<float>(2, countPoints) = hokuyoData.at<int>(0, c);
+			hokuyoCurPoints.at<float>(3, countPoints) = 1.0;
+			hokuyoCurPoints.at<float>(4, countPoints) = hokuyoData.at<int>(2, c);
+			hokuyoCurPoints.at<float>(5, countPoints) = hokuyoData.at<int>(3, c);
+			countPoints++;
 		}
-		if(encodersPrev.empty()){
-			encodersCur.copyTo(encodersPrev);
-		}
-
-		std::unique_lock<std::mutex> lck(mtxPointCloud);
-		if(posMapCenterGlobal.empty()){
-			posMapCenterGlobal = compOrient(imuCur);
-		}
-		if(curPosCloudMapCenter.empty()){
-			curPosCloudMapCenter = Mat::eye(4, 4, CV_32FC1);
-		}
-		curPosCloudMapCenter = compNewPos(imuPrev, imuCur,
-											encodersPrev, encodersCur,
-											curPosCloudMapCenter,
-											posMapCenterGlobal);
-		lck.unlock();
-		//cout << "trans = " << trans << endl;
-		//cout << "posMapCenterGlobal = " << posMapCenterGlobal << endl;
-		//cout << "curPosCloudMapCenter = " << curPosCloudMapCenter << endl;
-		//cout << "curTrans = " << curTrans << endl;
-		//cout << "curRot = " << curRot << endl;
-		//cout << "imuPosGlobal.inv()*curPos*cameraOrigImu.inv() = " << endl << imuPosGlobal.inv()*curPos*cameraOrigImu.front().inv() << endl;
-		//cout << "globalPos.inv()*curPos = " << globalPos.inv()*curPos << endl;
-
-		imuCur.copyTo(imuPrev);
-		encodersCur.copyTo(encodersPrev);
 	}
-#else
-	std::unique_lock<std::mutex> lck(mtxPointCloud);
-	curPosCloudMapCenter = Mat::eye(4, 4, CV_32FC1);
-	lck.unlock();
-#endif
-}
+	hokuyoCurPoints = hokuyoCurPoints.colRange(0, countPoints);
+	//cout << "countPoints = " << countPoints << ", hokuyoCurPoints.size = " << hokuyoCurPoints.size() << endl;
+	if(countPoints > 0){
 
-void MovementConstraints::processPointCloud(){
-	//cout << "processPointCloud()" << endl;
+		//cout << "Moving to camera orig" << endl;
+		hokuyoCurPoints.rowRange(0, 4) = cameraOrigLaser.inv()*hokuyoCurPoints.rowRange(0, 4);
 
-	updateCurPosCloudMapCenter();
-
-	if(hokuyo.isOpen()){
-		std::chrono::high_resolution_clock::time_point hokuyoTimestamp;
-		Mat hokuyoData = hokuyo.getData(hokuyoTimestamp);
-		Mat hokuyoCurPoints(6, hokuyoData.cols, CV_32FC1);
-
-		//cout << "Copying hokuyo data" << endl;
-		int countPoints = 0;
-		for(int c = 0; c < hokuyoData.cols; c++){
-			//cout << hokuyoData.at<int>(2, c) << endl;
-			if(hokuyoData.at<int>(2, c) > 500){
-				hokuyoCurPoints.at<float>(0, countPoints) = -hokuyoData.at<int>(1, c);
-				hokuyoCurPoints.at<float>(1, countPoints) = 0.0;
-				hokuyoCurPoints.at<float>(2, countPoints) = hokuyoData.at<int>(0, c);
-				hokuyoCurPoints.at<float>(3, countPoints) = 1.0;
-				hokuyoCurPoints.at<float>(4, countPoints) = hokuyoData.at<int>(2, c);
-				hokuyoCurPoints.at<float>(5, countPoints) = hokuyoData.at<int>(3, c);
-				countPoints++;
-			}
-		}
-		hokuyoCurPoints = hokuyoCurPoints.colRange(0, countPoints);
-		//cout << "countPoints = " << countPoints << ", hokuyoCurPoints.size = " << hokuyoCurPoints.size() << endl;
-		if(countPoints > 0){
-
-			//cout << "Moving to camera orig" << endl;
-			hokuyoCurPoints.rowRange(0, 4) = cameraOrigLaser.inv()*hokuyoCurPoints.rowRange(0, 4);
-
-			//cout << "Removing old points" << endl;
-			static const int timeoutThres = 5000;
-			//remove all points older than 2000 ms
-			int pointsSkipped = 0;
-			std::chrono::high_resolution_clock::time_point curTimestamp = std::chrono::high_resolution_clock::now();
-			if(pointsQueue.size() > 0){
-				//cout << "dt = " << std::chrono::duration_cast<std::chrono::milliseconds>(curTimestamp - pointsQueue.front().timestamp).count() << endl;
-				while(std::chrono::duration_cast<std::chrono::milliseconds>(curTimestamp - pointsQueue.front().timestamp).count() > timeoutThres){
-					pointsSkipped += pointsQueue.front().numPoints;
-					pointsQueue.pop();
-					if(pointsQueue.size() == 0){
-						break;
-					}
+		//cout << "Removing old points" << endl;
+		static const int timeoutThres = 5000;
+		//remove all points older than 2000 ms
+		int pointsSkipped = 0;
+		if(pointsInfo.size() > 0){
+			//cout << "dt = " << std::chrono::duration_cast<std::chrono::milliseconds>(curTimestamp - pointsQueue.front().timestamp).count() << endl;
+			while(std::chrono::duration_cast<std::chrono::milliseconds>(curTimestamp - pointsInfo.front().timestamp).count() > timeoutThres){
+				pointsSkipped += pointsInfo.front().numPoints;
+				pointsInfo.pop();
+				if(pointsInfo.size() == 0){
+					break;
 				}
 			}
-
-			//cout << "Moving pointCloudImuMapCenter, pointsSkipped = " << pointsSkipped << endl;
-			Mat tmpAllPoints(hokuyoCurPoints.rows, pointCloudImuMapCenter.cols + hokuyoCurPoints.cols - pointsSkipped, CV_32FC1);
-			if(!pointCloudImuMapCenter.empty()){
-				//cout << "copyTo" << endl;
-				//TODO check copying when all points are being removed
-				pointCloudImuMapCenter.colRange(pointsSkipped,
-													pointCloudImuMapCenter.cols).
-								copyTo(tmpAllPoints.colRange(0, pointCloudImuMapCenter.cols - pointsSkipped));
-			}
-			//cout << "Addding hokuyoCurPoints" << endl;
-			if(std::chrono::duration_cast<std::chrono::milliseconds>(curTimestamp - hokuyoTimestamp).count() <= timeoutThres){
-				Mat curPointCloudCameraMapCenter(hokuyoCurPoints.rows, hokuyoCurPoints.cols, CV_32FC1);
-				Mat tmpCurPoints = curPosCloudMapCenter*cameraOrigImu*hokuyoCurPoints.rowRange(0, 4);
-				tmpCurPoints.copyTo(curPointCloudCameraMapCenter.rowRange(0, 4));
-				hokuyoCurPoints.rowRange(4, 6).copyTo(curPointCloudCameraMapCenter.rowRange(4, 6));
-				//cout << hokuyoCurPointsGlobal.channels() << ", " << hokuyoAllPointsGlobal.channels() << endl;
-				curPointCloudCameraMapCenter.copyTo(tmpAllPoints.colRange(pointCloudImuMapCenter.cols - pointsSkipped,
-																			pointCloudImuMapCenter.cols + hokuyoCurPoints.cols - pointsSkipped));
-
-				pointsQueue.push(PointsPacket(hokuyoTimestamp, hokuyoCurPoints.cols));
-			}
-			std::unique_lock<std::mutex> lck(mtxPointCloud);
-			pointCloudImuMapCenter = tmpAllPoints;
-			lck.unlock();
 		}
-	}
-	else{
-		//cout << "Hokuyo closed" << endl;
-	}
 
-	//cout << "End processPointCloud()" << endl;
+		//cout << "Moving pointCloudImuMapCenter, pointsSkipped = " << pointsSkipped << endl;
+		Mat tmpAllPoints(hokuyoCurPoints.rows, pointCloudImuMapCenter.cols + hokuyoCurPoints.cols - pointsSkipped, CV_32FC1);
+		if(!pointCloudImuMapCenter.empty()){
+			//cout << "copyTo" << endl;
+			//TODO check copying when all points are being removed
+			pointCloudImuMapCenter.colRange(pointsSkipped,
+												pointCloudImuMapCenter.cols).
+							copyTo(tmpAllPoints.colRange(0, pointCloudImuMapCenter.cols - pointsSkipped));
+		}
+		//cout << "Addding hokuyoCurPoints" << endl;
+		if(std::chrono::duration_cast<std::chrono::milliseconds>(curTimestamp - hokuyoTimestamp).count() <= timeoutThres){
+			Mat curPointCloudCameraMapCenter(hokuyoCurPoints.rows, hokuyoCurPoints.cols, CV_32FC1);
+			Mat tmpCurPoints = curPosCloudMapCenter*cameraOrigImu*hokuyoCurPoints.rowRange(0, 4);
+			tmpCurPoints.copyTo(curPointCloudCameraMapCenter.rowRange(0, 4));
+			hokuyoCurPoints.rowRange(4, 6).copyTo(curPointCloudCameraMapCenter.rowRange(4, 6));
+			//cout << hokuyoCurPointsGlobal.channels() << ", " << hokuyoAllPointsGlobal.channels() << endl;
+			curPointCloudCameraMapCenter.copyTo(tmpAllPoints.colRange(pointCloudImuMapCenter.cols - pointsSkipped,
+																		pointCloudImuMapCenter.cols + hokuyoCurPoints.cols - pointsSkipped));
+
+			pointsInfo.push(PointsPacket(hokuyoTimestamp, hokuyoCurPoints.cols));
+		}
+		std::unique_lock<std::mutex> lck(mtxPointCloud);
+		pointCloudImuMapCenter = tmpAllPoints;
+		lck.unlock();
+	}
 }
 
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS

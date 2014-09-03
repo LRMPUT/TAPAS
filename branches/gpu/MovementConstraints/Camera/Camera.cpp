@@ -419,6 +419,8 @@ void Camera::processDir(boost::filesystem::path dir,
 	Mat imuPrev, encodersPrev;
 	Mat imuPosGlobal, curPos;
 
+	std::queue<MovementConstraints::PointsPacket> pointsQueue;
+
 	int hokuyoCurTime;
 	hokuyoFile >> hokuyoCurTime;
 	int imuCurTime;
@@ -661,7 +663,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			}
 		}
 		imshow("test", image);
-		waitKey(500);
+		waitKey(100);
 
 		TiXmlDocument data(	dir.string() +
 							string("/") +
@@ -796,11 +798,11 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 	ofstream dataFile("data.log");
 	dataFile.precision(15);
 	for(int e = 0; e < dataset.size(); e++){
-		dataFile << dataset[e].label << " " << dataset[e].weight << " ";
+		dataFile << dataset[e].label << " ";
 		for(int d = 0; d < dataset[e].descriptor.cols; d++){
-			dataFile << dataset[e].descriptor.at<float>(d) << " ";
+			dataFile << d + 1 << ":" << dataset[e].descriptor.at<float>(d) << " ";
 		}
-		dataFile << endl;
+		dataFile << dataset[e].descriptor.cols + 1 << ":-1" << endl;
 	}
 	dataFile.close();
 
@@ -1225,7 +1227,6 @@ void Camera::run(){
 						//cout << "max" << endl;
 						bestScore = max(bestScore, classRes[l]);
 					}
-					//TODO undo
 					classifiedImage[c] = bestLabels;
 					//classifiedImage[c] = Mat(numRows, numCols, CV_32SC1, Scalar(0));
 
@@ -1426,9 +1427,11 @@ void Camera::saveCache(boost::filesystem::path cacheFile){
 }
 
 //Inserts computed constraints into map
-void Camera::insertConstraints(cv::Mat map){
+void Camera::insertConstraints(cv::Mat map,
+								std::chrono::high_resolution_clock::time_point curTimestampMap)
+{
 	std::unique_lock<std::mutex> lck(mtxConstr);
-	if(!constraints.empty()){
+	if(!constraints.empty() && curTimestampMap < curTimestamp){
 		for(int x = 0; x < MAP_SIZE; x++){
 			for(int y = 0; y < MAP_SIZE; y++){
 				map.at<float>(x, y) = max(map.at<float>(x, y), constraints.at<float>(x, y));

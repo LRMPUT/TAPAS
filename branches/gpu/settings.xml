@@ -90,9 +90,9 @@
 					<cache enabled="true" />
 					<svm type="C_SVC">
 						<kernelType value="RBF" />
-						<gamma value="0.200226" />
+						<gamma value="0.5" />
 						<degree value="2" />
-						<C value="10" />
+						<C value="512" />
 					</svm>
 					<info desc_beg="0" desc_end="7" />
 				</Classifier>

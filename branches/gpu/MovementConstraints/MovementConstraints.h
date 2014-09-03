@@ -26,6 +26,9 @@ class Robot;
 class Debug;
 
 class MovementConstraints {
+	friend class Debug;
+
+public:
 	struct PointsPacket{
 		std::chrono::high_resolution_clock::time_point timestamp;
 		int numPoints;
@@ -34,7 +37,7 @@ class MovementConstraints {
 		{}
 	};
 
-	friend class Debug;
+private:
 
 	// Class to get data from Camera
 	Camera* camera;
@@ -99,11 +102,12 @@ class MovementConstraints {
 
 	void updateConstraintsMap();
 
-	void insertHokuyoConstraints(cv::Mat map);
+	void insertHokuyoConstraints(cv::Mat map,
+								std::chrono::high_resolution_clock::time_point curTimestampMap);
 
 	void updateCurPosCloudMapCenter();
 
-	void processPointCloud();
+	void updatePointCloud();
 
 public:
 	MovementConstraints(Robot* irobot, TiXmlElement* settings);
@@ -114,10 +118,20 @@ public:
 	cv::Mat compTrans(	cv::Mat orient,
 						cv::Mat encodersDiff);
 
-	cv::Mat compNewPos(cv::Mat lprevImu, cv::Mat lcurImu,
-			cv::Mat lprevEnc, cv::Mat lcurEnc,
-			cv::Mat lposMapCenter,
-			cv::Mat lmapCenterGlobal);
+	static cv::Mat compNewPos(cv::Mat lprevImu, cv::Mat lcurImu,
+								cv::Mat lprevEnc, cv::Mat lcurEnc,
+								cv::Mat lposMapCenter,
+								cv::Mat lmapCenterGlobal);
+
+	static void processPointCloud(cv::Mat hokuyoData,
+								cv::Mat& pointCloudImuMapCenter,
+								std::queue<PointsPacket>& pointsInfo,
+								std::chrono::high_resolution_clock::time_point hokuyoTimestamp,
+								std::chrono::high_resolution_clock::time_point curTimestamp,
+								cv::Mat curPosCloudMapCenter,
+								std::mutex& mtxPointCloud,
+								cv::Mat cameraOrigLaser,
+								cv::Mat cameraOrigImu);
 
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
 	//CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right
