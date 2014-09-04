@@ -128,7 +128,7 @@ void MovementConstraints::updateConstraintsMap(){
 	static const float mapTimeout = 5000;
 	std::chrono::high_resolution_clock::time_point timestampMapCur = std::chrono::high_resolution_clock::now();
 	if(std::chrono::duration_cast<std::chrono::milliseconds>(timestampMapCur - timestampMap).count() > 5000){
-		//move = true;
+		move = true;
 	}
 	if(move == true){
 		//cout << "Moving map" << endl;
@@ -328,7 +328,7 @@ void MovementConstraints::processPointCloud(){
 		int countPoints = 0;
 		for(int c = 0; c < hokuyoData.cols; c++){
 			//cout << hokuyoData.at<int>(2, c) << endl;
-			if(hokuyoData.at<int>(2, c) > 500){
+			if(hokuyoData.at<int>(2, c) > 100){
 				hokuyoCurPoints.at<float>(0, countPoints) = -hokuyoData.at<int>(1, c);
 				hokuyoCurPoints.at<float>(1, countPoints) = 0.0;
 				hokuyoCurPoints.at<float>(2, countPoints) = hokuyoData.at<int>(0, c);
@@ -430,6 +430,18 @@ cv::Mat MovementConstraints::getPosImuMapCenter(){
 	curPosCloudMapCenter.copyTo(ret);
 	lck.unlock();
 	return ret;
+}
+
+void MovementConstraints::getLocalPlanningData(cv::Mat& MovementConstraints,cv::Mat& PosImuMapCenter, cv::Mat& GlobalMapCenter){
+
+	std::unique_lock<std::mutex> lckPC(mtxPointCloud);
+	std::unique_lock<std::mutex> lckMap(mtxMap);
+	constraintsMap.copyTo(MovementConstraints);
+	curPosCloudMapCenter.copyTo(PosImuMapCenter);
+	posMapCenterGlobal.copyTo(GlobalMapCenter);
+	lckPC.unlock();
+	lckMap.unlock();
+
 }
 
 cv::Mat MovementConstraints::getPosGlobalMap(){

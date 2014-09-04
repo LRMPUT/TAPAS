@@ -54,9 +54,9 @@ PositionEstimation::~PositionEstimation() {
 }
 
 void PositionEstimation::run() {
-	while(!gps.isOpen()) usleep(200);
-	while (gps.getFixStatus() == 1 || (fabs(gps.getLat()) < 0.00001
-			|| fabs(gps.getLon()) < 0.000001)) {
+	while(!gps.isOpen() && runThread) usleep(200);
+	while ((gps.getFixStatus() == 1 || (fabs(gps.getLat()) < 0.00001)
+			|| (fabs(gps.getLon()) < 0.000001)) && runThread) {
 		usleep(200);
 	};
 

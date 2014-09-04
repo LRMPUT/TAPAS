@@ -23,9 +23,10 @@ class Debug;
 using namespace std;
 using namespace cv;
 
-#define HIST_ALPHA 18
+#define HIST_ALPHA 10
 #define HIST_SECTORS (360/HIST_ALPHA)
-#define HIST_THRESHOLD 10
+#define HIST_THRESHOLD 0
+#define STEERING_MARGIN 4 // in degrees
 
 
 
@@ -53,6 +54,11 @@ class LocalPlanner {
 	vector<int> freeSectors;
 	float bestDirection;
 	float goalDirection;
+
+	//constraint data
+	Mat constraints;
+	Mat posImuMapCenter;
+	Mat posLocalToGlobalMap;
 
 	void initHistogram();
 
