@@ -15,8 +15,6 @@ using namespace std;
 LocalPlanner::LocalPlanner(Robot* irobot, GlobalPlanner* planer) :
 		robot(irobot),
 		globalPlanner(planer),
-		//robotDrive1(NULL),
-		//robotDrive2(NULL),
 		startOperate(false)
 {
 	runThread = true;
@@ -26,7 +24,6 @@ LocalPlanner::LocalPlanner(Robot* irobot, GlobalPlanner* planer) :
 LocalPlanner::~LocalPlanner(){
 	cout << "~LocalPlanner()" << endl;
 	stopThread();
-	//closeRobotsDrive();
 	cout << "End ~LocalPlanner()" << endl;
 }
 
@@ -46,16 +43,11 @@ void LocalPlanner::executeVFH(){
 	updateHistogram();
 	findFreeSectors();
 	// smoothHistogram();
-
 	setGoalDirection();
-
 	/// goal direction in the local map coordiantes
-
 	determineGoalInLocalMap();
 	/// optimal direction in the local map - nearest to the goal
-
-	calculateLocalDirection();
-
+	findOptimSector();
 	determineDriversCommand();
 
 }
@@ -66,7 +58,25 @@ float LocalPlanner::getLocalDirection(){
 
 void LocalPlanner::setGoalDirection(){
 
-	goalDirection = globalPlanner->getHeadingToGoal();
+	///// this part of code is only for  test purposes
+	// to test the straight ahead direction of movement:
+	// logic flow: get current orientation ane keep it
+	static bool setStraighAheadDirection = false;
+	static float direction = 0;
+
+	if (!setStraighAheadDirection){
+	Mat posLocalToGlobalMap = robot->getLocalMapPosInGlobalMap();
+	/// and convert this orentation to euler yaw
+	direction = RotMatToEulerYaw(posLocalToGlobalMap);
+	direction = 180/PI*direction;
+	setStraighAheadDirection = true;
+	}
+	///////////////
+
+
+
+	//goalDirection = globalPlanner->getHeadingToGoal();
+	goalDirection = direction; // => test go straight ahead
 }
 
 
@@ -78,7 +88,7 @@ void LocalPlanner::initHistogram(){
 }
 
 void LocalPlanner::localPlanerTest(){
-	//globalPlanner->setMotorsVel(1000,1000);
+
 	initHistogram();
 	while (true){
 		executeVFH();
@@ -202,56 +212,51 @@ void LocalPlanner::findFreeSectors(){
 	}
 }
 
+/// return Goal Direction converted from Global Map to
+/// local MAP
 void LocalPlanner::determineGoalInLocalMap(){
 
-	float globalYaw;
-	float goalAngle;
+	float globalYaw = 0.0;
+	float localToGlobalDifference = 0.0;
 
-	// get current orientation
-	Mat posImuMapCenter = robot->getPosImuConstraintsMapCenter();
-	cout<<"GlobalYaw"<<posImuMapCenter.at<float>(0,0)<<endl;
+	cout<<"determineGoalInLocalMap"<<endl;
+
+
+	/// get Orientation of Local Map in Global Map
 	Mat posLocalToGlobalMap = robot->getLocalMapPosInGlobalMap();
-	//cout<<"GlobalYaw"<<posLocalToGlobalMap.at<float>(0,0)<<endl;
-	//determine Euler Yaw
-
-	cout<<"GlobalYaw"<<posLocalToGlobalMap.at<float>(0,0)<<endl;
-
+	/// and convert this orentation to euler yaw
 	globalYaw = RotMatToEulerYaw(posLocalToGlobalMap);
-	//slocalYaw = RotMatToEulerYaw(posImuMapCenter);
-	//convert local best direction from static map to global best direction
-	//goalAngle
+	globalYaw = 180/PI*globalYaw;
+	cout<<"Global_YAW: "<<globalYaw<<endl;
+	// calculate difference between local and global map in orientation
+	localToGlobalDifference = goalDirection - globalYaw;
+	cout<<"Difference: "<<localToGlobalDifference<<endl;
+	goalDirection = goalDirection - globalYaw;
 
-	cout<<"GlobalYaw"<<globalYaw<<endl;
-
-	cout<<"goalDirection"<<goalDirection<<endl;
-
-	goalDirection = goalDirection + 180/PI*globalYaw;
-	cout<<"Kierunek"<<endl;
-	cout<<goalDirection<<endl;
-
-	///return 90 only for test purposes until global planner will
-	/// be integrated. 90.0 means: go straight ahead
-	goalDirection = 90.0;
-
+	cout<<"determineGoalInLocalMap"<<endl;
 }
 
-void LocalPlanner::calculateLocalDirection(){
 
-	cout<<"Poczatek kalkulacji"<<endl;
-	int goalSector = goalDirection/HIST_ALPHA;
+
+void LocalPlanner::findOptimSector(){
+
+	cout<<"calculateLocalDirection START"<<endl;
+	// goal direction+offset/ sectors alpha
+	int goalSector = (goalDirection+90)/10;
+	cout<<goalSector<<endl;
 	int foundSector = -1;
 	int selectedSector = 0;
-	// remove previous free sectors
 
 
-	for (int i = 0; i < freeSectors.size()-3; i = i+2){
+
+	for (int i = 0; i < freeSectors.size()-1; i = i+2){
 		if (goalSector >= freeSectors.at(i) && goalSector <= freeSectors.at(i+1)){
 			/// go through the middle of the set of free sectors
 			selectedSector = (freeSectors.at(i) + freeSectors.at(i+1))/2;
 			foundSector =  selectedSector;
 		}
 	}
-	if (foundSector != -1){
+	if (foundSector == -1){
 		// set first sector as candidate and look for the better one
 		foundSector = 0;
 
@@ -261,9 +266,10 @@ void LocalPlanner::calculateLocalDirection(){
 			}
 		}
 	}
-	bestDirection = foundSector*HIST_ALPHA;
-
-	cout<<"Koniec kalkulacji"<<endl;
+	// 10 is HIST/ALPHA/2
+	bestDirection = foundSector*10;
+	cout<<"FoundSector: "<<foundSector<<endl;
+	cout<<"calculateLocalDirection END"<<endl;
 }
 
 
@@ -271,16 +277,25 @@ void LocalPlanner::determineDriversCommand(){
 
 	Mat posImuMapCenter = robot->getPosImuConstraintsMapCenter();
 	float localYaw = RotMatToEulerYaw(posImuMapCenter);
+	localYaw = localYaw*180/PI;
 
+	cout<<"LOCAL_YAW"<<localYaw<<endl;
+	cout<<bestDirection<<endl;
 	cout<<"Sterowanie"<<endl;
 
-/*	// if we achieve set point direction then go straight ahead
-	if ((bestDirection - localYaw)*(bestDirection - localYaw) < 100 )
-		return globalPlanner->setMotorsVel(1000,-1000);
-	else if (bestDirection > localYaw)
-		return globalPlanner->setMotorsVel(1000,-1000);
+	// if we achieve set point direction then go straight ahead
+	// 100 means that we are in target direction with 10 degree margin
+	if ((bestDirection+90 - localYaw)*(bestDirection+90 - localYaw) < 100 )
+		cout<<"break"<<endl;
+		//globalPlanner->setMotorsVel(1000,1000);
+	else if (bestDirection+90 > localYaw)
+		cout<<"break"<<endl;
+		 //globalPlanner->setMotorsVel(1000,-1000);
 	else
-		return globalPlanner->setMotorsVel(1000,-1000);*/
+		cout<<"break"<<endl;
+		 //globalPlanner->setMotorsVel(-1000,1000);
+
+	//getchar();
 }
 
 

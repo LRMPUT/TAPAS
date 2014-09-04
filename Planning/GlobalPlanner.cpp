@@ -36,9 +36,8 @@ public:
 GlobalPlanner::GlobalPlanner(Robot* irobot) :
 		robot(irobot), robotDrive1(NULL), robotDrive2(NULL), startOperate(false) {
 	cout << "GlobalPlanner()" << endl;
-	runThread = false;
+	runThread = true;
 	globalPlannerThread = std::thread(&GlobalPlanner::run, this);
-
 	cout << "End GlobalPlanner()" << endl;
 }
 
@@ -65,12 +64,14 @@ void GlobalPlanner::run() {
 	//readOpenStreetMap("robotourMap.osm");
 	while (runThread) {
 
-		if (startOperate || true) {
+		if (startOperate) {
 
-			updateRobotPosition();
-			findClosestStartingEdge(robotX, robotY);
-			setGoal(5,5);
-			computeGlobalPlan();
+			localPlanner = new LocalPlanner(robot, this);
+			localPlanner->localPlanerTest();
+//			updateRobotPosition();
+//			findClosestStartingEdge(robotX, robotY);
+//			setGoal(5,5);
+//			computeGlobalPlan();
 //			chooseNextSubGoal();
 //			updateHeadingGoal();
 

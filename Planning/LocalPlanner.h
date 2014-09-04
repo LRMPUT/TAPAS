@@ -24,7 +24,7 @@ using namespace std;
 using namespace cv;
 
 #define HIST_ALPHA 18
-#define HIST_SECTORS 360/HIST_ALPHA
+#define HIST_SECTORS (360/HIST_ALPHA)
 #define HIST_THRESHOLD 10
 
 
@@ -64,7 +64,7 @@ class LocalPlanner {
 
 	void determineDriversCommand();
 
-	void calculateLocalDirection();
+	void findOptimSector();
 
 	void determineGoalInLocalMap();
 
