@@ -113,10 +113,10 @@ public:
 	MovementConstraints(Robot* irobot, TiXmlElement* settings);
 	virtual ~MovementConstraints();
 
-	cv::Mat compOrient(cv::Mat imuData);
+	static cv::Mat compOrient(cv::Mat imuData);
 
-	cv::Mat compTrans(	cv::Mat orient,
-						cv::Mat encodersDiff);
+	static cv::Mat compTrans(	cv::Mat orient,
+								cv::Mat encodersDiff);
 
 	static cv::Mat compNewPos(cv::Mat lprevImu, cv::Mat lcurImu,
 								cv::Mat lprevEnc, cv::Mat lcurEnc,

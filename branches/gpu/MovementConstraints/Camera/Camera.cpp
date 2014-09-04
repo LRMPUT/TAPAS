@@ -467,33 +467,29 @@ void Camera::processDir(boost::filesystem::path dir,
 		while(hokuyoCurTime <= cameraCurTime && !hokuyoFile.eof()){
 			cout << "Hokuyo time: " << hokuyoCurTime << endl;
 
-			Mat hokuyoCurPoints, hokuyoCurPointsDist, hokuyoCurPointsInt;
+			Mat hokuyoData, hokuyoCurPointsDist, hokuyoCurPointsInt;
 			char tmpChar;
 			hokuyoFile >> tmpChar;
-			readLineFloat(hokuyoFile, hokuyoCurPointsDist);
+			readLineInt(hokuyoFile, hokuyoCurPointsDist);
 			hokuyoFile >> tmpChar;
-			readLineFloat(hokuyoFile, hokuyoCurPointsInt);
+			readLineInt(hokuyoFile, hokuyoCurPointsInt);
 			//hokuyoCurPoints = Mat(6, hokuyoCurPointsDist.cols, CV_32FC1, Scalar(1));
-			hokuyoCurPoints = Mat(0, 6, CV_32FC1);
+			hokuyoData = Mat(0, 4, CV_32SC1);
 
-			static const float startAngle = -45*PI/180;
+			static const float startAngle = -135*PI/180;
 			static const float stepAngle = 0.25*PI/180;
 			for(int i = 0; i < hokuyoCurPointsDist.cols; i++){
-				if(hokuyoCurPointsDist.at<float>(i) > 500){
-					Mat curPoint(1, 6, CV_32FC1);
-					curPoint.at<float>(0) = cos(startAngle + stepAngle*i)*hokuyoCurPointsDist.at<float>(i);
-					curPoint.at<float>(1) = 0;
-					curPoint.at<float>(2) = sin(startAngle + stepAngle*i)*hokuyoCurPointsDist.at<float>(i);
-					curPoint.at<float>(3) = 1;
-					curPoint.at<float>(4) = hokuyoCurPointsDist.at<float>(i);
-					curPoint.at<float>(5) = hokuyoCurPointsInt.at<float>(i);
-					hokuyoCurPoints.push_back(curPoint);
+				if(hokuyoCurPointsDist.at<int>(i) > 500){
+					Mat curPoint(1, 4, CV_32FC1);
+					curPoint.at<int>(0) = hokuyoCurPointsDist.at<int>(i)*cos(startAngle + i*stepAngle);
+					curPoint.at<int>(1) = hokuyoCurPointsDist.at<int>(i)*sin(startAngle + i*stepAngle);
+					curPoint.at<int>(2) = hokuyoCurPointsDist.at<int>(i);
+					curPoint.at<int>(3) = hokuyoCurPointsInt.at<int>(i);
+					hokuyoData.push_back(curPoint);
 				}
 			}
 			cout << endl;
-			hokuyoCurPoints = hokuyoCurPoints.t();
-
-			hokuyoCurPoints.rowRange(0, 4) = cameraOrigLaser.front().inv()*hokuyoCurPoints.rowRange(0, 4);
+			hokuyoData = hokuyoData.t();
 
 			//narrow hokuyo scan range 45 - 135
 			//hokuyoCurPoints = hokuyoCurPoints.colRange(400, 681);
@@ -565,22 +561,23 @@ void Camera::processDir(boost::filesystem::path dir,
 			cout << "curPos = " << endl << curPos << endl;
 			//cout << "globalPos.inv()*curPos = " << globalPos.inv()*curPos << endl;
 
-			//cout << "Moving hokuyoAllPointsGlobal" << endl;
-			Mat tmpAllPoints(hokuyoCurPoints.rows, hokuyoAllPointsGlobal.cols + hokuyoCurPoints.cols, CV_32FC1);
-			if(!hokuyoAllPointsGlobal.empty()){
-				hokuyoAllPointsGlobal.copyTo(tmpAllPoints.colRange(0, hokuyoAllPointsGlobal.cols));
-			}
-			//cout << "Addding hokuyoCurPoints" << endl;
-			Mat hokuyoCurPointsGlobal(hokuyoCurPoints.rows, hokuyoCurPoints.cols, CV_32FC1);
-			Mat tmpCurPoints = curPos*cameraOrigImu.front()*hokuyoCurPoints.rowRange(0, 4);
-			tmpCurPoints.copyTo(hokuyoCurPointsGlobal.rowRange(0, 4));
-			hokuyoCurPoints.rowRange(4, 6).copyTo(hokuyoCurPointsGlobal.rowRange(4, 6));
-			//cout << hokuyoCurPointsGlobal.channels() << ", " << hokuyoAllPointsGlobal.channels() << endl;
-			hokuyoCurPointsGlobal.copyTo(tmpAllPoints.colRange(hokuyoAllPointsGlobal.cols, hokuyoAllPointsGlobal.cols + hokuyoCurPoints.cols));
-			hokuyoAllPointsGlobal = tmpAllPoints;
+			std::chrono::duration<int,std::milli> durTmp(hokuyoCurTime);
+			std::chrono::high_resolution_clock::time_point hokuyoTimestamp(durTmp);
+
+			std::mutex mtxPointCloud;
+
+			MovementConstraints::processPointCloud(hokuyoData,
+													hokuyoAllPointsGlobal,
+													pointsQueue,
+													hokuyoTimestamp,
+													hokuyoTimestamp,
+													curPos,
+													mtxPointCloud,
+													cameraOrigLaser.front(),
+													cameraOrigImu.front());
 
 			//waitKey();
-			Mat covarLaserCur, meanLaserCur;
+			/*Mat covarLaserCur, meanLaserCur;
 			calcCovarMatrix(hokuyoCurPoints.rowRange(4, 6),
 							covarLaserCur,
 							meanLaserCur,
@@ -588,7 +585,9 @@ void Camera::processDir(boost::filesystem::path dir,
 							CV_32F);
 			meanLaser = (meanLaser*numPts + meanLaserCur*hokuyoCurPoints.cols)/(numPts + hokuyoCurPoints.cols);
 			covarLaser = (covarLaser*numPts + covarLaserCur*hokuyoCurPoints.cols)/(numPts + hokuyoCurPoints.cols);
-			numPts += hokuyoCurPoints.cols;
+			numPts += hokuyoCurPoints.cols;*/
+
+			cout << "hokuyoAllPointsGlobal.cols = " << hokuyoAllPointsGlobal.cols << endl;
 
 			imuCur.copyTo(imuPrev);
 			encodersCur.copyTo(encodersPrev);
@@ -663,7 +662,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			}
 		}
 		imshow("test", image);
-		waitKey(100);
+		waitKey(500);
 
 		TiXmlDocument data(	dir.string() +
 							string("/") +
@@ -1191,9 +1190,9 @@ void Camera::run(){
 		std::chrono::high_resolution_clock::time_point timeEndClassification;
 		std::chrono::high_resolution_clock::time_point timeEndConstraints;
 		Mat curPosImuMapCenter;
+		std::chrono::high_resolution_clock::time_point nextCurTimestamp = std::chrono::high_resolution_clock::now();
 		Mat pointCloudImu = movementConstraints->getPointCloud(curPosImuMapCenter);
 		if(!curPosImuMapCenter.empty()){
-			std::chrono::high_resolution_clock::time_point nextCurTimestamp = std::chrono::high_resolution_clock::now();
 			timeBegin = std::chrono::high_resolution_clock::now();
 			vector<Mat> cameraData = this->getData();
 #ifdef NO_CUDA

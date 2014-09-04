@@ -157,7 +157,7 @@ void MovementConstraints::updateConstraintsMap(){
 
 	//polling each constraints module to update map
 	//this->insertHokuyoConstraints(constraintsMap);
-	camera->insertConstraints(constraintsMap, );
+	camera->insertConstraints(constraintsMap, timestampMap);
 	//cout << constraintsMap << endl;
 	lckMap.unlock();
 	//cout << "End updateConstraintsMap()" << endl;
@@ -332,7 +332,7 @@ cv::Mat MovementConstraints::compTrans(	cv::Mat orient,
 	return trans;
 }
 
-static cv::Mat MovementConstraints::compNewPos(cv::Mat lprevImu, cv::Mat lcurImu,
+cv::Mat MovementConstraints::compNewPos(cv::Mat lprevImu, cv::Mat lcurImu,
 									cv::Mat lprevEnc, cv::Mat lcurEnc,
 									cv::Mat lposMapCenter,
 									cv::Mat lmapCenterGlobal)
@@ -358,7 +358,7 @@ static cv::Mat MovementConstraints::compNewPos(cv::Mat lprevImu, cv::Mat lcurImu
 	return ret;
 }
 
-static void MovementConstraints::processPointCloud(cv::Mat hokuyoData,
+void MovementConstraints::processPointCloud(cv::Mat hokuyoData,
 											cv::Mat& pointCloudImuMapCenter,
 											std::queue<PointsPacket>& pointsInfo,
 											std::chrono::high_resolution_clock::time_point hokuyoTimestamp,
