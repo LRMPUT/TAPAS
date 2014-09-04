@@ -40,6 +40,8 @@ void LocalPlanner::run(){
 void LocalPlanner::executeVFH(){
 
 
+	robot->getLocalPlanData(constraints, posImuMapCenter, posLocalToGlobalMap);
+
 	updateHistogram();
 	findFreeSectors();
 	// smoothHistogram();
@@ -65,7 +67,7 @@ void LocalPlanner::setGoalDirection(){
 	static float direction = 0;
 
 	if (!setStraighAheadDirection){
-	Mat posLocalToGlobalMap = robot->getLocalMapPosInGlobalMap();
+	//Mat posLocalToGlobalMap = robot->getLocalMapPosInGlobalMap();
 	/// and convert this orentation to euler yaw
 	direction = RotMatToEulerYaw(posLocalToGlobalMap);
 	direction = 180/PI*direction;
@@ -82,6 +84,7 @@ void LocalPlanner::setGoalDirection(){
 
 void LocalPlanner::initHistogram(){
 
+	histSectors.clear();
 	for (int sect = 0; sect < HIST_SECTORS; sect++){
 		histSectors.push_back(0.0);
 	}
@@ -90,32 +93,32 @@ void LocalPlanner::initHistogram(){
 void LocalPlanner::localPlanerTest(){
 
 	initHistogram();
-	while (true){
-		executeVFH();
-	}
+	executeVFH();
+
 }
 
 float LocalPlanner::RotMatToEulerYaw(Mat rotMat){
 
-	float R11 = rotMat.at<float>(1, 1);
-	float R21 = rotMat.at<float>(2, 1);
-	float R31 = rotMat.at<float>(3, 1);
+	float R11 = rotMat.at<float>(0, 0);
+	float R21 = rotMat.at<float>(1, 0);
+	float R31 = rotMat.at<float>(2, 0);
 
 	float teta1 = -asin(R31);
 	float teta2 = PI - teta1;
 	float fi1 = 0; float fi2 = 0;
 
-	if (R31 != 1 && R31 != -1){
+	if (fabs(R31) >= 1.001 || fabs(R31) < 0.999){
 
 		fi1 = atan2(R21/cos(teta1), R11/cos(teta1));
 		fi2 = atan2(R21/cos(teta2), R11/cos(teta2));
 	}
 	else
 	{
-		teta1 = 0;
-		teta2 = 0;
+		fi1 = 0.0;
+		fi2 = 0.0;
 	}
 
+	return fi1;
 }
 
 
@@ -124,12 +127,14 @@ void LocalPlanner::updateHistogram(){
 	float angPosition;
 	float density;
 
-	const float maxDistance = 1.41*(float)MAP_SIZE;
+
+
+	const float maxDistance = 1.41*(float)MAP_SIZE*1.41*(float)MAP_SIZE;
 	const float hist_A = 1;
 	const float hist_B =  hist_A/maxDistance;
 	/// Get current Constraints Raster Map
-	Mat constraints = robot->getMovementConstraints();
-	Mat posImuMapCenter = robot->getPosImuConstraintsMapCenter();
+	//Mat constraints = robot->getMovementConstraints();
+	//Mat posImuMapCenter = robot->getPosImuConstraintsMapCenter();
 
 	// update position of the robot
 	float addX = posImuMapCenter.at<float>(0, 3)/MAP_RASTER_SIZE;
@@ -138,27 +143,32 @@ void LocalPlanner::updateHistogram(){
 	int curRobCellX = MAP_SIZE/2 + addX;
 	int curRobCellY = MAP_SIZE/2 + addY;
 	int sector = 0;
-	cout<<"RobotX"<<curRobCellX<<endl;
-	cout<<"RobotY"<<curRobCellY<<endl;
+	//cout<<"RobotX"<<curRobCellX<<endl;
+	//cout<<"RobotY"<<curRobCellY<<endl;
 
 	/// for each cell of the raster map
-	for(int x = MAP_SIZE/2; x < MAP_SIZE ; x++){
-		for(int y = MAP_SIZE; y > 0; y--){
+	for(int x = 0; x < MAP_SIZE ; x++){
+		for(int y = 0; y < MAP_SIZE; y++){
 			///angular position
-			angPosition = 180/PI*atan2(float(x - curRobCellX), y - curRobCellY);
-			cout<<"angPosition"<<angPosition<<endl;
+//			angPosition = 180/PI*atan2(float(x - curRobCellX), y - curRobCellY);
+			angPosition = 180/PI*atan2(float(y - curRobCellY), float(x - curRobCellX));
+			//cout<<"angPosition"<<angPosition<<endl;
 			/// value of obstacle vector
-			density = pow(constraints.at<float>(x, y),2)*
-					(hist_A - hist_B*sqrt(pow((float)(x - curRobCellX),2)
-					+ pow((float)(y - curRobCellY), 2)));
+			float c = pow(constraints.at<float>(x, y),2);
+			float d2 = pow((float)(x - curRobCellX),2)
+							+ pow((float)(y - curRobCellY), 2);
+			density = c*(hist_A - hist_B*d2);
 
 			/// update proper sector of histogram
-			histSectors.at(floor((angPosition/10))) += density;
+			if (angPosition > 179.999)
+				angPosition = - 180.0;
+			histSectors.at(floor(((angPosition+180)/HIST_ALPHA))) += density;
 		}
 	}
 
-	for (int sect = 0; sect < HIST_SECTORS; sect++){
-		std::cout<<histSectors.at(sect)<<endl;
+	for (int sect = 0; sect < HIST_SECTORS; sect++) {
+		std::cout << "Angular histogram values for " << sect * HIST_ALPHA - 180
+				<< " is " << histSectors.at(sect)<<endl;
 	}
 }
 
@@ -191,24 +201,25 @@ void LocalPlanner::findFreeSectors(){
 
 	freeSectors.clear();
 
-	bool begOfFreeSec = false;
+	bool needToHigherThreshold = true;
 
-	for (int sec = 0; sec < HIST_SECTORS; sec++){
+	for (int thresholdIndex = 0; thresholdIndex < 5; thresholdIndex++)
+	{
+		for (int sec = 0; sec < HIST_SECTORS; sec++){
 
-		if (histSectors.at(sec) == 0 && !begOfFreeSec){
-			freeSectors.push_back(sec);
-			begOfFreeSec = true;
+			if (fabs(histSectors.at(sec)) <= HIST_THRESHOLD + thresholdIndex){
+				freeSectors.push_back(sec);
+				needToHigherThreshold = false;
+			}
 		}
-
-		if (histSectors.at(sec) != 0 && begOfFreeSec){
-					freeSectors.push_back(sec);
-					begOfFreeSec = false;
-				}
-
+		if (!needToHigherThreshold)
+		{
+			break;
+		}
 	}
 	cout<<"Wolne sektory:"<<endl;
 	for (int i = 0; i < freeSectors.size(); i++){
-	cout<<freeSectors.at(i)<<endl;
+	cout<<"Free to go: " << freeSectors.at(i)*HIST_ALPHA << " " << (freeSectors.at(i)+1)*HIST_ALPHA<<endl;
 	}
 }
 
@@ -219,11 +230,11 @@ void LocalPlanner::determineGoalInLocalMap(){
 	float globalYaw = 0.0;
 	float localToGlobalDifference = 0.0;
 
-	cout<<"determineGoalInLocalMap"<<endl;
+	//cout<<"determineGoalInLocalMap"<<endl;
 
 
 	/// get Orientation of Local Map in Global Map
-	Mat posLocalToGlobalMap = robot->getLocalMapPosInGlobalMap();
+	//Mat posLocalToGlobalMap = robot->getLocalMapPosInGlobalMap();
 	/// and convert this orentation to euler yaw
 	globalYaw = RotMatToEulerYaw(posLocalToGlobalMap);
 	globalYaw = 180/PI*globalYaw;
@@ -233,7 +244,7 @@ void LocalPlanner::determineGoalInLocalMap(){
 	cout<<"Difference: "<<localToGlobalDifference<<endl;
 	goalDirection = goalDirection - globalYaw;
 
-	cout<<"determineGoalInLocalMap"<<endl;
+	//cout<<"determineGoalInLocalMap"<<endl;
 }
 
 
@@ -242,58 +253,64 @@ void LocalPlanner::findOptimSector(){
 
 	cout<<"calculateLocalDirection START"<<endl;
 	// goal direction+offset/ sectors alpha
-	int goalSector = (goalDirection+90)/10;
-	cout<<goalSector<<endl;
+	int goalSector = (goalDirection+180)/HIST_ALPHA;
+	if (goalSector == HIST_ALPHA)
+	{
+		goalSector = 0;
+	}
+	cout<<"Goal sector : " << goalSector<<endl;
 	int foundSector = -1;
 	int selectedSector = 0;
 
-
-
-	for (int i = 0; i < freeSectors.size()-1; i = i+2){
-		if (goalSector >= freeSectors.at(i) && goalSector <= freeSectors.at(i+1)){
-			/// go through the middle of the set of free sectors
-			selectedSector = (freeSectors.at(i) + freeSectors.at(i+1))/2;
-			foundSector =  selectedSector;
+	if ( freeSectors.size() == 0)
+	{
+		std::cout<<"No free sectors -- I'm stuck !!!!" << std::endl;
+	}
+	/// if goal sector is free sector
+	cout<<"Free sector size : " << freeSectors.size()<<endl;
+	int bestSectorID = -1;
+	int bestSectorDistance = -1;
+	for (int i = 0; i < freeSectors.size(); i++){
+		cout<<"Free vs goal : " << freeSectors[i] << " " << goalSector<< endl;
+		int distance = (freeSectors[i] - goalSector)*(freeSectors[i] - goalSector);
+		cout<<"Distance " << distance <<endl;
+		if (bestSectorID == -1 || bestSectorDistance > distance)
+		{
+			bestSectorDistance = distance;
+			bestSectorID = freeSectors[i];
 		}
 	}
-	if (foundSector == -1){
-		// set first sector as candidate and look for the better one
-		foundSector = 0;
 
-		for (int i = 0; i < freeSectors.size()-1; i++){
-			if (pow(float(goalSector-freeSectors.at(i)), 2) < pow(float(goalSector-foundSector), 2)){
-				foundSector = freeSectors.at(i);
-			}
-		}
-	}
-	// 10 is HIST/ALPHA/2
-	bestDirection = foundSector*10;
-	cout<<"FoundSector: "<<foundSector<<endl;
+	bestDirection = bestSectorID*HIST_ALPHA;
+	cout<<"FoundSector: "<<bestSectorID<<endl;
+	cout<<"BestSector distance: "<<bestSectorDistance<<endl;
 	cout<<"calculateLocalDirection END"<<endl;
 }
 
 
 void LocalPlanner::determineDriversCommand(){
 
-	Mat posImuMapCenter = robot->getPosImuConstraintsMapCenter();
+	//Mat posImuMapCenter = robot->getPosImuConstraintsMapCenter();
 	float localYaw = RotMatToEulerYaw(posImuMapCenter);
 	localYaw = localYaw*180/PI;
-
-	cout<<"LOCAL_YAW"<<localYaw<<endl;
-	cout<<bestDirection<<endl;
-	cout<<"Sterowanie"<<endl;
+	cout<<"localYaw: "<<localYaw<<endl;
+	bestDirection = bestDirection - 180.0;
+	cout<<"Best Direction: "<<bestDirection<<endl;
 
 	// if we achieve set point direction then go straight ahead
 	// 100 means that we are in target direction with 10 degree margin
-	if ((bestDirection+90 - localYaw)*(bestDirection+90 - localYaw) < 100 )
-		cout<<"break"<<endl;
-		//globalPlanner->setMotorsVel(1000,1000);
-	else if (bestDirection+90 > localYaw)
-		cout<<"break"<<endl;
-		 //globalPlanner->setMotorsVel(1000,-1000);
+	if ((bestDirection - localYaw)*(bestDirection - localYaw) < STEERING_MARGIN * STEERING_MARGIN )
+		//cout<<"Straight"<<endl;
+
+		globalPlanner->setMotorsVel(500,500);
+	else if (bestDirection > localYaw)
+		//cout<<"Right"<<endl;
+
+		globalPlanner->setMotorsVel(800,-800);
 	else
-		cout<<"break"<<endl;
-		 //globalPlanner->setMotorsVel(-1000,1000);
+		//cout<<"Left"<<endl;
+
+		globalPlanner->setMotorsVel(-800,800);
 
 	//getchar();
 }

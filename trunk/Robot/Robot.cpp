@@ -29,8 +29,11 @@ Robot::Robot(boost::filesystem::path settingsFile) : globalPlanner(this), positi
 
 Robot::~Robot() {
 	cout << "~Robot()" << endl;
+	cout << "globalPlanner.stopThread()" << endl;
 	globalPlanner.stopThread();
+	cout << "positionEstimation.stopThread()" << endl;
 	positionEstimation.stopThread();
+	cout << "delete movementConstraints" << endl;
 	delete movementConstraints;
 	//positionEstimation.stopThread();
 	cout << "End ~Robot()" << endl;
@@ -172,4 +175,8 @@ cv::Mat Robot::getPosImuConstraintsMapCenter(){
 
 cv::Mat Robot::getLocalMapPosInGlobalMap(){
 	return movementConstraints->getPosGlobalMap();
+}
+
+void Robot::getLocalPlanData(cv::Mat& MovementConstraints,cv::Mat& PosImuMapCenter, cv::Mat& GlobalMapCenter){
+	movementConstraints->getLocalPlanningData(MovementConstraints, PosImuMapCenter, GlobalMapCenter);
 }

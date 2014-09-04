@@ -62,11 +62,12 @@ void GlobalPlanner::run() {
 //			localPlanner->localPlanerTest();
 //=======
 	//readOpenStreetMap("robotourMap.osm");
+	localPlanner = new LocalPlanner(robot, this);
 	while (runThread) {
 
 		if (startOperate) {
 
-			localPlanner = new LocalPlanner(robot, this);
+
 			localPlanner->localPlanerTest();
 //			updateRobotPosition();
 //			findClosestStartingEdge(robotX, robotY);
@@ -78,7 +79,7 @@ void GlobalPlanner::run() {
 //processHomologation();
 //			localPlanner->localPlanerTest();
 		}
-		std::chrono::milliseconds duration(500);
+		std::chrono::milliseconds duration(150);
 		std::this_thread::sleep_for(duration);
 	}
 }
