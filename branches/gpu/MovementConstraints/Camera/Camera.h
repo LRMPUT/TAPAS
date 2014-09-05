@@ -83,9 +83,9 @@ class Camera {
 
 	void computeConstraints(std::chrono::high_resolution_clock::time_point nextCurTimestamp);
 
-	void computeMapSegments(cv::Mat curPosImuMapCenter);
+	std::vector<cv::Mat> computeMapSegments(cv::Mat curPosImuMapCenter);
 
-	void computeMapSegmentsGpu(cv::Mat curPosImuMapCenter);
+	std::vector<cv::Mat> computeMapSegmentsGpu(cv::Mat curPosImuMapCenter);
 
 	std::vector<cv::Point2f> computePointProjection(const std::vector<cv::Point3f>& imPoint,
 													int cameraInd);
@@ -126,7 +126,8 @@ class Camera {
 							std::vector<cv::Mat>& images,
 							std::vector<cv::Mat>& manualRegionsOnImages,
 							std::vector<std::map<int, int> >& mapRegionIdToLabel,
-							std::vector<cv::Mat>& terrains);
+							std::vector<cv::Mat>& terrains,
+							std::vector<cv::Mat>& poses);
 
 	/** \brief Funkcja ucząca klasyfikator danymi z katalogu.
 	 *

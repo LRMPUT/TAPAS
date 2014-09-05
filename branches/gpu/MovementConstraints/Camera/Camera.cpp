@@ -120,14 +120,15 @@ void Camera::computeConstraints(std::chrono::high_resolution_clock::time_point n
 	lck.unlock();
 }
 
-void Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
+std::vector<cv::Mat> Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 	cout << "Computing map segments" << endl;
 	//cout << "curPosMapCenter = " << curPosImuMapCenter << endl;
 	//namedWindow("test");
-	mapSegments.clear();
+	//mapSegments.clear();
+	vector<Mat> ret;
 
 	for(int cam = 0; cam < numCameras; cam++){
-		mapSegments.push_back(Mat(numRows, numCols, CV_32SC1, Scalar(-1)));
+		ret.push_back(Mat(numRows, numCols, CV_32SC1, Scalar(-1)));
 
 		//cout << "curPosImuMapCenter*cameraOrigImu[cam]" << endl;
 		Mat curPosCameraMapCenterGlobal = imuOrigGlobal*curPosImuMapCenter*cameraOrigImu[cam];
@@ -165,30 +166,32 @@ void Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 				int xSegm = pointMapCenter.at<float>(0)/MAP_RASTER_SIZE + MAP_SIZE/2;
 				int ySegm = pointMapCenter.at<float>(1)/MAP_RASTER_SIZE + MAP_SIZE/2;
 				//cout << r << ":" << c << " = (" << xSegm << ", " << ySegm << ")" << endl;
-				mapSegments[cam].at<int>(r, c) = xSegm*MAP_SIZE + ySegm;
-				//cout << "mapSegments[cam].at<int>(r, c) = " << mapSegments[cam].at<int>(r, c) << endl;
+				ret[cam].at<int>(r, c) = xSegm*MAP_SIZE + ySegm;
+				//cout << "ret[cam].at<int>(r, c) = " << ret[cam].at<int>(r, c) << endl;
 				//cout << "End mapSegments[c].at<int>(r, c) =" << endl;
 				//waitKey();
 			}
 		}
 	}
 	cout << "End computing map segments" << endl;
+	return ret;
 }
 
-void Camera::computeMapSegmentsGpu(cv::Mat curPosImuMapCenter){
+std::vector<cv::Mat> Camera::computeMapSegmentsGpu(cv::Mat curPosImuMapCenter){
 	cout << "Computing map segments" << endl;
 	//namedWindow("test");
-	mapSegments.clear();
+	//mapSegments.clear();
+	vector<Mat> ret;
 
 	for(int cam = 0; cam < numCameras; cam++){
-		mapSegments.push_back(Mat(numRows, numCols, CV_32SC1, Scalar(-1)));
+		ret.push_back(Mat(numRows, numCols, CV_32SC1, Scalar(-1)));
 
 		//cout << "curPosImuMapCenter*cameraOrigImu[cam]" << endl;
 		Mat curPosCameraMapCenterGlobal = imuOrigGlobal*curPosImuMapCenter*cameraOrigImu[cam];
 		Mat curPosCameraMapCenterImu = curPosImuMapCenter*cameraOrigImu[cam];
 		Mat invCameraMatrix = cameraMatrix[cam].inv();
 
-		if(mapSegments[cam].isContinuous() &&
+		if(ret[cam].isContinuous() &&
 				curPosCameraMapCenterGlobal.isContinuous() &&
 				curPosCameraMapCenterImu.isContinuous() &&
 				invCameraMatrix.isContinuous())
@@ -199,12 +202,13 @@ void Camera::computeMapSegmentsGpu(cv::Mat curPosImuMapCenter){
 									(float*)curPosCameraMapCenterImu.data,
 									numRows,
 									numCols,
-									(int*)mapSegments[cam].data,
+									(int*)ret[cam].data,
 									MAP_SIZE,
 									MAP_RASTER_SIZE);
 
 		}
 	}
+	return ret;
 }
 
 std::vector<cv::Point2f> Camera::computePointProjection(const std::vector<cv::Point3f>& spPoints,
@@ -386,13 +390,15 @@ void Camera::processDir(boost::filesystem::path dir,
 						std::vector<cv::Mat>& images,
 						std::vector<cv::Mat>& manualRegionsOnImages,
 						std::vector<std::map<int, int> >& mapRegionIdToLabel,
-						std::vector<cv::Mat>& terrains)
+						std::vector<cv::Mat>& terrains,
+						std::vector<cv::Mat>& poses)
 {
 	cout << "processDir()" << endl;
 	images.clear();
 	manualRegionsOnImages.clear();
 	mapRegionIdToLabel.clear();
 	terrains.clear();
+	poses.clear();
 
 	//cout << dir.string() + "/hokuyo.data" << endl;
 	ifstream hokuyoFile(dir.string() + "/hokuyo.data");
@@ -599,6 +605,8 @@ void Camera::processDir(boost::filesystem::path dir,
 		terrain.rowRange(0, 4) = (curPos*cameraOrigImu.front()).inv()*hokuyoAllPointsGlobal.rowRange(0, 4);
 		terrains.push_back(terrain);
 
+		poses.push_back(curPos.clone());
+
 		//cout << "Displaying test image from file: " << dir.string() + string("/") + cameraImageFile.string() << endl;
 		Mat image = imread(dir.string() + string("/") + cameraImageFile.filename().string());
 		//rectangle(image, Point(0, 0), Point(image.cols, 100), Scalar(0, 0, 0), -1);
@@ -743,22 +751,26 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 	std::vector<cv::Mat> manualRegionsOnImages;
 	std::vector<std::map<int, int> > mapRegionIdToLabel;
 	std::vector<cv::Mat> terrains;
+	std::vector<cv::Mat> poses;
 
 	for(int d = 0; d < dirs.size(); d++){
 		std::vector<cv::Mat> tmpImages;
 		std::vector<cv::Mat> tmpManualRegionsOnImages;
 		std::vector<std::map<int, int> > tmpMapRegionIdToLabel;
 		std::vector<cv::Mat> tmpTerrains;
+		std::vector<cv::Mat> tmpPoses;
 		processDir(	dirs[d],
 					tmpImages,
 					tmpManualRegionsOnImages,
 					tmpMapRegionIdToLabel,
-					tmpTerrains);
+					tmpTerrains,
+					tmpPoses);
 		for(int i = 0; i < tmpImages.size(); i++){
 			images.push_back(tmpImages[i]);
 			manualRegionsOnImages.push_back(tmpManualRegionsOnImages[i]);
 			mapRegionIdToLabel.push_back(tmpMapRegionIdToLabel[i]);
 			terrains.push_back(tmpTerrains[i]);
+			poses.push_back(tmpPoses[i]);
 		}
 	}
 
@@ -768,7 +780,13 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 
 	for(int i = 0; i < images.size(); i++){
 		cout << "Segmenting" << endl;
-		Mat autoRegionsOnImage = hierClassifiers.front()->segmentImage(images[i]);
+		//Mat autoRegionsOnImage = hierClassifiers.front()->segmentImage(images[i]);
+#ifdef NO_CUDA
+		vector<Mat> mapSegmentsOnImage = computeMapSegments(poses[i]);
+#else
+		vector<Mat> mapSegmentsOnImage = computeMapSegmentsGpu(poses[i]);
+#endif
+		Mat autoRegionsOnImage = mapSegmentsOnImage.front();
 		cout << "Assigning manual ids" << endl;
 		//rectangle(manualRegionsOnImages[i], Point(0, 0), Point(images[i].cols, 100), Scalar(0, 0, 0), -1);
 		map<int, int> assignedManualId = hierClassifiers.front()->assignManualId(autoRegionsOnImage, manualRegionsOnImages[i]);
@@ -1196,9 +1214,9 @@ void Camera::run(){
 			timeBegin = std::chrono::high_resolution_clock::now();
 			vector<Mat> cameraData = this->getData();
 #ifdef NO_CUDA
-			computeMapSegments(curPosImuMapCenter);
+			mapSegments = computeMapSegments(curPosImuMapCenter);
 #else
-			computeMapSegmentsGpu(curPosImuMapCenter);
+			mapSegments = computeMapSegmentsGpu(curPosImuMapCenter);
 #endif
 			timeEndMapSegments = std::chrono::high_resolution_clock::now();
 			for(int c = 0; c < numCameras; c++){
