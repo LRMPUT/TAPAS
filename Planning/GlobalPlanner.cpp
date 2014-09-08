@@ -93,7 +93,8 @@ void GlobalPlanner::run() {
 
 	if (globalPlannerParams.runThread) {
 
-		while (!robot->isGpsOpen())
+		while (!robot->isGpsOpen()
+				|| robot->isSetZero() == false)
 			usleep(200);
 
 		double x, y;
@@ -110,7 +111,7 @@ void GlobalPlanner::run() {
 		setGoal(robot->getPosX(globalPlannerParams.longitude),
 				robot->getPosY(globalPlannerParams.latitude));
 
-		localPlanner->startLocalPlanner();
+		//localPlanner->startLocalPlanner();
 	}
 	while (globalPlannerParams.runThread) {
 
@@ -128,7 +129,7 @@ void GlobalPlanner::run() {
 		std::this_thread::sleep_for(duration);
 	}
 	if (globalPlannerParams.runThread) {
-		localPlanner->stopLocalPlanner();
+//		localPlanner->stopLocalPlanner();
 	}
 }
 
@@ -321,12 +322,15 @@ void GlobalPlanner::readOpenStreetMap(const char *mapName) {
 		const char *pLat = pElem->Attribute("lat");
 		const char *pLon = pElem->Attribute("lon");
 		if (pId && pLat && pLon) {
+//			printf("Id lat lon: %s %s %s\n", pId, pLat, pLon);
+//			printf("lat lon: %f %f\n", atof(pLat), atof(pLon));
+//			printf("X Y : %f %f\n", robot->getPosX(atof(pLat)*100), robot->getPosY(atof(pLon)*100));
 			char *end;
 			idConversion.insert(std::make_pair(strtol(pId, &end, 10), i));
 
 			nodePosition.push_back(
-					std::make_pair(robot->getPosX(atof(pLat)),
-							robot->getPosY(atof(pLon))));
+					std::make_pair(robot->getPosX(atof(pLat)*100),
+							robot->getPosY(atof(pLon)*100)));
 		}
 		i++;
 	}
@@ -381,6 +385,7 @@ void GlobalPlanner::readOpenStreetMap(const char *mapName) {
 	std::cout << "Ways found counter : " << i << std::endl;
 	std::cout << "Edges counter : " << edges.size() << std::endl;
 
+	std::unique_lock<std::mutex> lckGlobalPlan(mtxGlobalPlan);
 	for (int i = 0; i < edges.size(); i++) {
 		for (list<int>::iterator lIt = edges[i].begin(); lIt != edges[i].end();
 				++lIt) {
@@ -397,7 +402,7 @@ void GlobalPlanner::readOpenStreetMap(const char *mapName) {
 		}
 
 	}
-
+	lckGlobalPlan.unlock();
 
 	bool start = true;
 	int minX, maxX, minY, maxY;
@@ -423,7 +428,10 @@ void GlobalPlanner::readOpenStreetMap(const char *mapName) {
 		}
 
 	}
+	std::cout << "Min/Max : " << minX << " " << maxX << " " << minY << " "
+				<< maxY << std::endl;
 
+	std::cout << "robotX : " << robotX << "\trobotY" << robotY <<endl;
 	if ( robotX > maxX)
 		maxX = robotX;
 	else if (robotX < minX)
@@ -434,6 +442,11 @@ void GlobalPlanner::readOpenStreetMap(const char *mapName) {
 	else if (robotY < minY)
 		minY = robotY;
 
+	std::unique_lock<std::mutex> lckGlobalPlan2(mtxGlobalPlan);
+
+//	robotX = 0.0;
+//	robotY = 0.0;
+
 	globalPlanInfo.robotX = robotX;
 	globalPlanInfo.robotY = robotY;
 
@@ -442,6 +455,13 @@ void GlobalPlanner::readOpenStreetMap(const char *mapName) {
 	globalPlanInfo.minY = minY;
 	globalPlanInfo.maxY = maxY;
 
+	std::cout << "Min/Max : " << minX << " " << maxX << " " << minY << " "
+			<< maxY << std::endl;
+
+	std::cout<<"Edges size: " << globalPlanInfo.edges.size()<<std::endl;
+
+	lckGlobalPlan2.unlock();
+	std::cout<<"Global Planner: end readosmMap"<<std::endl;
 }
 
 void GlobalPlanner::findClosestStartingEdge(double X, double Y) {
@@ -559,8 +579,11 @@ GlobalPlanner::GlobalPlanInfo GlobalPlanner::getGlobalPlan() {
 //	tmpEdge.y2 = 2.5;
 //
 //	x.edges.push_back(tmpEdge);
+	std::unique_lock<std::mutex> lckGlobalPlan(mtxGlobalPlan);
+	GlobalPlanInfo plan = globalPlanInfo;
+	lckGlobalPlan.unlock();
 
-	return globalPlanInfo;
+	return plan;
 }
 
 //----------------------MENAGMENT OF GlobalPlanner DEVICES

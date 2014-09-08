@@ -82,10 +82,11 @@ void PositionEstimation::run() {
 
 		if (mtime == 0)
 			mtime = 1;
+#ifdef POSITION_ESTIMATION_DEBUG
 		printf("PE: X:%5.5f \tY:%5.5f \tS:%5.5f \tA:%5.5f\n",
 				state.at<double>(0), state.at<double>(1), state.at<double>(2),
 				state.at<double>(3));
-
+#endif
 		//cout << "PE:: framerate: " << 1000.0 / mtime << endl;
 	}
 }
@@ -119,13 +120,15 @@ void PositionEstimation::KalmanLoop() {
 							- lastUpdateTimestamp).count();
 	lastUpdateTimestamp = std::chrono::high_resolution_clock::now();
 
+#ifdef POSITION_ESTIMATION_DEBUG
 	printf("Kalman Loop --> predictTime: %f\n", predictTime);
-
+#endif
 	// Check if GPS is online
 //	printf("Checking GPS\n");
 	if (isGpsOpen() && gps.getFixStatus() > 1) {
+#ifdef POSITION_ESTIMATION_DEBUG
 		printf("GPS is online and will be used in update!\n");
-
+#endif
 		// Get the GPS data if GPS is available
 		gpsTimestamp = this->gps.getTimestamp();
 		float gps_dt = std::chrono::duration_cast < std::chrono::milliseconds
@@ -141,10 +144,12 @@ void PositionEstimation::KalmanLoop() {
 			Mat gps_data = Mat(2, 1, CV_64FC1);
 			gps_data.at<double>(0, 0) = this->gps.getPosX()/1000;
 			gps_data.at<double>(1, 0) = this->gps.getPosY()/1000;
+#ifdef POSITION_ESTIMATION_DEBUG
 			printf("\n\n GPS : %f %f\n", gps.getLat(), gps.getLon());
 			printf("GPS pos : %f %f\n", gps.getPosX()/1000, gps.getPosY()/1000);
 			printf("Gps update --> values %f %f\n", gps_data.at<double>(0, 0),
 					gps_data.at<double>(1, 0));
+#endif
 			state = EKF->correctGPS(gps_data);
 
 		}
@@ -154,11 +159,14 @@ void PositionEstimation::KalmanLoop() {
 	// Check if encoder is online
 //	printf("Checking encoder\n");
 	if (isEncodersOpen()) {
+#ifdef POSITION_ESTIMATION_DEBUG
 		printf("Encoders are open and will be used in update!\n");
+#endif
 		cv::Mat enc_data = this->getEncoderData(encoderTimestamp);
+#ifdef POSITION_ESTIMATION_DEBUG
 		printf("Encoder data: %d %d\n", enc_data.at<int>(0) - lastLeft,
 							enc_data.at<int>(1) - lastRight);
-
+#endif
 		float encoder_dt = std::chrono::duration_cast
 				< std::chrono::milliseconds
 				> (encoderTimestamp - lastEncoderTimestamp).count();
@@ -171,8 +179,10 @@ void PositionEstimation::KalmanLoop() {
 				EKF->predict(0);
 			}
 
+#ifdef POSITION_ESTIMATION_DEBUG
 			printf("Encoder data: %d %d %f\n", enc_data.at<int>(0) - lastLeft,
 					enc_data.at<int>(1) - lastRight, encoder_dt);
+#endif
 			lastEncoderTimestamp = encoderTimestamp;
 
 			if (encoderStart) {
@@ -181,22 +191,29 @@ void PositionEstimation::KalmanLoop() {
 				encoderStart = 0;
 			}
 
+#ifdef POSITION_ESTIMATION_DEBUG
 			printf("Bug test: %f %f\n", ENCODER_TICK_PER_REV, WHEEL_DIAMETER);
+#endif
 
 			float left_encoder = ((float) (enc_data.at<int>(0) - lastLeft))
 					/ ENCODER_TICK_PER_REV * M_PI * WHEEL_DIAMETER;
 			float right_encoder = ((float) (enc_data.at<int>(1) - lastRight))
 					/ ENCODER_TICK_PER_REV * M_PI * WHEEL_DIAMETER;
 
+#ifdef POSITION_ESTIMATION_DEBUG
 			printf("Encoder left/right: %f %f\n", left_encoder, right_encoder);
+#endif
 
 			float distance = (left_encoder + right_encoder) / 2.0;
 
 			Mat speed(1, 1, CV_64FC1);
 			speed.at<double>(0) = (double) (distance / encoder_dt * 1000); // Is in seconds or ms ?
+
+#ifdef POSITION_ESTIMATION_DEBUG
 			printf("Encoder distance: %.10f\n", distance);
 //				printf("Encoder encoder_dt: %.10f\n", encoder_dt );
 			printf("Encoder speed update: %f\n", distance / encoder_dt);
+#endif
 			state = EKF->correctEncoder(speed);
 
 			lastLeft = enc_data.at<int>(0);
@@ -208,10 +225,14 @@ void PositionEstimation::KalmanLoop() {
 	// Checking if info from IMU is available
 //	printf("Checking IMU\n");
 	if (isImuOpen()) {
+#ifdef POSITION_ESTIMATION_DEBUG
 		printf("IMU is online and will be used\n");
+#endif
 		cv::Mat imuData = this->imu.getData(imuTimestamp);
-		printf("IMU data : %f\n", imuData.at<float>(11));
 
+#ifdef POSITION_ESTIMATION_DEBUG
+		printf("IMU data : %f\n", imuData.at<float>(11));
+#endif
 		float imu_dt = std::chrono::duration_cast < std::chrono::milliseconds
 				> (imuTimestamp - lastImuTimestamp).count();
 
@@ -257,6 +278,11 @@ void PositionEstimation::setZeroPosition() {
 	}
 
 //	KF->statePost = KF->statePre = Mat::zeros(2,1, CV_32F);
+}
+
+bool PositionEstimation::isSetZero()
+{
+	return gps.getIsSetZero();
 }
 
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS

@@ -132,9 +132,9 @@ void Constraints::updateGlobalPlanView(){
 
 	double scaleX = (globalPlan.maxX - globalPlan.minX)/ui->planningGlobalViewLabel->width();
 	double scaleY = (globalPlan.maxY - globalPlan.minY)/ui->planningGlobalViewLabel->height();
-//	printf("Scales: %f %f\n", scaleX, scaleY);
+	printf("Scales: %f %f\n", scaleX, scaleY);
 	QPainter painter(&map);
-//	printf("Edges size: %d \n", globalPlan.edges.size());
+	printf("Edges size: %d \n", globalPlan.edges.size());
 	for(int e = 0; e < globalPlan.edges.size(); e++){
 		int x1 = (globalPlan.edges[e].x1 - globalPlan.minX)/scaleX;
 		int y1 = (globalPlan.edges[e].y1 - globalPlan.minY)/scaleY;

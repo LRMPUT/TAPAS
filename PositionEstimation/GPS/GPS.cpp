@@ -32,6 +32,7 @@ GPS::GPS() {
 	StartPosLon = 0.0;
 	Radius = 0.0;
 	newMeasurement = false;
+	isSetZero = false;
 }
 
 GPS::GPS(Robot* irobot) : robot(irobot) {
@@ -43,6 +44,7 @@ GPS::GPS(Robot* irobot) : robot(irobot) {
 	StartPosLon = 0.0;
 	Radius = 0.0;
 	newMeasurement = false;
+	isSetZero = false;
 }
 
 GPS::GPS(const char *PortName, int BaudRate) {
@@ -110,6 +112,7 @@ double GPS::getPosX(){
 
 double GPS::getPosX(double latitude)
 {
+    cout<< "GPS: " << StartPosLat << " " << StartPosLon << " vs " << latitude <<endl;
 	return (nmea_ndeg2radian(latitude - StartPosLat))*Radius;
 }
 
@@ -160,6 +163,12 @@ void GPS::setZeroXY(double Latitude, double Longitude){
 	StartPosLat = Latitude;
 	StartPosLon = Longitude;
 	calculateRadius();
+	isSetZero = true;
+}
+
+bool GPS::getIsSetZero()
+{
+	return isSetZero;
 }
 
 void GPS::start()
