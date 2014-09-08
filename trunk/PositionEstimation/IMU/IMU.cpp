@@ -29,10 +29,10 @@ Quantity quantities[NUM_VALUES] = {
 	Quantity(4*trobot::EULER_PSI + 2,			0.0109863)
 };
 
-IMU::IMU() : imu(NULL), imuNew(NULL), usedIMUType(IMU_UM6) {
+IMU::IMU() : imu(NULL), imuNew(NULL), usedIMUType(IMU_MICROSTRAIN_GX4_25) {
 }
 
-IMU::IMU(Robot* irobot) : imu(NULL), imuNew(NULL), robot(irobot), usedIMUType(IMU_UM6) {
+IMU::IMU(Robot* irobot) : imu(NULL), imuNew(NULL), robot(irobot), usedIMUType(IMU_MICROSTRAIN_GX4_25) {
 
 }
 
@@ -98,10 +98,10 @@ cv::Mat IMU::getGX4Data(std::chrono::high_resolution_clock::time_point &timestam
 	float* euler = imuNew->getEuler();
 
 	for(int i = 0; i < 3; i++){
-		ret.at<float>(i, 0) = acc[0];
-		ret.at<float>(i, 1) = gyro[0];
-		ret.at<float>(i, 2) = mag[0];
-		ret.at<float>(i, 3) = euler[0];
+		ret.at<float>(i, 0) = acc[i];
+		ret.at<float>(i, 1) = gyro[i];
+		ret.at<float>(i, 2) = mag[i];
+		ret.at<float>(i, 3) = euler[i];
 	}
 	timestamp = imuNew->getTimestamp();
 	return ret;

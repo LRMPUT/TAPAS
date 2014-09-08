@@ -42,11 +42,11 @@ void Calibration::getData(){
 	const QString imuFile("data/imu");
 	const QString imuExt(".log");
 
-	/*ofstream hokuyoOut((hokuyoFile + QString("%1").arg(index, 3, 10, QChar('0')) + hokuyoExt).toAscii().data());
+	ofstream hokuyoOut((hokuyoFile + QString("%1").arg(index, 3, 10, QChar('0')) + hokuyoExt).toAscii().data());
 	for(int i = 0; i < hokuyoData.cols; i++){
 		hokuyoOut << hokuyoData.at<int>(2, i) << endl; // " " << hokuyoData.at<int>(3, i) << endl;
 	}
-	hokuyoOut.close();*/
+	hokuyoOut.close();
 
 	imwrite((cameraFile + QString("%1").arg(index, 3, 10, QChar('0')) + cameraExt).toAscii().data(), cameraData[0]);
 
