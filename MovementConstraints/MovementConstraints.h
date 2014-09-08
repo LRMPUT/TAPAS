@@ -26,6 +26,9 @@ class Robot;
 class Debug;
 
 class MovementConstraints {
+	friend class Debug;
+
+public:
 	struct PointsPacket{
 		std::chrono::high_resolution_clock::time_point timestamp;
 		int numPoints;
@@ -34,7 +37,7 @@ class MovementConstraints {
 		{}
 	};
 
-	friend class Debug;
+private:
 
 	// Class to get data from Camera
 	Camera* camera;
@@ -99,20 +102,36 @@ class MovementConstraints {
 
 	void updateConstraintsMap();
 
-	void insertHokuyoConstraints(cv::Mat map);
-
-	cv::Mat compOrient(cv::Mat imuData);
-
-	cv::Mat compTrans(	cv::Mat orient,
-						cv::Mat encodersDiff);
+	void insertHokuyoConstraints(cv::Mat map,
+								std::chrono::high_resolution_clock::time_point curTimestampMap);
 
 	void updateCurPosCloudMapCenter();
 
-	void processPointCloud();
+	void updatePointCloud();
 
 public:
 	MovementConstraints(Robot* irobot, TiXmlElement* settings);
 	virtual ~MovementConstraints();
+
+	static cv::Mat compOrient(cv::Mat imuData);
+
+	static cv::Mat compTrans(	cv::Mat orient,
+								cv::Mat encodersDiff);
+
+	static cv::Mat compNewPos(cv::Mat lprevImu, cv::Mat lcurImu,
+								cv::Mat lprevEnc, cv::Mat lcurEnc,
+								cv::Mat lposMapCenter,
+								cv::Mat lmapCenterGlobal);
+
+	static void processPointCloud(cv::Mat hokuyoData,
+								cv::Mat& pointCloudImuMapCenter,
+								std::queue<PointsPacket>& pointsInfo,
+								std::chrono::high_resolution_clock::time_point hokuyoTimestamp,
+								std::chrono::high_resolution_clock::time_point curTimestamp,
+								cv::Mat curPosCloudMapCenter,
+								std::mutex& mtxPointCloud,
+								cv::Mat cameraOrigLaser,
+								cv::Mat cameraOrigImu);
 
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
 	//CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right
@@ -126,10 +145,7 @@ public:
 
 	cv::Mat getPosImuMapCenter();
 
-	cv::Mat getPosGlobalMap();
-
 	void getLocalPlanningData(cv::Mat& MovementConstraints, cv::Mat& PosImuMapCenter, cv::Mat& GlobalMapCenter);
-
 	//----------------------MENAGMENT OF MovementConstraints DEVICES
 	//Hokuyo
 	void openHokuyo(std::string port);

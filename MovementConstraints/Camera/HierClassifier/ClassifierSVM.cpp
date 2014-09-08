@@ -243,15 +243,15 @@ void ClassifierSVM::prepareProblem(	const std::vector<Entry>& entries,
 		}
 	}
 
-	/*ofstream logFile("dataNorm.log");
+	ofstream logFile("dataNorm.log");
 	for(int e = 0; e < numEntries; e++){
 		logFile << dataLabels[e] << " ";
 		for(int i = 0; i < descLen; i++){
-			logFile << labData[e][i].value << " ";
+			logFile << (i + 1) << ":" << labData[e][i].value << " ";
 		}
-		logFile << endl;
+		logFile << descLen + 1 << ":-1" << endl;
 	}
-	logFile.close();*/
+	logFile.close();
 
 	svmParams.nr_weight = 0;
 	svmProblem.l = numEntries;
@@ -502,7 +502,7 @@ cv::Mat ClassifierSVM::classify(cv::Mat features){
 	for(int i = 0; i < features.cols; i++){
 		svm_node tmp;
 		tmp.index = i;
-		tmp.value = (features.at<float>(i) - scalesSub[i]);
+		tmp.value = features.at<float>(i) - scalesSub[i];
 		if(scalesDiv[i] != 0){
 			tmp.value /= scalesDiv[i];
 		}

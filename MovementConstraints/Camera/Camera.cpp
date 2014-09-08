@@ -13,12 +13,10 @@
 #include <sstream>
 #include <algorithm>
 //CUDA
-#ifndef NO_CUDA
-	#include <cuda_runtime.h>
-#endif
-
+#include <cuda_runtime.h>
 //Robotour
 #include "Camera.h"
+#include "CameraCuda.h"
 #include "../../Robot/Robot.h"
 
 using namespace boost;
@@ -60,9 +58,8 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 
 	std::vector<boost::filesystem::path> dirs;
 	dirs.push_back("../MovementConstraints/Camera/database/przejazd22");
-	//learnFromDir(dirs);
+	learnFromDir(dirs);
 	//readCache("cache/cameraCache");
-	//computeImagePolygons();
 
 #ifndef NO_CUDA
 	int devCount;
@@ -70,7 +67,9 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 	cout << "Available CUDA devices: " <<  devCount << endl;
 	cudaDeviceProp prop;
 	cudaGetDeviceProperties(&prop, 0);
-	cout << "Version: " << prop.major << "." << prop.minor << endl;
+	cout << "Computing capability: " << prop.major << "." << prop.minor << endl;
+	cout << "Max threads per block: " << prop.maxThreadsPerBlock << endl;
+	cout << "Max grid dim: " << prop.maxGridSize[0] << "x" << prop.maxGridSize[1] << "x" << prop.maxGridSize[2] << endl;
 	cout << "Number of processors: " << prop.multiProcessorCount << endl;
 	cout << "Unified addressing: " << prop.unifiedAddressing << endl;
 #endif //NO_CUDA
@@ -85,66 +84,6 @@ Camera::~Camera(){
 
 void Camera::computeConstraints(std::chrono::high_resolution_clock::time_point nextCurTimestamp){
 	cout << "Computing constraints" << endl;
-	/*constraints = Mat(X_RES, Y_RES, CV_32FC1, Scalar(0));
-	Mat constrNorm(X_RES, Y_RES, CV_32FC1, Scalar(0));
-	namedWindow("original");
-	namedWindow("prob asphalt");
-	namedWindow("constraints");
-	for(int c = 0; c < image.size(); c++){
-		vector<Mat> classRes = hierClassifiers[c]->classify(image[c]);
-		//cout << "Drawing polygons" << endl;
-		Mat regions(image[c].rows, image[c].cols, CV_32SC1, Scalar(-1));
-		for(int xInd = 0; xInd < X_RES; xInd++){
-			for(int yInd = 0; yInd < Y_RES; yInd++){
-				selectPolygonPixels(imagePolygons[c][xInd][yInd],
-									xInd*X_RES + yInd,
-									regions);
-				/*float probDriv = 0;
-				for(int l = 0; l < classRes.size(); l++){
-					if(l == DRIVABLE_LABEL){
-						Mat tmp(classRes[l].rows, classRes[l].rows, CV_32FC1, Scalar(0));
-						classRes[l].copyTo(tmp, mask);
-						probDriv += sum(tmp)[0];
-					}
-				}
-				constraints.at<float>(xInd, yInd) = probDriv;/
-			}
-		}
-		//cout << "adding probabilities, classRes.size() = " << classRes.size() << endl;
-		for(int row = 0; row < image[c].rows; row++){
-			for(int col = 0; col < image[c].cols; col++){
-				if(regions.at<int>(row, col) != -1){
-					int xInd = regions.at<int>(row, col) / X_RES;
-					int yInd = regions.at<int>(row, col) % X_RES;
-					//cout << "adding " << classRes[DRIVABLE_LABEL].at<float>(row, col) << endl;
-					constraints.at<float>(yInd, xInd) += classRes[DRIVABLE_LABEL].at<float>(row, col);
-					constrNorm.at<float>(yInd, xInd) += 1;
-				}
-			}
-		}
-		//cout << "normalizing constraints" << endl;
-		for(int xInd = 0; xInd < X_RES; xInd++){
-			for(int yInd = 0; yInd < Y_RES; yInd++){
-				if(constrNorm.at<float>(yInd, xInd) != 0){
-					constraints.at<float>(yInd, xInd) /= constrNorm.at<float>(yInd, xInd);
-				}
-			}
-		}
-
-		//cout << "building test image" << endl;
-		Mat test(image[c].rows, image[c].cols, CV_32FC1);
-		for(int xInd = 0; xInd < X_RES; xInd++){
-			for(int yInd = 0; yInd < Y_RES; yInd++){
-				selectPolygonPixels(imagePolygons[c][xInd][yInd],
-									constraints.at<float>(yInd, xInd),
-									test);
-			}
-		}
-		imshow("original", image[c]);
-		imshow("prob asphalt", classRes[DRIVABLE_LABEL]);
-		imshow("constraints", test);
-		waitKey();
-	}*/
 
 	Mat votes(MAP_SIZE, MAP_SIZE, CV_32SC1, Scalar(0));
 	Mat countVotes(MAP_SIZE, MAP_SIZE, CV_32SC1, Scalar(0));
@@ -181,14 +120,15 @@ void Camera::computeConstraints(std::chrono::high_resolution_clock::time_point n
 	lck.unlock();
 }
 
-void Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
+std::vector<cv::Mat> Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 	cout << "Computing map segments" << endl;
 	//cout << "curPosMapCenter = " << curPosImuMapCenter << endl;
 	//namedWindow("test");
-	mapSegments.clear();
+	//mapSegments.clear();
+	vector<Mat> ret;
 
 	for(int cam = 0; cam < numCameras; cam++){
-		mapSegments.push_back(Mat(numRows, numCols, CV_32SC1, Scalar(-1)));
+		ret.push_back(Mat(numRows, numCols, CV_32SC1, Scalar(-1)));
 
 		//cout << "curPosImuMapCenter*cameraOrigImu[cam]" << endl;
 		Mat curPosCameraMapCenterGlobal = imuOrigGlobal*curPosImuMapCenter*cameraOrigImu[cam];
@@ -226,41 +166,32 @@ void Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 				int xSegm = pointMapCenter.at<float>(0)/MAP_RASTER_SIZE + MAP_SIZE/2;
 				int ySegm = pointMapCenter.at<float>(1)/MAP_RASTER_SIZE + MAP_SIZE/2;
 				//cout << r << ":" << c << " = (" << xSegm << ", " << ySegm << ")" << endl;
-				mapSegments[cam].at<int>(r, c) = xSegm*MAP_SIZE + ySegm;
-				//cout << "mapSegments[cam].at<int>(r, c) = " << mapSegments[cam].at<int>(r, c) << endl;
+				ret[cam].at<int>(r, c) = xSegm*MAP_SIZE + ySegm;
+				//cout << "ret[cam].at<int>(r, c) = " << ret[cam].at<int>(r, c) << endl;
 				//cout << "End mapSegments[c].at<int>(r, c) =" << endl;
 				//waitKey();
 			}
 		}
 	}
 	cout << "End computing map segments" << endl;
+	return ret;
 }
 
-extern "C" void reprojectCameraPoints(float* invCameraMatrix,
-		float* distCoeffs,
-		float* curPosCameraMapCenterGlobal,
-		float* curPosCameraMapCenterImu,
-		int numRows,
-		int numCols,
-		int* segments,
-		int mapSize,
-		int rasterSize);
-
-#ifndef NO_CUDA
-void Camera::computeMapSegmentsGpu(cv::Mat curPosImuMapCenter){
+std::vector<cv::Mat> Camera::computeMapSegmentsGpu(cv::Mat curPosImuMapCenter){
 	cout << "Computing map segments" << endl;
 	//namedWindow("test");
-	mapSegments.clear();
+	//mapSegments.clear();
+	vector<Mat> ret;
 
 	for(int cam = 0; cam < numCameras; cam++){
-		mapSegments.push_back(Mat(numRows, numCols, CV_32SC1, Scalar(-1)));
+		ret.push_back(Mat(numRows, numCols, CV_32SC1, Scalar(-1)));
 
 		//cout << "curPosImuMapCenter*cameraOrigImu[cam]" << endl;
 		Mat curPosCameraMapCenterGlobal = imuOrigGlobal*curPosImuMapCenter*cameraOrigImu[cam];
 		Mat curPosCameraMapCenterImu = curPosImuMapCenter*cameraOrigImu[cam];
 		Mat invCameraMatrix = cameraMatrix[cam].inv();
 
-		if(mapSegments[cam].isContinuous() &&
+		if(ret[cam].isContinuous() &&
 				curPosCameraMapCenterGlobal.isContinuous() &&
 				curPosCameraMapCenterImu.isContinuous() &&
 				invCameraMatrix.isContinuous())
@@ -271,14 +202,14 @@ void Camera::computeMapSegmentsGpu(cv::Mat curPosImuMapCenter){
 									(float*)curPosCameraMapCenterImu.data,
 									numRows,
 									numCols,
-									(int*)mapSegments[cam].data,
+									(int*)ret[cam].data,
 									MAP_SIZE,
 									MAP_RASTER_SIZE);
 
 		}
 	}
+	return ret;
 }
-#endif
 
 std::vector<cv::Point2f> Camera::computePointProjection(const std::vector<cv::Point3f>& spPoints,
 														int cameraInd)
@@ -353,7 +284,7 @@ int Camera::selectPolygonPixels(std::vector<cv::Point2f> polygon, float regionId
 	return selectPolygonPixels(tmp, regionId, regionsOnImage);
 }
 
-cv::Mat Camera::compOrient(cv::Mat imuData){
+/*cv::Mat Camera::compOrient(cv::Mat imuData){
 	//cout << "Computing orientation from IMU" << endl;
 	//cout << "imuData = " << imuData << endl;
 
@@ -405,9 +336,9 @@ cv::Mat Camera::compTrans(	cv::Mat orient,
 	//cout << trans << endl << orient << endl;
 	trans = orient*trans;
 	return trans;
-}
+}*/
 
-bool Camera::readLine(std::ifstream& stream, Mat& data){
+bool Camera::readLineFloat(std::ifstream& stream, Mat& data){
 	data = Mat(0, 1, CV_32FC1);
 	string line;
 	getline(stream, line);
@@ -421,9 +352,37 @@ bool Camera::readLine(std::ifstream& stream, Mat& data){
 	while(!tmp.eof()){
 		float val;
 		tmp >> val;
+		if(tmp.fail()){
+			break;
+		}
 		data.push_back(val);
 	}
 	data = data.reshape(0, 1);
+	//cout << "returning matrix: " << data << endl;
+	return true;
+}
+
+bool Camera::readLineInt(std::ifstream& stream, Mat& data){
+	data = Mat(0, 1, CV_32SC1);
+	string line;
+	getline(stream, line);
+	//cout << "Got line: " << line << endl;
+	if(stream.eof()){
+		return false;
+	}
+	stringstream tmp(line);
+	//double time;
+	//tmp >> time;
+	while(!tmp.eof()){
+		int val;
+		tmp >> val;
+		if(tmp.fail()){
+			break;
+		}
+		data.push_back(val);
+	}
+	data = data.reshape(0, 1);
+	//cout << "returning matrix: " << data << endl;
 	return true;
 }
 
@@ -431,13 +390,15 @@ void Camera::processDir(boost::filesystem::path dir,
 						std::vector<cv::Mat>& images,
 						std::vector<cv::Mat>& manualRegionsOnImages,
 						std::vector<std::map<int, int> >& mapRegionIdToLabel,
-						std::vector<cv::Mat>& terrains)
+						std::vector<cv::Mat>& terrains,
+						std::vector<cv::Mat>& poses)
 {
 	cout << "processDir()" << endl;
 	images.clear();
 	manualRegionsOnImages.clear();
 	mapRegionIdToLabel.clear();
 	terrains.clear();
+	poses.clear();
 
 	//cout << dir.string() + "/hokuyo.data" << endl;
 	ifstream hokuyoFile(dir.string() + "/hokuyo.data");
@@ -463,7 +424,9 @@ void Camera::processDir(boost::filesystem::path dir,
 	Mat hokuyoAllPointsGlobal;
 	Mat imuPrev, encodersPrev;
 	Mat imuPosGlobal, curPos;
-	Mat prevRot;
+
+	std::queue<MovementConstraints::PointsPacket> pointsQueue;
+
 	int hokuyoCurTime;
 	hokuyoFile >> hokuyoCurTime;
 	int imuCurTime;
@@ -510,61 +473,71 @@ void Camera::processDir(boost::filesystem::path dir,
 		while(hokuyoCurTime <= cameraCurTime && !hokuyoFile.eof()){
 			cout << "Hokuyo time: " << hokuyoCurTime << endl;
 
-			Mat hokuyoCurPoints, hokuyoCurPointsDist, hokuyoCurPointsInt;
+			Mat hokuyoData, hokuyoCurPointsDist, hokuyoCurPointsInt;
 			char tmpChar;
 			hokuyoFile >> tmpChar;
-			readLine(hokuyoFile, hokuyoCurPointsDist);
+			readLineInt(hokuyoFile, hokuyoCurPointsDist);
 			hokuyoFile >> tmpChar;
-			readLine(hokuyoFile, hokuyoCurPointsInt);
+			readLineInt(hokuyoFile, hokuyoCurPointsInt);
 			//hokuyoCurPoints = Mat(6, hokuyoCurPointsDist.cols, CV_32FC1, Scalar(1));
-			hokuyoCurPoints = Mat(0, 6, CV_32FC1);
+			hokuyoData = Mat(0, 4, CV_32SC1);
 
-			static const float startAngle = -45*PI/180;
+			static const float startAngle = -135*PI/180;
 			static const float stepAngle = 0.25*PI/180;
 			for(int i = 0; i < hokuyoCurPointsDist.cols; i++){
-				if(hokuyoCurPointsDist.at<float>(i) > 500){
-					Mat curPoint(1, 6, CV_32FC1);
-					curPoint.at<float>(0) = cos(startAngle + stepAngle*i)*hokuyoCurPointsDist.at<float>(i);
-					curPoint.at<float>(1) = 0;
-					curPoint.at<float>(2) = sin(startAngle + stepAngle*i)*hokuyoCurPointsDist.at<float>(i);
-					curPoint.at<float>(3) = 1;
-					curPoint.at<float>(4) = hokuyoCurPointsDist.at<float>(i);
-					curPoint.at<float>(5) = hokuyoCurPointsInt.at<float>(i);
-					hokuyoCurPoints.push_back(curPoint);
+				if(hokuyoCurPointsDist.at<int>(i) > 500){
+					Mat curPoint(1, 4, CV_32FC1);
+					curPoint.at<int>(0) = hokuyoCurPointsDist.at<int>(i)*cos(startAngle + i*stepAngle);
+					curPoint.at<int>(1) = hokuyoCurPointsDist.at<int>(i)*sin(startAngle + i*stepAngle);
+					curPoint.at<int>(2) = hokuyoCurPointsDist.at<int>(i);
+					curPoint.at<int>(3) = hokuyoCurPointsInt.at<int>(i);
+					hokuyoData.push_back(curPoint);
 				}
 			}
 			cout << endl;
-			hokuyoCurPoints = hokuyoCurPoints.t();
-
-			hokuyoCurPoints.rowRange(0, 4) = cameraOrigLaser.front().inv()*hokuyoCurPoints.rowRange(0, 4);
+			hokuyoData = hokuyoData.t();
 
 			//narrow hokuyo scan range 45 - 135
 			//hokuyoCurPoints = hokuyoCurPoints.colRange(400, 681);
 
 			if(imuPrev.empty()){
-				readLine(imuFile, imuPrev);
-				imuPosGlobal = compOrient(imuPrev);
-				imuPosGlobal.copyTo(curPos);
+				readLineFloat(imuFile, imuPrev);
 				imuFile >> imuCurTime;
 			}
 			if(encodersPrev.empty()){
-				readLine(encodersFile, encodersPrev);
+				readLineInt(encodersFile, encodersPrev);
 				encodersFile >> encodersCurTime;
+			}
+			if(!imuPrev.empty()){
+				//cout << "imuPrev.size() = " << imuPrev.size() << endl;
+				//TODO Poprawić po zmianie plików z danymi (były błędnie zapisane)
+				imuPrev = imuPrev.reshape(1, 4);
+				imuPrev = imuPrev.t();
+			}
+			if(imuPosGlobal.empty()){
+				imuPosGlobal = movementConstraints->compOrient(imuPrev);
+				curPos = Mat::eye(4, 4, CV_32FC1);
 			}
 			Mat imuCur, encodersCur;
 
 			while(imuCurTime <= hokuyoCurTime && !imuFile.eof()){
 				//cout << "Imu time: " << imuCurTime << endl;
-				readLine(imuFile, imuCur);
+				readLineFloat(imuFile, imuCur);
 
 				imuFile >> imuCurTime;
 			}
 
 			while(encodersCurTime <= hokuyoCurTime && !encodersFile.eof()){
 				//cout << "Encoders time: " << encodersCurTime << endl;
-				readLine(encodersFile, encodersCur);
+				readLineInt(encodersFile, encodersCur);
 
 				encodersFile >> encodersCurTime;
+			}
+			if(!imuCur.empty()){
+				//cout << "imuCur.size() = " << imuCur.size() << endl;
+				//TODO Poprawić po zmianie plików z danymi (były błędnie zapisane)
+				imuCur = imuCur.reshape(1, 4);
+				imuCur = imuCur.t();
 			}
 			if(imuCur.empty()){
 				imuPrev.copyTo(imuCur);
@@ -572,10 +545,14 @@ void Camera::processDir(boost::filesystem::path dir,
 			if(encodersCur.empty()){
 				encodersPrev.copyTo(encodersCur);
 			}
-
 			//cout << "Computing curPos" << endl;
 			//cout << "encodersCur = " << encodersCur << endl << "encodersPrev = " << encodersPrev << endl;
-			Mat trans = compTrans(compOrient(imuPrev), encodersCur - encodersPrev);
+			curPos = movementConstraints->compNewPos(imuPrev, imuCur,
+														encodersPrev, encodersCur,
+														curPos, imuPosGlobal);
+
+
+			/*Mat trans = compTrans(compOrient(imuPrev), encodersCur - encodersPrev);
 			cout << "trans = " << trans << endl;
 			//cout << "Computing curTrans" << endl;
 			Mat curTrans = Mat(curPos, Rect(3, 0, 1, 4)) + trans;
@@ -583,29 +560,30 @@ void Camera::processDir(boost::filesystem::path dir,
 
 			Mat curRot = compOrient(imuCur)*cameraOrigImu.front();
 			curRot.copyTo(curPos);
-			curTrans.copyTo(Mat(curPos, Rect(3, 0, 1, 4)));
+			curTrans.copyTo(Mat(curPos, Rect(3, 0, 1, 4)));*/
 			//cout << "trans = " << trans << endl;
 			//cout << "curTrans = " << curTrans << endl;
 			//cout << "curRot = " << curRot << endl;
-			cout << "imuPosGlobal.inv()*curPos*cameraOrigImu.inv() = " << endl << imuPosGlobal.inv()*curPos*cameraOrigImu.front().inv() << endl;
+			cout << "curPos = " << endl << curPos << endl;
 			//cout << "globalPos.inv()*curPos = " << globalPos.inv()*curPos << endl;
 
-			//cout << "Moving hokuyoAllPointsGlobal" << endl;
-			Mat tmpAllPoints(hokuyoCurPoints.rows, hokuyoAllPointsGlobal.cols + hokuyoCurPoints.cols, CV_32FC1);
-			if(!hokuyoAllPointsGlobal.empty()){
-				hokuyoAllPointsGlobal.copyTo(tmpAllPoints.colRange(0, hokuyoAllPointsGlobal.cols));
-			}
-			//cout << "Addding hokuyoCurPoints" << endl;
-			Mat hokuyoCurPointsGlobal(hokuyoCurPoints.rows, hokuyoCurPoints.cols, CV_32FC1);
-			Mat tmpCurPoints = curPos*hokuyoCurPoints.rowRange(0, 4);
-			tmpCurPoints.copyTo(hokuyoCurPointsGlobal.rowRange(0, 4));
-			hokuyoCurPoints.rowRange(4, 6).copyTo(hokuyoCurPointsGlobal.rowRange(4, 6));
-			//cout << hokuyoCurPointsGlobal.channels() << ", " << hokuyoAllPointsGlobal.channels() << endl;
-			hokuyoCurPointsGlobal.copyTo(tmpAllPoints.colRange(hokuyoAllPointsGlobal.cols, hokuyoAllPointsGlobal.cols + hokuyoCurPoints.cols));
-			hokuyoAllPointsGlobal = tmpAllPoints;
+			std::chrono::duration<int,std::milli> durTmp(hokuyoCurTime);
+			std::chrono::high_resolution_clock::time_point hokuyoTimestamp(durTmp);
+
+			std::mutex mtxPointCloud;
+
+			MovementConstraints::processPointCloud(hokuyoData,
+													hokuyoAllPointsGlobal,
+													pointsQueue,
+													hokuyoTimestamp,
+													hokuyoTimestamp,
+													curPos,
+													mtxPointCloud,
+													cameraOrigLaser.front(),
+													cameraOrigImu.front());
 
 			//waitKey();
-			Mat covarLaserCur, meanLaserCur;
+			/*Mat covarLaserCur, meanLaserCur;
 			calcCovarMatrix(hokuyoCurPoints.rowRange(4, 6),
 							covarLaserCur,
 							meanLaserCur,
@@ -613,17 +591,21 @@ void Camera::processDir(boost::filesystem::path dir,
 							CV_32F);
 			meanLaser = (meanLaser*numPts + meanLaserCur*hokuyoCurPoints.cols)/(numPts + hokuyoCurPoints.cols);
 			covarLaser = (covarLaser*numPts + covarLaserCur*hokuyoCurPoints.cols)/(numPts + hokuyoCurPoints.cols);
-			numPts += hokuyoCurPoints.cols;
+			numPts += hokuyoCurPoints.cols;*/
+
+			cout << "hokuyoAllPointsGlobal.cols = " << hokuyoAllPointsGlobal.cols << endl;
 
 			imuCur.copyTo(imuPrev);
 			encodersCur.copyTo(encodersPrev);
 			hokuyoFile >> hokuyoCurTime;
 
-			curRot.copyTo(prevRot);
+			//curRot.copyTo(prevRot);
 		}
 		Mat terrain = hokuyoAllPointsGlobal.clone();
-		terrain.rowRange(0, 4) = curPos.inv()*hokuyoAllPointsGlobal.rowRange(0, 4);
+		terrain.rowRange(0, 4) = (curPos*cameraOrigImu.front()).inv()*hokuyoAllPointsGlobal.rowRange(0, 4);
 		terrains.push_back(terrain);
+
+		poses.push_back(curPos.clone());
 
 		//cout << "Displaying test image from file: " << dir.string() + string("/") + cameraImageFile.string() << endl;
 		Mat image = imread(dir.string() + string("/") + cameraImageFile.filename().string());
@@ -632,7 +614,7 @@ void Camera::processDir(boost::filesystem::path dir,
 		if(image.data == NULL){
 			throw "Bad image file";
 		}
-		Mat hokuyoAllPointsCamera = curPos.inv()*hokuyoAllPointsGlobal.rowRange(0, 4);
+		Mat hokuyoAllPointsCamera = (curPos*cameraOrigImu.front()).inv()*hokuyoAllPointsGlobal.rowRange(0, 4);
 		//cout << "Computing point projection" << endl;
 		vector<Point2f> pointsImage;
 		projectPoints(	hokuyoAllPointsCamera.rowRange(0, 3).t(),
@@ -688,7 +670,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			}
 		}
 		imshow("test", image);
-		waitKey(200);
+		waitKey(500);
 
 		TiXmlDocument data(	dir.string() +
 							string("/") +
@@ -769,22 +751,26 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 	std::vector<cv::Mat> manualRegionsOnImages;
 	std::vector<std::map<int, int> > mapRegionIdToLabel;
 	std::vector<cv::Mat> terrains;
+	std::vector<cv::Mat> poses;
 
 	for(int d = 0; d < dirs.size(); d++){
 		std::vector<cv::Mat> tmpImages;
 		std::vector<cv::Mat> tmpManualRegionsOnImages;
 		std::vector<std::map<int, int> > tmpMapRegionIdToLabel;
 		std::vector<cv::Mat> tmpTerrains;
+		std::vector<cv::Mat> tmpPoses;
 		processDir(	dirs[d],
 					tmpImages,
 					tmpManualRegionsOnImages,
 					tmpMapRegionIdToLabel,
-					tmpTerrains);
+					tmpTerrains,
+					tmpPoses);
 		for(int i = 0; i < tmpImages.size(); i++){
 			images.push_back(tmpImages[i]);
 			manualRegionsOnImages.push_back(tmpManualRegionsOnImages[i]);
 			mapRegionIdToLabel.push_back(tmpMapRegionIdToLabel[i]);
 			terrains.push_back(tmpTerrains[i]);
+			poses.push_back(tmpPoses[i]);
 		}
 	}
 
@@ -794,7 +780,13 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 
 	for(int i = 0; i < images.size(); i++){
 		cout << "Segmenting" << endl;
-		Mat autoRegionsOnImage = hierClassifiers.front()->segmentImage(images[i]);
+		//Mat autoRegionsOnImage = hierClassifiers.front()->segmentImage(images[i]);
+#ifdef NO_CUDA
+		vector<Mat> mapSegmentsOnImage = computeMapSegments(poses[i]);
+#else
+		vector<Mat> mapSegmentsOnImage = computeMapSegmentsGpu(poses[i]);
+#endif
+		Mat autoRegionsOnImage = mapSegmentsOnImage.front();
 		cout << "Assigning manual ids" << endl;
 		//rectangle(manualRegionsOnImages[i], Point(0, 0), Point(images[i].cols, 100), Scalar(0, 0, 0), -1);
 		map<int, int> assignedManualId = hierClassifiers.front()->assignManualId(autoRegionsOnImage, manualRegionsOnImages[i]);
@@ -811,6 +803,7 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 				break;
 			}
 		}
+		//cout << "terrains[i].size() = " << terrains[i].size() << endl;
 		vector<Entry> newData = hierClassifiers.front()->extractEntries(images[i], terrains[i], autoRegionsOnImage);
 		for(int e = 0; e < newData.size(); e++){
 			if(mapRegionIdToLabel[i].count(assignedManualId[newData[e].imageId]) > 0){
@@ -822,11 +815,11 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 	ofstream dataFile("data.log");
 	dataFile.precision(15);
 	for(int e = 0; e < dataset.size(); e++){
-		dataFile << dataset[e].label << " " << dataset[e].weight << " ";
+		dataFile << dataset[e].label << " ";
 		for(int d = 0; d < dataset[e].descriptor.cols; d++){
-			dataFile << dataset[e].descriptor.at<float>(d) << " ";
+			dataFile << d + 1 << ":" << dataset[e].descriptor.at<float>(d) << " ";
 		}
-		dataFile << endl;
+		dataFile << dataset[e].descriptor.cols + 1 << ":-1" << endl;
 	}
 	dataFile.close();
 
@@ -1215,15 +1208,15 @@ void Camera::run(){
 		std::chrono::high_resolution_clock::time_point timeEndClassification;
 		std::chrono::high_resolution_clock::time_point timeEndConstraints;
 		Mat curPosImuMapCenter;
+		std::chrono::high_resolution_clock::time_point nextCurTimestamp = std::chrono::high_resolution_clock::now();
 		Mat pointCloudImu = movementConstraints->getPointCloud(curPosImuMapCenter);
 		if(!curPosImuMapCenter.empty()){
-			std::chrono::high_resolution_clock::time_point nextCurTimestamp = std::chrono::high_resolution_clock::now();
 			timeBegin = std::chrono::high_resolution_clock::now();
 			vector<Mat> cameraData = this->getData();
 #ifdef NO_CUDA
-			computeMapSegments(curPosImuMapCenter);
+			mapSegments = computeMapSegments(curPosImuMapCenter);
 #else
-			computeMapSegmentsGpu(curPosImuMapCenter);
+			mapSegments = computeMapSegmentsGpu(curPosImuMapCenter);
 #endif
 			timeEndMapSegments = std::chrono::high_resolution_clock::now();
 			for(int c = 0; c < numCameras; c++){
@@ -1236,7 +1229,7 @@ void Camera::run(){
 						tmpPointCoords.copyTo(pointCloudCamera.rowRange(0, 4));
 					}
 					cout << "Classification" << endl;
-					vector<Mat> classRes = hierClassifiers[c]->classify(cameraData[c], pointCloudCamera);
+					vector<Mat> classRes = hierClassifiers[c]->classify(cameraData[c], pointCloudCamera, mapSegments[c]);
 					timeEndClassification = std::chrono::high_resolution_clock::now();
 					//cout << "End classification" << endl;
 					Mat bestLabels(numRows, numCols, CV_32SC1, Scalar(0));
@@ -1251,9 +1244,8 @@ void Camera::run(){
 						//cout << "max" << endl;
 						bestScore = max(bestScore, classRes[l]);
 					}
-					//TODO undo
-					//classifiedImage[c] = bestLabels;
-					classifiedImage[c] = Mat(numRows, numCols, CV_32SC1, Scalar(0));
+					classifiedImage[c] = bestLabels;
+					//classifiedImage[c] = Mat(numRows, numCols, CV_32SC1, Scalar(0));
 
 					cout << "Copying classified image" << endl;
 					std::unique_lock<std::mutex> lck(mtxClassIm);
@@ -1452,9 +1444,11 @@ void Camera::saveCache(boost::filesystem::path cacheFile){
 }
 
 //Inserts computed constraints into map
-void Camera::insertConstraints(cv::Mat map){
+void Camera::insertConstraints(cv::Mat map,
+								std::chrono::high_resolution_clock::time_point curTimestampMap)
+{
 	std::unique_lock<std::mutex> lck(mtxConstr);
-	if(!constraints.empty()){
+	if(!constraints.empty() && curTimestampMap < curTimestamp){
 		for(int x = 0; x < MAP_SIZE; x++){
 			for(int y = 0; y < MAP_SIZE; y++){
 				map.at<float>(x, y) = max(map.at<float>(x, y), constraints.at<float>(x, y));
@@ -1517,7 +1511,7 @@ void Camera::open(std::vector<std::string> device){
 			throw "Cannot open camera device";
 		}
 	}
-	runThread = false;
+	runThread = true;
 	cameraThread = std::thread(&Camera::run, this);
 }
 
