@@ -132,7 +132,7 @@ public:
 
 	cv::Mat getPosImuConstraintsMapCenter();
 
-	cv::Mat getLocalMapPosInGlobalMap();
+	//cv::Mat getLocalMapPosInGlobalMap();
 
 	void getLocalPlanData(cv::Mat& MovementConstraints,cv::Mat& PosImuMapCenter, cv::Mat& GlobalMapCenter);
 };
