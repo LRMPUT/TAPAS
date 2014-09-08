@@ -12,11 +12,14 @@
 #include <cmath>
 #include <sstream>
 #include <algorithm>
-//CUDA
-#include <cuda_runtime.h>
-//Robotour
+
+#ifndef NO_CUDA
+	//CUDA
+	#include <cuda_runtime.h>
+	//Robotour
+	#include "CameraCuda.h"
+#endif
 #include "Camera.h"
-#include "CameraCuda.h"
 #include "../../Robot/Robot.h"
 
 using namespace boost;
@@ -58,7 +61,7 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 
 	std::vector<boost::filesystem::path> dirs;
 	dirs.push_back("../MovementConstraints/Camera/database/przejazd22");
-	learnFromDir(dirs);
+	//learnFromDir(dirs);
 	//readCache("cache/cameraCache");
 
 #ifndef NO_CUDA
@@ -177,6 +180,7 @@ std::vector<cv::Mat> Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 	return ret;
 }
 
+#ifndef NO_CUDA
 std::vector<cv::Mat> Camera::computeMapSegmentsGpu(cv::Mat curPosImuMapCenter){
 	cout << "Computing map segments" << endl;
 	//namedWindow("test");
@@ -196,6 +200,7 @@ std::vector<cv::Mat> Camera::computeMapSegmentsGpu(cv::Mat curPosImuMapCenter){
 				curPosCameraMapCenterImu.isContinuous() &&
 				invCameraMatrix.isContinuous())
 		{
+
 			reprojectCameraPoints((float*)invCameraMatrix.data,
 									(float*)NULL,
 									(float*)curPosCameraMapCenterGlobal.data,
@@ -210,6 +215,7 @@ std::vector<cv::Mat> Camera::computeMapSegmentsGpu(cv::Mat curPosImuMapCenter){
 	}
 	return ret;
 }
+#endif
 
 std::vector<cv::Point2f> Camera::computePointProjection(const std::vector<cv::Point3f>& spPoints,
 														int cameraInd)

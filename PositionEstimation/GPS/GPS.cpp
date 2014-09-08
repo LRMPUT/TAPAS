@@ -91,6 +91,7 @@ void GPS::closePort()
 
 bool GPS::isOpen()
 {
+//	printf("GPS serial port active state : %d\n", SerialPort.isActive());
 	return SerialPort.isActive();
 }
 

@@ -16,12 +16,12 @@
 using namespace cv;
 using namespace std;
 
-PositionEstimation::PositionEstimation(Robot* irobot) :
-		robot(irobot), imu(irobot), gps(irobot), encoders(irobot) {
+PositionEstimation::PositionEstimation(Robot* irobot, PositionEstimation::Parameters parameters) :
+		robot(irobot), imu(irobot), gps(irobot), encoders(irobot), runThread(parameters.runThread) {
 	std::cout << "PositionEstimation::PositionEstimation" << std::endl;
 	ENCODER_TICK_PER_REV = 300;
-	WHEEL_DIAMETER = 178.0 / 1000;
-	WHEEL_BASE = 432.0 / 1000;
+	WHEEL_DIAMETER = 188.0 / 1000;
+	WHEEL_BASE = 452.0 / 1000;
 	/* KALMAN:
 	 * - we track 2 values -> global position
 	 *
@@ -32,14 +32,13 @@ PositionEstimation::PositionEstimation(Robot* irobot) :
 	kalmanSetup();
 
 
-
-
 	lastUpdateTimestamp = std::chrono::high_resolution_clock::now();
 	lastEncoderTimestamp = std::chrono::high_resolution_clock::now();
 	lastGpsTimestamp = std::chrono::high_resolution_clock::now();
 	lastImuTimestamp = std::chrono::high_resolution_clock::now();
-	runThread = false;
-	estimationThread = std::thread(&PositionEstimation::run, this);
+
+	if(runThread)
+		estimationThread = std::thread(&PositionEstimation::run, this);
 
 	std::cout << "End PositionEstimation::PositionEstimation" << std::endl;
 }
@@ -54,15 +53,16 @@ PositionEstimation::~PositionEstimation() {
 }
 
 void PositionEstimation::run() {
-	while(!gps.isOpen() && runThread) usleep(200);
-	while ((gps.getFixStatus() == 1 || (fabs(gps.getLat()) < 0.00001)
-			|| (fabs(gps.getLon()) < 0.000001)) && runThread) {
-		usleep(200);
-	};
+	if (runThread)
+	{
+		while(!gps.isOpen()) usleep(200);
+		while ((gps.getFixStatus() == 1 || (fabs(gps.getLat()) < 0.00001)
+				|| (fabs(gps.getLon()) < 0.000001)) && runThread) {
+			usleep(200);
+		};
 
-
-	gps.setZeroXY(gps.getLat(), gps.getLon());
-
+		gps.setZeroXY(gps.getLat(), gps.getLon());
+	}
 	struct timeval start, end;
 	while (runThread) {
 		gettimeofday(&start, NULL);
@@ -290,6 +290,10 @@ void PositionEstimation::closeGps() {
 
 bool PositionEstimation::isGpsOpen() {
 	return gps.isOpen();
+}
+
+int PositionEstimation::gpsGetFixStatus() {
+	return gps.getFixStatus();
 }
 
 double PositionEstimation::getPosX(double longitude) {

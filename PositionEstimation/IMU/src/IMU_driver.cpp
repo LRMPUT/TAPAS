@@ -181,6 +181,7 @@ IMU_driver::IMU_driver() {
 IMU_driver::~IMU_driver() {
 	runThread = false;
 	processingThread.join();
+	mip_sdk_port_close(&device_interface.port_handle);
 	pointerToIMUDriver = NULL;
 }
 

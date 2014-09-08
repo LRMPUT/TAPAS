@@ -32,47 +32,47 @@ Debug::Debug(Robot* irobot) : robot(irobot){
 
 //----------------------MODES OF OPERATION
 void Debug::switchMode(OperationMode mode){
-	robot->globalPlanner.switchMode(mode);
+	robot->globalPlanner->switchMode(mode);
 }
 
 void Debug::setMotorsVel(float motLeft, float motRight){
-	robot->globalPlanner.setMotorsVel(motLeft, motRight);
+	robot->globalPlanner->setMotorsVel(motLeft, motRight);
 }
 
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 //CV_32SC1 2x1: left, right encoder
 const cv::Mat Debug::getEncoderData(){
 	std::chrono::high_resolution_clock::time_point timestamp;
-	return robot->positionEstimation.getEncoderData(timestamp);
+	return robot->positionEstimation->getEncoderData(timestamp);
 }
 
 //CV_32SC1 4x1: x, y, lat, lon position
 const cv::Mat Debug::getGpsData(){
 	Mat ret(4, 1, CV_32FC1);
-	ret.at<float>(0) = robot->positionEstimation.gps.getPosX();
-	ret.at<float>(1) = robot->positionEstimation.gps.getPosY();
-	ret.at<float>(2) = robot->positionEstimation.gps.getLat();
-	ret.at<float>(3) = robot->positionEstimation.gps.getLon();
+	ret.at<float>(0) = robot->positionEstimation->gps.getPosX();
+	ret.at<float>(1) = robot->positionEstimation->gps.getPosY();
+	ret.at<float>(2) = robot->positionEstimation->gps.getLat();
+	ret.at<float>(3) = robot->positionEstimation->gps.getLon();
 	return ret;
 }
 
 //1 - no fix, 2 - 2D, 3 - 3D
 int Debug::getGpsFixStatus(){
-	return robot->positionEstimation.gps.getFixStatus();
+	return robot->positionEstimation->gps.getFixStatus();
 }
 
 int Debug::getGpsSatelitesUsed(){
-	return robot->positionEstimation.gps.getSatelitesUsed();
+	return robot->positionEstimation->gps.getSatelitesUsed();
 }
 
 void Debug::setGpsZeroPoint(double lat, double lon){
-	robot->positionEstimation.gps.setZeroXY(lat, lon);
+	robot->positionEstimation->gps.setZeroXY(lat, lon);
 }
 
 //CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
 const cv::Mat Debug::getImuData(){
 	std::chrono::high_resolution_clock::time_point timestamp;
-	return robot->positionEstimation.imu.getData(timestamp);
+	return robot->positionEstimation->imu.getData(timestamp);
 }
 
 //CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right
@@ -153,12 +153,12 @@ void Debug::testDrivers(){
 
 	while(true){
 
-		robot->globalPlanner.setMotorsVel(1000, 1000);
+		robot->globalPlanner->setMotorsVel(1000, 1000);
 		char a = waitKey(500);
 		if(a == 'q'){
 			break;
 		}
-		robot->globalPlanner.setMotorsVel(0, 0);
+		robot->globalPlanner->setMotorsVel(0, 0);
 		}
 	}
 
@@ -166,7 +166,7 @@ void Debug::testDrivers(){
 //----------------------ACCESS TO COMPUTED DATA
 //CV_32SC1 3x1: x, y, fi
 const cv::Mat Debug::getEstimatedPosition(){
-	return robot->positionEstimation.getEstimatedPosition();
+	return robot->positionEstimation->getEstimatedPosition();
 }
 
 //CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)
@@ -209,7 +209,7 @@ cv::Mat Debug::getClassifiedImage(){
 }
 
 GlobalPlanner::GlobalPlanInfo Debug::getGlobalPlan(){
-	return robot->globalPlanner.getGlobalPlan();
+	return robot->globalPlanner->getGlobalPlan();
 }
 
 void Debug::getTransformationMatrices(cv::Mat& retImuOrigGlobal,

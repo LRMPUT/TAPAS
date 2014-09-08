@@ -20,9 +20,10 @@ MovementConstraints::MovementConstraints(Robot* irobot, TiXmlElement* settings) 
 	TiXmlElement* pCamera = settings->FirstChildElement("Camera");
 	camera = new Camera(this, pCamera);
 
+
 	constraintsMap = Mat(MAP_SIZE, MAP_SIZE, CV_32FC1, Scalar(0));
 
-	runThread = true;
+	runThread = false;
 	movementConstraintsThread = std::thread(&MovementConstraints::run, this);
 
 }
@@ -33,6 +34,9 @@ MovementConstraints::~MovementConstraints() {
 	delete camera;
 	cout << "End ~MovementConstraints()" << endl;
 }
+
+
+
 
 void MovementConstraints::readSettings(TiXmlElement* settings){
 	cameraOrigLaser = readMatrixSettings(settings, "camera_position_laser", 4, 4);

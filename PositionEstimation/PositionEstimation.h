@@ -59,10 +59,13 @@ private:
 	void run();
 
 public:
-	PositionEstimation(Robot* irobot);
+	struct Parameters {
+		int runThread;
+	};
+
+	PositionEstimation(Robot* irobot, PositionEstimation::Parameters parameters);
 	virtual ~PositionEstimation();
 
-;
 
 	// Stopping the position estimation thread
 	void stopThread();
@@ -98,6 +101,8 @@ public:
 	void closeGps();
 
 	bool isGpsOpen();
+
+	int gpsGetFixStatus();
 
 	double getPosX(double longitude);
 	double getPosLongitude(double X);

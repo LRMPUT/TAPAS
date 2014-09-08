@@ -16,8 +16,11 @@
 #include "HierClassifier.h"
 #include "UnionFind.h"
 #include "ClassifierSVM.h"
-#include "../CameraCuda.h"
 
+
+#ifndef NO_CUDA
+	#include "../CameraCuda.h"
+#endif
 /*#define HIST_SIZE_H 4
 #define HIST_SIZE_S 4
 #define HIST_SIZE_V 4
@@ -720,6 +723,8 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 	return ret;
 }
 
+
+#ifndef NO_CUDA
 std::vector<Entry> HierClassifier::extractEntriesGPU(cv::Mat imageBGR,
 													cv::Mat terrain,
 													cv::Mat regionsOnImage)
@@ -890,6 +895,7 @@ std::vector<Entry> HierClassifier::extractEntriesGPU(cv::Mat imageBGR,
 	cout << "Extract gpu time: " << duration_cast<std::chrono::milliseconds>(endTime - endConvertingTime).count() << endl;
 	return ret;
 }
+#endif
 
 struct Edge{
 	int i, j;

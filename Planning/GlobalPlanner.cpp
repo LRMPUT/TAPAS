@@ -32,12 +32,18 @@ public:
 	}
 };
 
-
-GlobalPlanner::GlobalPlanner(Robot* irobot) :
+GlobalPlanner::GlobalPlanner(Robot* irobot, TiXmlElement* settings) :
 		robot(irobot), robotDrive1(NULL), robotDrive2(NULL), startOperate(false) {
 	cout << "GlobalPlanner()" << endl;
-	runThread = true;
+
+	TiXmlElement* pGlobalPlanner;
+	pGlobalPlanner = settings->FirstChildElement("GlobalPlanner");
+
+	readSettings(pGlobalPlanner);
 	globalPlannerThread = std::thread(&GlobalPlanner::run, this);
+
+	localPlanner = new LocalPlanner(robot, this, settings);
+
 	cout << "End GlobalPlanner()" << endl;
 }
 
@@ -48,39 +54,81 @@ GlobalPlanner::~GlobalPlanner() {
 	cout << "End ~GlobalPlanner()" << endl;
 }
 
-void GlobalPlanner::run() {
-//	localPlanner = new LocalPlanner(robot, this);
+void GlobalPlanner::readSettings(TiXmlElement* settings)
+{
+	if (settings->QueryIntAttribute("runThread", &globalPlannerParams.runThread)
+			!= TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner Thread";
+	}
+	if (settings->QueryIntAttribute("runHomologation", &globalPlannerParams.runHomologation)
+			!= TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner runHomologation";
+	}
 
-//<<<<<<< .mine
-//void GlobalPlanner::run(){
-//
-//	while(runThread){
-//		//readOpenStreetMap("robotourMap.osm");
-//		if(startOperate){
-//			localPlanner = new LocalPlanner(robot, this);
-//			//processHomologation();
-//			localPlanner->localPlanerTest();
-//=======
-	//readOpenStreetMap("robotourMap.osm");
-	localPlanner = new LocalPlanner(robot, this);
-	while (runThread) {
+	if (settings->QueryStringAttribute("mapFile", &globalPlannerParams.mapFile)
+			!= TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner mapFile";
+	}
+
+	if (settings->QueryDoubleAttribute("latitude",
+			&globalPlannerParams.latitude) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner latitude";
+	}
+
+	if (settings->QueryDoubleAttribute("longitude",
+			&globalPlannerParams.longitude) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner longitude";
+	}
+
+
+	printf("GlobalPlanner -- runThread: %d\n", globalPlannerParams.runThread);
+	printf("GlobalPlanner -- runhomologation: %d\n", globalPlannerParams.runHomologation);
+	printf("GlobalPlanner -- mapFile: %s\n", globalPlannerParams.mapFile.c_str());
+	printf("GlobalPlanner -- goal latitude: %f \n", globalPlannerParams.latitude);
+	printf("GlobalPlanner -- goal longitude: %f \n", globalPlannerParams.longitude);
+}
+
+
+void GlobalPlanner::run() {
+
+	if (globalPlannerParams.runThread) {
+
+		while (!robot->isGpsOpen())
+			usleep(200);
+
+		double x, y;
+		robot->getPosLongitude(x);
+		robot->getPosLatitude(y);
+		while ((robot->gpsGetFixStatus() == 1 || (fabs(y) < 0.00001)
+				|| (fabs(x) < 0.000001)) && runThread) {
+			usleep(200);
+		};
+
+		const char *cstr = globalPlannerParams.mapFile.c_str();
+		readOpenStreetMap(cstr);
+
+		setGoal(robot->getPosX(globalPlannerParams.longitude),
+				robot->getPosY(globalPlannerParams.latitude));
+
+		localPlanner->startLocalPlanner();
+	}
+	while (globalPlannerParams.runThread) {
 
 		if (startOperate) {
 
+			updateRobotPosition();
+			findClosestStartingEdge(robotX, robotY);
 
-			localPlanner->localPlanerTest();
-//			updateRobotPosition();
-//			findClosestStartingEdge(robotX, robotY);
-//			setGoal(5,5);
-//			computeGlobalPlan();
+			computeGlobalPlan();
 //			chooseNextSubGoal();
 //			updateHeadingGoal();
 
-//processHomologation();
-//			localPlanner->localPlanerTest();
 		}
 		std::chrono::milliseconds duration(150);
 		std::this_thread::sleep_for(duration);
+	}
+	if (globalPlannerParams.runThread) {
+		localPlanner->stopLocalPlanner();
 	}
 }
 
@@ -252,7 +300,7 @@ void GlobalPlanner::updateRobotPosition() {
 	globalPlanInfo.robotY = robotY;
 }
 
-void GlobalPlanner::readOpenStreetMap(char *mapName) {
+void GlobalPlanner::readOpenStreetMap(const char *mapName) {
 	std::cout << "Reading OpenStreetMap" << std::endl;
 
 	TiXmlDocument osmMap(mapName);
@@ -332,6 +380,23 @@ void GlobalPlanner::readOpenStreetMap(char *mapName) {
 
 	std::cout << "Ways found counter : " << i << std::endl;
 	std::cout << "Edges counter : " << edges.size() << std::endl;
+
+	for (int i = 0; i < edges.size(); i++) {
+		for (list<int>::iterator lIt = edges[i].begin(); lIt != edges[i].end();
+				++lIt) {
+			std::pair<double, double> node1 = nodePosition[i], node2 =
+					nodePosition[*lIt];
+
+			Edge edge;
+			edge.isChoosen = false;
+			edge.x1 = node1.first;
+			edge.y1 = node1.second;
+			edge.x2 = node2.first;
+			edge.y2 = node2.second;
+			globalPlanInfo.edges.push_back(edge);
+		}
+
+	}
 
 
 	bool start = true;
