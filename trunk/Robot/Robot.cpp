@@ -23,7 +23,7 @@ Robot::Robot(boost::filesystem::path settingsFile) {
 	TiXmlElement* pMovementConstraints = pRobot->FirstChildElement("MovementConstraints");
 	movementConstraints = new MovementConstraints(this, pMovementConstraints);
 
-
+	readPositionEstimationSettings(pRobot);
 
 	positionEstimation = new PositionEstimation(this, positionEstimationParams);
 	globalPlanner = new GlobalPlanner(this, pRobot);
@@ -47,7 +47,8 @@ Robot::~Robot() {
 
 void Robot::readPositionEstimationSettings(TiXmlElement* settings)
 {
-	if (settings->QueryIntAttribute("runThread", &positionEstimationParams.runThread)
+	TiXmlElement* pPositionEstimation = settings->FirstChildElement("PositionEstimation");
+	if (pPositionEstimation->QueryIntAttribute("runThread", &positionEstimationParams.runThread)
 			!= TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for positionEstimationThread";
 	}
@@ -88,6 +89,10 @@ void Robot::closeGps(){
 
 bool Robot::isGpsOpen(){
 	return positionEstimation->isGpsOpen();
+}
+
+bool Robot::isSetZero() {
+	positionEstimation->isSetZero();
 }
 
 int Robot::gpsGetFixStatus()

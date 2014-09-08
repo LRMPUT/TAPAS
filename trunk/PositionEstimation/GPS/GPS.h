@@ -102,6 +102,7 @@ public:
 	 * @warning Use only when fix available.
 	 */
 	void setZeroXY(double Latitude, double Longitude);
+	bool getIsSetZero();
 	/**
 	 * Checks if port is opened
 	 */
@@ -116,6 +117,7 @@ private:
 	char Buffer[BUFFER_SIZE];
 	void ClearBuffer();
 	volatile bool threadEnd;
+	bool isSetZero;
 
 	void start();
 	void join();

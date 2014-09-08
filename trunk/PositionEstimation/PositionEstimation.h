@@ -22,6 +22,8 @@
 class Robot;
 class Debug;
 
+//#define POSITION_ESTIMATION_DEBUG
+
 class PositionEstimation {
 	friend class Debug;
 
@@ -81,6 +83,7 @@ public:
 
 	// Zeroes the current position estimate
 	void setZeroPosition();
+	bool isSetZero();
 
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
 	//CV_32SC1 2x1: left, right encoder

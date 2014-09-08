@@ -88,6 +88,8 @@ public:
 
 	bool isGpsOpen();
 
+	bool isSetZero();
+
 	int gpsGetFixStatus();
 
 	double getPosX(double longitude);

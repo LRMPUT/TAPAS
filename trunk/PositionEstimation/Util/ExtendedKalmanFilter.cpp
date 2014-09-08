@@ -85,8 +85,6 @@ cv::Mat ExtendedKalmanFilter::correctGPS(cv::Mat gpsMeasurement) {
 	cv::Mat K = cv::Mat::zeros(4, 2, CV_64F);
 	K = (this->P_apriori * this->Hgps.t())
 			* (this->Hgps * this->P_apriori * this->Hgps.t() + this->Rgps).inv();
-	std::cout<<"K: " << K <<std::endl;
-	std::cout<<"Size: " << gpsMeasurement.rows<< " " << gpsMeasurement.cols<<std::endl;
 	this->x_aposteriori = this->x_apriori
 			+ K * (gpsMeasurement - this->Hgps * this->x_apriori);
 	std::cout<<"Where is the issue?"<<std::endl;
@@ -100,7 +98,6 @@ cv::Mat ExtendedKalmanFilter::correctIMU(cv::Mat imuMeasurement) {
 	K = (this->P_apriori * this->Himu.t())
 			* (this->Himu * this->P_apriori * this->Himu.t() + this->Rimu).inv();
 
-//	std::cout<<"K: " << K <<std::endl;
 	this->x_aposteriori = this->x_apriori
 			+ K * (imuMeasurement - this->Himu * this->x_apriori);
 	this->P_aposteriori = (this->I - K * this->Himu) * this->P_apriori;

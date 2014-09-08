@@ -68,6 +68,8 @@ public:
 	};
 
 private:
+	std::mutex mtxGlobalPlan;
+
 	//parent class robot
 	Robot* robot;
 
