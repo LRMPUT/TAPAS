@@ -470,6 +470,18 @@ cv::Mat MovementConstraints::getPosImuMapCenter(){
 	return ret;
 }
 
+void MovementConstraints::getLocalPlanningData(cv::Mat& MovementConstraints,cv::Mat& PosImuMapCenter, cv::Mat& GlobalMapCenter){
+
+	std::unique_lock<std::mutex> lckPC(mtxPointCloud);
+	std::unique_lock<std::mutex> lckMap(mtxMap);
+	constraintsMap.copyTo(MovementConstraints);
+	curPosCloudMapCenter.copyTo(PosImuMapCenter);
+	posMapCenterGlobal.copyTo(GlobalMapCenter);
+	lckPC.unlock();
+	lckMap.unlock();
+
+}
+
 //----------------------MENAGMENT OF MovementConstraints DEVICES
 //Hokuyo
 void MovementConstraints::openHokuyo(std::string port){
