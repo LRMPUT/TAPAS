@@ -377,7 +377,7 @@ void MovementConstraints::processPointCloud(cv::Mat hokuyoData,
 	int countPoints = 0;
 	for(int c = 0; c < hokuyoData.cols; c++){
 		//cout << hokuyoData.at<int>(2, c) << endl;
-		if(hokuyoData.at<int>(2, c) > 500){
+		if(hokuyoData.at<int>(2, c) > 100){
 			hokuyoCurPoints.at<float>(0, countPoints) = -hokuyoData.at<int>(1, c);
 			hokuyoCurPoints.at<float>(1, countPoints) = 0.0;
 			hokuyoCurPoints.at<float>(2, countPoints) = hokuyoData.at<int>(0, c);
