@@ -4,6 +4,7 @@
 //#define DRIVE_DBG
 
 #include <QtCore/QObject>
+#include <QtCore/QTimer>
 #include <string>
 #include "../Robot/Robot.h"
 #include "../Debug/Debug.h"
@@ -29,6 +30,7 @@ public:
 	Action getState();
 	bool isOpen();
 private:
+	QTimer refreshTimer;
 	Ui::TrobotQtClass* ui;
 	void setButtonsEnabled(bool state);
 	void calcVelSteering();
@@ -51,6 +53,7 @@ public slots:
 	void steeringChanged(int val);
 	void openRobotDrive();
 	void closeRobotDrive();
+	void updateState();
 };
 
 #endif //QT_ROBOT_DRIVE

@@ -39,10 +39,44 @@ MovementConstraints::~MovementConstraints() {
 
 
 void MovementConstraints::readSettings(TiXmlElement* settings){
+	if(settings->QueryBoolAttribute("runThread", &runThread) != TIXML_SUCCESS){
+		throw "Bad settings file - no runThread setting for MovementConstraints";
+	}
+
+	TiXmlElement* pOdom = settings->FirstChildElement("odometry");
+	if(!pOdom){
+		throw "Bad settings file - no odometry settings";
+	}
+	if(pOdom->QueryFloatAttribute("diam", &pointCloudSettings.wheelCir) != TIXML_SUCCESS){
+		cout << "Warning - bad odometry diam";
+	}
+	pointCloudSettings.wheelCir *= PI;
+	if(pOdom->QueryFloatAttribute("base", &pointCloudSettings.wheelDistance) != TIXML_SUCCESS){
+		cout << "Warning - bad odometry base";
+	}
+	if(pOdom->QueryIntAttribute("encodersCPR", &pointCloudSettings.encodersCPR) != TIXML_SUCCESS){
+		cout << "Warning - bad odometry encodersCPR";
+	}
+
+	TiXmlElement* pPtCloud = settings->FirstChildElement("point_cloud");
+	if(!pPtCloud){
+		throw "Bad settings file - no point_cloud settings";
+	}
+	if(pPtCloud->QueryIntAttribute("minDist", &pointCloudSettings.minLaserDist) != TIXML_SUCCESS){
+		cout << "Warning - bad point_cloud minDist";
+	}
+
+	if(pPtCloud->QueryIntAttribute("maxTimePoint", &pointCloudSettings.pointCloudTimeout) != TIXML_SUCCESS){
+		cout << "Warning - bad point_cloud maxTimePoint";
+	}
+	if(pPtCloud->QueryIntAttribute("maxTimeMap", &pointCloudSettings.mapTimeout) != TIXML_SUCCESS){
+		cout << "Warning - bad point_cloud maxTimeMap";
+	}
+
 	cameraOrigLaser = readMatrixSettings(settings, "camera_position_laser", 4, 4);
 	cameraOrigImu = readMatrixSettings(settings, "imu_position_camera", 4, 4).t();
 	imuOrigGlobal = readMatrixSettings(settings, "imu_position_global", 4, 4);
-	groundPlane = readMatrixSettings(settings, "ground_plane_global", 4, 1);
+	//groundPlane = readMatrixSettings(settings, "ground_plane_global", 4, 1);
 }
 
 cv::Mat MovementConstraints::readMatrixSettings(TiXmlElement* parent, const char* node, int rows, int cols){
@@ -126,7 +160,7 @@ void MovementConstraints::updateConstraintsMap(){
 	else if(curMapY < (-MAP_SIZE/2 + MAP_MARGIN) * MAP_RASTER_SIZE){
 		move = true;
 	}
-	static const float mapTimeout = 5000;
+
 	std::chrono::high_resolution_clock::time_point timestampMapCur = std::chrono::high_resolution_clock::now();
 	if(std::chrono::duration_cast<std::chrono::milliseconds>(timestampMapCur - timestampMap).count() > 5000){
 		move = true;
@@ -237,7 +271,8 @@ void MovementConstraints::updateCurPosCloudMapCenter(){
 		curPosCloudMapCenter = compNewPos(imuPrev, imuCur,
 											encodersPrev, encodersCur,
 											curPosCloudMapCenter,
-											posMapCenterGlobal);
+											posMapCenterGlobal,
+											pointCloudSettings);
 		lck.unlock();
 		//cout << "trans = " << trans << endl;
 		//cout << "posMapCenterGlobal = " << posMapCenterGlobal << endl;
@@ -273,7 +308,8 @@ void MovementConstraints::updatePointCloud(){
 						curPosCloudMapCenter,
 						mtxPointCloud,
 						cameraOrigLaser,
-						cameraOrigImu);
+						cameraOrigImu,
+						pointCloudSettings);
 	}
 	else{
 		//cout << "Hokuyo closed" << endl;
@@ -312,21 +348,20 @@ cv::Mat MovementConstraints::compOrient(cv::Mat imuData){
 
 
 cv::Mat MovementConstraints::compTrans(	cv::Mat orient,
-							cv::Mat encodersDiff)
+							cv::Mat encodersDiff,
+							const PointCloudSettings& pointCloudSettings)
 {
-	static const float wheelCir = 178*PI;
-	static const float wheelDistance = 432;
-	static const int encodersCPR = 300;
-	float sl = (float)encodersDiff.at<int>(0)*wheelCir/encodersCPR;
-	float sr = (float)encodersDiff.at<int>(1)*wheelCir/encodersCPR;
-	float theta = (sl - sr)/(-wheelDistance);
+
+	float sl = (float)encodersDiff.at<int>(0)*pointCloudSettings.wheelCir/pointCloudSettings.encodersCPR;
+	float sr = (float)encodersDiff.at<int>(1)*pointCloudSettings.wheelCir/pointCloudSettings.encodersCPR;
+	float theta = (sl - sr)/(-pointCloudSettings.wheelDistance);
 	Mat trans(4, 1, CV_32FC1, Scalar(0));
 	//cout << "theta = " << theta << endl;
 	if(theta < 0.1){
 		trans.at<float>(0) = (sl + sr)/2;
 	}
 	else{
-		float r = -wheelDistance*(sl - sr)/(2*(sl - sr));
+		float r = -pointCloudSettings.wheelDistance*(sl - sr)/(2*(sl - sr));
 		trans.at<float>(0) = r*sin(theta);
 		trans.at<float>(1) = r*(cos(theta) - 1);
 
@@ -339,7 +374,8 @@ cv::Mat MovementConstraints::compTrans(	cv::Mat orient,
 cv::Mat MovementConstraints::compNewPos(cv::Mat lprevImu, cv::Mat lcurImu,
 									cv::Mat lprevEnc, cv::Mat lcurEnc,
 									cv::Mat lposMapCenter,
-									cv::Mat lmapCenterGlobal)
+									cv::Mat lmapCenterGlobal,
+									const PointCloudSettings& pointCloudSettings)
 {
 	Mat ret = Mat::eye(4, 4, CV_32FC1);
 	if(!lposMapCenter.empty() && !lmapCenterGlobal.empty()){
@@ -347,7 +383,7 @@ cv::Mat MovementConstraints::compNewPos(cv::Mat lprevImu, cv::Mat lcurImu,
 		//cout << "lmapCenterGlobal = " << lmapCenterGlobal << endl;
 		//cout << "Computing curPos" << endl;
 		//cout << "encodersCur - encodersPrev = " << encodersCur - encodersPrev << endl;
-		Mat trans = lmapCenterGlobal.inv()*compTrans(compOrient(lprevImu), lcurEnc - lprevEnc);
+		Mat trans = lmapCenterGlobal.inv()*compTrans(compOrient(lprevImu), lcurEnc - lprevEnc, pointCloudSettings);
 		//cout << "trans = " << trans << endl;
 		//cout << "Computing curTrans" << endl;
 		Mat curTrans = Mat(lposMapCenter, Rect(3, 0, 1, 4)) + trans;
@@ -370,14 +406,15 @@ void MovementConstraints::processPointCloud(cv::Mat hokuyoData,
 											cv::Mat curPosCloudMapCenter,
 											std::mutex& mtxPointCloud,
 											cv::Mat cameraOrigLaser,
-											cv::Mat cameraOrigImu)
+											cv::Mat cameraOrigImu,
+											const PointCloudSettings& pointCloudSettings)
 {
 	Mat hokuyoCurPoints(6, hokuyoData.cols, CV_32FC1);
 	//cout << "Copying hokuyo data" << endl;
 	int countPoints = 0;
 	for(int c = 0; c < hokuyoData.cols; c++){
 		//cout << hokuyoData.at<int>(2, c) << endl;
-		if(hokuyoData.at<int>(2, c) > 100){
+		if(hokuyoData.at<int>(2, c) > pointCloudSettings.minLaserDist){
 			hokuyoCurPoints.at<float>(0, countPoints) = -hokuyoData.at<int>(1, c);
 			hokuyoCurPoints.at<float>(1, countPoints) = 0.0;
 			hokuyoCurPoints.at<float>(2, countPoints) = hokuyoData.at<int>(0, c);
@@ -395,12 +432,11 @@ void MovementConstraints::processPointCloud(cv::Mat hokuyoData,
 		hokuyoCurPoints.rowRange(0, 4) = cameraOrigLaser.inv()*hokuyoCurPoints.rowRange(0, 4);
 
 		//cout << "Removing old points" << endl;
-		static const int timeoutThres = 5000;
-		//remove all points older than 2000 ms
+		//remove all points older than pointCloudTimeout ms
 		int pointsSkipped = 0;
 		if(pointsInfo.size() > 0){
 			//cout << "dt = " << std::chrono::duration_cast<std::chrono::milliseconds>(curTimestamp - pointsQueue.front().timestamp).count() << endl;
-			while(std::chrono::duration_cast<std::chrono::milliseconds>(curTimestamp - pointsInfo.front().timestamp).count() > timeoutThres){
+			while(std::chrono::duration_cast<std::chrono::milliseconds>(curTimestamp - pointsInfo.front().timestamp).count() > pointCloudSettings.pointCloudTimeout){
 				pointsSkipped += pointsInfo.front().numPoints;
 				pointsInfo.pop();
 				if(pointsInfo.size() == 0){
@@ -419,7 +455,7 @@ void MovementConstraints::processPointCloud(cv::Mat hokuyoData,
 							copyTo(tmpAllPoints.colRange(0, pointCloudImuMapCenter.cols - pointsSkipped));
 		}
 		//cout << "Addding hokuyoCurPoints" << endl;
-		if(std::chrono::duration_cast<std::chrono::milliseconds>(curTimestamp - hokuyoTimestamp).count() <= timeoutThres){
+		if(std::chrono::duration_cast<std::chrono::milliseconds>(curTimestamp - hokuyoTimestamp).count() <= pointCloudSettings.pointCloudTimeout){
 			Mat curPointCloudCameraMapCenter(hokuyoCurPoints.rows, hokuyoCurPoints.cols, CV_32FC1);
 			Mat tmpCurPoints = curPosCloudMapCenter*cameraOrigImu*hokuyoCurPoints.rowRange(0, 4);
 			tmpCurPoints.copyTo(curPointCloudCameraMapCenter.rowRange(0, 4));
@@ -434,6 +470,10 @@ void MovementConstraints::processPointCloud(cv::Mat hokuyoData,
 		pointCloudImuMapCenter = tmpAllPoints;
 		lck.unlock();
 	}
+}
+
+const MovementConstraints::PointCloudSettings& MovementConstraints::getPointCloudSettings(){
+	return pointCloudSettings;
 }
 
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS

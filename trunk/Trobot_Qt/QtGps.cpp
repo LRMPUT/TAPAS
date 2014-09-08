@@ -23,6 +23,7 @@ QtGps::QtGps(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug) :
 	QObject::connect(&(this->refreshTimer), SIGNAL(timeout()), this, SLOT(refresh()));
 	QObject::connect(ui->gpsZeroPointButton, SIGNAL(clicked()), this, SLOT(setZeroPoint()));
 	refreshTimer.setInterval(500);
+	refreshTimer.start();
 }
 
 QtGps::~QtGps(){
@@ -32,21 +33,21 @@ QtGps::~QtGps(){
 void QtGps::connect(){
 	if(ui->gpsPortCombo->count() != 0){
 		robot->openGps(ui->gpsPortCombo->currentText().toAscii().data());
-		refreshTimer.start();
 	}
 }
 
 void QtGps::disconnect(){
-	refreshTimer.stop();
 	robot->closeGps();
 }
 
 void QtGps::refresh(){
-	const Mat tmp = debug->getGpsData();
-	ui->gpsXLabel->setText(QString("%1").arg(tmp.at<float>(0)));
-	ui->gpsYLabel->setText(QString("%1").arg(tmp.at<float>(1)));
-	ui->gpsFixLabel->setText(QString("%1").arg(debug->getGpsFixStatus()));
-	ui->gpsSatelitesLabel->setText(QString("%1").arg(debug->getGpsSatelitesUsed()));
+	if(robot->isGpsOpen()){
+		const Mat tmp = debug->getGpsData();
+		ui->gpsXLabel->setText(QString("%1").arg(tmp.at<float>(0)));
+		ui->gpsYLabel->setText(QString("%1").arg(tmp.at<float>(1)));
+		ui->gpsFixLabel->setText(QString("%1").arg(debug->getGpsFixStatus()));
+		ui->gpsSatelitesLabel->setText(QString("%1").arg(debug->getGpsSatelitesUsed()));
+	}
 }
 
 void QtGps::setZeroPoint(){

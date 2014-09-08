@@ -28,8 +28,9 @@
 	<!--
 		Jan Wietrzykowski is lazy and does not use the comments ;d
 	-->
-	<MovementConstraints>
-		
+	<MovementConstraints runThread="1">
+		<odometry diam="188" base="452" encodersCPR="300" />
+		<point_cloud minDist="100" maxTimePoint="4000" maxTimeMap="4000" />
 		<camera_position_laser>
 			0.999975467433325   0.006201805494175   0.003256092768350	19.302285337921
   		-0.006965113845532   0.831082312695594   0.556105814313842 -581.986641194198
@@ -48,10 +49,7 @@
 			0	0	1	-830
 			0	0	0	1
 		</imu_position_global>
-		<ground_plane_global>
-			0	0	1 -30
-		</ground_plane_global>
-		<Camera number="1" rows="480" cols="640">
+		<Camera runThread="0" number="1" rows="480" cols="640">
 			<cache enabled="true" />
 			<HierClassifier>
 				<cache enabled="true" />
@@ -127,7 +125,9 @@
 					<info desc_beg="0" desc_end="7" />
 				</Classifier>
 			</HierClassifier>
-			<learning dir="../../MovementConstraints/Camera/training_data" />
+			<learning enabled="0">
+				"../MovementConstraints/Camera/database/przejazd1"
+			</learning>
 			<labels>
 				<label text="grass" id="0"/>
 				<label text="pavement" id="1"/>
@@ -155,33 +155,13 @@
 				</position_laser>
 				<camera_matrix>
 					646.345999973665580	0	312.531846659870780
-        	0	645.650527914581740	244.961100510703430
-        	0	0	1.0000
+        			0	645.650527914581740	244.961100510703430
+        			0	0	1.0000
 				</camera_matrix>
 				<dist_coeffs>
 					-0.002321429512793 0.042019134230480 -0.000280334014614 0.001284356067402 0.000000000000000 
 				</dist_coeffs>
 			</sensor>
-				<!-- <sensor id="right">
-				<position>
-					1 0 0 0
-					0	1	0	0
-					0	0	1	0
-					0	0	0	1
-				</position>
-				<position_laser>
-
-				</position_laser>
-				<camera_matrix>
-
-				</camera_matrix>
-				<dist_fact>
-
-				</dist_fact>
-			</sensor> -->
-			<ground_plane_global>
-				0	0	1 -30
-			</ground_plane_global>
 		</Camera>
 	</MovementConstraints>
 </Robot>
