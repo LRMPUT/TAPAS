@@ -37,6 +37,20 @@ public:
 		{}
 	};
 
+	struct PointCloudSettings{
+		float wheelCir;
+
+		float wheelDistance;
+
+		int encodersCPR;
+
+		int minLaserDist;
+
+		int mapTimeout;
+
+		int pointCloudTimeout;
+	};
+
 private:
 
 	// Class to get data from Camera
@@ -90,6 +104,8 @@ private:
 
 	bool runThread;
 
+	PointCloudSettings pointCloudSettings;
+
 	// Main loop of MovementContraints thread.
 	void run();
 
@@ -116,12 +132,14 @@ public:
 	static cv::Mat compOrient(cv::Mat imuData);
 
 	static cv::Mat compTrans(	cv::Mat orient,
-								cv::Mat encodersDiff);
+								cv::Mat encodersDiff,
+								const PointCloudSettings& pointCloudSettings);
 
 	static cv::Mat compNewPos(cv::Mat lprevImu, cv::Mat lcurImu,
 								cv::Mat lprevEnc, cv::Mat lcurEnc,
 								cv::Mat lposMapCenter,
-								cv::Mat lmapCenterGlobal);
+								cv::Mat lmapCenterGlobal,
+								const PointCloudSettings& pointCloudSettings);
 
 	static void processPointCloud(cv::Mat hokuyoData,
 								cv::Mat& pointCloudImuMapCenter,
@@ -131,7 +149,10 @@ public:
 								cv::Mat curPosCloudMapCenter,
 								std::mutex& mtxPointCloud,
 								cv::Mat cameraOrigLaser,
-								cv::Mat cameraOrigImu);
+								cv::Mat cameraOrigImu,
+								const PointCloudSettings& pointCloudSettings);
+
+	const PointCloudSettings& getPointCloudSettings();
 
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
 	//CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right

@@ -12,14 +12,13 @@
 #include <cmath>
 #include <sstream>
 #include <algorithm>
-
+//CUDA
 #ifndef NO_CUDA
-	//CUDA
 	#include <cuda_runtime.h>
-	//Robotour
-	#include "CameraCuda.h"
 #endif
+//Robotour
 #include "Camera.h"
+#include "CameraCuda.h"
 #include "../../Robot/Robot.h"
 
 using namespace boost;
@@ -59,11 +58,6 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 	}
 	readSettings(settings);
 
-	std::vector<boost::filesystem::path> dirs;
-	dirs.push_back("../MovementConstraints/Camera/database/przejazd22");
-	//learnFromDir(dirs);
-	//readCache("cache/cameraCache");
-
 #ifndef NO_CUDA
 	int devCount;
 	cudaGetDeviceCount(&devCount);
@@ -76,6 +70,13 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 	cout << "Number of processors: " << prop.multiProcessorCount << endl;
 	cout << "Unified addressing: " << prop.unifiedAddressing << endl;
 #endif //NO_CUDA
+
+	if(learnEnabled){
+		learnFromDir(learningDirs);
+	}
+	else{
+		//readCache("cache/cameraCache");
+	}
 }
 
 Camera::~Camera(){
@@ -200,7 +201,6 @@ std::vector<cv::Mat> Camera::computeMapSegmentsGpu(cv::Mat curPosImuMapCenter){
 				curPosCameraMapCenterImu.isContinuous() &&
 				invCameraMatrix.isContinuous())
 		{
-
 			reprojectCameraPoints((float*)invCameraMatrix.data,
 									(float*)NULL,
 									(float*)curPosCameraMapCenterGlobal.data,
@@ -215,7 +215,7 @@ std::vector<cv::Mat> Camera::computeMapSegmentsGpu(cv::Mat curPosImuMapCenter){
 	}
 	return ret;
 }
-#endif
+#endif //NO_CUDA
 
 std::vector<cv::Point2f> Camera::computePointProjection(const std::vector<cv::Point3f>& spPoints,
 														int cameraInd)
@@ -516,9 +516,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			}
 			if(!imuPrev.empty()){
 				//cout << "imuPrev.size() = " << imuPrev.size() << endl;
-				//TODO Poprawić po zmianie plików z danymi (były błędnie zapisane)
-				imuPrev = imuPrev.reshape(1, 4);
-				imuPrev = imuPrev.t();
+				imuPrev = imuPrev.reshape(1, 3);
 			}
 			if(imuPosGlobal.empty()){
 				imuPosGlobal = movementConstraints->compOrient(imuPrev);
@@ -541,9 +539,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			}
 			if(!imuCur.empty()){
 				//cout << "imuCur.size() = " << imuCur.size() << endl;
-				//TODO Poprawić po zmianie plików z danymi (były błędnie zapisane)
-				imuCur = imuCur.reshape(1, 4);
-				imuCur = imuCur.t();
+				imuCur = imuCur.reshape(1, 3);
 			}
 			if(imuCur.empty()){
 				imuPrev.copyTo(imuCur);
@@ -555,7 +551,8 @@ void Camera::processDir(boost::filesystem::path dir,
 			//cout << "encodersCur = " << encodersCur << endl << "encodersPrev = " << encodersPrev << endl;
 			curPos = movementConstraints->compNewPos(imuPrev, imuCur,
 														encodersPrev, encodersCur,
-														curPos, imuPosGlobal);
+														curPos, imuPosGlobal,
+														movementConstraints->getPointCloudSettings());
 
 
 			/*Mat trans = compTrans(compOrient(imuPrev), encodersCur - encodersPrev);
@@ -586,7 +583,8 @@ void Camera::processDir(boost::filesystem::path dir,
 													curPos,
 													mtxPointCloud,
 													cameraOrigLaser.front(),
-													cameraOrigImu.front());
+													cameraOrigImu.front(),
+													movementConstraints->getPointCloudSettings());
 
 			//waitKey();
 			/*Mat covarLaserCur, meanLaserCur;
@@ -676,7 +674,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			}
 		}
 		imshow("test", image);
-		waitKey(500);
+		waitKey();
 
 		TiXmlDocument data(	dir.string() +
 							string("/") +
@@ -1276,7 +1274,9 @@ void Camera::run(){
 
 
 void Camera::readSettings(TiXmlElement* settings){
-	string tmp;
+	if(settings->QueryBoolAttribute("runThread", &runThread) != TIXML_SUCCESS){
+		throw "Bad settings file - no runThread setting for Camera";
+	}
 
 	if(settings->QueryIntAttribute("number", &numCameras) != TIXML_SUCCESS){
 		throw "Bad settings file - wrong number of cameras";
@@ -1293,7 +1293,9 @@ void Camera::readSettings(TiXmlElement* settings){
 	if(!pPtr){
 		throw "Bad settings file - no cache setting for Camera";
 	}
-	pPtr->QueryBoolAttribute("enabled", &cacheEnabled);
+	if(pPtr->QueryBoolAttribute("enabled", &cacheEnabled) != TIXML_SUCCESS){
+		cout << "Warning - no cacheEnabled setting for Camera";
+	}
 
 	crossValidate = false;
 
@@ -1301,8 +1303,25 @@ void Camera::readSettings(TiXmlElement* settings){
 	if(!pPtr){
 		throw "Bad settings file - no learning settings";
 	}
-	pPtr->QueryStringAttribute("dir", &tmp);
-	learningDir = tmp;
+	if(pPtr->QueryBoolAttribute("enabled", &learnEnabled) != TIXML_SUCCESS){
+		cout << "Warning - no learnEnabled settings for Camera";
+	}
+
+	const char* learnText = pPtr->GetText();
+	char dirText[100];
+	//cout << "pPtr->GetText: " << pPtr->GetText() << endl;
+	cout << "Learning dirs: " << endl;
+	int lenText = strlen(learnText);
+	const char* pos = find(learnText, learnText + lenText, '"');
+	while(pos < learnText + lenText){
+		const char* dirTextEnd = find(pos + 1, learnText + lenText, '"');
+		if(dirTextEnd == learnText + lenText){
+			break;
+		}
+		cout << string(pos + 1, dirTextEnd - pos - 1) << endl;
+		learningDirs.push_back(string(pos + 1, dirTextEnd - pos - 1));
+		pos = find(dirTextEnd + 1, learnText + lenText, '"');
+	}
 
 	pPtr = settings->FirstChildElement("labels");
 	if(!pPtr){
@@ -1333,6 +1352,7 @@ void Camera::readSettings(TiXmlElement* settings){
 		if(!pPtr){
 			throw "Bad settings file - no sensor settings";
 		}
+		string tmp;
 		pPtr->QueryStringAttribute("id", &tmp);
 		int idx = 0;
 		if(tmp == "left"){
@@ -1363,8 +1383,6 @@ void Camera::readSettings(TiXmlElement* settings){
 	for(int i = 0; i < hierClassifiers.size(); i++){
 		hierClassifiers[i]->loadSettings(pPtr);
 	}
-
-	groundPlane = readMatrixSettings(settings, "ground_plane_global", 4, 1);
 
 	/*svmParams = CvSVMParams();	//default values
 	svmParams.kernel_type = kernelType;

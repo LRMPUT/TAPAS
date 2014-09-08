@@ -43,6 +43,10 @@ class Camera {
 
 	bool cacheEnabled;
 
+	bool learnEnabled;
+
+	std::vector<boost::filesystem::path> learningDirs;
+
 	/** \brief Flaga informująca o tym czy dokonywać cross validation.
 	 *
 	 */
@@ -66,9 +70,6 @@ class Camera {
 
 	/** CV_32FC1 1x5: distortion coefficients. */
 	std::vector<cv::Mat> distCoeffs;
-
-	//CV_32FC1 4x1: ground plane equation [A, B, C, D]'
-	cv::Mat groundPlane;
 
 	std::vector<cv::Mat> mapSegments;
 

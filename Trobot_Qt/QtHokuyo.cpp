@@ -30,6 +30,7 @@ QtHokuyo::QtHokuyo(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug) :
 	QObject::connect(&refreshTimer, SIGNAL(timeout()), this, SLOT(refresh()));
 
 	refreshTimer.setInterval(100);
+	refreshTimer.start();
 
 	map = QPixmap(ui->calibLaserLabel->width(), ui->calibLaserLabel->height());
 }
@@ -42,39 +43,39 @@ cv::Mat QtHokuyo::getData(){
 }
 
 void QtHokuyo::refresh(){
-	Mat data = getData();
+	if(robot->isHokuyoOpen()){
+		Mat data = getData();
 
-	map.fill(Qt::white);
-	QPainter painter(&map);
-	painter.setPen(Qt::blue);
+		map.fill(Qt::white);
+		QPainter painter(&map);
+		painter.setPen(Qt::blue);
 
-	float scale;
-	const int range = 4000;
-	scale = (float)min(ui->calibLaserLabel->width(), ui->calibLaserLabel->height()) / (2 * range);
+		float scale;
+		const int range = 4000;
+		scale = (float)min(ui->calibLaserLabel->width(), ui->calibLaserLabel->height()) / (2 * range);
 
-	int origX = ui->calibLaserLabel->width()/2;
-	int origY = ui->calibLaserLabel->height()/2;
+		int origX = ui->calibLaserLabel->width()/2;
+		int origY = ui->calibLaserLabel->height()/2;
 
-	QVector<QPointF> lines;
-	for(int i = 0; i < data.cols; i++){
-		//cout << "Point " << i << " = (" << data.at<int>(0, i) << ", " << data.at<int>(1, i) << ")" << endl;
-		lines.append(QPointF(origX - data.at<int>(1, i)*scale, origY - data.at<int>(0, i)*scale));
+		QVector<QPointF> lines;
+		for(int i = 0; i < data.cols; i++){
+			//cout << "Point " << i << " = (" << data.at<int>(0, i) << ", " << data.at<int>(1, i) << ")" << endl;
+			lines.append(QPointF(origX - data.at<int>(1, i)*scale, origY - data.at<int>(0, i)*scale));
+		}
+		painter.drawPolyline(lines);
+
+		painter.end();
+		ui->calibLaserLabel->setPixmap(map);
+		ui->calibLaserLabel->update();
 	}
-	painter.drawPolyline(lines);
-
-	painter.end();
-	ui->calibLaserLabel->setPixmap(map);
-	ui->calibLaserLabel->update();
 }
 
 void QtHokuyo::connect(){
 	if(ui->hokuyoPortCombo->count() != 0){
 		robot->openHokuyo(ui->hokuyoPortCombo->currentText().toAscii().data());
-		refreshTimer.start();
 	}
 }
 
 void QtHokuyo::disconnect(){
-	refreshTimer.stop();
 	robot->closeHokuyo();
 }
