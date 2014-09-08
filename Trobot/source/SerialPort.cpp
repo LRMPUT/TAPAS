@@ -236,6 +236,7 @@ namespace trobot {
 		filesystem::path dirPath("/dev/robots");
 		names.push_back(string("gps"));
 		names.push_back(string("imu"));
+		names.push_back(string("imu2"));
 		names.push_back(string("driver"));
 		names.push_back(string("arduino"));
 		names.push_back(string("hokuyo"));
