@@ -27,8 +27,8 @@ class Debug;
 #include "../PositionEstimation/PositionEstimation.h"
 #include "../MovementConstraints/MovementConstraints.h"
 #include "../Planning/GlobalPlanner.h"
-#include "../Planning/LocalPlanner.h"
-
+//TinyXML
+#include <tinyxml.h>
 
 
 #define MAP_RASTER_SIZE 200		//[mm]
@@ -41,13 +41,19 @@ class Debug;
 #define PI 3.14159265359
 
 class Robot {
+
 	friend class Debug;
 
+	void readPositionEstimationSettings(TiXmlElement* settings);
+
+
+
 	// Class containing information about our position estimation from sensors
-	PositionEstimation positionEstimation;
+	PositionEstimation::Parameters positionEstimationParams;
+	PositionEstimation* positionEstimation;
 
 	// Class responsible for planning
-	GlobalPlanner globalPlanner;
+	GlobalPlanner* globalPlanner;
 
 	MovementConstraints* movementConstraints;
 
@@ -81,6 +87,8 @@ public:
 	void closeGps();
 
 	bool isGpsOpen();
+
+	int gpsGetFixStatus();
 
 	double getPosX(double longitude);
 	double getPosLongitude(double X);

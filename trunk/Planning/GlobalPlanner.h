@@ -21,7 +21,7 @@
 #include <tinyxml.h>
 //TAPAS
 #include "RobotDrivers/robotDrivers.h"
-//#include "LocalPlanner.h"
+#include "LocalPlanner.h"
 
 
 class Robot;
@@ -39,6 +39,13 @@ class GlobalPlanner {
 	friend class Debug;
 
 public:
+	struct Parameters{
+		int runThread;
+		int runHomologation;
+		std::string mapFile;
+		double latitude, longitude;
+	};
+
 	struct Edge{
 		float x1, y1, x2, y2;
 		bool isChoosen;
@@ -82,7 +89,7 @@ private:
 
 
 
-
+	GlobalPlanner::Parameters globalPlannerParams;
 
 	std::mutex driverMtx;
 
@@ -105,15 +112,17 @@ private:
 	void computeGlobalPlan();
 
 
-	void readOpenStreetMap(char *mapName);
+	void readOpenStreetMap(const char *mapName);
 //	std::pair<int,int> findDistances(double X, double Y);
 
 
 	void setGoal(double X, double Y);
 
 public:
-	GlobalPlanner(Robot* irobot);
+	GlobalPlanner(Robot* irobot, TiXmlElement* settings);
 	virtual ~GlobalPlanner();
+
+	void readSettings(TiXmlElement* settings);
 
 	void stopThread();
 

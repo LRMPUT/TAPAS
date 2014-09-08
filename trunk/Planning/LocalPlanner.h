@@ -13,12 +13,15 @@
 #include <chrono>
 //OpenCV
 #include <opencv2/opencv.hpp>
+//TinyXML
+#include <tinyxml.h>
 //TAPAS
 #include "RobotDrivers/robotDrivers.h"
-#include "GlobalPlanner.h"
+
 
 class Robot;
 class Debug;
+class GlobalPlanner;
 
 using namespace std;
 using namespace cv;
@@ -32,6 +35,18 @@ using namespace cv;
 
 class LocalPlanner {
 	friend class Debug;
+
+public:
+	struct Parameters {
+		int runThread;
+		int avoidObstacles;
+		int histResolution;
+		float threshold;
+		float steeringMargin;
+	};
+
+private:
+	Parameters localPlannerParams;
 
 	//parent class robot
 	Robot* robot;
@@ -79,8 +94,11 @@ class LocalPlanner {
 	void setGoalDirection();
 
 public:
-	LocalPlanner(Robot* irobot, GlobalPlanner* planer);
+
+	LocalPlanner(Robot* irobot, GlobalPlanner* planer, TiXmlElement* settings);
 	virtual ~LocalPlanner();
+
+	void readSettings(TiXmlElement* settings);
 
 	void stopThread();
 
@@ -89,6 +107,9 @@ public:
 	float getLocalDirection();
 
 	void localPlanerTest();
+
+	void startLocalPlanner();
+	void stopLocalPlanner();
 
 	//	void setMotorsVel(float motLeft, float motRight);
 
@@ -101,6 +122,7 @@ public:
 //	bool isRobotsDriveOpen();*/
 };
 
+#include "GlobalPlanner.h"
 #include "../Robot/Robot.h"
 
 #endif /* LOCALPLANNER_H_ */

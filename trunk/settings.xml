@@ -1,5 +1,35 @@
 <Robot>
+	<!--
+		runThread:		1 - module ON, 0 - module OFF
+		runHomologation:	1 - overrides global Planner to perform Homologation
+		mapFile:		file in open street map used in navigation
+		latitude:		latitude N/S
+		longitude:		longitude W/E
+	-->
+	<GlobalPlanner runThread="1" runHomologation="0" mapFile="robotourMap.osm" latitude="52.401505" longitude="16.949933"/>
+
+	<!--
+		runThread: 		1 - module ON, 0 - module OFF
+		avoidObstacles:	        0 - run as globalPlanner wants, 1 - take into account the obstacles
+		VFH_HistResolution: 	resolution of directions in VFH in degrees
+		VFH_Threshold:		threshold for the direction to be considered a valid choice
+		VFH_SteeringMargin:	the dead_zone of steering deciding upon going straight, left, right
+	-->
+	<LocalPlanner runThread="1" avoidObstacles="0" VFH_HistResolution="10" VFH_Threshold="0" VFH_SteeringMargin="4"/>
+
+	<!--
+		runThread: 		1 - module ON, 0 - module OFF
+		GPSCovariance:	
+		IMUCovariance:
+		EncoderCovariance:	
+	-->
+	<PositionEstimation runThread="1"/>
+
+	<!--
+		Jan Wietrzykowski is lazy and does not use the comments ;d
+	-->
 	<MovementConstraints>
+		
 		<camera_position_laser>
 			0.999975467433325   0.006201805494175   0.003256092768350	19.302285337921
   		-0.006965113845532   0.831082312695594   0.556105814313842 -581.986641194198
