@@ -24,10 +24,12 @@ private:
 	cv::Mat cameraOrigImu;
 	cv::Mat imuOrigGlobal;
 	cv::Mat constraintsMap;
+	std::vector<float> vecFieldHist;
 
 	void drawRobot();
 	void drawPointCloud();
 	void drawConstraintsMap();
+	void drawVecFieldHist();
 
 	void multCurMatrix(cv::Mat trans);
 
@@ -39,6 +41,7 @@ public:
 	void updatePointCloud(cv::Mat newPointCloud);
 	void updateRobotPos(cv::Mat newRobotPos);
 	void updateConstraintsMap(cv::Mat newConstraintsMap);
+	void updateVecFieldHist(std::vector<float> newVecFieldHist);
 	//void updateCameraOrigImu(cv::Mat newCameraOrigImu);
 	//void updateImuOrigGlobal(cv::Mat newImuOrigGlobal);
 	Viewer(cv::Mat iImuOrigGlobal, cv::Mat icameraOrigImu);

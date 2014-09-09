@@ -183,14 +183,16 @@ public:
 	*/
 	std::vector<cv::Mat> classify(cv::Mat image,
 								  cv::Mat terrain = cv::Mat(),
-								  cv::Mat segmentation = cv::Mat());
+								  cv::Mat segmentation = cv::Mat(),
+								  cv::Mat maskIgnore = cv::Mat());
 	
 	/** \brief Funkcja ekstrahująca wektor cech.
 
 	*/
 	std::vector<Entry> extractEntries(cv::Mat image,
 										cv::Mat terrain,
-										cv::Mat regionsOnImage);
+										cv::Mat regionsOnImage,
+										cv::Mat maskIgnore = cv::Mat());
 
 	std::vector<Entry> extractEntriesGPU(cv::Mat imageBGR,
 										cv::Mat terrain,

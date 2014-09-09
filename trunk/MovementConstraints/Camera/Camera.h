@@ -71,6 +71,8 @@ class Camera {
 	/** CV_32FC1 1x5: distortion coefficients. */
 	std::vector<cv::Mat> distCoeffs;
 
+	std::vector<cv::Mat> maskIgnore;
+
 	std::vector<cv::Mat> mapSegments;
 
 	//boost::filesystem::path settingsFile;

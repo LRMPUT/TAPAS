@@ -399,7 +399,8 @@ void HierClassifier::train(const std::vector<Entry>& data,
 
 std::vector<cv::Mat> HierClassifier::classify(cv::Mat image,
 							  	  	  	  	  cv::Mat terrain,
-							  	  	  	  	  cv::Mat segmentation)
+							  	  	  	  	  cv::Mat segmentation,
+							  	  	  	  	  cv::Mat maskIgnore)
 {
 
 
@@ -410,7 +411,7 @@ std::vector<cv::Mat> HierClassifier::classify(cv::Mat image,
 	else{
 		regionsOnImage = segmentation;
 	}
-	vector<Entry> entries = extractEntries(image, terrain, regionsOnImage);
+	vector<Entry> entries = extractEntries(image, terrain, regionsOnImage, maskIgnore);
 
 	using namespace std::chrono;
 	high_resolution_clock::time_point start = high_resolution_clock::now();
@@ -478,11 +479,15 @@ bool operator<(const Pixel& left, const Pixel& right){
 
 std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 													cv::Mat terrain,
-													cv::Mat regionsOnImage)
+													cv::Mat regionsOnImage,
+													cv::Mat maskIgnore)
 {
 	using namespace std::chrono;
 	high_resolution_clock::time_point start = high_resolution_clock::now();
 
+	if(maskIgnore.empty()){
+		maskIgnore = Mat(imageBGR.rows, imageBGR.cols, CV_32SC1, Scalar(0));
+	}
 	//namedWindow("imageBGR");
 	Mat imageHSV;
 	cvtColor(imageBGR, imageHSV, CV_BGR2HSV);
@@ -490,7 +495,9 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 	pixels.resize(imageHSV.rows * imageHSV.cols);
 	for(int r = 0; r < imageHSV.rows; r++){
 		for(int c = 0; c < imageHSV.cols; c++){
-			pixels[r * imageHSV.cols + c] = Pixel(r, c, regionsOnImage.at<int>(r, c));
+			if(maskIgnore.at<int>(r, c) == 0){
+				pixels[r * imageHSV.cols + c] = Pixel(r, c, regionsOnImage.at<int>(r, c));
+			}
 		}
 	}
 	sort(pixels.begin(), pixels.end());
@@ -512,7 +519,8 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 			int imageRow = round(terrainPointsImage.at<float>(1, p));
 			int imageCol = round(terrainPointsImage.at<float>(0, p));
 			if(imageRow >= 0 && imageRow < imageBGR.rows &&
-				imageCol >= 0 && imageCol < imageBGR.cols)
+				imageCol >= 0 && imageCol < imageBGR.cols &&
+				maskIgnore.at<int>(imageRow, imageCol) == 0)
 			{
 				int region = regionsOnImage.at<int>(imageRow, imageCol);
 				terrainRegion.push_back(pair<int, int>(region, p));

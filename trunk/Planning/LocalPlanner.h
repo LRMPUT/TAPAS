@@ -63,6 +63,8 @@ private:
 	std::thread localPlannerThread;
 	std::mutex driverMtx;
 
+	std::mutex mtxHistSectors;
+
 	void run();
 
 	vector<float> histSectors;
@@ -111,6 +113,7 @@ public:
 	void startLocalPlanner();
 	void stopLocalPlanner();
 
+	std::vector<float> getVecFieldHist();
 	//	void setMotorsVel(float motLeft, float motRight);
 
 	//----------------------MENAGMENT OF GlobalPlanner DEVICES

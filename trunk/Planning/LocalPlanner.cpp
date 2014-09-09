@@ -143,10 +143,12 @@ void LocalPlanner::setGoalDirection() {
 
 void LocalPlanner::initHistogram() {
 
+	std::unique_lock<std::mutex> lck(mtxHistSectors);
 	histSectors.clear();
 	for (int sect = 0; sect < HIST_SECTORS; sect++) {
 		histSectors.push_back(0.0);
 	}
+	lck.unlock();
 }
 
 void LocalPlanner::localPlanerTest() {
@@ -201,6 +203,8 @@ void LocalPlanner::updateHistogram() {
 	//cout<<"RobotX"<<curRobCellX<<endl;
 	//cout<<"RobotY"<<curRobCellY<<endl;
 
+
+	std::unique_lock<std::mutex> lck(mtxHistSectors);
 	/// for each cell of the raster map
 	for (int x = 0; x < MAP_SIZE; x++) {
 		for (int y = 0; y < MAP_SIZE; y++) {
@@ -227,6 +231,7 @@ void LocalPlanner::updateHistogram() {
 		std::cout << "Angular histogram values for " << sect * HIST_ALPHA - 180
 				<< " is " << histSectors.at(sect) << endl;
 	}
+	lck.unlock();
 }
 
 void LocalPlanner::smoothHistogram() {
@@ -247,6 +252,8 @@ void LocalPlanner::smoothHistogram() {
 	int winWidthRight = 0;
 	float sumOfDensity = 0.0;
 
+
+	std::unique_lock<std::mutex> lck(mtxHistSectors);
 	for (int sec = 0; sec < HIST_SECTORS; sec++) {
 
 		/// set default width
@@ -264,6 +271,7 @@ void LocalPlanner::smoothHistogram() {
 			histSectors.at(sec) = sumOfDensity / 7;
 		}
 	}
+	lck.unlock();
 }
 
 void LocalPlanner::findFreeSectors() {
@@ -272,6 +280,7 @@ void LocalPlanner::findFreeSectors() {
 
 	bool needToHigherThreshold = true;
 
+	std::unique_lock<std::mutex> lck(mtxHistSectors);
 	for (int thresholdIndex = 0; thresholdIndex < 5; thresholdIndex++) {
 		for (int sec = 0; sec < HIST_SECTORS; sec++) {
 
@@ -284,6 +293,7 @@ void LocalPlanner::findFreeSectors() {
 			break;
 		}
 	}
+	lck.unlock();
 	cout << "Wolne sektory:" << endl;
 	for (int i = 0; i < freeSectors.size(); i++) {
 		cout << "Free to go: " << freeSectors.at(i) * HIST_ALPHA << " "
@@ -386,3 +396,9 @@ void LocalPlanner::stopThread() {
 	}
 }
 
+std::vector<float> LocalPlanner::getVecFieldHist(){
+	std::unique_lock<std::mutex> lck(mtxHistSectors);
+	std::vector<float> ret = histSectors;
+	lck.unlock();
+	return ret;
+}

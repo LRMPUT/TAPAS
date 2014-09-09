@@ -76,6 +76,35 @@ void Viewer::drawConstraintsMap(){
 	//cout << "End drawConstraintsMap()" << endl;
 }
 
+void Viewer::drawVecFieldHist(){
+	if(!posImuMapCenter.empty() && !vecFieldHist.empty()){
+		glPushMatrix();
+		multCurMatrix(posImuMapCenter);
+		multCurMatrix(imuOrigGlobal.inv());
+
+		int numSect = vecFieldHist.size();
+		float alpha = (float)360/numSect;
+		float startAngle = 0;
+
+		GLUquadricObj *quadric=gluNewQuadric();
+		gluQuadricNormals(quadric, GLU_SMOOTH);
+
+		for(int s = 0; s < numSect; s++){
+			glColor4f(1.0, 1.0, 0.0, max(1.0 - vecFieldHist[s]/10, 0.0));
+			gluPartialDisk(quadric,
+							1000,
+							1500,
+							30,
+							30,
+							startAngle + s*alpha,
+							alpha);
+		}
+
+		gluDeleteQuadric(quadric);
+
+		glPopMatrix();
+	}
+}
 
 void Viewer::multCurMatrix(cv::Mat trans){
 	glMultTransposeMatrixf((float*)trans.data);
@@ -148,6 +177,7 @@ void Viewer::draw()
 	drawRobot();
 	drawPointCloud();
 	drawConstraintsMap();
+	drawVecFieldHist();
 }
 
 void Viewer::init()
@@ -178,6 +208,11 @@ void Viewer::updateRobotPos(cv::Mat newRobotPos){
 
 void Viewer::updateConstraintsMap(cv::Mat newConstraintsMap){
 	constraintsMap = newConstraintsMap;
+}
+
+
+void Viewer::updateVecFieldHist(std::vector<float> newVecFieldHist){
+	vecFieldHist = newVecFieldHist;
 }
 
 /*void Viewer::updateCameraOrigImu(cv::Mat newCameraOrigImu){
