@@ -23,9 +23,7 @@ Robot::Robot(boost::filesystem::path settingsFile) {
 	TiXmlElement* pMovementConstraints = pRobot->FirstChildElement("MovementConstraints");
 	movementConstraints = new MovementConstraints(this, pMovementConstraints);
 
-	readPositionEstimationSettings(pRobot);
-
-	positionEstimation = new PositionEstimation(this, positionEstimationParams);
+	positionEstimation = new PositionEstimation(this, pRobot);
 	globalPlanner = new GlobalPlanner(this, pRobot);
 
 	startTime = std::chrono::high_resolution_clock::now();
@@ -43,20 +41,6 @@ Robot::~Robot() {
 	//positionEstimation.stopThread();
 	cout << "End ~Robot()" << endl;
 }
-
-
-void Robot::readPositionEstimationSettings(TiXmlElement* settings)
-{
-	TiXmlElement* pPositionEstimation = settings->FirstChildElement("PositionEstimation");
-	if (pPositionEstimation->QueryIntAttribute("runThread", &positionEstimationParams.runThread)
-			!= TIXML_SUCCESS) {
-		throw "Bad settings file - wrong value for positionEstimationThread";
-	}
-	printf("positionEstimationThread : %d\n", positionEstimationParams.runThread);
-}
-
-
-
 
 
 void Robot::homologation(){

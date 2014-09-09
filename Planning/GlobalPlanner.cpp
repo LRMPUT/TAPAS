@@ -36,10 +36,9 @@ GlobalPlanner::GlobalPlanner(Robot* irobot, TiXmlElement* settings) :
 		robot(irobot), robotDrive1(NULL), robotDrive2(NULL), startOperate(false) {
 	cout << "GlobalPlanner()" << endl;
 
-	TiXmlElement* pGlobalPlanner;
-	pGlobalPlanner = settings->FirstChildElement("GlobalPlanner");
 
-	readSettings(pGlobalPlanner);
+
+	readSettings(settings);
 	globalPlannerThread = std::thread(&GlobalPlanner::run, this);
 
 	localPlanner = new LocalPlanner(robot, this, settings);
@@ -56,26 +55,29 @@ GlobalPlanner::~GlobalPlanner() {
 
 void GlobalPlanner::readSettings(TiXmlElement* settings)
 {
-	if (settings->QueryIntAttribute("runThread", &globalPlannerParams.runThread)
+	TiXmlElement* pGlobalPlanner;
+	pGlobalPlanner = settings->FirstChildElement("GlobalPlanner");
+
+	if (pGlobalPlanner->QueryIntAttribute("runThread", &globalPlannerParams.runThread)
 			!= TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner Thread";
 	}
-	if (settings->QueryIntAttribute("runHomologation", &globalPlannerParams.runHomologation)
+	if (pGlobalPlanner->QueryIntAttribute("runHomologation", &globalPlannerParams.runHomologation)
 			!= TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner runHomologation";
 	}
 
-	if (settings->QueryStringAttribute("mapFile", &globalPlannerParams.mapFile)
+	if (pGlobalPlanner->QueryStringAttribute("mapFile", &globalPlannerParams.mapFile)
 			!= TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner mapFile";
 	}
 
-	if (settings->QueryDoubleAttribute("latitude",
+	if (pGlobalPlanner->QueryDoubleAttribute("latitude",
 			&globalPlannerParams.latitude) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner latitude";
 	}
 
-	if (settings->QueryDoubleAttribute("longitude",
+	if (pGlobalPlanner->QueryDoubleAttribute("longitude",
 			&globalPlannerParams.longitude) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner longitude";
 	}
@@ -108,8 +110,10 @@ void GlobalPlanner::run() {
 		const char *cstr = globalPlannerParams.mapFile.c_str();
 		readOpenStreetMap(cstr);
 
-		setGoal(robot->getPosX(globalPlannerParams.longitude),
-				robot->getPosY(globalPlannerParams.latitude));
+		double lon = GPS::decimal2Nmea(globalPlannerParams.longitude);
+		double lat = GPS::decimal2Nmea(globalPlannerParams.latitude);
+		setGoal(robot->getPosX(lon),
+				robot->getPosY(lat));
 
 		//localPlanner->startLocalPlanner();
 	}
@@ -119,6 +123,9 @@ void GlobalPlanner::run() {
 
 			updateRobotPosition();
 			findClosestStartingEdge(robotX, robotY);
+
+
+
 
 			computeGlobalPlan();
 //			chooseNextSubGoal();
@@ -328,9 +335,12 @@ void GlobalPlanner::readOpenStreetMap(const char *mapName) {
 			char *end;
 			idConversion.insert(std::make_pair(strtol(pId, &end, 10), i));
 
+
+			double lon = GPS::decimal2Nmea(atof(pLon)*100);
+			double lat = GPS::decimal2Nmea(atof(pLat)*100);
 			nodePosition.push_back(
-					std::make_pair(robot->getPosX(atof(pLat)*100),
-							robot->getPosY(atof(pLon)*100)));
+					std::make_pair(robot->getPosX(lon),
+							robot->getPosY(lat)));
 		}
 		i++;
 	}
@@ -350,7 +360,7 @@ void GlobalPlanner::readOpenStreetMap(const char *mapName) {
 		for (; pNode; pNode = pNode->NextSiblingElement("tag")) {
 			const char *key = pNode->Attribute("k");
 			const char *value = pNode->Attribute("v");
-			if (strstr(key, "foot") || strstr(value, "foot")) {
+			if (strstr(key, "foot") || strstr(value, "foot") || strstr(value, "service")) {
 				footWay = true;
 				break;
 			}

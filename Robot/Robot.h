@@ -49,7 +49,6 @@ class Robot {
 
 
 	// Class containing information about our position estimation from sensors
-	PositionEstimation::Parameters positionEstimationParams;
 	PositionEstimation* positionEstimation;
 
 	// Class responsible for planning

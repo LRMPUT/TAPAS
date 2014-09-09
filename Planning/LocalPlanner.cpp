@@ -17,10 +17,9 @@ LocalPlanner::LocalPlanner(Robot* irobot, GlobalPlanner* planer,
 		robot(irobot), globalPlanner(planer), startOperate(false) {
 	cout << "LocalPlanner()" << endl;
 
-	TiXmlElement* pLocalPlanner;
-	pLocalPlanner = settings->FirstChildElement("LocalPlanner");
 
-	readSettings(pLocalPlanner);
+
+	readSettings(settings);
 	localPlannerThread = std::thread(&LocalPlanner::run, this);
 
 	cout << "End ~LocalPlanner()" << endl;
@@ -34,36 +33,39 @@ LocalPlanner::~LocalPlanner() {
 
 void LocalPlanner::readSettings(TiXmlElement* settings) {
 
-	if (settings->QueryIntAttribute("runThread", &localPlannerParams.runThread)
+	TiXmlElement* pLocalPlanner;
+	pLocalPlanner = settings->FirstChildElement("LocalPlanner");
+
+	if (pLocalPlanner->QueryIntAttribute("runThread", &localPlannerParams.runThread)
 			!= TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for localPlanner runThread";
 	}
 
-	if (settings->QueryIntAttribute("runThread", &localPlannerParams.avoidObstacles)
+	if (pLocalPlanner->QueryIntAttribute("runThread", &localPlannerParams.avoidObstacles)
 			!= TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for localPlanner avoidObstacles";
 	}
 
-	if (settings->QueryIntAttribute("VFH_HistResolution",
+	if (pLocalPlanner->QueryIntAttribute("VFH_HistResolution",
 			&localPlannerParams.histResolution) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for localPlanner VFH_HistResolution";
 	}
 
-	if (settings->QueryFloatAttribute("VFH_Threshold",
+	if (pLocalPlanner->QueryFloatAttribute("VFH_Threshold",
 			&localPlannerParams.threshold) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for localPlanner VFH_Threshold";
 	}
-	if (settings->QueryFloatAttribute("VFH_SteeringMargin",
+	if (pLocalPlanner->QueryFloatAttribute("VFH_SteeringMargin",
 			&localPlannerParams.steeringMargin) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for VFH_SteeringMargin";
 	}
 
-	printf("LocalPlanner runThread: %d\n", localPlannerParams.runThread);
-	printf("LocalPlanner avoidObstacles: %d\n", localPlannerParams.avoidObstacles);
-	printf("LocalPlanner VFH_HistResolution: %d\n",
+	printf("LocalPlanner -- runThread: %d\n", localPlannerParams.runThread);
+	printf("LocalPlanner -- avoidObstacles: %d\n", localPlannerParams.avoidObstacles);
+	printf("LocalPlanner -- VFH_HistResolution: %d\n",
 			localPlannerParams.histResolution);
-	printf("LocalPlanner VFH_Threshold: %f\n", localPlannerParams.threshold);
-	printf("LocalPlanner VFH_SteeringMargin: %f\n",
+	printf("LocalPlanner -- VFH_Threshold: %f\n", localPlannerParams.threshold);
+	printf("LocalPlanner -- VFH_SteeringMargin: %f\n",
 			localPlannerParams.steeringMargin);
 }
 

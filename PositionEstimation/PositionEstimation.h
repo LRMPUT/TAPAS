@@ -16,6 +16,9 @@
 #include "Util/ExtendedKalmanFilter.h"
 #include <thread>
 
+//TinyXML
+#include <tinyxml.h>
+
 #include <chrono>
 #include <iostream>
 
@@ -28,6 +31,15 @@ class PositionEstimation {
 	friend class Debug;
 
 private:
+	struct Parameters {
+		int runThread;
+		int encoderTicksPerRev;
+		double wheelDiameter;
+		double wheelBase;
+	};
+
+	Parameters parameters;
+
 	// unique pointer to the PositionEstimation thread
 	std::thread estimationThread;
 	bool runThread;
@@ -53,21 +65,15 @@ private:
 	//Parent class Robot
 	Robot* robot;
 
-	double ENCODER_TICK_PER_REV;
-	double WHEEL_DIAMETER;
-	double WHEEL_BASE;
-
 	// The cycle of the position estimation thread
 	void run();
 
 public:
-	struct Parameters {
-		int runThread;
-	};
 
-	PositionEstimation(Robot* irobot, PositionEstimation::Parameters parameters);
+	PositionEstimation(Robot* irobot, TiXmlElement* settings);
 	virtual ~PositionEstimation();
 
+	void readSettings(TiXmlElement* settings);
 
 	// Stopping the position estimation thread
 	void stopThread();

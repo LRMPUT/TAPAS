@@ -19,11 +19,14 @@
 
 	<!--
 		runThread: 		1 - module ON, 0 - module OFF
+		encoderTickPerRev:	number of encoder ticks per one revolution
+		wheelDiameter:		wheel diameter in meters
+		wheelBase:		wheel base in meters
 		GPSCovariance:	
 		IMUCovariance:
 		EncoderCovariance:	
 	-->
-	<PositionEstimation runThread="1"/>
+	<PositionEstimation runThread="1" encoderTicksPerRev="300" wheelDiameter="0.188" wheelBase="0.452"/>
 
 	<!--
 		Jan Wietrzykowski is lazy and does not use the comments ;d
