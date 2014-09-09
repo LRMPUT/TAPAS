@@ -135,34 +135,44 @@ void Constraints::updateGlobalPlanView(){
 	map.fill(Qt::white);
 
 	double scaleX = (globalPlan.maxX - globalPlan.minX)/ui->planningGlobalViewLabel->width();
-	double scaleY = (globalPlan.maxY - globalPlan.minY)/ui->planningGlobalViewLabel->height();
-	printf("Scales: %f %f\n", scaleX, scaleY);
+	double scaleY = (globalPlan.maxY - globalPlan.minY)
+			/ ui->planningGlobalViewLabel->height();
+	printf("Scales: %f %f and edges size: %d, curEdge : %d\n", scaleX, scaleY,
+			globalPlan.edges.size(), globalPlan.curEdge);
 	QPainter painter(&map);
-	printf("Edges size: %d \n", globalPlan.edges.size());
-	for(int e = 0; e < globalPlan.edges.size(); e++){
-		int x1 = (globalPlan.edges[e].x1 - globalPlan.minX)/scaleX;
-		int y1 = (globalPlan.edges[e].y1 - globalPlan.minY)/scaleY;
-		int x2 = (globalPlan.edges[e].x2 - globalPlan.minX)/scaleX;
-		int y2 = (globalPlan.edges[e].y2 - globalPlan.minY)/scaleY;
-		if(globalPlan.edges[e].isChoosen == true){
-			painter.setPen(Qt::red);
-		}
-		else if(e == globalPlan.curEdge){
-			painter.setPen(Qt::green);
+
+	std::set<GlobalPlanner::Edge>::iterator it = globalPlan.edges.begin();
+	int e=0;
+	for(; it != globalPlan.edges.end(); ++it,e++){
+		int x1 = (it->x1 - globalPlan.minX)/scaleX;
+		int y1 = (it->y1 - globalPlan.minY)/scaleY;
+		int x2 = (it->x2 - globalPlan.minX)/scaleX;
+		int y2 = (it->y2 - globalPlan.minY)/scaleY;
+		if (e == globalPlan.curEdge) {
+			printf("Drawing current edge !!! Number: %d || %d %d %d %d\n", e, x1, y1, x2, y2);
+			QPen myPen(Qt::red, 7, Qt::SolidLine);
+			painter.setPen(myPen);
+		} else if (it->isChosen == true) {
+			QPen myPen(Qt::green, 2, Qt::SolidLine);
+			painter.setPen(myPen);
 		}
 		else{
-			painter.setPen(Qt::blue);
+			QPen myPen(Qt::blue, 2, Qt::SolidLine);
+			painter.setPen(myPen);
 		}
 //		printf("drawLine: %d %d %d %d \n", x1, y1, x2, y2);
 		painter.drawLine(x1, y1, x2, y2);
-		painter.setPen(Qt::black);
+		QPen myPen(Qt::black, 2, Qt::SolidLine);
+		painter.setPen(myPen);
 		painter.drawEllipse(x1, y1, 2, 2);
 		painter.drawEllipse(x2, y2, 2, 2);
 	}
 	painter.setPen(Qt::green);
+	printf("Drawing robot's coordinates: %f %f\n",globalPlan.robotX,globalPlan.robotY);
 	int rX = (globalPlan.robotX - globalPlan.minX)/scaleX;
 	int rY = (globalPlan.robotY - globalPlan.minY)/scaleY;
-	painter.drawEllipse(rX, rY, 2, 2);
+	painter.setBrush(Qt::green);
+	painter.drawEllipse(rX, rY, 6, 6);
 	painter.end();
 	ui->planningGlobalViewLabel->setPixmap(map);
 	ui->planningGlobalViewLabel->update();

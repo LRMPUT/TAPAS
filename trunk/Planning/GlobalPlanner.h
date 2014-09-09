@@ -48,19 +48,27 @@ public:
 
 	struct Edge{
 		float x1, y1, x2, y2;
-		bool isChoosen;
+		bool isChosen;
 		Edge() {}
-		Edge(float ix1, float iy1, float ix2, float iy2, float iisChoosen):
+		Edge(float ix1, float iy1, float ix2, float iy2, float iisChosen):
 			x1(ix1),
 			y1(iy1),
 			x2(ix2),
 			y2(iy2),
-			isChoosen(iisChoosen)
+			isChosen(iisChosen)
 		{}
+		bool operator<(const Edge& rhs) const
+		{
+			if (x1 < x2)
+				return true;
+			else if (x1 == x2 && y1 < y2)
+				return true;
+			return false;
+		}
 	};
 
 	struct GlobalPlanInfo {
-		std::vector<GlobalPlanner::Edge> edges;
+		std::set<GlobalPlanner::Edge> edges;
 		float minX, maxX;
 		float minY, maxY;
 		float robotX, robotY;
@@ -85,7 +93,6 @@ private:
 
 	bool startOperate;
 
-	bool runThread;
 	std::thread globalPlannerThread;
 
 

@@ -87,7 +87,6 @@ cv::Mat ExtendedKalmanFilter::correctGPS(cv::Mat gpsMeasurement) {
 			* (this->Hgps * this->P_apriori * this->Hgps.t() + this->Rgps).inv();
 	this->x_aposteriori = this->x_apriori
 			+ K * (gpsMeasurement - this->Hgps * this->x_apriori);
-	std::cout<<"Where is the issue?"<<std::endl;
 	this->P_aposteriori = (this->I - K * this->Hgps) * this->P_apriori;
 	return this->x_aposteriori;
 }
