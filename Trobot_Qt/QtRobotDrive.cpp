@@ -35,7 +35,7 @@ QtRobotDrive::QtRobotDrive(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug)
 	QObject::connect(ui->robotDriveSteeringScrollBar, SIGNAL(valueChanged(int)), this, SLOT(steeringChanged(int)));
 	QObject::connect(ui->robotDriveThrottleScrollBar, SIGNAL(valueChanged(int)), this, SLOT(throttleChanged(int)));
 	QObject::connect(ui->robotDriveThrottleStopButton, SIGNAL(clicked()), this, SLOT(stop()));
-	QObject::connect(&(this->refreshTimer), SIGNAL(timeout()), this, SLOT(updateStatus()));
+	QObject::connect(&(this->refreshTimer), SIGNAL(timeout()), this, SLOT(updateState()));
 	refreshTimer.setInterval(100);
 	refreshTimer.start();
 	setButtonsEnabled(false);

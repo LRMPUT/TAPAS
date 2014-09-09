@@ -21,11 +21,11 @@
 
 #include <chrono>
 #include <iostream>
+#include <mutex>
 
 class Robot;
 class Debug;
 
-//#define POSITION_ESTIMATION_DEBUG
 
 class PositionEstimation {
 	friend class Debug;
@@ -33,6 +33,7 @@ class PositionEstimation {
 private:
 	struct Parameters {
 		int runThread;
+		int debug;
 		int encoderTicksPerRev;
 		double wheelDiameter;
 		double wheelBase;
@@ -42,7 +43,8 @@ private:
 
 	// unique pointer to the PositionEstimation thread
 	std::thread estimationThread;
-	bool runThread;
+	std::mutex positionEstimationMtx;
+
 
 	// Kalman filter to gather position information
 	ExtendedKalmanFilter *EKF;

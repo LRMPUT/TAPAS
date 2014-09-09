@@ -17,7 +17,7 @@ using namespace cv;
 using namespace std;
 
 PositionEstimation::PositionEstimation(Robot* irobot, TiXmlElement* settings) :
-		robot(irobot), imu(irobot), gps(irobot), encoders(irobot), runThread(false) {
+		robot(irobot), imu(irobot), gps(irobot), encoders(irobot) {
 	std::cout << "PositionEstimation::PositionEstimation" << std::endl;
 
 	readSettings(settings);
@@ -31,14 +31,12 @@ PositionEstimation::PositionEstimation(Robot* irobot, TiXmlElement* settings) :
 	 */
 	kalmanSetup();
 
-
 	lastUpdateTimestamp = std::chrono::high_resolution_clock::now();
 	lastEncoderTimestamp = std::chrono::high_resolution_clock::now();
 	lastGpsTimestamp = std::chrono::high_resolution_clock::now();
 	lastImuTimestamp = std::chrono::high_resolution_clock::now();
 
-	if(runThread)
-		estimationThread = std::thread(&PositionEstimation::run, this);
+	estimationThread = std::thread(&PositionEstimation::run, this);
 
 	std::cout << "End PositionEstimation::PositionEstimation" << std::endl;
 }
@@ -52,12 +50,16 @@ PositionEstimation::~PositionEstimation() {
 	cout << "End ~PositionEstimation()" << endl;
 }
 
-void PositionEstimation::readSettings(TiXmlElement* settings)
-{
-	TiXmlElement* pPositionEstimation = settings->FirstChildElement("PositionEstimation");
-	if (pPositionEstimation->QueryIntAttribute("runThread", &parameters.runThread)
-			!= TIXML_SUCCESS) {
+void PositionEstimation::readSettings(TiXmlElement* settings) {
+	TiXmlElement* pPositionEstimation = settings->FirstChildElement(
+			"PositionEstimation");
+	if (pPositionEstimation->QueryIntAttribute("runThread",
+			&parameters.runThread) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for position estimation Thread";
+	}
+	if (pPositionEstimation->QueryIntAttribute("debug", &parameters.debug)
+			!= TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for position estimation debug";
 	}
 	if (pPositionEstimation->QueryIntAttribute("encoderTicksPerRev",
 			&parameters.encoderTicksPerRev) != TIXML_SUCCESS) {
@@ -72,25 +74,27 @@ void PositionEstimation::readSettings(TiXmlElement* settings)
 		throw "Bad settings file - wrong value for positionEstimation wheel base";
 	}
 	printf("positionEstimation -- runThread: %d\n", parameters.runThread);
-	printf("positionEstimation -- encoderTicksPerRev : %d\n", parameters.encoderTicksPerRev);
-	printf("positionEstimation -- wheelDiameter : %f\n", parameters.wheelDiameter);
+	printf("positionEstimation -- debug: %d\n", parameters.debug);
+	printf("positionEstimation -- encoderTicksPerRev : %d\n",
+			parameters.encoderTicksPerRev);
+	printf("positionEstimation -- wheelDiameter : %f\n",
+			parameters.wheelDiameter);
 	printf("positionEstimation -- wheelBase : %f\n", parameters.wheelBase);
 }
 
-
 void PositionEstimation::run() {
-	if (runThread)
-	{
-		while(!gps.isOpen()) usleep(200);
+	if (parameters.runThread) {
+		while (!gps.isOpen())
+			usleep(200);
 		while ((gps.getFixStatus() == 1 || (fabs(gps.getLat()) < 0.00001)
-				|| (fabs(gps.getLon()) < 0.000001)) && runThread) {
+				|| (fabs(gps.getLon()) < 0.000001)) && parameters.runThread) {
 			usleep(200);
 		};
 
 		gps.setZeroXY(gps.getLat(), gps.getLon());
 	}
 	struct timeval start, end;
-	while (runThread) {
+	while (parameters.runThread) {
 		gettimeofday(&start, NULL);
 
 		KalmanLoop();
@@ -108,17 +112,17 @@ void PositionEstimation::run() {
 
 		if (mtime == 0)
 			mtime = 1;
-#ifdef POSITION_ESTIMATION_DEBUG
-		printf("PE: X:%5.5f \tY:%5.5f \tS:%5.5f \tA:%5.5f\n",
-				state.at<double>(0), state.at<double>(1), state.at<double>(2),
-				state.at<double>(3));
-#endif
+		if (parameters.debug == 1) {
+			printf("PE: X:%5.5f \tY:%5.5f \tS:%5.5f \tA:%5.5f\n",
+					state.at<double>(0), state.at<double>(1),
+					state.at<double>(2), state.at<double>(3));
+		}
 		//cout << "PE:: framerate: " << 1000.0 / mtime << endl;
 	}
 }
 
 void PositionEstimation::stopThread() {
-	runThread = false;
+	parameters.runThread = false;
 	if (estimationThread.joinable()) {
 		estimationThread.join();
 	}
@@ -133,7 +137,6 @@ void PositionEstimation::kalmanSetup() {
 
 void PositionEstimation::KalmanLoop() {
 
-
 	// Local variables
 	std::chrono::high_resolution_clock::time_point encoderTimestamp,
 			gpsTimestamp, imuTimestamp;
@@ -146,15 +149,15 @@ void PositionEstimation::KalmanLoop() {
 							- lastUpdateTimestamp).count();
 	lastUpdateTimestamp = std::chrono::high_resolution_clock::now();
 
-#ifdef POSITION_ESTIMATION_DEBUG
-	printf("Kalman Loop --> predictTime: %f\n", predictTime);
-#endif
+	if (parameters.debug == 1) {
+		printf("Kalman Loop --> predictTime: %f\n", predictTime);
+	}
 	// Check if GPS is online
 //	printf("Checking GPS\n");
 	if (isGpsOpen() && gps.getFixStatus() > 1) {
-#ifdef POSITION_ESTIMATION_DEBUG
-		printf("GPS is online and will be used in update!\n");
-#endif
+		if (parameters.debug == 1) {
+			printf("GPS is online and will be used in update!\n");
+		}
 		// Get the GPS data if GPS is available
 		gpsTimestamp = this->gps.getTimestamp();
 		float gps_dt = std::chrono::duration_cast < std::chrono::milliseconds
@@ -168,15 +171,18 @@ void PositionEstimation::KalmanLoop() {
 			// Correct with GPS
 			lastGpsTimestamp = gpsTimestamp;
 			Mat gps_data = Mat(2, 1, CV_64FC1);
-			gps_data.at<double>(0, 0) = this->gps.getPosX()/1000;
-			gps_data.at<double>(1, 0) = this->gps.getPosY()/1000;
-#ifdef POSITION_ESTIMATION_DEBUG
-			printf("\n\n GPS : %f %f\n", gps.getLat(), gps.getLon());
-			printf("GPS pos : %f %f\n", gps.getPosX()/1000, gps.getPosY()/1000);
-			printf("Gps update --> values %f %f\n", gps_data.at<double>(0, 0),
-					gps_data.at<double>(1, 0));
-#endif
+			gps_data.at<double>(0, 0) = this->gps.getPosX() / 1000;
+			gps_data.at<double>(1, 0) = this->gps.getPosY() / 1000;
+			if (parameters.debug == 1) {
+				printf("\n\n GPS : %f %f\n", gps.getLat(), gps.getLon());
+				printf("GPS pos : %f %f\n", gps.getPosX() / 1000,
+						gps.getPosY() / 1000);
+				printf("Gps update --> values %f %f\n",
+						gps_data.at<double>(0, 0), gps_data.at<double>(1, 0));
+			}
+			std::unique_lock<std::mutex> gpsLck(positionEstimationMtx);
 			state = EKF->correctGPS(gps_data);
+			gpsLck.unlock();
 
 		}
 
@@ -185,14 +191,14 @@ void PositionEstimation::KalmanLoop() {
 	// Check if encoder is online
 //	printf("Checking encoder\n");
 	if (isEncodersOpen()) {
-#ifdef POSITION_ESTIMATION_DEBUG
-		printf("Encoders are open and will be used in update!\n");
-#endif
+		if (parameters.debug == 1) {
+			printf("Encoders are open and will be used in update!\n");
+		}
 		cv::Mat enc_data = this->getEncoderData(encoderTimestamp);
-#ifdef POSITION_ESTIMATION_DEBUG
-		printf("Encoder data: %d %d\n", enc_data.at<int>(0) - lastLeft,
-							enc_data.at<int>(1) - lastRight);
-#endif
+		if (parameters.debug == 1) {
+			printf("Encoder data: %d %d\n", enc_data.at<int>(0) - lastLeft,
+					enc_data.at<int>(1) - lastRight);
+		}
 		float encoder_dt = std::chrono::duration_cast
 				< std::chrono::milliseconds
 				> (encoderTimestamp - lastEncoderTimestamp).count();
@@ -205,10 +211,11 @@ void PositionEstimation::KalmanLoop() {
 				EKF->predict(0);
 			}
 
-#ifdef POSITION_ESTIMATION_DEBUG
-			printf("Encoder data: %d %d %f\n", enc_data.at<int>(0) - lastLeft,
-					enc_data.at<int>(1) - lastRight, encoder_dt);
-#endif
+			if (parameters.debug == 1) {
+				printf("Encoder data: %d %d %f\n",
+						enc_data.at<int>(0) - lastLeft,
+						enc_data.at<int>(1) - lastRight, encoder_dt);
+			}
 			lastEncoderTimestamp = encoderTimestamp;
 
 			if (encoderStart) {
@@ -217,30 +224,36 @@ void PositionEstimation::KalmanLoop() {
 				encoderStart = 0;
 			}
 
-#ifdef POSITION_ESTIMATION_DEBUG
-			printf("Bug test: %f %f\n", parameters.encoderTicksPerRev, parameters.wheelDiameter);
-#endif
+			if (parameters.debug == 1) {
+				printf("Bug test: %d %f\n", parameters.encoderTicksPerRev,
+						parameters.wheelDiameter);
+			}
 
 			float left_encoder = ((float) (enc_data.at<int>(0) - lastLeft))
-					/ parameters.encoderTicksPerRev * M_PI * parameters.wheelDiameter;
+					/ parameters.encoderTicksPerRev * M_PI
+					* parameters.wheelDiameter;
 			float right_encoder = ((float) (enc_data.at<int>(1) - lastRight))
-					/ parameters.encoderTicksPerRev * M_PI * parameters.wheelDiameter;
+					/ parameters.encoderTicksPerRev * M_PI
+					* parameters.wheelDiameter;
 
-#ifdef POSITION_ESTIMATION_DEBUG
-			printf("Encoder left/right: %f %f\n", left_encoder, right_encoder);
-#endif
+			if (parameters.debug == 1) {
+				printf("Encoder left/right: %f %f\n", left_encoder,
+						right_encoder);
+			}
 
 			float distance = (left_encoder + right_encoder) / 2.0;
 
 			Mat speed(1, 1, CV_64FC1);
 			speed.at<double>(0) = (double) (distance / encoder_dt * 1000); // Is in seconds or ms ?
 
-#ifdef POSITION_ESTIMATION_DEBUG
-			printf("Encoder distance: %.10f\n", distance);
+			if (parameters.debug == 1) {
+				printf("Encoder distance: %.10f\n", distance);
 //				printf("Encoder encoder_dt: %.10f\n", encoder_dt );
-			printf("Encoder speed update: %f\n", distance / encoder_dt);
-#endif
+				printf("Encoder speed update: %f\n", distance / encoder_dt);
+			}
+			std::unique_lock<std::mutex> encoderLck(positionEstimationMtx);
 			state = EKF->correctEncoder(speed);
+			encoderLck.unlock();
 
 			lastLeft = enc_data.at<int>(0);
 			lastRight = enc_data.at<int>(1);
@@ -251,14 +264,14 @@ void PositionEstimation::KalmanLoop() {
 	// Checking if info from IMU is available
 //	printf("Checking IMU\n");
 	if (isImuOpen()) {
-#ifdef POSITION_ESTIMATION_DEBUG
-		printf("IMU is online and will be used\n");
-#endif
+		if (parameters.debug == 1) {
+			printf("IMU is online and will be used\n");
+		}
 		cv::Mat imuData = this->imu.getData(imuTimestamp);
 
-#ifdef POSITION_ESTIMATION_DEBUG
-		printf("IMU data : %f\n", imuData.at<float>(11));
-#endif
+		if (parameters.debug == 1) {
+			printf("IMU data : %f\n", imuData.at<float>(11));
+		}
 		float imu_dt = std::chrono::duration_cast < std::chrono::milliseconds
 				> (imuTimestamp - lastImuTimestamp).count();
 
@@ -284,15 +297,20 @@ void PositionEstimation::KalmanLoop() {
 			orientation.at<double>(0) = (double) (imuData.at<float>(11)
 					- imuZeroAngle) * M_PI / 180.0;
 //			printf("IMU new update: %f\n", imuData.at<float>(11));
+
+			std::unique_lock<std::mutex> imuLck(positionEstimationMtx);
 			state = EKF->correctIMU(orientation);
+			imuLck.unlock();
 		}
 	}
 }
 
 void PositionEstimation::setZeroPosition() {
-	state.at<float>(0) = 0.0;
-	state.at<float>(1) = 0.0;
-	state.at<float>(2) = 0.0;
+	std::unique_lock<std::mutex> zeroLck(positionEstimationMtx);
+	state.at<double>(0) = 0.0;
+	state.at<double>(1) = 0.0;
+	state.at<double>(2) = 0.0;
+	zeroLck.unlock();
 
 	lastLeft = 0;
 	lastRight = 0;
@@ -306,8 +324,7 @@ void PositionEstimation::setZeroPosition() {
 //	KF->statePost = KF->statePre = Mat::zeros(2,1, CV_32F);
 }
 
-bool PositionEstimation::isSetZero()
-{
+bool PositionEstimation::isSetZero() {
 	return gps.getIsSetZero();
 }
 
@@ -325,9 +342,13 @@ cv::Mat PositionEstimation::getImuData(
 }
 
 //----------------------ACCESS TO COMPUTED DATA
-//CV_32SC1 3x1: x, y, fi
+//CV_64FC1 3x1: x, y, fi
 const cv::Mat PositionEstimation::getEstimatedPosition() {
-	return state;
+	std::unique_lock<std::mutex> pe(positionEstimationMtx);
+	cv::Mat stateCpy = cv::Mat(3,1,CV_64FC1);
+	stateCpy = state.clone();
+	pe.unlock();
+	return stateCpy;
 }
 
 //----------------------MENAGMENT OF PositionEstimation DEVICES

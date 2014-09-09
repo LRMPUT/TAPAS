@@ -133,7 +133,7 @@ double GPS::getPosX(){
 
 double GPS::getPosX(double latitude)
 {
-    cout<< "GPS: " << StartPosLat << " " << StartPosLon << " vs " << latitude <<endl;
+//    cout<< "GPS: " << StartPosLat << " " << StartPosLon << " vs 1st: " << latitude <<endl;
 	return (nmea_ndeg2radian(latitude) - nmea_ndeg2radian(StartPosLat))*Radius;
 }
 
@@ -151,6 +151,7 @@ double GPS::getPosY(){
 
 double GPS::getPosY(double longitude)
 {
+//	cout<< "GPS: " << StartPosLat << " " << StartPosLon << " vs 2nd:" << longitude <<endl;
 	return (nmea_ndeg2radian(longitude) - nmea_ndeg2radian(StartPosLon))*Radius;
 }
 
