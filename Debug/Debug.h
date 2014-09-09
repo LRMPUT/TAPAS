@@ -70,6 +70,8 @@ public:
 
 	GlobalPlanner::GlobalPlanInfo getGlobalPlan();
 
+	std::vector<float> getVecFieldHist();
+
 	//----------------------ACCESS TO SETTINGS
 	void getTransformationMatrices(cv::Mat& retImuOrigGlobal,
 									cv::Mat& retCameraOrigLaser,

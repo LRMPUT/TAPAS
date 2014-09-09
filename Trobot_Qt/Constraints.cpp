@@ -79,6 +79,7 @@ void Constraints::updateMapView(){
 	Mat curPosImuMapCenter;
 	Mat pointCloudImuMapCenter = debug->getPointCloudImu(curPosImuMapCenter);
 	Mat constraintsMap = debug->getMovementConstraints();
+	vector<float> vecFieldHist = debug->getVecFieldHist();
 
 	stringstream tmp;
 	tmp.width(4);
@@ -95,6 +96,9 @@ void Constraints::updateMapView(){
 	//cout << "curPosImuMapCenter.size() = " << curPosImuMapCenter.size() << endl;
 	if(!pointCloudImuMapCenter.empty()){
 		viewer->updatePointCloud(pointCloudImuMapCenter);
+	}
+	if(!vecFieldHist.empty()){
+		viewer->updateVecFieldHist(vecFieldHist);
 	}
 	if(!curPosImuMapCenter.empty()){
 		//cout << "Updating constraintsMap" << endl;

@@ -212,6 +212,10 @@ GlobalPlanner::GlobalPlanInfo Debug::getGlobalPlan(){
 	return robot->globalPlanner->getGlobalPlan();
 }
 
+std::vector<float> Debug::getVecFieldHist(){
+	return robot->globalPlanner->localPlanner->getVecFieldHist();
+}
+
 void Debug::getTransformationMatrices(cv::Mat& retImuOrigGlobal,
 									cv::Mat& retCameraOrigLaser,
 									cv::Mat& retCameraOrigImu)

@@ -808,7 +808,7 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 			}
 		}
 		//cout << "terrains[i].size() = " << terrains[i].size() << endl;
-		vector<Entry> newData = hierClassifiers.front()->extractEntries(images[i], terrains[i], autoRegionsOnImage);
+		vector<Entry> newData = hierClassifiers.front()->extractEntries(images[i], terrains[i], autoRegionsOnImage, maskIgnore.front());
 		for(int e = 0; e < newData.size(); e++){
 			if(mapRegionIdToLabel[i].count(assignedManualId[newData[e].imageId]) > 0){
 				newData[e].label = mapRegionIdToLabel[i][assignedManualId[newData[e].imageId]];
@@ -1233,7 +1233,7 @@ void Camera::run(){
 						tmpPointCoords.copyTo(pointCloudCamera.rowRange(0, 4));
 					}
 					cout << "Classification" << endl;
-					vector<Mat> classRes = hierClassifiers[c]->classify(cameraData[c], pointCloudCamera, mapSegments[c]);
+					vector<Mat> classRes = hierClassifiers[c]->classify(cameraData[c], pointCloudCamera, mapSegments[c], maskIgnore[c]);
 					timeEndClassification = std::chrono::high_resolution_clock::now();
 					//cout << "End classification" << endl;
 					Mat bestLabels(numRows, numCols, CV_32SC1, Scalar(0));
@@ -1348,6 +1348,7 @@ void Camera::readSettings(TiXmlElement* settings){
 	cameraMatrix.resize(numCameras);
 	distCoeffs.resize(numCameras);
 	hierClassifiers.resize(numCameras);
+	maskIgnore.resize(numCameras);
 	for(int i = 0; i < numCameras; i++){
 		if(!pPtr){
 			throw "Bad settings file - no sensor settings";
@@ -1369,7 +1370,30 @@ void Camera::readSettings(TiXmlElement* settings){
 		cameraOrigLaser[idx] = readMatrixSettings(pPtr, "position_laser", 4, 4);
 		cameraMatrix[idx] = readMatrixSettings(pPtr, "camera_matrix", 3, 3);
 		distCoeffs[idx] = readMatrixSettings(pPtr, "dist_coeffs", 1, 5);
+		maskIgnore[idx] = Mat(numRows, numCols, CV_32SC1);
 
+		TiXmlElement* pMaskIgnore = pPtr->FirstChildElement("mask_ignore");
+		if(!pMaskIgnore){
+			throw "Bad settings file - no mask_ignore";
+		}
+		TiXmlElement* pPolygon = pMaskIgnore->FirstChildElement("polygon");
+		if(!pPolygon){
+			cout << "Bad settings file - no polygon inside mask_ignore" << endl;
+			throw "Bad settings file - no polygon inside mask_ignore";
+		}
+		while(pPolygon){
+			vector<Point2i> poly;
+
+			TiXmlElement* pPt = pPolygon->FirstChildElement("pt");
+			while(pPt){
+				int x = atoi(pPt->FirstChildElement("x")->GetText());
+				int y = atoi(pPt->FirstChildElement("y")->GetText());
+				poly.push_back(Point2i(x, y));
+				pPt = pPt->NextSiblingElement("pt");
+			}
+			selectPolygonPixels(poly, 1, maskIgnore[idx]);
+			pPolygon = pPolygon->NextSiblingElement("polygon");
+		}
 
 		hierClassifiers[idx] = new HierClassifier(cameraMatrix[idx]);
 
@@ -1520,6 +1544,7 @@ cv::Mat Camera::getClassifiedImage(){
 			coloredOriginal.setTo(colors[l], sharedClassifiedImage == l);
 		}
 		ret = coloredOriginal * 0.25 + sharedOriginalImage * 0.75;
+		ret.setTo(Scalar(0, 0, 0), maskIgnore.front() != 0);
 	}
 	lck.unlock();
 
