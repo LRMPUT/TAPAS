@@ -67,6 +67,12 @@ public:
 	* @return Bool indicating if there has been a new measurement from the last read.
 	*/
 	bool getNewMeasurement();
+
+	/*
+	 * Conversion between Nmea and decimal format of latitude and longitude
+	 */
+	static double nmea2Decimal(double value);
+	static double decimal2Nmea(double value);
 	/*
 	 * @return Distance from Zero Point measured in meters, X (latitude - poludnikowo - szerokosc geograficzna).
 	 */

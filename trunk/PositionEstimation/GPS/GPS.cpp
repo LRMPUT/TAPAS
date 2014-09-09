@@ -102,9 +102,30 @@ std::chrono::high_resolution_clock::time_point GPS::getTimestamp() {
 }
 
 
+double GPS::nmea2Decimal(double value) {
+	// Example:
+	// 1527.456 is 15 degrees and 27.456 minutes in Nmea
+	// floor(value/100.0) = 15
+	// (value/100.0 - floor(value/100.0)) = 27.456
+	// 27.456 * 100.0/60.0 to achieve value in decimal format
+	// We multiply times 100.0
+	double newValue = floor(value / 100.0)
+			+ (value / 100.0 - floor(value / 100.0)) * 100.0 / 60.0;
+	return newValue * 100.0;
+}
+
+double GPS::decimal2Nmea(double value) {
+	// Similarly to previous method
+	// This time, we take anything after decimal place and convert it to minutes
+	// We multiply times 100.0
+	double newValue = floor(value / 100.0)
+			+ (value / 100.0 - floor(value / 100.0)) * 60.0 / 100.0;
+	return newValue * 100.0;
+}
+
 double GPS::getPosX(){
 	newMeasurement = false;
-	PosX = (nmea_ndeg2radian(Info.lat - StartPosLat))*Radius;
+	PosX = (nmea_ndeg2radian(Info.lat) - nmea_ndeg2radian(StartPosLat))*Radius;
 	//cout << "Angular difference X = " << Info.lon << " - " << StartPosLon << " = " <<
 	//		 nmea_ndeg2radian(Info.lon - StartPosLon) << endl;
 	return PosX;
@@ -113,29 +134,29 @@ double GPS::getPosX(){
 double GPS::getPosX(double latitude)
 {
     cout<< "GPS: " << StartPosLat << " " << StartPosLon << " vs " << latitude <<endl;
-	return (nmea_ndeg2radian(latitude - StartPosLat))*Radius;
+	return (nmea_ndeg2radian(latitude) - nmea_ndeg2radian(StartPosLat))*Radius;
 }
 
 double GPS::getPosLatitude(double Y)
 {
-	return (nmea_radian2ndeg(Y/Radius) + StartPosLat);
+	return nmea_radian2ndeg(Y/Radius + nmea_ndeg2radian(StartPosLat));
 }
 
 
 double GPS::getPosY(){
 	newMeasurement = false;
-	PosY = (nmea_ndeg2radian(Info.lon - StartPosLon))*Radius;
+	PosY = (nmea_ndeg2radian(Info.lon) - nmea_ndeg2radian(StartPosLon))*Radius;
 	return PosY;
 }
 
 double GPS::getPosY(double longitude)
 {
-	return (nmea_ndeg2radian(longitude - StartPosLon))*Radius;
+	return (nmea_ndeg2radian(longitude) - nmea_ndeg2radian(StartPosLon))*Radius;
 }
 
 double GPS::getPosLongitude(double Y)
 {
-	return (nmea_radian2ndeg(Y/Radius) + StartPosLon);
+	return nmea_radian2ndeg(Y/Radius +nmea_ndeg2radian(StartPosLon));
 }
 
 double GPS::getLat(){

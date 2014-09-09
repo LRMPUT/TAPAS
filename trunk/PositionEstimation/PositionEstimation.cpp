@@ -16,12 +16,12 @@
 using namespace cv;
 using namespace std;
 
-PositionEstimation::PositionEstimation(Robot* irobot, PositionEstimation::Parameters parameters) :
-		robot(irobot), imu(irobot), gps(irobot), encoders(irobot), runThread(parameters.runThread) {
+PositionEstimation::PositionEstimation(Robot* irobot, TiXmlElement* settings) :
+		robot(irobot), imu(irobot), gps(irobot), encoders(irobot), runThread(false) {
 	std::cout << "PositionEstimation::PositionEstimation" << std::endl;
-	ENCODER_TICK_PER_REV = 300;
-	WHEEL_DIAMETER = 188.0 / 1000;
-	WHEEL_BASE = 452.0 / 1000;
+
+	readSettings(settings);
+
 	/* KALMAN:
 	 * - we track 2 values -> global position
 	 *
@@ -51,6 +51,32 @@ PositionEstimation::~PositionEstimation() {
 	delete EKF;
 	cout << "End ~PositionEstimation()" << endl;
 }
+
+void PositionEstimation::readSettings(TiXmlElement* settings)
+{
+	TiXmlElement* pPositionEstimation = settings->FirstChildElement("PositionEstimation");
+	if (pPositionEstimation->QueryIntAttribute("runThread", &parameters.runThread)
+			!= TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for position estimation Thread";
+	}
+	if (pPositionEstimation->QueryIntAttribute("encoderTicksPerRev",
+			&parameters.encoderTicksPerRev) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for position estimation encoderTicksPerRev";
+	}
+	if (pPositionEstimation->QueryDoubleAttribute("wheelDiameter",
+			&parameters.wheelDiameter) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for position estimation wheel diameter";
+	}
+	if (pPositionEstimation->QueryDoubleAttribute("wheelBase",
+			&parameters.wheelBase) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for positionEstimation wheel base";
+	}
+	printf("positionEstimation -- runThread: %d\n", parameters.runThread);
+	printf("positionEstimation -- encoderTicksPerRev : %d\n", parameters.encoderTicksPerRev);
+	printf("positionEstimation -- wheelDiameter : %f\n", parameters.wheelDiameter);
+	printf("positionEstimation -- wheelBase : %f\n", parameters.wheelBase);
+}
+
 
 void PositionEstimation::run() {
 	if (runThread)
@@ -192,13 +218,13 @@ void PositionEstimation::KalmanLoop() {
 			}
 
 #ifdef POSITION_ESTIMATION_DEBUG
-			printf("Bug test: %f %f\n", ENCODER_TICK_PER_REV, WHEEL_DIAMETER);
+			printf("Bug test: %f %f\n", parameters.encoderTicksPerRev, parameters.wheelDiameter);
 #endif
 
 			float left_encoder = ((float) (enc_data.at<int>(0) - lastLeft))
-					/ ENCODER_TICK_PER_REV * M_PI * WHEEL_DIAMETER;
+					/ parameters.encoderTicksPerRev * M_PI * parameters.wheelDiameter;
 			float right_encoder = ((float) (enc_data.at<int>(1) - lastRight))
-					/ ENCODER_TICK_PER_REV * M_PI * WHEEL_DIAMETER;
+					/ parameters.encoderTicksPerRev * M_PI * parameters.wheelDiameter;
 
 #ifdef POSITION_ESTIMATION_DEBUG
 			printf("Encoder left/right: %f %f\n", left_encoder, right_encoder);
