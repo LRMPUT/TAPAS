@@ -122,7 +122,6 @@ HierClassifier::~HierClassifier(){
 	}
 }
 
-
 void HierClassifier::loadSettings(TiXmlElement* settings){
 	TiXmlElement* pPtr = settings->FirstChildElement("cache");
 	if(!pPtr){

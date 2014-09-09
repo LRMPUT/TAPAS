@@ -674,7 +674,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			}
 		}
 		imshow("test", image);
-		waitKey();
+		waitKey(100);
 
 		TiXmlDocument data(	dir.string() +
 							string("/") +
