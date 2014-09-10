@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
-set(CUDA 0)
+set(CUDA 1)
 set(CMAKE_BUILD_TYPE "Release")
 
 project(RobotsIntellect)
@@ -22,7 +22,7 @@ find_package(Boost COMPONENTS system filesystem thread REQUIRED)
 IF (CUDA GREATER 0)
 	find_package(CUDA REQUIRED)
 	# Pass options to NVCC
-	set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3 -gencode arch=compute_20,code=sm_21)
+	set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3 -gencode arch=compute_12,code=sm_12)
 	SET( CUDA_PROPAGATE_HOST_FLAGS OFF )
 ENDIF (CUDA GREATER 0)
 link_directories(${URG_LIBRARIES_DIR})

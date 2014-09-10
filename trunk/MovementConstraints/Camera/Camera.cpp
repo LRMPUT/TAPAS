@@ -75,7 +75,7 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 		learnFromDir(learningDirs);
 	}
 	else{
-		//readCache("cache/cameraCache");
+		readCache("cache/cameraCache");
 	}
 }
 
@@ -1370,7 +1370,7 @@ void Camera::readSettings(TiXmlElement* settings){
 		cameraOrigLaser[idx] = readMatrixSettings(pPtr, "position_laser", 4, 4);
 		cameraMatrix[idx] = readMatrixSettings(pPtr, "camera_matrix", 3, 3);
 		distCoeffs[idx] = readMatrixSettings(pPtr, "dist_coeffs", 1, 5);
-		maskIgnore[idx] = Mat(numRows, numCols, CV_32SC1);
+		maskIgnore[idx] = Mat(numRows, numCols, CV_32SC1, Scalar(0));
 
 		TiXmlElement* pMaskIgnore = pPtr->FirstChildElement("mask_ignore");
 		if(!pMaskIgnore){

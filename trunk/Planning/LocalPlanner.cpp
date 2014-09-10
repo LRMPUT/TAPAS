@@ -20,9 +20,11 @@ LocalPlanner::LocalPlanner(Robot* irobot, GlobalPlanner* planer,
 
 
 	readSettings(settings);
+	initHistogram();
+
 	localPlannerThread = std::thread(&LocalPlanner::run, this);
 
-	cout << "End ~LocalPlanner()" << endl;
+	cout << "End LocalPlanner()" << endl;
 }
 
 LocalPlanner::~LocalPlanner() {
@@ -94,9 +96,22 @@ void LocalPlanner::executeVFH() {
 		robot->getLocalPlanData(constraints, posImuMapCenter,
 				posLocalToGlobalMap);
 
+		if(constraints.empty() || posImuMapCenter.empty() || posLocalToGlobalMap.empty()){
+			cout << "No movement constraints data" << endl;
+			return;
+		}
+
+		cout << "updateHistogram()" << endl;
 		updateHistogram();
+		cout << "findFreeSectors()" << endl;
 		findFreeSectors();
+		cout << "smoothHistogram" << endl;
 		smoothHistogram();
+
+		std::unique_lock<std::mutex> lck(mtxVecFieldHist);
+		vecFieldHist = histSectors;
+		cout << "vecFieldHist.size() = " << vecFieldHist.size() << endl;
+		lck.unlock();
 	}
 
 
@@ -143,12 +158,10 @@ void LocalPlanner::setGoalDirection() {
 
 void LocalPlanner::initHistogram() {
 
-	std::unique_lock<std::mutex> lck(mtxHistSectors);
 	histSectors.clear();
 	for (int sect = 0; sect < HIST_SECTORS; sect++) {
 		histSectors.push_back(0.0);
 	}
-	lck.unlock();
 }
 
 void LocalPlanner::localPlanerTest() {
@@ -204,7 +217,6 @@ void LocalPlanner::updateHistogram() {
 	//cout<<"RobotY"<<curRobCellY<<endl;
 
 
-	std::unique_lock<std::mutex> lck(mtxHistSectors);
 	/// for each cell of the raster map
 	for (int x = 0; x < MAP_SIZE; x++) {
 		for (int y = 0; y < MAP_SIZE; y++) {
@@ -231,7 +243,6 @@ void LocalPlanner::updateHistogram() {
 		std::cout << "Angular histogram values for " << sect * HIST_ALPHA - 180
 				<< " is " << histSectors.at(sect) << endl;
 	}
-	lck.unlock();
 }
 
 void LocalPlanner::smoothHistogram() {
@@ -252,8 +263,6 @@ void LocalPlanner::smoothHistogram() {
 	int winWidthRight = 0;
 	float sumOfDensity = 0.0;
 
-
-	std::unique_lock<std::mutex> lck(mtxHistSectors);
 	for (int sec = 0; sec < HIST_SECTORS; sec++) {
 
 		/// set default width
@@ -271,7 +280,6 @@ void LocalPlanner::smoothHistogram() {
 			histSectors.at(sec) = sumOfDensity / 7;
 		}
 	}
-	lck.unlock();
 }
 
 void LocalPlanner::findFreeSectors() {
@@ -280,7 +288,6 @@ void LocalPlanner::findFreeSectors() {
 
 	bool needToHigherThreshold = true;
 
-	std::unique_lock<std::mutex> lck(mtxHistSectors);
 	for (int thresholdIndex = 0; thresholdIndex < 5; thresholdIndex++) {
 		for (int sec = 0; sec < HIST_SECTORS; sec++) {
 
@@ -293,7 +300,6 @@ void LocalPlanner::findFreeSectors() {
 			break;
 		}
 	}
-	lck.unlock();
 	cout << "Wolne sektory:" << endl;
 	for (int i = 0; i < freeSectors.size(); i++) {
 		cout << "Free to go: " << freeSectors.at(i) * HIST_ALPHA << " "
@@ -374,18 +380,21 @@ void LocalPlanner::determineDriversCommand() {
 	// 100 means that we are in target direction with 10 degree margin
 	if ((bestDirection - localYaw)
 			* (bestDirection - localYaw)< STEERING_MARGIN * STEERING_MARGIN)
-		//cout<<"Straight"<<endl;
+	{
+		cout<<"Straight"<<endl;
 
-		globalPlanner->setMotorsVel(500, 500);
-	else if (bestDirection > localYaw)
-		//cout<<"Right"<<endl;
+		//globalPlanner->setMotorsVel(500, 500);
+	}
+	else if (bestDirection > localYaw)	{
+		cout<<"Right"<<endl;
 
-		globalPlanner->setMotorsVel(800, -800);
-	else
-		//cout<<"Left"<<endl;
+		//globalPlanner->setMotorsVel(800, -800);
+	}
+	else{
+		cout<<"Left"<<endl;
 
-		globalPlanner->setMotorsVel(-800, 800);
-
+		//globalPlanner->setMotorsVel(-800, 800);
+	}
 	//getchar();
 }
 
@@ -397,8 +406,8 @@ void LocalPlanner::stopThread() {
 }
 
 std::vector<float> LocalPlanner::getVecFieldHist(){
-	std::unique_lock<std::mutex> lck(mtxHistSectors);
-	std::vector<float> ret = histSectors;
+	std::unique_lock<std::mutex> lck(mtxVecFieldHist);
+	std::vector<float> ret = vecFieldHist;
 	lck.unlock();
 	return ret;
 }

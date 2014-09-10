@@ -20,10 +20,13 @@ Robot::Robot(boost::filesystem::path settingsFile) {
 	if(!pRobot){
 		throw "Bad settings file - entry Robot not found";
 	}
+
+	//Must be first, because MovementConstraints uses it's devices
+	positionEstimation = new PositionEstimation(this, pRobot);
+
 	TiXmlElement* pMovementConstraints = pRobot->FirstChildElement("MovementConstraints");
 	movementConstraints = new MovementConstraints(this, pMovementConstraints);
 
-	positionEstimation = new PositionEstimation(this, pRobot);
 	globalPlanner = new GlobalPlanner(this, pRobot);
 
 	startTime = std::chrono::high_resolution_clock::now();

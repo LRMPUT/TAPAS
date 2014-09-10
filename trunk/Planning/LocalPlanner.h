@@ -63,7 +63,8 @@ private:
 	std::thread localPlannerThread;
 	std::mutex driverMtx;
 
-	std::mutex mtxHistSectors;
+	std::mutex mtxVecFieldHist;
+	std::vector<float> vecFieldHist;
 
 	void run();
 
