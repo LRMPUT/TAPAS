@@ -34,7 +34,7 @@
 	-->
 	<MovementConstraints runThread="true">
 		<odometry diam="188" base="452" encodersCPR="300" />
-		<point_cloud minDist="100" maxTimePoint="4000" maxTimeMap="4000" />
+		<point_cloud minDist="100" maxTimePoint="4000" maxTimeMap="10000" />
 		<camera_position_laser>
 			0.999975467433325   0.006201805494175   0.003256092768350	19.302285337921
   		-0.006965113845532   0.831082312695594   0.556105814313842 -581.986641194198

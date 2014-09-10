@@ -20,7 +20,6 @@ LocalPlanner::LocalPlanner(Robot* irobot, GlobalPlanner* planer,
 
 
 	readSettings(settings);
-	initHistogram();
 
 	localPlannerThread = std::thread(&LocalPlanner::run, this);
 
@@ -76,6 +75,7 @@ void LocalPlanner::startLocalPlanner() {
 }
 
 void LocalPlanner::stopLocalPlanner() {
+	cout << "LocalPlanner::stopLocalPlanner()" << endl;
 	startOperate = false;
 }
 
@@ -101,16 +101,18 @@ void LocalPlanner::executeVFH() {
 			return;
 		}
 
-		cout << "updateHistogram()" << endl;
+		initHistogram();
+		//cout << "updateHistogram()" << endl;
 		updateHistogram();
-		cout << "findFreeSectors()" << endl;
+		//cout << "findFreeSectors()" << endl;
 		findFreeSectors();
-		cout << "smoothHistogram" << endl;
+		//cout << "smoothHistogram" << endl;
 		smoothHistogram();
 
+		//cout << "Waiting for mtxVecFieldHist" << endl;
 		std::unique_lock<std::mutex> lck(mtxVecFieldHist);
 		vecFieldHist = histSectors;
-		cout << "vecFieldHist.size() = " << vecFieldHist.size() << endl;
+		//cout << "vecFieldHist.size() = " << vecFieldHist.size() << endl;
 		lck.unlock();
 	}
 
@@ -158,10 +160,7 @@ void LocalPlanner::setGoalDirection() {
 
 void LocalPlanner::initHistogram() {
 
-	histSectors.clear();
-	for (int sect = 0; sect < HIST_SECTORS; sect++) {
-		histSectors.push_back(0.0);
-	}
+	histSectors = std::vector<float>(HIST_SECTORS, 0.0);
 }
 
 void LocalPlanner::localPlanerTest() {
@@ -231,6 +230,7 @@ void LocalPlanner::updateHistogram() {
 					+ pow((float) (y - curRobCellY), 2);
 			density = c * (hist_A - hist_B * d2);
 
+			//cout << "map (" << x << ", " << y << "), histB = " << hist_B << ", c = " << c << ", d2 = " << d2 << ", density = " << density << endl;
 			/// update proper sector of histogram
 			if (angPosition > 179.999)
 				angPosition = -180.0;
@@ -256,30 +256,8 @@ void LocalPlanner::smoothHistogram() {
 		printf("Tab value : %f\n", dst.at<float>(i));
 	}
 
-	int a;
-	cin >> a;
-
-	int winWidthLeft = 0;
-	int winWidthRight = 0;
-	float sumOfDensity = 0.0;
-
-	for (int sec = 0; sec < HIST_SECTORS; sec++) {
-
-		/// set default width
-		winWidthLeft = 3;
-		winWidthRight = 3;
-		/// omit the window boundaries
-		for (sec = 3; sec <= HIST_SECTORS - 3; sec++) {
-			/// clear sum of density
-			sumOfDensity = 0.0;
-
-			for (int i = sec - 3; i < sec + 3; i++) {
-				sumOfDensity += histSectors.at(i);
-			}
-
-			histSectors.at(sec) = sumOfDensity / 7;
-		}
-	}
+	//int a;
+	//cin >> a;
 }
 
 void LocalPlanner::findFreeSectors() {
