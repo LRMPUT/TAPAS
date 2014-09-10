@@ -1,12 +1,20 @@
 <Robot>
 	<!--
-		runThread:		1 - module ON, 0 - module OFF
-		runHomologation:	1 - overrides global Planner to perform Homologation
-		mapFile:		file in open street map used in navigation
-		latitude:		latitude N/S
-		longitude:		longitude W/E
+		runThread:				1 - module ON, 0 - module OFF
+		processingFrequency: 	The frequency of processing in global planner thread in Hz
+		debug:					1 - debug ON, 0 - debug OFF
+		runHomologation:		1 - overrides global Planner to perform Homologation
+		mapFile:				file in open street map used in navigation
+		latitude:				latitude N/S
+		longitude:				longitude W/E 
+		 // Alternative coordinates in PP :
+		 // -> latitude="52.401680" longitude="16.951594" 
+		 // -> latitude="52.401306" longitude="16.951138"
+		 // -> latitude="52.402357" longitude="16.952361"
+		 // -> latitude="52.403535" longitude="16.949781" - NO WAY
+		 // -> latitude="52.403418" longitude="16.950173"
 	-->
-	<GlobalPlanner runThread="1" runHomologation="0" mapFile="ppMap.osm" latitude="52.401505" longitude="16.949933"/>
+	<GlobalPlanner runThread="1" processingFrequency="5" debug ="1" runHomologation="0" mapFile="ppMap.osm" latitude="52.403535" longitude="16.949781"/>
 
 	<!--
 		runThread: 		1 - module ON, 0 - module OFF
@@ -15,14 +23,14 @@
 		VFH_Threshold:		threshold for the direction to be considered a valid choice
 		VFH_SteeringMargin:	the dead_zone of steering deciding upon going straight, left, right
 	-->
-	<LocalPlanner runThread="1" avoidObstacles="1" VFH_HistResolution="10" VFH_Threshold="0" VFH_SteeringMargin="4"/>
+	<LocalPlanner runThread="0" avoidObstacles="1" VFH_HistResolution="10" VFH_Threshold="0" VFH_SteeringMargin="4"/>
 
 	<!--
-		runThread: 		1 - module ON, 0 - module OFF
-		debug:				1 - debug ON, 0 - debug
+		runThread: 			1 - module ON, 0 - module OFF
+		debug:				1 - debug ON, 0 - debug OFF
 		encoderTickPerRev:	number of encoder ticks per one revolution
 		wheelDiameter:		wheel diameter in meters
-		wheelBase:		wheel base in meters
+		wheelBase:			wheel base in meters
 		GPSCovariance:	
 		IMUCovariance:
 		EncoderCovariance:	

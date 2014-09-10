@@ -41,6 +41,8 @@ class GlobalPlanner {
 public:
 	struct Parameters{
 		int runThread;
+		double processingFrequency;
+		int debug;
 		int runHomologation;
 		std::string mapFile;
 		double latitude, longitude;
@@ -54,14 +56,18 @@ public:
 			x1(ix1),
 			y1(iy1),
 			x2(ix2),
-			y2(iy2),
-			isChosen(iisChosen)
-		{}
-		bool operator<(const Edge& rhs) const
-		{
-			if (x1 < x2)
+			y2(iy2), isChosen(iisChosen) {
+		}
+		bool operator<(const Edge& rhs) const {
+			if (x1 < rhs.x1)
 				return true;
-			else if (x1 == x2 && y1 < y2)
+			else if (fabs(x1 - rhs.x1) < 0.0001 && y1 < rhs.y1)
+				return true;
+			else if (fabs(x1 - rhs.x1) < 0.0001 && fabs(y1 - rhs.y1) < 0.0001
+					&& x2 < rhs.x2)
+				return true;
+			else if (fabs(x1 - rhs.x1) < 0.0001 && fabs(y1 - rhs.y1) < 0.0001
+					&& fabs(x2 - rhs.x2) < 0.0001 && y2 < rhs.y2)
 				return true;
 			return false;
 		}
@@ -72,60 +78,68 @@ public:
 		float minX, maxX;
 		float minY, maxY;
 		float robotX, robotY;
+		float goalX, goalY;
 		int curEdge;
 	};
 
 private:
-	std::mutex mtxGlobalPlan;
+
+	// WTF group
+	OperationMode currentMode;
 
 	//parent class robot
 	Robot* robot;
 
 	//Driver
-	//trobot::RobotDrive* robotDrive;
-
 	Drivers* robotDrive1;
 	Drivers* robotDrive2;
-
-	LocalPlanner* localPlanner;
-
-	OperationMode currentMode;
-
-	bool startOperate;
-
-	std::thread globalPlannerThread;
-
-
-
-
-	GlobalPlanner::Parameters globalPlannerParams;
-
 	std::mutex driverMtx;
 
-	float currentGoal;
+	// Local Planning
+	LocalPlanner* localPlanner;
 
+	// Processing thread
+	std::thread globalPlannerThread;
+
+	// Parameters
+	GlobalPlanner::Parameters globalPlannerParams;
+
+	// Processing thread method
 	void run();
 
+	// Homologation
 	void processHomologation();
 
-
-	// Global planner variables
+	// Global planner variables from map
 	std::vector<std::pair<double, double>> nodePosition;
 	std::vector< std::list<int> > edges;
+
+	// Plan + mutex
 	GlobalPlanInfo globalPlanInfo;
-	double goalX, goalY, goalId;
+	std::mutex mtxGlobalPlan;
+
+	// Goal
+	int goalId[2];
+	double goalX, goalY;
+
+	// Robot position
 	double robotX, robotY, robotTheta;
-	double startingNodeIndex[2], startingNodeDist[2];
+	int startingNodeIndex[2], startingNodeDist[2];
+
+	// Methods to call
+	void readOpenStreetMap(std::string mapName);
+	void setGoal();
 	void updateRobotPosition();
-	void findClosestStartingEdge(double X, double Y);
+	void findStartingEdge(double X, double Y);
 	void computeGlobalPlan();
 
+	// Helping methods
+	void findClosestEdge(double X, double Y, int &id1, int &id2, double &minDistance);
+	bool areEdgesEqual(Edge e, Edge f);
+	void switchEdge(Edge &e);
+	void checkAndCorrectEdgeConvention(Edge &e);
 
-	void readOpenStreetMap(const char *mapName);
-//	std::pair<int,int> findDistances(double X, double Y);
 
-
-	void setGoal(double X, double Y);
 
 public:
 	GlobalPlanner(Robot* irobot, TiXmlElement* settings);
@@ -136,7 +150,6 @@ public:
 	void stopThread();
 
 	void startHomologation();
-
 
 	float getHeadingToGoal();
 
