@@ -7,6 +7,8 @@
 
 #include "../include/IMU_driver.h"
 
+#define PI (3.14159265359)
+
 // Global pointer to instance of IMUDriver
 IMU_driver* pointerToIMUDriver;
 
@@ -385,9 +387,9 @@ float* IMU_driver::getEuler() {
 	return euler;
 }
 void IMU_driver::setEuler(float roll, float pitch, float yaw) {
-	euler[0] = roll;
-	euler[1] = pitch;
-	euler[2] = yaw;
+	euler[0] = roll*180/PI;
+	euler[1] = pitch*180/PI;
+	euler[2] = yaw*180/PI;
 }
 
 // get Timestamp of last orientation update

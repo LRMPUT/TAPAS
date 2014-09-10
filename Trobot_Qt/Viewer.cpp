@@ -79,25 +79,30 @@ void Viewer::drawConstraintsMap(){
 void Viewer::drawVecFieldHist(){
 	if(!posImuMapCenter.empty() && !vecFieldHist.empty()){
 		glPushMatrix();
-		multCurMatrix(posImuMapCenter);
+		Mat posNoOrient = posImuMapCenter.clone();
+		Mat eye33 = Mat::eye(3, 3, CV_32FC1);
+		eye33.copyTo(Mat(posNoOrient, Rect(0, 0, 3, 3)));
+		multCurMatrix(posNoOrient);
 		multCurMatrix(imuOrigGlobal.inv());
 
 		int numSect = vecFieldHist.size();
 		float alpha = (float)360/numSect;
-		float startAngle = 0;
+		float startAngle = 270;
 
 		GLUquadricObj *quadric=gluNewQuadric();
 		gluQuadricNormals(quadric, GLU_SMOOTH);
 
 		for(int s = 0; s < numSect; s++){
-			glColor4f(1.0, 1.0, 0.0, max(1.0 - vecFieldHist[s]/10, 0.0));
+			//cout << "vecFieldHist[" << s << "] = " << vecFieldHist[s] << endl;
+			//cout << "alpha = " << min(vecFieldHist[s]/3, 1.0f) << endl;
+			glColor4f(0.0, 1.0, 1.0, min(vecFieldHist[s]/3, 1.0f));
 			gluPartialDisk(quadric,
 							1000,
 							1500,
 							30,
 							30,
-							startAngle + s*alpha,
-							alpha);
+							startAngle - s*alpha,
+							-alpha);
 		}
 
 		gluDeleteQuadric(quadric);
@@ -162,6 +167,8 @@ void Viewer::cylinder(float x1, float y1, float z1, float x2,float y2, float z2,
 
 void Viewer::draw()
 {
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	//cout << "rysuje" << endl;
 	//glMatrixMode(GL_MODELVIEW);
 	//glLoadIdentity();
@@ -176,8 +183,8 @@ void Viewer::draw()
 
 	drawRobot();
 	drawPointCloud();
-	drawConstraintsMap();
 	drawVecFieldHist();
+	drawConstraintsMap();
 }
 
 void Viewer::init()

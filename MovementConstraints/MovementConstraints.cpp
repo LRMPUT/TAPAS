@@ -252,7 +252,7 @@ void MovementConstraints::updateCurPosCloudMapCenter(){
 		Mat encodersCur = robot->getEncoderData();
 		Mat imuCur = robot->getImuData(imuTimestamp);
 
-		//cout << "Euler angles: " << imuCur.at<float>(2, 3) << " " << imuCur.at<float>(1, 3) << " " << imuCur.at<float>(0, 3) << endl;
+		cout << "Euler angles: " << imuCur.at<float>(2, 3) << " " << imuCur.at<float>(1, 3) << " " << imuCur.at<float>(0, 3) << endl;
 		//cout << "imuCur = " << imuCur << endl;
 		//cout << "encodersCur = " << encodersCur << endl;
 
