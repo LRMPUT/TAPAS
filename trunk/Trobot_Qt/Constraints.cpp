@@ -80,7 +80,7 @@ void Constraints::updateMapView(){
 	Mat pointCloudImuMapCenter = debug->getPointCloudImu(curPosImuMapCenter);
 	Mat constraintsMap = debug->getMovementConstraints();
 	vector<float> vecFieldHist = debug->getVecFieldHist();
-	//cout << "vecFieldHist.size() = " << vecFieldHist.size() << endl;
+//	cout << "vecFieldHist.size() = " << vecFieldHist.size() << endl;
 
 	stringstream tmp;
 	tmp.width(4);
@@ -150,7 +150,7 @@ void Constraints::updateGlobalPlanView(){
 		int x2 = (it->x2 - globalPlan.minX)/scaleX;
 		int y2 = (it->y2 - globalPlan.minY)/scaleY;
 		if (e == globalPlan.curEdge) {
-			printf("Drawing current edge !!! Number: %d || %d %d %d %d\n", e, x1, y1, x2, y2);
+//			printf("Drawing current edge !!! Number: %d || %d %d %d %d\n", e, x1, y1, x2, y2);
 			QPen myPen(Qt::red, 7, Qt::SolidLine);
 			painter.setPen(myPen);
 		} else if (it->isChosen == true) {
@@ -168,12 +168,23 @@ void Constraints::updateGlobalPlanView(){
 		painter.drawEllipse(x1, y1, 2, 2);
 		painter.drawEllipse(x2, y2, 2, 2);
 	}
+
+	// Robot coordinates
 	painter.setPen(Qt::green);
-	printf("Drawing robot's coordinates: %f %f\n",globalPlan.robotX,globalPlan.robotY);
+//	printf("Drawing robot's coordinates: %f %f\n",globalPlan.robotX,globalPlan.robotY);
 	int rX = (globalPlan.robotX - globalPlan.minX)/scaleX;
 	int rY = (globalPlan.robotY - globalPlan.minY)/scaleY;
 	painter.setBrush(Qt::green);
 	painter.drawEllipse(rX, rY, 6, 6);
+
+	painter.setPen(Qt::red);
+//	printf("Drawing goal's coordinates: %f %f\n",globalPlan.goalX,globalPlan.goalY);
+	int gX = (globalPlan.goalX - globalPlan.minX)/scaleX;
+	int gY = (globalPlan.goalY - globalPlan.minY)/scaleY;
+	painter.setBrush(Qt::red);
+	painter.drawEllipse(gX, gY, 6, 6);
+
+
 	painter.end();
 	ui->planningGlobalViewLabel->setPixmap(map);
 	ui->planningGlobalViewLabel->update();

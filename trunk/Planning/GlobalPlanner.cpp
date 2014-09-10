@@ -28,23 +28,17 @@ public:
 	}
 	bool operator()(const std::pair<double, int>& lhs,
 			const std::pair<double, int>&rhs) const {
-		return (lhs.first < rhs.second);
+		return (lhs.first < rhs.first);
 	}
 };
 
 GlobalPlanner::GlobalPlanner(Robot* irobot, TiXmlElement* settings) :
-		robot(irobot), robotDrive1(NULL), robotDrive2(NULL), startOperate(false) {
+		robot(irobot), robotDrive1(NULL), robotDrive2(NULL) {
 	cout << "GlobalPlanner()" << endl;
-
-
-
 	readSettings(settings);
 
 	localPlanner = new LocalPlanner(robot, this, settings);
-
 	globalPlannerThread = std::thread(&GlobalPlanner::run, this);
-
-	//localPlanner->startLocalPlanner();
 
 	cout << "End GlobalPlanner()" << endl;
 }
@@ -53,10 +47,11 @@ GlobalPlanner::GlobalPlanner(Robot* irobot, TiXmlElement* settings) :
 GlobalPlanner::~GlobalPlanner() {
 	cout << "~GlobalPlanner()" << endl;
 	stopThread();
-	cout << "closeRobotsDrive()" << endl;
 	closeRobotsDrive();
 	cout << "End ~GlobalPlanner()" << endl;
 }
+
+// Reading settings
 
 void GlobalPlanner::readSettings(TiXmlElement* settings)
 {
@@ -66,6 +61,14 @@ void GlobalPlanner::readSettings(TiXmlElement* settings)
 	if (pGlobalPlanner->QueryIntAttribute("runThread", &globalPlannerParams.runThread)
 			!= TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner Thread";
+	}
+	if (pGlobalPlanner->QueryDoubleAttribute("processingFrequency",
+			&globalPlannerParams.processingFrequency) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner processing frequency";
+	}
+	if (pGlobalPlanner->QueryIntAttribute("debug", &globalPlannerParams.debug)
+			!= TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner debug";
 	}
 	if (pGlobalPlanner->QueryIntAttribute("runHomologation", &globalPlannerParams.runHomologation)
 			!= TIXML_SUCCESS) {
@@ -89,6 +92,7 @@ void GlobalPlanner::readSettings(TiXmlElement* settings)
 
 
 	printf("GlobalPlanner -- runThread: %d\n", globalPlannerParams.runThread);
+	printf("GlobalPlanner -- debug: %d\n", globalPlannerParams.debug);
 	printf("GlobalPlanner -- runhomologation: %d\n", globalPlannerParams.runHomologation);
 	printf("GlobalPlanner -- mapFile: %s\n", globalPlannerParams.mapFile.c_str());
 	printf("GlobalPlanner -- goal latitude: %f \n", globalPlannerParams.latitude);
@@ -96,55 +100,301 @@ void GlobalPlanner::readSettings(TiXmlElement* settings)
 }
 
 
+// Main processing thread
 void GlobalPlanner::run() {
+//	localPlanner->startLocalPlanner();
 
-	localPlanner->startLocalPlanner();
+	if (globalPlannerParams.debug == 1)
+		std::cout<<"GlobalPlanner: Waiting for GPS set zero" <<std::endl;
 
-	std::cout<<"GPS: Waiting for GPS set zero" <<std::endl;
-	while ((!robot->isGpsOpen()
-			|| robot->isSetZero() == false)  && globalPlannerParams.runThread)
-	{
+	while (robot->isSetZero() == false || robot->gpsGetFixStatus() == 1
+			|| !globalPlannerParams.runThread) {
 		usleep(200);
 	}
 
-	std::cout<<"GPS: Waiting on Fix status" <<std::endl;
-	while (robot->gpsGetFixStatus() == 1 && globalPlannerParams.runThread) {
-		usleep(200);
-	};
-	std::cout<<"GPS: Stopped waiting on fix status" <<std::endl;
+	if (globalPlannerParams.debug == 1)
+		std::cout<<"GlobalPlanner: We have fix and zero position" <<std::endl;
 
 	if(globalPlannerParams.runThread){
-		const char *cstr = globalPlannerParams.mapFile.c_str();
-		readOpenStreetMap(cstr);
+		// Read the map of the tournament
+		readOpenStreetMap(globalPlannerParams.mapFile);
 
-		double lon = GPS::decimal2Nmea(globalPlannerParams.longitude);
-		double lat = GPS::decimal2Nmea(globalPlannerParams.latitude);
-		setGoal(robot->getPosX(lon)/1000,
-				robot->getPosY(lat)/1000);
-
-		//localPlanner->startLocalPlanner();
+		// Set the goal in the map
+		setGoal();
 	}
 	while (globalPlannerParams.runThread) {
 
-//		if (startOperate) {
-
+			// Where are we ?
 			updateRobotPosition();
-			findClosestStartingEdge(robotX, robotY);
 
+			// Where are we in the map
+			findStartingEdge(robotX, robotY);
 
+			// Compute the route to follow
+			computeGlobalPlan();
 
-
-//			computeGlobalPlan();
+			// Let's compute the next target
 //			chooseNextSubGoal();
+
+			// Let's update out subgoal as current destination
 //			updateHeadingGoal();
 
-//		}
-		std::chrono::milliseconds duration(150);
+			break;
+
+		std::chrono::milliseconds duration(int(1000.0/globalPlannerParams.processingFrequency));
 		std::this_thread::sleep_for(duration);
 	}
-	if (globalPlannerParams.runThread) {
-//		localPlanner->stopLocalPlanner();
+//	localPlanner->stopLocalPlanner();
+
+}
+
+
+// Methods called in processing thread
+
+void GlobalPlanner::readOpenStreetMap(std::string mapName) {
+	if (globalPlannerParams.debug == 1)
+		std::cout << "GlobalPlanner: Reading OpenStreetMap" << std::endl;
+
+	TiXmlDocument osmMap(mapName);
+	if (!osmMap.LoadFile())
+		std::cout << "GlobalPlanner: OSM map was not loaded!" << std::endl;
+	;
+	TiXmlHandle osmHandle(&osmMap);
+
+	std::map<long int, int> idConversion;
+
+	// Reading nodes
+	TiXmlElement* pElem = osmHandle.FirstChildElement().FirstChildElement(
+			"node").Element();
+	int i = 0;
+	for (; pElem; pElem = pElem->NextSiblingElement("node")) {
+		const char *pId = pElem->Attribute("id");
+		const char *pLat = pElem->Attribute("lat");
+		const char *pLon = pElem->Attribute("lon");
+		if (pId && pLat && pLon) {
+
+			char *end;
+			idConversion.insert(std::make_pair(strtol(pId, &end, 10), i));
+
+			// We need to convert from OSM's gps coordinates to Nmea format
+			double lon = GPS::decimal2Nmea(atof(pLon)*100);
+			double lat = GPS::decimal2Nmea(atof(pLat)*100);
+
+			// Adding the node
+			nodePosition.push_back(
+					std::make_pair(robot->getPosX(lat)/1000,
+							robot->getPosY(lon)/1000));
+		}
+		i++;
 	}
+
+	// List of edges
+	edges.resize(i);
+	std::fill(edges.begin(), edges.end(), std::list<int>());
+
+	// Reading ways
+	pElem = osmHandle.FirstChildElement().FirstChildElement("way").Element();
+	i = 0;
+	for (; pElem; pElem = pElem->NextSiblingElement("way")) {
+		TiXmlElement* pNode = pElem->FirstChildElement("tag");
+		bool footWay = false;
+
+		// Checking way type
+		for (; pNode; pNode = pNode->NextSiblingElement("tag")) {
+			const char *key = pNode->Attribute("k");
+			const char *value = pNode->Attribute("v");
+
+			// Is is a way we can walk on? Can add here more way tags if needed
+			if (strstr(key, "foot") || strstr(value, "foot") || strstr(value, "service")) {
+				footWay = true;
+				break;
+			}
+
+
+		}
+
+		// If type is correct - add as an edge
+		if (footWay) {
+			pNode = pElem->FirstChildElement("nd");
+
+			int j = 0;
+			// Splitting way into edges
+			long int previousId = 0;
+			for (; pNode; pNode = pNode->NextSiblingElement("nd")) {
+				const char *Id = pNode->Attribute("ref");
+				if (Id) {
+					char* end;
+					std::map<long int, int>::iterator tmp = idConversion.find(
+							strtol(Id, &end, 10));
+					if (j > 0) {
+						edges[tmp->second].push_back(previousId);
+						edges[previousId].push_back(tmp->second);
+					}
+					j++;
+					previousId = tmp->second;
+				}
+
+			}
+			i++;
+		}
+	}
+
+	if (globalPlannerParams.debug == 1)
+		std::cout << "GlobalPlanner: Found " << edges.size() << " in read mapfile"<< std::endl;
+
+
+	// Adding edges to the global plan
+	std::unique_lock<std::mutex> lckGlobalPlan(mtxGlobalPlan);
+	globalPlanInfo.robotX = robotX;
+	globalPlanInfo.robotY = robotY;
+	double minX = robotX, maxX = robotX, minY = robotY, maxY = robotY;
+
+	for (int i = 0; i < edges.size(); i++) {
+		for (list<int>::iterator lIt = edges[i].begin(); lIt != edges[i].end();
+				++lIt) {
+
+			// Node positions of both ends of the edge
+			std::pair<double, double> node1 = nodePosition[i], node2 =
+					nodePosition[*lIt];
+
+			// Creating the edge
+			Edge edge;
+			edge.isChosen = false;
+
+			edge.x1 = node1.first;
+			edge.y1 = node1.second;
+			edge.x2 = node2.first;
+			edge.y2 = node2.second;
+
+			checkAndCorrectEdgeConvention(edge);
+			globalPlanInfo.edges.insert(edge);
+
+			// Finding the minimal and maximal coordinates
+			double t = std::min(edge.x1, edge.x2);
+			minX = std::min(minX, t);
+			t = std::max(edge.x1, edge.x2);
+			maxX = std::max(maxX, t);
+			t = std::min(edge.y1, edge.y2);
+			minY = std::min(minY, t);
+			t = std::max(edge.y1, edge.y2);
+			maxY = std::max(maxY, t);
+		}
+
+	}
+
+	if (globalPlannerParams.debug == 1)
+	{
+		std::cout << "GlobalPlanner: mixX, maxX, minY, maxY : " << minX << ", " << maxX << ", " << minY << ", "
+				<< maxY << std::endl;
+
+		std::cout << "GlobalPlanner: robotX, robotY : " << robotX << ", " << robotY <<endl;
+	}
+
+	globalPlanInfo.minX = minX;
+	globalPlanInfo.maxX = maxX;
+	globalPlanInfo.minY = minY;
+	globalPlanInfo.maxY = maxY;
+	lckGlobalPlan.unlock();
+
+
+	if (globalPlannerParams.debug == 1)
+		std::cout<<"Global Planner: end readosmMap"<<std::endl;
+}
+
+void GlobalPlanner::setGoal() {
+
+	// Recomputing from decimal coordinates to Nmea
+	double lon = GPS::decimal2Nmea(globalPlannerParams.longitude * 100);
+	double lat = GPS::decimal2Nmea(globalPlannerParams.latitude * 100);
+	if (globalPlannerParams.debug == 1)
+		std::cout << "GlobalPlanner: goal longitude and latitude: " << lat / 100 << " "
+			<< lon / 100 << std::endl;
+	goalX = robot->getPosX(lat)/1000;
+	goalY = robot->getPosY(lon)/1000;
+
+
+	// Updating global plan
+	std::unique_lock<std::mutex> lckGlobalPlan(mtxGlobalPlan);
+		globalPlanInfo.goalX = goalX;
+		globalPlanInfo.goalY = goalY;
+	lckGlobalPlan.unlock();
+
+
+	// Finding the edge that is the closest to the goal
+	double dist;
+	findClosestEdge(goalX, goalY, goalId[0], goalId[1], dist);
+}
+
+void GlobalPlanner::updateRobotPosition() {
+
+	cv::Mat robotPosition = robot->getEstimatedPosition();
+	robotX = robotPosition.at<double>(0);
+	robotY = robotPosition.at<double>(1);
+	robotTheta = robotPosition.at<double>(2);
+
+	std::unique_lock<std::mutex> lckGlobalPlan(mtxGlobalPlan);
+		globalPlanInfo.robotX = robotX;
+		globalPlanInfo.robotY = robotY;
+	lckGlobalPlan.unlock();
+
+	if (globalPlannerParams.debug == 1)
+		std::cout << "Global Planner : robot position : " << robotX << " " <<robotY<<std::endl;
+}
+
+void GlobalPlanner::findStartingEdge(double X, double Y) {
+
+	// Looking for the edges closest the the starting X and Y
+	double minDist;
+	findClosestEdge(X, Y, startingNodeIndex[0], startingNodeIndex[1], minDist);
+
+	// We have the two nodes that are connected with the closest edge
+	for (int i=0;i<2;i++)
+	{
+		std::pair<double, double> node = nodePosition[startingNodeIndex[i]];
+
+		// We compute the distance to this node
+		startingNodeDist[i] = sqrt( pow(node.first - X, 2) + pow(node.second - Y, 2) );
+
+		if (globalPlannerParams.debug == 1)
+			std::cout << "The closest edge's node is the one between "
+					<< startingNodeIndex[i] << " with distance = " << startingNodeDist[i] << std::endl;
+
+	}
+
+	// We need to update the position of the closest edge in the map
+	std::unique_lock < std::mutex > lckGlobalPlan(mtxGlobalPlan);
+
+	Edge e;
+	e.x1 = nodePosition[startingNodeIndex[0]].first;
+	e.y1 = nodePosition[startingNodeIndex[0]].second;
+	e.x2 = nodePosition[startingNodeIndex[1]].first;
+	e.y2 = nodePosition[startingNodeIndex[1]].second;
+
+	// Lets look for the edge in the visualization
+	int i = 0;
+	std::set<GlobalPlanner::Edge>::iterator it = globalPlanInfo.edges.begin();
+	for (; it != globalPlanInfo.edges.end(); i++) {
+
+		// We found our edge
+		if (areEdgesEqual(e, *it)) {
+			globalPlanInfo.curEdge = i;
+		}
+		// We also invalidate the previously found route
+//		if (it->isChosen == true) {
+//			GlobalPlanner::Edge tmp = *it;
+//			it = globalPlanInfo.edges.erase(it);
+//			tmp.isChosen = false;
+//			globalPlanInfo.edges.insert(tmp);
+//		}
+//		else
+			++it;
+	}
+
+	lckGlobalPlan.unlock();
+
+	if (globalPlannerParams.debug == 1)
+		std::cout << "GlobalPlanner : Finished finding current edge " << std::endl;
+
 }
 
 void GlobalPlanner::computeGlobalPlan() {
@@ -157,8 +407,8 @@ void GlobalPlanner::computeGlobalPlan() {
 			std::vector<std::pair<double, int>>, myPQueueComparison> pqueue;
 
 	// Going through nodes
-	distance[ startingNodeIndex[0] ] = 0;
-	distance[ startingNodeIndex[1] ] = 0;
+	distance[ startingNodeIndex[0] ] = startingNodeDist[0];
+	distance[ startingNodeIndex[1] ] = startingNodeDist[1];
 
 	previous[ startingNodeIndex[0] ] = -2.0;
 	previous[ startingNodeIndex[1] ] = -2.0;
@@ -166,7 +416,10 @@ void GlobalPlanner::computeGlobalPlan() {
 	pqueue.push(std::make_pair(startingNodeDist[0],  startingNodeIndex[0]));
 	pqueue.push(std::make_pair(startingNodeDist[1],  startingNodeIndex[1]));
 
+	// We process the graph
 	while (!pqueue.empty()) {
+
+		// Currently first in the queue
 		std::pair<double, int> tmp = pqueue.top();
 		pqueue.pop();
 		int idToProcess = tmp.second;
@@ -183,63 +436,179 @@ void GlobalPlanner::computeGlobalPlan() {
 			double additionalDistance = sqrt(
 					(x - x2) * (x - x2) + (y - y2) * (y - y2));
 
-			if (distance[*listIter] == -1
+			// If it is a new node in processing or we found shorter path
+			if ( fabs(distance[*listIter] + 1) < 0.0000001
 					|| distance[*listIter]
 							> distance[idToProcess] + additionalDistance) {
 				distance[*listIter] = distance[idToProcess]
 						+ additionalDistance;
 				previous[*listIter] = idToProcess;
+
+				// We add as a new node to process
 				pqueue.push(std::make_pair(distance[*listIter], *listIter));
 			}
 		}
 
 	}
 
-//	// Conclusions
-//	std::cout << "Ended computation from nodes : " << closestEdge.first << " "
-//			<< closestEdge.second << std::endl;
-//	int ile = 0, ogolem = 0;
-//	for (int i = 0; i < edges.size(); i++) {
-//		if (edges[i].size() != 0) {
-//			ogolem++;
-//			std::cout << "Distance to " << i << " is equal to " << distance[i]
-//					<< std::endl;
-//			if (distance[i] > 0)
-//				ile++;
-//		}
-//	}
-//	std::cout << "Possiblity to access " << ile * 100.0 / ogolem
-//			<< "% of all nodes" << std::endl;
-//
-
-	std::cout << "Printing ids from backward to get to id=" << goalId
-			<< " from ids=" << startingNodeIndex[0] << " or "
-			<< startingNodeIndex[1] << std::endl;
-	int i = goalId;
-	while( true )
+	// Conclusions
+	if (globalPlannerParams.debug == 1)
 	{
-		int k = previous[i];
-		std::cout<<"From "<<i<<" to " << k << std::endl;
-		i = k;
+		std::cout << "Global Planner : Printing ids from backward to get to id="
+				<< goalId[0] << " or " << goalId[1] << " from ids="
+				<< startingNodeIndex[0] << " or " << startingNodeIndex[1]
+				<< std::endl;
 
-		Edge edge;
-		edge.isChosen = true;
-		edge.x1 = nodePosition[i].first;
-		edge.y1 = nodePosition[i].second;
-		edge.x2 = nodePosition[k].first;
-		edge.y2 = nodePosition[k].second;
-		globalPlanInfo.edges.insert(edge);
-
-		if(distance[i] == -2)
-		{
-			break;
-		}
+		std::cout<<std::endl<<" GOAL DISTANCE : "  << distance[goalId[0]] << " or " << distance[goalId[1]] << std::endl;
 	}
 
+	// Let's check which node of the final edge is closer to us
+	int finalGoalId = goalId[0];
+	if ( distance[finalGoalId] > distance[goalId[1]] )
+		finalGoalId  = goalId[1];
+
+	// Print the route until we are in our position
+	int i = finalGoalId;
+	while( i != startingNodeIndex[0] && i != startingNodeIndex[1] )
+	{
+		int k = previous[i];
+
+		// We go using this edge
+		Edge e;
+		e.x1 = nodePosition[i].first, e.y1 = nodePosition[i].second;
+		e.x2 = nodePosition[k].first, e.y2 = nodePosition[k].second;
+
+		std::unique_lock < std::mutex > lckGlobalPlan(mtxGlobalPlan);
+		std::set<GlobalPlanner::Edge>::iterator it = globalPlanInfo.edges.begin();
+
+		// We look for this edge
+		bool found = false;
+		for (; it != globalPlanInfo.edges.end(); i++) {
+			if ( areEdgesEqual(e, *it)) {
+				// We mark them as chosen in our route
+				GlobalPlanner::Edge tmp = *it;
+				it = globalPlanInfo.edges.erase(it);
+				tmp.isChosen = true;
+				std::cout<<"Global Planner:: Edge sizes 1: " << globalPlanInfo.edges.size() << std::endl;
+				globalPlanInfo.edges.insert(tmp);
+				std::cout<<"Global Planner:: Edge sizes 2: " << globalPlanInfo.edges.size() << std::endl;
+				found = true;
+			} else
+				++it;
+		}
+		if (globalPlannerParams.debug == 1)
+		{
+			std::cout<<"Global Planner:: Edge sizes : " << globalPlanInfo.edges.size() << std::endl;
+		}
+
+		lckGlobalPlan.unlock();
+
+		if (globalPlannerParams.debug == 1)
+		{
+			if (found == false)
+				std::cout<<"Global Planner: NIE ZNALEZIONO KRAWEDZI z drogi w grafie " << std::endl;
+		}
+		// Let's move using the route
+		i = k;
+	}
 
 }
 
+// Helping methods
+
+void GlobalPlanner::findClosestEdge(double X, double Y, int &id1, int &id2, double &minDistance) {
+
+	minDistance = -1;
+	// For all nodes
+	for (int i = 0; i < edges.size(); i++) {
+
+		// For all neighbours
+		for (list<int>::iterator lIt = edges[i].begin(); lIt != edges[i].end();
+				++lIt) {
+
+			// Edge
+			std::pair<double, double> node1 = nodePosition[i], node2 =
+					nodePosition[*lIt];
+
+			// Distance to the infinite line
+			double A = node2.second - node1.second;
+			double B = node1.first - node2.first;
+			double C = node1.second * node2.first - node1.first * node2.second;
+
+			double d = fabs(A * X + B * Y + C) / sqrt(A * A + B * B);
+
+			// Helping variables
+			double x1 = node1.first, y1 = node1.second;
+			double x2 = node2.first, y2 = node2.second;
+
+			// Check the dot products -> because we look for distance to section
+			double a_x = x1 - X, a_y = y1 - Y;
+			double b_x = x1 - x2, b_y = y1 - y2;
+			double c_x = x2 - X, c_y = y2 - Y;
+
+			double ab = a_x * b_x + a_y * b_y;
+			double cb = -c_x * b_x - c_y * b_y;
+
+			// The distance is computed to the 1st vertex
+			if (ab <= 0 && cb >= 0)
+			{
+				d = sqrt( (x1 - X)*(x1 - X) + (y1 - Y)*(y1 - Y) );
+			}
+			// ... and to the second vertex
+			else if (ab >= 0 && cb <= 0)
+			{
+				d = sqrt( (x2 - X)*(x2 - X) + (y2 - Y)*(y2 - Y) );
+			}
+
+			// Let's see if this edge is the closest one to the currently check position
+			if (d < minDistance || minDistance < 0) {
+				minDistance = d;
+				id1 = i;
+				id2 = *lIt;
+			}
+		}
+	}
+	if (globalPlannerParams.debug == 1)
+		std::cout << "Global Planner: the ids of the closest edge are : " << id1
+				<< " and " << id2 << " and the distance is " << minDistance
+				<< " meters"<< std::endl;
+}
+
+bool GlobalPlanner::areEdgesEqual(Edge e, Edge f)
+{
+	checkAndCorrectEdgeConvention(e);
+	checkAndCorrectEdgeConvention(f);
+
+	double d = fabs(e.x1 - f.x1) + fabs(e.y1 - f.y1) + fabs(e.x2 - f.x2) + fabs(e.y2 - f.y2);
+	if ( d > 0.000001)
+		return false;
+	return true;
+}
+
+void GlobalPlanner::switchEdge(Edge &e)
+{
+	double a = e.x1;
+	e.x1 = e.x2;
+	e.x2 = a;
+
+	a = e.y1;
+	e.y1 = e.y2;
+	e.y2 = a;
+}
+
+void GlobalPlanner::checkAndCorrectEdgeConvention(Edge &e)
+{
+	if (e.x1 < e.x2)
+		switchEdge(e);
+	else if ( fabs(e.x1 - e.x2) < 0.000001 && e.y1 < e.y2 )
+		switchEdge(e);
+}
+
+// Homologation
+
 void GlobalPlanner::processHomologation() {
+
+	/// MISSING START OPERATE - removed. Should use parameters
 	cout << "homologation()" << endl;
 	if (!isRobotsDriveOpen()) {
 		cout << "Robots drive not open, ending homologation" << endl;
@@ -300,385 +669,13 @@ void GlobalPlanner::processHomologation() {
 		std::this_thread::sleep_for(duration);
 	}
 	cout << "Position = " << robot->getPosImuConstraintsMapCenter() << endl;
-	startOperate = false;
 }
 
+void GlobalPlanner::startHomologation() {
 
-
-void GlobalPlanner::updateRobotPosition() {
-	cv::Mat robotPosition = robot->getEstimatedPosition();
-	robotX = robotPosition.at<double>(0);
-	robotY = robotPosition.at<double>(1);
-	robotTheta = robotPosition.at<double>(2);
-
-	std::unique_lock<std::mutex> lckGlobalPlan(mtxGlobalPlan);
-	globalPlanInfo.robotX = robotX;
-	globalPlanInfo.robotY = robotY;
-	lckGlobalPlan.unlock();
-
-	std::cout << "Global planner - robot position: " << robotX << " " <<robotY<<std::endl;
 }
 
-void GlobalPlanner::readOpenStreetMap(const char *mapName) {
-	std::cout << "Reading OpenStreetMap" << std::endl;
-
-	TiXmlDocument osmMap(mapName);
-	if (!osmMap.LoadFile())
-		std::cout << "OSM map was not loaded!" << std::endl;
-	;
-	TiXmlHandle osmHandle(&osmMap);
-
-	std::map<long int, int> idConversion;
-
-	// Reading nodes
-	TiXmlElement* pElem = osmHandle.FirstChildElement().FirstChildElement(
-			"node").Element();
-	int i = 0;
-
-	for (; pElem; pElem = pElem->NextSiblingElement("node")) {
-		const char *pId = pElem->Attribute("id");
-		const char *pLat = pElem->Attribute("lat");
-		const char *pLon = pElem->Attribute("lon");
-		if (pId && pLat && pLon) {
-//			printf("Id lat lon: %s %s %s\n", pId, pLat, pLon);
-//			printf("lat lon: %f %f\n", atof(pLat), atof(pLon));
-//			printf("X Y : %f %f\n", robot->getPosX(atof(pLat)*100), robot->getPosY(atof(pLon)*100));
-			char *end;
-			idConversion.insert(std::make_pair(strtol(pId, &end, 10), i));
-
-
-			double lon = GPS::decimal2Nmea(atof(pLon)*100);
-			double lat = GPS::decimal2Nmea(atof(pLat)*100);
-
-
-			nodePosition.push_back(
-					std::make_pair(robot->getPosX(lat)/1000,
-							robot->getPosY(lon)/1000));
-
-			printf("Edge: %f %f -- %f %f (in meters)\n", lat, lon, robot->getPosX(lat)/1000, robot->getPosY(lon)/1000);
-		}
-		i++;
-	}
-	std::cout << "Node counter : " << i << std::endl;
-
-	edges.resize(i);
-	std::fill(edges.begin(), edges.end(), std::list<int>());
-
-	// Reading ways
-	pElem = osmHandle.FirstChildElement().FirstChildElement("way").Element();
-	i = 0;
-	for (; pElem; pElem = pElem->NextSiblingElement("way")) {
-		TiXmlElement* pNode = pElem->FirstChildElement("tag");
-		bool footWay = false;
-
-		// Checking way type
-		for (; pNode; pNode = pNode->NextSiblingElement("tag")) {
-			const char *key = pNode->Attribute("k");
-			const char *value = pNode->Attribute("v");
-			if (strstr(key, "foot") || strstr(value, "foot") || strstr(value, "service")) {
-				footWay = true;
-				break;
-			}
-		}
-
-		// If type is correct - add as an edge
-		if (footWay) {
-			pNode = pElem->FirstChildElement("nd");
-
-			int j = 0;
-			// Splitting way into edges
-			long int previousId = 0;
-			for (; pNode; pNode = pNode->NextSiblingElement("nd")) {
-				const char *Id = pNode->Attribute("ref");
-				if (Id) {
-					char* end;
-					std::map<long int, int>::iterator tmp = idConversion.find(
-							strtol(Id, &end, 10));
-					if (j > 0) {
-						edges[tmp->second].push_back(previousId);
-						edges[previousId].push_back(tmp->second);
-					}
-					j++;
-					previousId = tmp->second;
-				}
-
-			}
-			i++;
-		}
-	}
-
-	std::cout << "Ways found counter : " << i << std::endl;
-	std::cout << "Edges counter : " << edges.size() << std::endl;
-
-	std::unique_lock<std::mutex> lckGlobalPlan(mtxGlobalPlan);
-	bool start = true;
-	double minX, maxX, minY, maxY;
-
-	for (int i = 0; i < edges.size(); i++) {
-		for (list<int>::iterator lIt = edges[i].begin(); lIt != edges[i].end();
-				++lIt) {
-			std::pair<double, double> node1 = nodePosition[i], node2 =
-					nodePosition[*lIt];
-
-			Edge edge;
-			edge.isChosen = false;
-
-			if ((node1.first < node2.first)
-					|| (node1.first == node2.first && node2.second < node2.second ))
-			{
-				edge.x1 = node1.first;
-				edge.y1 = node1.second;
-				edge.x2 = node2.first;
-				edge.y2 = node2.second;
-			}
-			else
-			{
-				edge.x1 = node2.first;
-				edge.y1 = node2.second;
-				edge.x2 = node1.first;
-				edge.y2 = node1.second;
-			}
-
-			globalPlanInfo.edges.insert(edge);
-
-			if (start)
-			{
-				minX = edge.x1 > edge.x2 ? edge.x2 : edge.x1 ;
-				maxX = edge.x1 > edge.x2 ? edge.x1 : edge.x2 ;
-				minY = edge.y1 > edge.y2 ? edge.y2 : edge.y1 ;
-				maxY = edge.y1 > edge.y2 ? edge.y1 : edge.y2 ;
-				start = false;
-			}
-			else
-			{
-				if (edge.x1 > maxX)
-					maxX = edge.x1;
-				if (edge.x1 < minX)
-					minX = edge.x1;
-
-				if (edge.y1 > maxY)
-					maxY = edge.y1;
-				if (edge.y1 < minY)
-					minY = edge.y1;
-
-				if (edge.x2 > maxX)
-					maxX = edge.x2;
-				if (edge.x2 < minX)
-					minX = edge.x2;
-
-				if (edge.y2 > maxY)
-					maxY = edge.y2;
-				if (edge.y2 < minY)
-					minY = edge.y2;
-
-			}
-		}
-
-	}
-	lckGlobalPlan.unlock();
-
-
-//	for (int i = 0; i < nodePosition.size();i++)
-//	{
-//		if ( start )
-//		{
-//			minX = maxX = nodePosition[i].first;
-//			minY = maxY = nodePosition[i].second;
-//			start = false;
-//		}
-//		else
-//		{
-//			if ( nodePosition[i].first > maxX)
-//				maxX = nodePosition[i].first;
-//			if ( nodePosition[i].first < minX)
-//				minX = nodePosition[i].first;
-//
-//			if ( nodePosition[i].second > maxY)
-//				maxY = nodePosition[i].second;
-//			if ( nodePosition[i].second < minY)
-//				minY = nodePosition[i].second;
-//		}
-//
-//	}
-	std::cout << "Min/Max : " << minX << " " << maxX << " " << minY << " "
-				<< maxY << std::endl;
-
-	std::cout << "robotX : " << robotX << "\trobotY" << robotY <<endl;
-	if ( robotX > maxX)
-		maxX = robotX;
-	else if (robotX < minX)
-		minX = robotX;
-
-	if (robotY > maxY)
-		maxY = robotY;
-	else if (robotY < minY)
-		minY = robotY;
-
-	std::unique_lock<std::mutex> lckGlobalPlan2(mtxGlobalPlan);
-
-//	robotX = 0.0;
-//	robotY = 0.0;
-
-	globalPlanInfo.robotX = robotX;
-	globalPlanInfo.robotY = robotY;
-
-	globalPlanInfo.minX = minX;
-	globalPlanInfo.maxX = maxX;
-	globalPlanInfo.minY = minY;
-	globalPlanInfo.maxY = maxY;
-
-	std::cout << "Min/Max : " << minX << " " << maxX << " " << minY << " "
-			<< maxY << std::endl;
-
-	std::cout<<"Edges size: " << globalPlanInfo.edges.size()<<std::endl;
-
-	lckGlobalPlan2.unlock();
-	std::cout<<"Global Planner: end readosmMap"<<std::endl;
-}
-
-void GlobalPlanner::findClosestStartingEdge(double X, double Y) {
-
-	double minDist = -1;
-	int bestVersion;
-	int save1, save2;
-	for (int i = 0; i < edges.size(); i++) {
-		for (list<int>::iterator lIt = edges[i].begin(); lIt != edges[i].end();
-				++lIt) {
-			std::pair<double, double> node1 = nodePosition[i], node2 =
-					nodePosition[*lIt];
-
-			double A = node2.second - node1.second;
-			double B = node1.first - node2.first;
-			double C = node1.second * node2.first - node1.first * node2.second;
-
-			double d = fabs(A * X + B * Y + C) / sqrt(A * A + B * B);
-
-			// According to :
-			// dev.cdur.pl/Artykuly/Odleglosc-punktu-od-odcinka
-			double x1 = node1.first, y1 = node1.second;
-			double x2 = node2.first, y2 = node2.second;
-
-//			double u_nom = (x2 - x1) * (X - x1) + (y2 - y1) * (Y - y1);
-//			double u_den = (x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1);
-//			double u = u_nom / u_den;
-//			double x3 = x1 + u * (x2 - x1);
-//			double y3 = y1 + u * (y2 - y1);
-
-			double a_x = x1 - X, a_y = y1 - Y;
-			double b_x = x1 - x2, b_y = y1 - y2;
-			double c_x = x2 - X, c_y = y2 - Y;
-
-			double ab = a_x * b_x + a_y * b_y;
-			double cb = -c_x * b_x - c_y * b_y;
-
-			int version = 0;// ab > 0 && cb > 0
-			if (ab <= 0 && cb >= 0)
-			{
-				version = 1;
-				d = sqrt( (x1 - X)*(x1 - X) + (y1 - Y)*(y1 - Y) );
-			}
-			else if (ab >= 0 && cb <= 0)
-			{
-				version = 2;
-				d = sqrt( (x2 - X)*(x2 - X) + (y2 - Y)*(y2 - Y) );
-			}
-//			else if (ab < 0 && cb < 0)
-//			{
-//				printf("Values: %f %f %f %f %f %f\n", x1, y1, x2, y2, X, Y);
-//				printf("Oh shit! It is wrong! dist = %f\n", u);
-//				cin >>d;
-//			}
-
-			if (d < minDist || minDist < 0) {
-				minDist = d;
-				bestVersion = version;
-				save1 = i;
-				save2 = *lIt;
-			}
-		}
-	}
-	std::cout << "MinDist : " << minDist << " Version: " << bestVersion << std::endl;
-
-	std::pair<double, double> node1 = nodePosition[save1], node2 =
-			nodePosition[save2];
-	std::cout << "Compare - " << node1.first << " " << node1.second << " " << X
-			<< " | " << node2.first << " " << node2.second << " " << Y
-			<< std::endl;
-
-	double distance1 = sqrt(
-			pow(node1.first - X, 2) + pow(node1.second - Y, 2)
-					- minDist * minDist / 4);
-	double distance2 = sqrt(
-			pow(node2.first - X, 2) + pow(node2.second - Y, 2)
-					- minDist * minDist / 4);
-
-	std::cout << "The closest edge is the one between " << save1 << " and "
-			<< save2 << std::endl;
-
-	startingNodeIndex[0] = save1;
-	startingNodeIndex[1] = save2;
-	startingNodeDist[0] = distance1;
-	startingNodeDist[1] = distance2;
-
-	std::unique_lock < std::mutex > lckGlobalPlan(mtxGlobalPlan);
-	std::cout << "Managed to get through mutex " << std::endl;
-
-	if ((nodePosition[save1].first > nodePosition[save2].first)
-			|| (nodePosition[save1].first == nodePosition[save2].first
-					&& nodePosition[save1].second < nodePosition[save2].second))
-	{
-		int tmp = save2;
-		save2 = save1;
-		save1 = tmp;
-	}
-
-	double x1 = nodePosition[save1].first, y1 = nodePosition[save1].second;
-	double x2 = nodePosition[save2].first, y2 = nodePosition[save2].second;
-	std::set<GlobalPlanner::Edge>::iterator it = globalPlanInfo.edges.begin();
-	int i=0;
-	for (; it != globalPlanInfo.edges.end(); i++) {
-		if (fabs(it->x1 - x1) < 0.0001
-				&& fabs(it->y1 - y1) < 0.0001
-				&& fabs(it->x2 - x2) < 0.0001
-				&& fabs(it->y2 - y2) < 0.0001) {
-			globalPlanInfo.curEdge = i;
-			std::cout << "Global planner current edge: " << i << " | " << it->x1
-					<< " " << it->y1 << " " << it->x2 << " " << it->y2
-					<< std::endl;
-		}
-		if ( it->isChosen == true )
-		{
-			GlobalPlanner::Edge tmp = *it;
-			globalPlanInfo.edges.erase(it++);
-			tmp.isChosen = false;
-			globalPlanInfo.edges.insert(tmp);
-		}
-		else
-			++it;
-	}
-
-	lckGlobalPlan.unlock();
-
-	std::cout << "Finished finding current edge "<< std::endl;
-}
-
-void GlobalPlanner::setGoal(double X, double Y) {
-	goalX = X;
-	goalY = Y;
-	double bestDistance = -1;
-	int bestId = -1;
-	for (int i=0;i<nodePosition.size();i++)
-	{
-		std::pair<double, double> tmp = nodePosition[i];
-		double dist = (tmp.first - X) * (tmp.first - X) + (tmp.second - X) * (tmp.second - Y);
-		if (dist > bestDistance || bestDistance == -1)
-		{
-			bestDistance = dist;
-			bestId = i;
-		}
-	}
-	goalId = bestId;
-}
+// Stop thread
 
 void GlobalPlanner::stopThread() {
 	globalPlannerParams.runThread = 0;
@@ -687,9 +684,6 @@ void GlobalPlanner::stopThread() {
 	}
 }
 
-void GlobalPlanner::startHomologation() {
-	startOperate = true;
-}
 
 //----------------------MODES OF OPERATION
 void GlobalPlanner::switchMode(OperationMode mode) {
@@ -777,7 +771,7 @@ bool GlobalPlanner::isRobotsDriveOpen() {
 float GlobalPlanner::getHeadingToGoal() {
 
 	// indicate: go straight ahead
-	currentGoal = 90.0;
+	float currentGoal = 90.0;
 
 	return currentGoal;
 }

@@ -75,7 +75,7 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 		learnFromDir(learningDirs);
 	}
 	else{
-		readCache("cache/cameraCache");
+//		readCache("cache/cameraCache");
 	}
 }
 
