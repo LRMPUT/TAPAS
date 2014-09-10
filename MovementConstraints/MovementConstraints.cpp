@@ -12,7 +12,7 @@
 using namespace cv;
 using namespace std;
 
-MovementConstraints::MovementConstraints(Robot* irobot, TiXmlElement* settings) : robot(irobot) {
+MovementConstraints::MovementConstraints(Robot* irobot, TiXmlElement* settings) : robot(irobot), runThread(false) {
 	if(!settings){
 		throw "Bad settings file - entry MovementConstraints not found";
 	}
@@ -23,7 +23,7 @@ MovementConstraints::MovementConstraints(Robot* irobot, TiXmlElement* settings) 
 
 	constraintsMap = Mat(MAP_SIZE, MAP_SIZE, CV_32FC1, Scalar(0));
 
-	runThread = false;
+	//runThread = false;
 	movementConstraintsThread = std::thread(&MovementConstraints::run, this);
 
 }
@@ -99,12 +99,13 @@ cv::Mat MovementConstraints::readMatrixSettings(TiXmlElement* parent, const char
 
 // Main loop of MovementContraints thread.
 void MovementConstraints::run(){
-
 #ifndef ROBOT_OFFLINE
 	while(runThread){
 		if(robot->isEncodersOpen() && robot->isImuOpen()){
+			//cout << "robot->isEncodersOpen() = " << robot->isEncodersOpen() << ", robot->isImuOpen() = " << robot->isImuOpen() << endl;
 			break;
 		}
+		//cout << "robot->isEncodersOpen() = " << robot->isEncodersOpen() << ", robot->isImuOpen() = " << robot->isImuOpen() << endl;
 		std::chrono::milliseconds duration(100);
 		std::this_thread::sleep_for(duration);
 	}
@@ -117,6 +118,7 @@ void MovementConstraints::run(){
 	int i = 0;
 	while (runThread) {
 		//cout << "Processing points cloud" << endl;
+		//cout << "robot->isEncodersOpen() = " << robot->isEncodersOpen() << ", robot->isImuOpen() = " << robot->isImuOpen() << endl;
 		//updateConstraintsMap(0, 0, 0);
 		updatePointCloud();
 
@@ -124,7 +126,7 @@ void MovementConstraints::run(){
 			updateConstraintsMap();
 			i = 0;
 		}
-		//500 ms sleep
+		//20 ms sleep
 		std::chrono::milliseconds duration(20);
 		std::this_thread::sleep_for(duration);
 		i++;
@@ -194,8 +196,8 @@ void MovementConstraints::updateConstraintsMap(){
 	constraintsMap = Scalar(0);
 
 	//polling each constraints module to update map
-	//this->insertHokuyoConstraints(constraintsMap);
-	camera->insertConstraints(constraintsMap, timestampMap);
+	this->insertHokuyoConstraints(constraintsMap, timestampMap);
+	//camera->insertConstraints(constraintsMap, timestampMap);
 	//cout << constraintsMap << endl;
 	lckMap.unlock();
 	//cout << "End updateConstraintsMap()" << endl;

@@ -83,14 +83,15 @@ void PositionEstimation::readSettings(TiXmlElement* settings) {
 }
 
 void PositionEstimation::run() {
-	if (parameters.runThread) {
-		while (!gps.isOpen())
-			usleep(200);
-		while ((gps.getFixStatus() == 1 || (fabs(gps.getLat()) < 0.00001)
-				|| (fabs(gps.getLon()) < 0.000001)) && parameters.runThread) {
-			usleep(200);
-		};
+	while (!gps.isOpen() && parameters.runThread)
+		usleep(200);
+	while ((gps.getFixStatus() == 1 || (fabs(gps.getLat()) < 0.00001)
+			|| (fabs(gps.getLon()) < 0.000001)) && parameters.runThread)
+	{
+		usleep(200);
+	};
 
+	if (parameters.runThread) {
 		gps.setZeroXY(gps.getLat(), gps.getLon());
 	}
 	struct timeval start, end;

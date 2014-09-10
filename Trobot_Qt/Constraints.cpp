@@ -80,6 +80,7 @@ void Constraints::updateMapView(){
 	Mat pointCloudImuMapCenter = debug->getPointCloudImu(curPosImuMapCenter);
 	Mat constraintsMap = debug->getMovementConstraints();
 	vector<float> vecFieldHist = debug->getVecFieldHist();
+	cout << "vecFieldHist.size() = " << vecFieldHist.size() << endl;
 
 	stringstream tmp;
 	tmp.width(4);

@@ -39,16 +39,21 @@ GlobalPlanner::GlobalPlanner(Robot* irobot, TiXmlElement* settings) :
 
 
 	readSettings(settings);
-	globalPlannerThread = std::thread(&GlobalPlanner::run, this);
 
 	localPlanner = new LocalPlanner(robot, this, settings);
+
+	globalPlannerThread = std::thread(&GlobalPlanner::run, this);
+
+	//localPlanner->startLocalPlanner();
 
 	cout << "End GlobalPlanner()" << endl;
 }
 
+
 GlobalPlanner::~GlobalPlanner() {
 	cout << "~GlobalPlanner()" << endl;
 	stopThread();
+	cout << "closeRobotsDrive()" << endl;
 	closeRobotsDrive();
 	cout << "End ~GlobalPlanner()" << endl;
 }
@@ -93,20 +98,22 @@ void GlobalPlanner::readSettings(TiXmlElement* settings)
 
 void GlobalPlanner::run() {
 
-	if (globalPlannerParams.runThread) {
+	localPlanner->startLocalPlanner();
 
-		std::cout<<"GPS: Waiting for GPS set zero" <<std::endl;
-		while (!robot->isGpsOpen()
-				|| robot->isSetZero() == false)
-			usleep(200);
+	std::cout<<"GPS: Waiting for GPS set zero" <<std::endl;
+	while ((!robot->isGpsOpen()
+			|| robot->isSetZero() == false)  && globalPlannerParams.runThread)
+	{
+		usleep(200);
+	}
 
+	std::cout<<"GPS: Waiting on Fix status" <<std::endl;
+	while (robot->gpsGetFixStatus() == 1 && globalPlannerParams.runThread) {
+		usleep(200);
+	};
+	std::cout<<"GPS: Stopped waiting on fix status" <<std::endl;
 
-		std::cout<<"GPS: Waiting on Fix status" <<std::endl;
-		while (robot->gpsGetFixStatus() == 1 && globalPlannerParams.runThread) {
-			usleep(200);
-		};
-		std::cout<<"GPS: Stopped waiting on fix status" <<std::endl;
-
+	if(globalPlannerParams.runThread){
 		const char *cstr = globalPlannerParams.mapFile.c_str();
 		readOpenStreetMap(cstr);
 
@@ -674,7 +681,7 @@ void GlobalPlanner::setGoal(double X, double Y) {
 }
 
 void GlobalPlanner::stopThread() {
-	globalPlannerParams.runThread = false;
+	globalPlannerParams.runThread = 0;
 	if (globalPlannerThread.joinable()) {
 		globalPlannerThread.join();
 	}

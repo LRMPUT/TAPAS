@@ -495,9 +495,9 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 	pixels.resize(imageHSV.rows * imageHSV.cols);
 	for(int r = 0; r < imageHSV.rows; r++){
 		for(int c = 0; c < imageHSV.cols; c++){
-			if(maskIgnore.at<int>(r, c) == 0){
+			//if(maskIgnore.at<int>(r, c) == 0){
 				pixels[r * imageHSV.cols + c] = Pixel(r, c, regionsOnImage.at<int>(r, c));
-			}
+			//}
 		}
 	}
 	sort(pixels.begin(), pixels.end());
