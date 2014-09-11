@@ -43,6 +43,7 @@ public:
 		int runThread;
 		double processingFrequency;
 		int debug;
+		double subgoalThreshold;
 		int runHomologation;
 		std::string mapFile;
 		double latitude, longitude;
@@ -121,6 +122,8 @@ private:
 	// Goal
 	int goalId[2];
 	double goalX, goalY;
+	double goalTheta;
+	std::mutex mtxGoalTheta;
 
 	// Robot position
 	double robotX, robotY, robotTheta;

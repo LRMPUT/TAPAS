@@ -35,7 +35,7 @@ public:
 };
 
 GlobalPlanner::GlobalPlanner(Robot* irobot, TiXmlElement* settings) :
-		robot(irobot), robotDrive1(NULL), robotDrive2(NULL) {
+		robot(irobot), robotDrive1(NULL), robotDrive2(NULL), goalTheta(0.0) {
 	cout << "GlobalPlanner()" << endl;
 	readSettings(settings);
 
@@ -71,6 +71,10 @@ void GlobalPlanner::readSettings(TiXmlElement* settings)
 	if (pGlobalPlanner->QueryIntAttribute("debug", &globalPlannerParams.debug)
 			!= TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner debug";
+	}
+	if (pGlobalPlanner->QueryDoubleAttribute("subgoalThreshold",
+			&globalPlannerParams.subgoalThreshold) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner subgoalThreshold";
 	}
 	if (pGlobalPlanner->QueryIntAttribute("runHomologation", &globalPlannerParams.runHomologation)
 			!= TIXML_SUCCESS) {
@@ -109,7 +113,7 @@ void GlobalPlanner::run() {
 	if (globalPlannerParams.debug == 1)
 		std::cout<<"GlobalPlanner: Waiting for GPS set zero" <<std::endl;
 
-	while ((robot->isSetZero() == false || robot->gpsGetFixStatus() == 1)
+	while ((!robot->isGpsOpen() || robot->isSetZero() == false || robot->gpsGetFixStatus() == 1)
 			&& globalPlannerParams.runThread)
 	{
 		usleep(200);
@@ -472,6 +476,8 @@ void GlobalPlanner::computeGlobalPlan() {
 
 	// Print the route until we are in our position
 	int i = finalGoalId;
+	std::list<int> nodesToVisit;
+	nodesToVisit.push_back(i);
 	while( i != startingNodeIndex[0] && i != startingNodeIndex[1] )
 	{
 		int k = previous[i];
@@ -513,6 +519,26 @@ void GlobalPlanner::computeGlobalPlan() {
 		}
 		// Let's move using the route
 		i = k;
+		nodesToVisit.push_back(i);
+	}
+
+
+	// We check the global plan
+	for (std::list<int>::iterator it = nodesToVisit.begin(); it!=nodesToVisit.end(); ++it)
+	{
+		std::pair<double, double> tmp = nodePosition[*it];
+		double dist = pow(tmp.first - robotX, 2) + pow(tmp.second - robotY, 2);
+
+		// This is the node we go to:
+		if ( sqrt(dist) < globalPlannerParams.subgoalThreshold)
+		{
+			std::unique_lock<std::mutex> lckGoalTheta(mtxGoalTheta);
+			double x = tmp.first - robotX;
+			double y = tmp.second - robotY;
+			goalTheta = atan2(y,x) * 180.0 / 3.14159265;
+
+			lckGoalTheta.unlock();
+		}
 	}
 
 }
@@ -774,8 +800,12 @@ bool GlobalPlanner::isRobotsDriveOpen() {
 float GlobalPlanner::getHeadingToGoal() {
 
 	// indicate: go straight ahead
-	float currentGoal = 90.0;
 
-	return currentGoal;
+	std::unique_lock<std::mutex> lckGoalTheta(mtxGoalTheta);
+	float returnValue = goalTheta;
+	//returnValue = 90.0;
+	lckGoalTheta.unlock();
+
+	return goalTheta;
 }
 
