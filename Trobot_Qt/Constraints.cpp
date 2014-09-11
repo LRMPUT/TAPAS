@@ -140,8 +140,8 @@ void Constraints::updateGlobalPlanView(){
 	double scaleX = (globalPlan.maxX - globalPlan.minX)/ui->planningGlobalViewLabel->width();
 	double scaleY = (globalPlan.maxY - globalPlan.minY)
 			/ ui->planningGlobalViewLabel->height();
-	printf("Scales: %f %f and edges size: %d, curEdge : %d\n", scaleX, scaleY,
-			globalPlan.edges.size(), globalPlan.curEdge);
+//	printf("Scales: %f %f and edges size: %d, curEdge : %d\n", scaleX, scaleY,
+//			globalPlan.edges.size(), globalPlan.curEdge);
 	QPainter painter(&map);
 
 	std::set<GlobalPlanner::Edge>::iterator it = globalPlan.edges.begin();

@@ -57,6 +57,10 @@ void PositionEstimation::readSettings(TiXmlElement* settings) {
 			&parameters.runThread) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for position estimation Thread";
 	}
+	if (pPositionEstimation->QueryDoubleAttribute("processingFrequency",
+			&parameters.processingFrequency) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for positionEstimation processing frequency";
+	}
 	if (pPositionEstimation->QueryIntAttribute("debug", &parameters.debug)
 			!= TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for position estimation debug";
@@ -102,7 +106,7 @@ void PositionEstimation::run() {
 
 		// Thread sleep, so that the position is not updated too often
 		// Right now 1 ms as Robot Drive has it's own sleep
-		std::chrono::milliseconds duration(200);
+		std::chrono::milliseconds duration(int(1000.0/parameters.processingFrequency));
 		std::this_thread::sleep_for(duration);
 
 		gettimeofday(&end, NULL);
