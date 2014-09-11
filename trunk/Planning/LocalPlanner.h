@@ -61,60 +61,56 @@ private:
 
 
 	std::thread localPlannerThread;
-	std::mutex driverMtx;
 
 	std::mutex mtxVecFieldHist;
 	std::vector<float> vecFieldHist;
+	float shGoalDirLocalMap;
+	float shBestDirLocalMap;
 
 	void run();
 
-	vector<float> histSectors;
-	vector<int> freeSectors;
-	float bestDirection;
-	float goalDirection;
+	void updateHistogram(std::vector<float>& histSectors,
+						cv::Mat posImuMapCenter,
+						cv::Mat constraints);
 
-	//constraint data
-	Mat constraints;
-	Mat posImuMapCenter;
-	Mat posLocalToGlobalMap;
+	void smoothHistogram(std::vector<float>& histSectors);
 
-	void initHistogram();
+	void findFreeSectors(std::vector<float>& histSectors,
+						std::vector<int>& freeSectors);
 
-	void updateHistogram();
+	float determineGoalInLocalMap(cv::Mat posLocalToGlobalMap,
+								float goalDirGlobalMap);
 
-	void smoothHistogram();
+	float findOptimSector(const std::vector<int>& freeSectors,
+						float goalDirLocalMap);
 
-	void findFreeSectors();
-
-	void determineDriversCommand();
-
-	void findOptimSector();
-
-	void determineGoalInLocalMap();
+	void determineDriversCommand(cv::Mat posImuMapCenter,
+								float bestDirLocalMap);
 
 	float RotMatToEulerYaw(Mat rotMat);
 
-	void setGoalDirection();
+	float setGoalDirection(cv::Mat posLocalToGlobalMap);
+
+	void readSettings(TiXmlElement* settings);
+
+	void executeVFH();
 
 public:
 
 	LocalPlanner(Robot* irobot, GlobalPlanner* planer, TiXmlElement* settings);
 	virtual ~LocalPlanner();
 
-	void readSettings(TiXmlElement* settings);
 
 	void stopThread();
 
-	void executeVFH();
-
-	float getLocalDirection();
+	//float getLocalDirection();
 
 	void localPlanerTest();
 
 	void startLocalPlanner();
 	void stopLocalPlanner();
 
-	void getVecFieldHist(std::vector<float>& retVecFieldHist, float& retBestDirection);
+	void getVecFieldHist(std::vector<float>& retVecFieldHist, float& retGoalDirection, float& retBestDirection);
 	//	void setMotorsVel(float motLeft, float motRight);
 
 	//----------------------MENAGMENT OF GlobalPlanner DEVICES

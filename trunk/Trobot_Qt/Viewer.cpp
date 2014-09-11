@@ -108,6 +108,19 @@ void Viewer::drawVecFieldHist(){
 
 		gluDeleteQuadric(quadric);
 
+		glColor4f(0.0, 1.0, 1.0, 1.0);
+		static const float arrowLen = 1000;
+		drawArrow(qglviewer::Vec(0, 0, 0),
+					qglviewer::Vec(arrowLen*cos(bestDirection*PI/180), sin(bestDirection*PI/180), 0),
+					30);
+
+
+		glTranslatef(0, 0, -50);	//100 mm over ground;
+		glColor4f(1.0, 0.0, 1.0, 1.0);
+		drawArrow(qglviewer::Vec(0, 0, 0),
+					qglviewer::Vec(arrowLen*cos(goalDirection*PI/180), sin(goalDirection*PI/180), 0),
+					30);
+
 		glPopMatrix();
 	}
 }
@@ -219,8 +232,9 @@ void Viewer::updateConstraintsMap(cv::Mat newConstraintsMap){
 }
 
 
-void Viewer::updateVecFieldHist(std::vector<float> newVecFieldHist, float newBestDirection){
+void Viewer::updateVecFieldHist(std::vector<float> newVecFieldHist, float newGoalDirection, float newBestDirection){
 	vecFieldHist = newVecFieldHist;
+	goalDirection = newGoalDirection;
 	bestDirection = newBestDirection;
 }
 

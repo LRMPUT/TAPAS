@@ -91,57 +91,61 @@ void LocalPlanner::run() {
 
 void LocalPlanner::executeVFH() {
 
-	if ( localPlannerParams.avoidObstacles == 1)
-	{
-		robot->getLocalPlanData(constraints, posImuMapCenter,
-				posLocalToGlobalMap);
 
-		if(constraints.empty() || posImuMapCenter.empty() || posLocalToGlobalMap.empty()){
-			cout << "No movement constraints data" << endl;
-			return;
+	//constraint data
+	Mat constraints;
+	Mat posImuMapCenter;
+	Mat posLocalToGlobalMap;
+
+	robot->getLocalPlanData(constraints, posImuMapCenter,
+			posLocalToGlobalMap);
+	if(!constraints.empty() && !posImuMapCenter.empty() && !posLocalToGlobalMap.empty()){
+		vector<float> histSectors(HIST_SECTORS, 0);
+		vector<int> freeSectors;
+		if ( localPlannerParams.avoidObstacles == 1)
+		{
+			//cout << "updateHistogram()" << endl;
+			updateHistogram(histSectors, posImuMapCenter, constraints);
+			//cout << "findFreeSectors()" << endl;
+			findFreeSectors(histSectors, freeSectors);
+			//cout << "smoothHistogram" << endl;
+			smoothHistogram(histSectors);
 		}
 
-		initHistogram();
-		//cout << "updateHistogram()" << endl;
-		updateHistogram();
-		//cout << "findFreeSectors()" << endl;
-		findFreeSectors();
-		//cout << "smoothHistogram" << endl;
-		smoothHistogram();
 
-		//cout << "Waiting for mtxVecFieldHist" << endl;
+		float goalDirGlobalMap = setGoalDirection(posLocalToGlobalMap);
+		/// goal direction in the local map coordiantes
+		float goalDirLocalMap = determineGoalInLocalMap(posLocalToGlobalMap, goalDirGlobalMap);
+
+		float bestDirLocalMap = 0;
+		/// optimal direction in the local map - nearest to the goal
+		if ( localPlannerParams.avoidObstacles == 1)
+		{
+			bestDirLocalMap = findOptimSector(freeSectors, goalDirLocalMap);
+		}
+		else
+		{
+			bestDirLocalMap = goalDirLocalMap;
+		}
+
+		determineDriversCommand(posImuMapCenter,
+								bestDirLocalMap);
+
 		std::unique_lock<std::mutex> lck(mtxVecFieldHist);
 		vecFieldHist = histSectors;
+		shBestDirLocalMap = bestDirLocalMap;
+		shGoalDirLocalMap = goalDirLocalMap;
 		//cout << "vecFieldHist.size() = " << vecFieldHist.size() << endl;
 		lck.unlock();
 	}
 
-
-	setGoalDirection();
-	/// goal direction in the local map coordiantes
-	determineGoalInLocalMap();
-
-	std::unique_lock<std::mutex> lck(mtxVecFieldHist);
-	/// optimal direction in the local map - nearest to the goal
-	if ( localPlannerParams.avoidObstacles == 1)
-	{
-		findOptimSector();
-	}
-	else
-	{
-		bestDirection = goalDirection;
-	}
-	lck.unlock();
-
-	determineDriversCommand();
-
 }
 
-float LocalPlanner::getLocalDirection() {
+/*float LocalPlanner::getLocalDirection() {
 	return bestDirection;
-}
+}*/
 
-void LocalPlanner::setGoalDirection() {
+float LocalPlanner::setGoalDirection(cv::Mat posLocalToGlobalMap) {
 
 	///// this part of code is only for  test purposes
 	// to test the straight ahead direction of movement:
@@ -149,29 +153,25 @@ void LocalPlanner::setGoalDirection() {
 	static bool setStraighAheadDirection = false;
 	static float direction = 0;
 
-	if (!setStraighAheadDirection) {
+	/*if (!setStraighAheadDirection) {
+		float goalDirection = globalPlanner->getHeadingToGoal();
 		//Mat posLocalToGlobalMap = robot->getLocalMapPosInGlobalMap();
 		/// and convert this orentation to euler yaw
 		direction = RotMatToEulerYaw(posLocalToGlobalMap);
 		direction = 180 / PI * direction;
+		goalDirection = direction;
 		setStraighAheadDirection = true;
 	}
-	///////////////
+	else{
 
-	goalDirection = globalPlanner->getHeadingToGoal();
-//	goalDirection = direction; // => test go straight ahead
-}
+	}*/
+	direction = globalPlanner->getHeadingToGoal();
 
-void LocalPlanner::initHistogram() {
-
-	histSectors = std::vector<float>(HIST_SECTORS, 0.0);
+	return direction;
 }
 
 void LocalPlanner::localPlanerTest() {
-
-	initHistogram();
 	executeVFH();
-
 }
 
 float LocalPlanner::RotMatToEulerYaw(Mat rotMat) {
@@ -197,7 +197,9 @@ float LocalPlanner::RotMatToEulerYaw(Mat rotMat) {
 	return fi1;
 }
 
-void LocalPlanner::updateHistogram() {
+void LocalPlanner::updateHistogram(std::vector<float>& histSectors,
+									cv::Mat posImuMapCenter,
+									cv::Mat constraints) {
 
 	float angPosition;
 	float density;
@@ -249,7 +251,7 @@ void LocalPlanner::updateHistogram() {
 	}
 }
 
-void LocalPlanner::smoothHistogram() {
+void LocalPlanner::smoothHistogram(std::vector<float>& histSectors) {
 
 	cv::Mat src = cv::Mat::ones(10, 1, CV_32F), dst = cv::Mat(10, 1, CV_32F);
 
@@ -264,7 +266,8 @@ void LocalPlanner::smoothHistogram() {
 	//cin >> a;
 }
 
-void LocalPlanner::findFreeSectors() {
+void LocalPlanner::findFreeSectors(std::vector<float>& histSectors,
+									std::vector<int>& freeSectors) {
 
 	freeSectors.clear();
 
@@ -291,7 +294,8 @@ void LocalPlanner::findFreeSectors() {
 
 /// return Goal Direction converted from Global Map to
 /// local MAP
-void LocalPlanner::determineGoalInLocalMap() {
+float LocalPlanner::determineGoalInLocalMap(cv::Mat posLocalToGlobalMap,
+											float goalDirGlobalMap) {
 
 	float globalYaw = 0.0;
 	float localToGlobalDifference = 0.0;
@@ -305,18 +309,19 @@ void LocalPlanner::determineGoalInLocalMap() {
 	globalYaw = 180 / PI * globalYaw;
 	cout << "Global_YAW: " << globalYaw << endl;
 	// calculate difference between local and global map in orientation
-	localToGlobalDifference = goalDirection - globalYaw;
+	localToGlobalDifference = goalDirGlobalMap - globalYaw;
 	cout << "Difference: " << localToGlobalDifference << endl;
-	goalDirection = goalDirection - globalYaw;
 
 	//cout<<"determineGoalInLocalMap"<<endl;
+	return goalDirGlobalMap - globalYaw;
 }
 
-void LocalPlanner::findOptimSector() {
+float LocalPlanner::findOptimSector(const std::vector<int>& freeSectors,
+									float goalDirLocalMap) {
 
 	cout << "calculateLocalDirection START" << endl;
 	// goal direction+offset/ sectors alpha
-	int goalSector = (goalDirection + 180) / HIST_ALPHA;
+	int goalSector = (goalDirLocalMap + 180) / HIST_ALPHA;
 	if (goalSector == HIST_ALPHA) {
 		goalSector = 0;
 	}
@@ -343,31 +348,32 @@ void LocalPlanner::findOptimSector() {
 		}
 	}
 
-	bestDirection = bestSectorID * HIST_ALPHA;
+	float bestDirection = bestSectorID * HIST_ALPHA - 180;
 	cout << "FoundSector: " << bestSectorID << endl;
 	cout << "BestSector distance: " << bestSectorDistance << endl;
 	cout << "calculateLocalDirection END" << endl;
+	return bestDirection;
 }
 
-void LocalPlanner::determineDriversCommand() {
+void LocalPlanner::determineDriversCommand(cv::Mat posImuMapCenter,
+											float bestDirLocalMap) {
 
 	//Mat posImuMapCenter = robot->getPosImuConstraintsMapCenter();
 	float localYaw = RotMatToEulerYaw(posImuMapCenter);
 	localYaw = localYaw * 180 / PI;
 	cout << "localYaw: " << localYaw << endl;
-	bestDirection = bestDirection - 180.0;
-	cout << "Best Direction: " << bestDirection << endl;
+	cout << "Best Direction: " << bestDirLocalMap << endl;
 
 	// if we achieve set point direction then go straight ahead
 	// 100 means that we are in target direction with 10 degree margin
-	if ((bestDirection - localYaw)
-			* (bestDirection - localYaw)< STEERING_MARGIN * STEERING_MARGIN)
+	if ((bestDirLocalMap - localYaw)
+			* (bestDirLocalMap - localYaw)< STEERING_MARGIN * STEERING_MARGIN)
 	{
 		cout<<"Straight"<<endl;
 
 		//globalPlanner->setMotorsVel(25, 25);
 	}
-	else if (bestDirection > localYaw)	{
+	else if (bestDirLocalMap > localYaw)	{
 		cout<<"Right"<<endl;
 
 		//globalPlanner->setMotorsVel(25, -25);
@@ -387,9 +393,12 @@ void LocalPlanner::stopThread() {
 	}
 }
 
-void LocalPlanner::getVecFieldHist(std::vector<float>& retVecFieldHist, float& retBestDirection){
+void LocalPlanner::getVecFieldHist(std::vector<float>& retVecFieldHist,
+									float& retGoalDir,
+									float& retBestDirection){
 	std::unique_lock<std::mutex> lck(mtxVecFieldHist);
 	retVecFieldHist = vecFieldHist;
-	retBestDirection = bestDirection;
+	retGoalDir = shGoalDirLocalMap;
+	retBestDirection = shBestDirLocalMap;
 	lck.unlock();
 }

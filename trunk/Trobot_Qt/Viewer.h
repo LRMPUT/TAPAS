@@ -25,6 +25,7 @@ private:
 	cv::Mat imuOrigGlobal;
 	cv::Mat constraintsMap;
 	std::vector<float> vecFieldHist;
+	float goalDirection;
 	float bestDirection;
 
 	void drawRobot();
@@ -42,7 +43,7 @@ public:
 	void updatePointCloud(cv::Mat newPointCloud);
 	void updateRobotPos(cv::Mat newRobotPos);
 	void updateConstraintsMap(cv::Mat newConstraintsMap);
-	void updateVecFieldHist(std::vector<float> newVecFieldHist, float newBestDirection);
+	void updateVecFieldHist(std::vector<float> newVecFieldHist, float newGoalDirection, float newBestDirection);
 	//void updateCameraOrigImu(cv::Mat newCameraOrigImu);
 	//void updateImuOrigGlobal(cv::Mat newImuOrigGlobal);
 	Viewer(cv::Mat iImuOrigGlobal, cv::Mat icameraOrigImu);

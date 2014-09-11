@@ -44,7 +44,7 @@ void Drivers::exitSafeStart(){
 	/// send save start command
 	serialPort->write("GO\r");
 
-	cout << "Drivers::exitSafeStart()" << endl;
+	//cout << "Drivers::exitSafeStart()" << endl;
 	while(!commandCorrect && driveCount < 50){
 
 		/// send command again if failure occured
@@ -54,11 +54,11 @@ void Drivers::exitSafeStart(){
 		/// read serial data
 		driverResp = serialPort->getDataRead();
 
-		cout << "driverResp: ";
+		/*cout << "driverResp: ";
 		for(int i = 0; i < driverResp.size(); i++){
 			cout << driverResp[i];
 		}
-		cout << endl;
+		cout << endl;*/
 
 		if (searchBufferR(driverResp, "?") != -1  )
 			errorCount1++;
@@ -104,15 +104,15 @@ void Drivers::setMotorSpeed(int speed){
 
 	//cout << "speed = " << speed << endl;
 	if (speed >= 0){
-		cout << 'F' + boost::lexical_cast<string>(speed) + '\r' << endl;
+		//cout << 'F' + boost::lexical_cast<string>(speed) + '\r' << endl;
 		serialPort->write('F' + boost::lexical_cast<string>(speed) + '\r');
 	}
 	else{
-		cout << 'R' + boost::lexical_cast<string>(-speed) + '\r' << endl;
+		//cout << 'R' + boost::lexical_cast<string>(-speed) + '\r' << endl;
 		serialPort->write('R' + boost::lexical_cast<string>(-speed) + '\r');
 	}
 
-	cout << "Drivers::setMotorSpeed()" << endl;
+	//cout << "Drivers::setMotorSpeed()" << endl;
 	while(!commandCorrect && driveCount < 50){
 
 				/// send command again if failure occured
@@ -127,11 +127,11 @@ void Drivers::setMotorSpeed(int speed){
 				/// read serial data
 				driverResp = serialPort->getDataRead();
 
-				cout << "driverResp: ";
+				/*cout << "driverResp: ";
 				for(int i = 0; i < driverResp.size(); i++){
 					cout << driverResp[i];
 				}
-				cout << endl;
+				cout << endl;*/
 
 				if (searchBufferR(driverResp, "?") != -1  )
 					errorCount1++;
