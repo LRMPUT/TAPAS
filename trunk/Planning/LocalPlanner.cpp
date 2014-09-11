@@ -158,8 +158,8 @@ void LocalPlanner::setGoalDirection() {
 	}
 	///////////////
 
-	//goalDirection = globalPlanner->getHeadingToGoal();
-	goalDirection = direction; // => test go straight ahead
+	goalDirection = globalPlanner->getHeadingToGoal();
+//	goalDirection = direction; // => test go straight ahead
 }
 
 void LocalPlanner::initHistogram() {
