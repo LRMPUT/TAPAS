@@ -175,7 +175,7 @@ void ahrs_packet_callback(void *user_ptr, u8 *packet, u16 packet_size,
 	}
 }
 
-IMU_driver::IMU_driver() {
+IMU_driver::IMU_driver() : accValid(false), gyroValid(false), magValid(false), eulerValid(false) {
 	pointerToIMUDriver = this;
 	runThread = false;
 }
@@ -352,14 +352,20 @@ void IMU_driver::openPort(std::string& device) {
 	processingThread = std::thread(&IMU_driver::updateIMU, this);
 }
 
+bool IMU_driver::isDataValid(){
+	return (accValid && gyroValid && magValid && eulerValid);
+}
+
 //Read data from gyro.
 float* IMU_driver::getGyro() {
 	return gyro;
 }
 
 void IMU_driver::setGyro(float * _gyro) {
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 3; i++){
 		gyro[i] = _gyro[i];
+	}
+	gyroValid = true;
 }
 
 //Read data from accelerometer.
@@ -368,8 +374,10 @@ float* IMU_driver::getAccel() {
 }
 
 void IMU_driver::setAccel(float * _accel) {
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 3; i++){
 		acc[i] = _accel[i];
+	}
+	accValid = true;
 }
 
 //Read data from magnetometer.
@@ -378,8 +386,10 @@ float* IMU_driver::getMag() {
 }
 
 void IMU_driver::setMag(float * _mag) {
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 3; i++){
 		mag[i] = _mag[i];
+	}
+	magValid = true;
 }
 
 //Read Euler angles.
@@ -390,6 +400,7 @@ void IMU_driver::setEuler(float roll, float pitch, float yaw) {
 	euler[0] = roll*180/PI;
 	euler[1] = pitch*180/PI;
 	euler[2] = yaw*180/PI;
+	eulerValid = true;
 }
 
 // get Timestamp of last orientation update

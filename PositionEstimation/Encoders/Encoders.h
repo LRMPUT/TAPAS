@@ -26,6 +26,7 @@ class Encoders {
 	std::chrono::high_resolution_clock::time_point curTimestamp;
 	std::mutex mtx;
 	bool runThread;
+	bool dataValid;
 
 	void run();
 public:
@@ -38,6 +39,8 @@ public:
 	void openPort(const std::string& device, unsigned int baud);
 	void closePort();
 	bool isPortOpen();
+	bool isDataValid();
+
 	cv::Mat getEncoders(std::chrono::high_resolution_clock::time_point &timestamp);
 };
 

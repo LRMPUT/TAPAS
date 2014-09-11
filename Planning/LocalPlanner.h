@@ -114,7 +114,7 @@ public:
 	void startLocalPlanner();
 	void stopLocalPlanner();
 
-	std::vector<float> getVecFieldHist();
+	void getVecFieldHist(std::vector<float>& retVecFieldHist, float& retBestDirection);
 	//	void setMotorsVel(float motLeft, float motRight);
 
 	//----------------------MENAGMENT OF GlobalPlanner DEVICES

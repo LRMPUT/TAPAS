@@ -114,6 +114,8 @@ public:
 	 */
 	bool isOpen();
 
+	bool isDataValid();
+
 private:
 	double PosLat, PosLon;
 	double PosX, PosY;
@@ -124,6 +126,7 @@ private:
 	void ClearBuffer();
 	volatile bool threadEnd;
 	bool isSetZero;
+	bool dataValid;
 
 	void start();
 	void join();

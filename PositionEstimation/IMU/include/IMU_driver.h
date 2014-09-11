@@ -61,6 +61,8 @@ public:
 	// Port openings
 	void openPort(std::string& device);
 
+	bool isDataValid();
+
 private:
 	//! Serial port baud length
 	static const int Baud = 115200;
@@ -75,6 +77,7 @@ private:
 	// Current data
 	float acc[3], gyro[3], mag[3], euler[3];
 
+	bool accValid, gyroValid, magValid, eulerValid;
 	// Timestamp of last measurement
 	std::chrono::high_resolution_clock::time_point timestamp;
 

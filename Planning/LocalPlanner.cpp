@@ -120,6 +120,8 @@ void LocalPlanner::executeVFH() {
 	setGoalDirection();
 	/// goal direction in the local map coordiantes
 	determineGoalInLocalMap();
+
+	std::unique_lock<std::mutex> lck(mtxVecFieldHist);
 	/// optimal direction in the local map - nearest to the goal
 	if ( localPlannerParams.avoidObstacles == 1)
 	{
@@ -129,6 +131,8 @@ void LocalPlanner::executeVFH() {
 	{
 		bestDirection = goalDirection;
 	}
+	lck.unlock();
+
 	determineDriversCommand();
 
 }
@@ -361,17 +365,17 @@ void LocalPlanner::determineDriversCommand() {
 	{
 		cout<<"Straight"<<endl;
 
-		//globalPlanner->setMotorsVel(500, 500);
+		//globalPlanner->setMotorsVel(25, 25);
 	}
 	else if (bestDirection > localYaw)	{
 		cout<<"Right"<<endl;
 
-		//globalPlanner->setMotorsVel(800, -800);
+		//globalPlanner->setMotorsVel(25, -25);
 	}
 	else{
 		cout<<"Left"<<endl;
 
-		//globalPlanner->setMotorsVel(-800, 800);
+		//globalPlanner->setMotorsVel(-25, 25);
 	}
 	//getchar();
 }
@@ -383,9 +387,9 @@ void LocalPlanner::stopThread() {
 	}
 }
 
-std::vector<float> LocalPlanner::getVecFieldHist(){
+void LocalPlanner::getVecFieldHist(std::vector<float>& retVecFieldHist, float& retBestDirection){
 	std::unique_lock<std::mutex> lck(mtxVecFieldHist);
-	std::vector<float> ret = vecFieldHist;
+	retVecFieldHist = vecFieldHist;
+	retBestDirection = bestDirection;
 	lck.unlock();
-	return ret;
 }

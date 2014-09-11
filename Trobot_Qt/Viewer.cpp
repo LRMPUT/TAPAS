@@ -84,6 +84,7 @@ void Viewer::drawVecFieldHist(){
 		eye33.copyTo(Mat(posNoOrient, Rect(0, 0, 3, 3)));
 		multCurMatrix(posNoOrient);
 		multCurMatrix(imuOrigGlobal.inv());
+		glTranslatef(0, 0, -100);	//100 mm over ground;
 
 		int numSect = vecFieldHist.size();
 		float alpha = (float)360/numSect;
@@ -183,8 +184,8 @@ void Viewer::draw()
 
 	drawRobot();
 	drawPointCloud();
-	drawVecFieldHist();
 	drawConstraintsMap();
+	drawVecFieldHist();
 }
 
 void Viewer::init()
@@ -218,8 +219,9 @@ void Viewer::updateConstraintsMap(cv::Mat newConstraintsMap){
 }
 
 
-void Viewer::updateVecFieldHist(std::vector<float> newVecFieldHist){
+void Viewer::updateVecFieldHist(std::vector<float> newVecFieldHist, float newBestDirection){
 	vecFieldHist = newVecFieldHist;
+	bestDirection = newBestDirection;
 }
 
 /*void Viewer::updateCameraOrigImu(cv::Mat newCameraOrigImu){

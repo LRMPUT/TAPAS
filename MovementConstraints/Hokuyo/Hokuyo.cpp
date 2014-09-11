@@ -43,6 +43,7 @@ void Hokuyo::run(){
 			curMeas.at<int>(2, i) = distance[i];
 			curMeas.at<int>(3, i) = intensity[i];
 		}
+		dataValid = true;
 		lck.unlock();
 		//cout << "Number of zeros: " << count << endl;
 
@@ -86,6 +87,10 @@ void Hokuyo::closePort(){
 
 bool Hokuyo::isOpen(){
 	return hokuyo.is_open();
+}
+
+bool Hokuyo::isDataValid(){
+	return dataValid;
 }
 
 //CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right
