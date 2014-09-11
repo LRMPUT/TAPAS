@@ -70,7 +70,9 @@ public:
 
 	GlobalPlanner::GlobalPlanInfo getGlobalPlan();
 
-	void getVecFieldHist(std::vector<float>& retVecFieldHist, float& retBestDirection);
+	void getVecFieldHist(std::vector<float>& retVecFieldHist,
+						float& retGoalDirection,
+						float& retBestDirection);
 
 	//----------------------ACCESS TO SETTINGS
 	void getTransformationMatrices(cv::Mat& retImuOrigGlobal,
