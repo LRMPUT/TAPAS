@@ -22,6 +22,8 @@ using namespace std;
 #define LEFT_CHANNEL 2
 #define RIGHT_CHANNEL 1
 
+#define ROBOT_DRIVE_MAX 3200
+
 class myPQueueComparison {
 public:
 	myPQueueComparison() {
@@ -107,8 +109,9 @@ void GlobalPlanner::run() {
 	if (globalPlannerParams.debug == 1)
 		std::cout<<"GlobalPlanner: Waiting for GPS set zero" <<std::endl;
 
-	while (robot->isSetZero() == false || robot->gpsGetFixStatus() == 1
-			|| !globalPlannerParams.runThread) {
+	while ((robot->isSetZero() == false || robot->gpsGetFixStatus() == 1)
+			&& globalPlannerParams.runThread)
+	{
 		usleep(200);
 	}
 
@@ -672,7 +675,7 @@ void GlobalPlanner::processHomologation() {
 }
 
 void GlobalPlanner::startHomologation() {
-
+	localPlanner->startLocalPlanner();
 }
 
 // Stop thread
@@ -698,8 +701,8 @@ void GlobalPlanner::setMotorsVel(float motLeft, float motRight) {
 		robotDrive1->exitSafeStart();
 		robotDrive2->exitSafeStart();
 
-		robotDrive1->setMotorSpeed(motLeft);
-		robotDrive2->setMotorSpeed(-motRight);
+		robotDrive1->setMotorSpeed(max(min((int)(motLeft*ROBOT_DRIVE_MAX/100), ROBOT_DRIVE_MAX), -ROBOT_DRIVE_MAX));
+		robotDrive2->setMotorSpeed(max(min((int)(-motRight*ROBOT_DRIVE_MAX/100), ROBOT_DRIVE_MAX), -ROBOT_DRIVE_MAX));
 	}
 	lck.unlock();
 }

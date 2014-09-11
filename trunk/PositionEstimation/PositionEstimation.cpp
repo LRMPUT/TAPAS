@@ -399,6 +399,10 @@ bool PositionEstimation::isImuOpen() {
 	return imu.isPortOpen();
 }
 
+bool PositionEstimation::isImuDataValid(){
+	return imu.isDataValid();
+}
+
 //Encoders
 void PositionEstimation::openEncoders(std::string port) {
 	encoders.openPort(port, 115200);

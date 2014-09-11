@@ -125,6 +125,7 @@ public:
 	void openImu(std::string port);
 	void closeImu();
 	bool isImuOpen();
+	bool isImuDataValid();
 
 
 	//Encoders

@@ -121,6 +121,10 @@ bool Robot::isImuOpen(){
 	return positionEstimation->isImuOpen();
 }
 
+bool Robot::isImuDataValid(){
+	return positionEstimation->isImuDataValid();
+}
+
 //Encoders
 void Robot::openEncoders(std::string port){
 	positionEstimation->openEncoders(port);

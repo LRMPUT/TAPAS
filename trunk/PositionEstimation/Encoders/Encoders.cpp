@@ -12,11 +12,11 @@ using namespace std;
 using namespace cv;
 using namespace trobot;
 
-Encoders::Encoders() : runThread(false), curEnc(2, 1, CV_32SC1) {
+Encoders::Encoders() : runThread(false), curEnc(2, 1, CV_32SC1), dataValid(false) {
 
 }
 
-Encoders::Encoders(Robot* irobot) : runThread(false), curEnc(2, 1, CV_32SC1), robot(irobot) {
+Encoders::Encoders(Robot* irobot) : runThread(false), curEnc(2, 1, CV_32SC1), robot(irobot), dataValid(false) {
 
 }
 
@@ -29,7 +29,7 @@ Encoders::~Encoders() {
 }
 
 void Encoders::run(){
-while(runThread){
+	while(runThread){
 
 		serialPort.startReadCount();
 		serialPort.write("req");
@@ -86,6 +86,7 @@ while(runThread){
 		else{
 			curEnc.at<int>(0) = -left;	//rotates in an opposite direction
 			curEnc.at<int>(1) = right;
+			dataValid = true;
 		}
 		//std::cout<<"Circular buffer result : " << -left << " " << right << std::endl;
 		lck.unlock();
@@ -96,6 +97,7 @@ while(runThread){
 }
 
 void Encoders::openPort(const std::string& device, unsigned int baud){
+	cout << "Opening encoders on port: " << device << endl;
 	serialPort.open(baud, device);
 	runThread = true;
 	readingThread = std::thread(&Encoders::run, this);
@@ -111,6 +113,10 @@ void Encoders::closePort(){
 
 bool Encoders::isPortOpen(){
 	return serialPort.isActive();
+}
+
+bool Encoders::isDataValid(){
+	return dataValid;
 }
 
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS

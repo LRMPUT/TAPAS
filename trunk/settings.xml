@@ -23,7 +23,7 @@
 		VFH_Threshold:		threshold for the direction to be considered a valid choice
 		VFH_SteeringMargin:	the dead_zone of steering deciding upon going straight, left, right
 	-->
-	<LocalPlanner runThread="0" avoidObstacles="1" VFH_HistResolution="10" VFH_Threshold="0" VFH_SteeringMargin="4"/>
+	<LocalPlanner runThread="1" avoidObstacles="1" VFH_HistResolution="10" VFH_Threshold="0" VFH_SteeringMargin="4"/>
 
 	<!--
 		runThread: 			1 - module ON, 0 - module OFF
@@ -42,7 +42,7 @@
 	-->
 	<MovementConstraints runThread="true">
 		<odometry diam="188" base="452" encodersCPR="300" />
-		<point_cloud minDist="100" maxTimePoint="4000" maxTimeMap="10000" />
+		<point_cloud minDist="100" maxTimePoint="4000" maxTimeMap="4000" />
 		<camera_position_laser>
 			0.999975467433325   0.006201805494175   0.003256092768350	19.302285337921
   		-0.006965113845532   0.831082312695594   0.556105814313842 -581.986641194198

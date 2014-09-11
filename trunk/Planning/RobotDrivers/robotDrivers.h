@@ -28,7 +28,7 @@ public:
 
 	void exitSafeStart();
 
-	void setMotorSpeed(float speed);
+	void setMotorSpeed(int speed);
 
 	void stopMotor();
 

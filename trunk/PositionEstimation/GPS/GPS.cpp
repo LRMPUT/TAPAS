@@ -33,6 +33,7 @@ GPS::GPS() {
 	Radius = 0.0;
 	newMeasurement = false;
 	isSetZero = false;
+	dataValid = false;
 }
 
 GPS::GPS(Robot* irobot) : robot(irobot) {
@@ -45,6 +46,7 @@ GPS::GPS(Robot* irobot) : robot(irobot) {
 	Radius = 0.0;
 	newMeasurement = false;
 	isSetZero = false;
+	dataValid = false;
 }
 
 GPS::GPS(const char *PortName, int BaudRate) {
@@ -56,6 +58,8 @@ GPS::GPS(const char *PortName, int BaudRate) {
 	StartPosLon = 0.0;
 	Radius = 0.0;
 	newMeasurement = false;
+	isSetZero = false;
+	dataValid = false;
 	initController(PortName, BaudRate);
 }
 
@@ -95,6 +99,10 @@ bool GPS::isOpen()
 {
 //	printf("GPS serial port active state : %d\n", SerialPort.isActive());
 	return SerialPort.isActive();
+}
+
+bool GPS::isDataValid(){
+	return dataValid;
 }
 
 std::chrono::high_resolution_clock::time_point GPS::getTimestamp() {
@@ -239,6 +247,7 @@ void GPS::monitorSerialPort()
 				PosLat = nmea_ndeg2degree(Info.lat);
 				PosLon = nmea_ndeg2degree(Info.lon);
 				newMeasurement = true;
+				dataValid = true;
 			}
 		}
 		if(threadEnd == true){

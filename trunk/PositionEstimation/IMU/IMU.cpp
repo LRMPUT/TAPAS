@@ -67,6 +67,17 @@ bool IMU::isPortOpen(){
 	return (imu != NULL) || (imuNew != NULL);
 }
 
+
+bool IMU::isDataValid(){
+	if ( usedIMUType == IMU_UM6){
+		throw "Not supported";
+		return false;
+	}
+	else if ( usedIMUType == IMU_MICROSTRAIN_GX4_25){
+		return imuNew->isDataValid();
+	}
+}
+
 //CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
 cv::Mat IMU::getUM6Data(std::chrono::high_resolution_clock::time_point &timestamp){
 	Mat ret(3, 4, CV_32FC1);

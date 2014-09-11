@@ -109,11 +109,12 @@ void MovementConstraints::run(){
 		std::chrono::milliseconds duration(100);
 		std::this_thread::sleep_for(duration);
 	}
+	while(runThread && !robot->isImuDataValid()){
+		//cout << "Waiting for isImuDataValid()" << endl;
+		std::chrono::milliseconds duration(100);
+		std::this_thread::sleep_for(duration);
+	}
 #endif
-
-	//1000 ms sleep
-	std::chrono::milliseconds duration(1000);
-	std::this_thread::sleep_for(duration);
 
 	int i = 0;
 	while (runThread) {
@@ -252,7 +253,7 @@ void MovementConstraints::updateCurPosCloudMapCenter(){
 		Mat encodersCur = robot->getEncoderData();
 		Mat imuCur = robot->getImuData(imuTimestamp);
 
-		cout << "Euler angles: " << imuCur.at<float>(2, 3) << " " << imuCur.at<float>(1, 3) << " " << imuCur.at<float>(0, 3) << endl;
+		//cout << "Euler angles: " << imuCur.at<float>(2, 3) << " " << imuCur.at<float>(1, 3) << " " << imuCur.at<float>(0, 3) << endl;
 		//cout << "imuCur = " << imuCur << endl;
 		//cout << "encodersCur = " << encodersCur << endl;
 

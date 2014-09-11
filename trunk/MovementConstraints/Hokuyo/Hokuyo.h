@@ -32,6 +32,8 @@ class Hokuyo {
 	std::chrono::high_resolution_clock::time_point curTimestamp;
 	std::mutex mtx;
 
+	bool dataValid;
+
 	void run();
 public:
 	Hokuyo();
@@ -43,6 +45,7 @@ public:
 
 	bool isOpen();
 
+	bool isDataValid();
 	//CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right
 	cv::Mat getData(std::chrono::high_resolution_clock::time_point &timestamp);
 };

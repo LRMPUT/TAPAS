@@ -44,6 +44,7 @@ void Drivers::exitSafeStart(){
 	/// send save start command
 	serialPort->write("GO\r");
 
+	cout << "Drivers::exitSafeStart()" << endl;
 	while(!commandCorrect && driveCount < 50){
 
 		/// send command again if failure occured
@@ -52,6 +53,12 @@ void Drivers::exitSafeStart(){
 
 		/// read serial data
 		driverResp = serialPort->getDataRead();
+
+		cout << "driverResp: ";
+		for(int i = 0; i < driverResp.size(); i++){
+			cout << driverResp[i];
+		}
+		cout << endl;
 
 		if (searchBufferR(driverResp, "?") != -1  )
 			errorCount1++;
@@ -68,16 +75,22 @@ void Drivers::exitSafeStart(){
 			break;
 	}
 
-	if (driveCount == countDriveLimit)
-		throw "No driver response";
-	else if (errorCount1 == errorCountLimit)
-		throw "Unknown command sent";
-	else if (errorCount2 == errorCountLimit)
-		throw "Driver error. Command known.";
+	if (driveCount == countDriveLimit){
+		cout << "Drivers::exitSafeStart(): No driver response" << endl;
+		throw "Drivers::exitSafeStart(): No driver response";
+	}
+	else if (errorCount1 == errorCountLimit){
+		cout << "Drivers::exitSafeStart(): Unknown command sent" << endl;
+		throw "Drivers::exitSafeStart(): Unknown command sent";
+	}
+	else if (errorCount2 == errorCountLimit){
+		cout << "Drivers::exitSafeStart(): Driver error. Command known." << endl;
+		throw "Drivers::exitSafeStart(): Driver error. Command known.";
+	}
 
 }
 
-void Drivers::setMotorSpeed(float speed){
+void Drivers::setMotorSpeed(int speed){
 
 	bool commandCorrect = false;
 	static const int countDriveLimit = 50;
@@ -89,17 +102,23 @@ void Drivers::setMotorSpeed(float speed){
 	/// wrong command counter
 	int errorCount2 = 0;
 
-	if (speed > 0)
+	//cout << "speed = " << speed << endl;
+	if (speed >= 0){
+		cout << 'F' + boost::lexical_cast<string>(speed) + '\r' << endl;
 		serialPort->write('F' + boost::lexical_cast<string>(speed) + '\r');
-	else
+	}
+	else{
+		cout << 'R' + boost::lexical_cast<string>(-speed) + '\r' << endl;
 		serialPort->write('R' + boost::lexical_cast<string>(-speed) + '\r');
+	}
 
+	cout << "Drivers::setMotorSpeed()" << endl;
 	while(!commandCorrect && driveCount < 50){
 
 				/// send command again if failure occured
 				if (errorCount1 > 0 || errorCount2 > 0){
 
-					if (speed > 0)
+					if (speed >= 0)
 						serialPort->write('F' + boost::lexical_cast<string>(speed) + '\r');
 					else
 						serialPort->write('R' + boost::lexical_cast<string>(-speed) + '\r');
@@ -107,6 +126,12 @@ void Drivers::setMotorSpeed(float speed){
 
 				/// read serial data
 				driverResp = serialPort->getDataRead();
+
+				cout << "driverResp: ";
+				for(int i = 0; i < driverResp.size(); i++){
+					cout << driverResp[i];
+				}
+				cout << endl;
 
 				if (searchBufferR(driverResp, "?") != -1  )
 					errorCount1++;
@@ -123,12 +148,18 @@ void Drivers::setMotorSpeed(float speed){
 					break;
 	}
 
-	if (driveCount == countDriveLimit)
-		throw "No driver response";
-	else if (errorCount1 == errorCountLimit)
-		throw "Unknown command sent";
-	else if (errorCount2 == errorCountLimit)
-		throw "Driver error. Commands known.";
+	if (driveCount == countDriveLimit){
+		cout << "Drivers::setMotorSpeed: No driver response" << endl;
+		throw "Drivers::setMotorSpeed: No driver response";
+	}
+	else if (errorCount1 == errorCountLimit){
+		cout << "Drivers::setMotorSpeed: Unknown command sent" << endl;
+		throw "Drivers::setMotorSpeed: Unknown command sent";
+	}
+	else if (errorCount2 == errorCountLimit){
+		cout << "Drivers::setMotorSpeed: Driver error. Command known." << endl;
+		throw "Drivers::setMotorSpeed: Driver error. Command known.";
+	}
 
 }
 
