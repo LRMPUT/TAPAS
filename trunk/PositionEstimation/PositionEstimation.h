@@ -33,6 +33,7 @@ class PositionEstimation {
 private:
 	struct Parameters {
 		int runThread;
+		double processingFrequency;
 		int debug;
 		int encoderTicksPerRev;
 		double wheelDiameter;

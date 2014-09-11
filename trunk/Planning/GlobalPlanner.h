@@ -126,15 +126,15 @@ private:
 	std::mutex mtxGoalTheta;
 
 	// Robot position
-	double robotX, robotY, robotTheta;
-	int startingNodeIndex[2], startingNodeDist[2];
+	int startingNodeIndex[2];
+	double startingNodeDist[2];
 
 	// Methods to call
 	void readOpenStreetMap(std::string mapName);
 	void setGoal();
-	void updateRobotPosition();
-	void findStartingEdge(double X, double Y);
-	void computeGlobalPlan();
+	void updateRobotPosition(double &robotX, double &robotY);
+	void findStartingEdge(double robotX, double robotY);
+	void computeGlobalPlan(double robotX, double robotY);
 
 	// Helping methods
 	void findClosestEdge(double X, double Y, int &id1, int &id2, double &minDistance);
