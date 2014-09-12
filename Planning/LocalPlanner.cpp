@@ -59,6 +59,11 @@ void LocalPlanner::readSettings(TiXmlElement* settings) {
 			&localPlannerParams.steeringMargin) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for VFH_SteeringMargin";
 	}
+	if (pLocalPlanner->QueryFloatAttribute("VFH_Gauss3sig",
+			&localPlannerParams.gauss3sig) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for VFH_Gauss3sig";
+	}
+
 
 	printf("LocalPlanner -- runThread: %d\n", localPlannerParams.runThread);
 	printf("LocalPlanner -- avoidObstacles: %d\n", localPlannerParams.avoidObstacles);
@@ -203,21 +208,19 @@ void LocalPlanner::updateHistogram(std::vector<float>& histSectors,
 	float angPosition;
 	float density;
 
+	//TODO Change posImuMapCener to posRobotMapCenter
 	//TODO Change units to mm instead of cells
-	const float maxDistance = 1.41 * (float) MAP_SIZE * 1.41 * (float) MAP_SIZE;
+	const float maxDistanceSq = 2*pow(MAP_SIZE * MAP_RASTER_SIZE, 2);
 	const float hist_A = 1;
-	const float hist_B = hist_A / maxDistance;
+	const float hist_B = hist_A / maxDistanceSq;
 	/// Get current Constraints Raster Map
 	//Mat constraints = robot->getMovementConstraints();
 	//Mat posImuMapCenter = robot->getPosImuConstraintsMapCenter();
 
 	// update position of the robot
-	float addX = posImuMapCenter.at<float>(0, 3) / MAP_RASTER_SIZE;
-	float addY = posImuMapCenter.at<float>(1, 3) / MAP_RASTER_SIZE;
+	float curRobX = posImuMapCenter.at<float>(0, 3);
+	float curRobY = posImuMapCenter.at<float>(1, 3);
 
-	int curRobCellX = MAP_SIZE / 2 + addX;
-	int curRobCellY = MAP_SIZE / 2 + addY;
-	int sector = 0;
 	//cout<<"RobotX"<<curRobCellX<<endl;
 	//cout<<"RobotY"<<curRobCellY<<endl;
 
@@ -225,14 +228,16 @@ void LocalPlanner::updateHistogram(std::vector<float>& histSectors,
 	/// for each cell of the raster map
 	for (int x = 0; x < MAP_SIZE; x++) {
 		for (int y = 0; y < MAP_SIZE; y++) {
+			float cellX = ((x + 0.5)  - MAP_SIZE/2)*MAP_RASTER_SIZE;
+			float cellY = ((y + 0.5)  - MAP_SIZE/2)*MAP_RASTER_SIZE;
 			///angular position
 //			angPosition = 180/PI*atan2(float(x - curRobCellX), y - curRobCellY);
-			angPosition = atan2(float(y - curRobCellY), float(x - curRobCellX)) * 180 / PI;
+			angPosition = atan2(float(cellY - curRobY), float(cellX - curRobX)) * 180 / PI;
 			//cout<<"angPosition"<<angPosition<<endl;
 			/// value of obstacle vector
 			float c = pow(constraints.at<float>(x, y), 2);
-			float d2 = pow((float) (x - curRobCellX), 2)
-					+ pow((float) (y - curRobCellY), 2);
+			float d2 = pow((float) (cellX - curRobX), 2)
+					+ pow((float) (cellY - curRobY), 2);
 			density = c * (hist_A - hist_B * d2);
 
 			//cout << "map (" << x << ", " << y << "), histB = " << hist_B << ", c = " << c << ", d2 = " << d2 << ", density = " << density << endl;
@@ -252,17 +257,20 @@ void LocalPlanner::updateHistogram(std::vector<float>& histSectors,
 
 void LocalPlanner::smoothHistogram(std::vector<float>& histSectors) {
 
-	cv::Mat src = cv::Mat::ones(10, 1, CV_32F), dst = cv::Mat(10, 1, CV_32F);
-
-	// 3 sigmas is 25 degrees
-	cv::GaussianBlur(src, dst, cv::Size(10, 1), (25.0 / localPlannerParams.histResolution) / 3, 0);
-
-	for (int i = 0; i < 10; i++) {
-		printf("Tab value : %f\n", dst.at<float>(i));
+	int kernelSize = 2*localPlannerParams.gauss3sig/localPlannerParams.histResolution;
+	kernelSize += (kernelSize + 1) % 2;	//kernelSize must be odd
+	int kernelMid = kernelSize/2;
+	cv::Mat gaussKernel = getGaussianKernel(kernelSize,
+											(localPlannerParams.gauss3sig/localPlannerParams.histResolution)/3,
+											CV_32FC1);
+	vector<float> newHistSectors(histSectors.size(), 0);
+	for(int i = 0; i < histSectors.size(); i++){
+		for(int k = 0; k < kernelSize; k++){
+			newHistSectors[i] += histSectors[(i + k - kernelMid + histSectors.size()) % histSectors.size()]
+			                      * gaussKernel.at<float>(k);
+		}
 	}
-
-	//int a;
-	//cin >> a;
+	histSectors = newHistSectors;
 }
 
 void LocalPlanner::findFreeSectors(std::vector<float>& histSectors,
@@ -347,7 +355,8 @@ float LocalPlanner::findOptimSector(const std::vector<int>& freeSectors,
 		}
 	}
 
-	float bestDirection = bestSectorID * localPlannerParams.histResolution - 180;
+	//middle of best sector
+	float bestDirection = bestSectorID * localPlannerParams.histResolution + localPlannerParams.histResolution/2 - 180;
 	cout << "FoundSector: " << bestSectorID << endl;
 	cout << "BestSector distance: " << bestSectorDistance << endl;
 	cout << "calculateLocalDirection END" << endl;

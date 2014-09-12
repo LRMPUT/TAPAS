@@ -518,13 +518,13 @@ cv::Mat MovementConstraints::getPosImuMapCenter(){
 	return ret;
 }
 
-void MovementConstraints::getLocalPlanningData(cv::Mat& MovementConstraints,cv::Mat& PosImuMapCenter, cv::Mat& GlobalMapCenter){
+void MovementConstraints::getLocalPlanningData(cv::Mat& movementConstraints,cv::Mat& posImuMapCenter, cv::Mat& globalMapCenter){
 
 	std::unique_lock<std::mutex> lckMap(mtxMap);
 	std::unique_lock<std::mutex> lckPC(mtxPointCloud);
-	constraintsMap.copyTo(MovementConstraints);
-	curPosCloudMapCenter.copyTo(PosImuMapCenter);
-	posMapCenterGlobal.copyTo(GlobalMapCenter);
+	constraintsMap.copyTo(movementConstraints);
+	curPosCloudMapCenter.copyTo(posImuMapCenter);
+	posMapCenterGlobal.copyTo(globalMapCenter);
 	lckPC.unlock();
 	lckMap.unlock();
 
