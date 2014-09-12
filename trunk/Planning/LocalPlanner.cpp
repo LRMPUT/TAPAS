@@ -163,7 +163,7 @@ float LocalPlanner::setGoalDirection(cv::Mat posLocalToGlobalMap) {
 	///// this part of code is only for  test purposes
 	// to test the straight ahead direction of movement:
 	// logic flow: get current orientation ane keep it
-	static const bool forwardRun = true;
+	static const bool forwardRun = false;
 	static bool setStraighAheadDirection = false;
 	static float direction = 0;
 
@@ -220,7 +220,6 @@ void LocalPlanner::updateHistogram(std::vector<float>& histSectors,
 	float density;
 
 	//TODO Change posImuMapCener to posRobotMapCenter
-	//TODO Change units to mm instead of cells
 	const float maxDistanceSq = 2*pow(MAP_SIZE * MAP_RASTER_SIZE, 2);
 	const float hist_A = 1;
 	const float hist_B = hist_A / maxDistanceSq;
@@ -305,11 +304,11 @@ void LocalPlanner::findFreeSectors(std::vector<float>& histSectors,
 			break;
 		}
 	}
-	cout << "Wolne sektory:" << endl;
+	/*cout << "Wolne sektory:" << endl;
 	for (int i = 0; i < freeSectors.size(); i++) {
 		cout << "Free to go: " << freeSectors.at(i) * localPlannerParams.histResolution << " "
 				<< (freeSectors.at(i) + 1) * localPlannerParams.histResolution << endl;
-	}
+	}*/
 }
 
 /// return Goal Direction converted from Global Map to
@@ -353,15 +352,15 @@ float LocalPlanner::findOptimSector(const std::vector<int>& freeSectors,
 		std::cout << "No free sectors -- I'm stuck !!!!" << std::endl;
 	}
 	/// if goal sector is free sector
-	cout << "Free sector size : " << freeSectors.size() << endl;
+//	cout << "Free sector size : " << freeSectors.size() << endl;
 	int bestSectorID = -1;
 	int bestSectorDistance = -1;
 	for (int i = 0; i < freeSectors.size(); i++) {
-		cout << "Free vs goal : " << freeSectors[i] << " " << goalSector
-				<< endl;
+		//cout << "Free vs goal : " << freeSectors[i] << " " << goalSector
+		//		<< endl;
 		int distance = (freeSectors[i] - goalSector)
 				* (freeSectors[i] - goalSector);
-		cout << "Distance " << distance << endl;
+		//cout << "Distance " << distance << endl;
 		if (bestSectorID == -1 || bestSectorDistance > distance) {
 			bestSectorDistance = distance;
 			bestSectorID = freeSectors[i];
@@ -370,9 +369,9 @@ float LocalPlanner::findOptimSector(const std::vector<int>& freeSectors,
 
 	//middle of best sector
 	float bestDirection = bestSectorID * localPlannerParams.histResolution + localPlannerParams.histResolution/2 - 180;
-	cout << "FoundSector: " << bestSectorID << endl;
-	cout << "BestSector distance: " << bestSectorDistance << endl;
-	cout << "calculateLocalDirection END" << endl;
+//	cout << "FoundSector: " << bestSectorID << endl;
+//	cout << "BestSector distance: " << bestSectorDistance << endl;
+//	cout << "calculateLocalDirection END" << endl;
 	return bestDirection;
 }
 
@@ -392,17 +391,17 @@ void LocalPlanner::determineDriversCommand(cv::Mat posImuMapCenter,
 	{
 		cout<<"Straight"<<endl;
 
-		globalPlanner->setMotorsVel(25, 25);
+		globalPlanner->setMotorsVel(40, 40);
 	}
 	else if (bestDirLocalMap > localYaw)	{
 		cout<<"Right"<<endl;
 
-		globalPlanner->setMotorsVel(40, -40);
+		globalPlanner->setMotorsVel(80, -80);
 	}
 	else{
 		cout<<"Left"<<endl;
 
-		globalPlanner->setMotorsVel(-40, 40);
+		globalPlanner->setMotorsVel(-80, 80);
 	}
 	cout << "End LocalPlanner::determineDriversCommand" << endl;
 	//getchar();

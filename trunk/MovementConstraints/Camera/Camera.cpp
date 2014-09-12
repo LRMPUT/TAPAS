@@ -75,7 +75,7 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 		learnFromDir(learningDirs);
 	}
 	else{
-//		readCache("cache/cameraCache");
+		readCache("cache/cameraCache");
 	}
 }
 
@@ -1217,6 +1217,7 @@ void Camera::run(){
 		if(!curPosImuMapCenter.empty()){
 			timeBegin = std::chrono::high_resolution_clock::now();
 			vector<Mat> cameraData = this->getData();
+			cout << "Computing map segments" << endl;
 #ifdef NO_CUDA
 			mapSegments = computeMapSegments(curPosImuMapCenter);
 #else
@@ -1511,6 +1512,7 @@ void Camera::insertConstraints(cv::Mat map,
 //CV_8UC3 2x640x480: left, right image
 const std::vector<cv::Mat> Camera::getData(){
 	//empty matrix
+	std::unique_lock<std::mutex> lck(mtxDevice);
 	vector<Mat> ret;
 	for(int i = 0; i < cameras.size(); i++){
 		cameras[i].grab();
@@ -1526,6 +1528,7 @@ const std::vector<cv::Mat> Camera::getData(){
 		}
 		ret.push_back(tmp);
 	}
+	lck.unlock();
 	return ret;
 }
 

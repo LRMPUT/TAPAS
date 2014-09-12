@@ -27,7 +27,7 @@
 		VFH_Threshold:		threshold for the direction to be considered a valid choice
 		VFH_SteeringMargin:	the dead_zone of steering deciding upon going straight, left, right
 	-->
-	<LocalPlanner runThread="1" avoidObstacles="1" VFH_HistResolution="10" VFH_Threshold="0" VFH_SteeringMargin="10" VFH_Gauss3sig="20"/>
+	<LocalPlanner runThread="1" avoidObstacles="1" VFH_HistResolution="10" VFH_Threshold="0.5" VFH_SteeringMargin="10" VFH_Gauss3sig="40"/>
 
 	<!--
 		runThread: 				1 - module ON, 0 - module OFF
@@ -40,13 +40,13 @@
 		IMUCovariance:
 		EncoderCovariance:	
 	-->
-	<PositionEstimation runThread="1" processingFrequency="20" debug="0" encoderTicksPerRev="300" wheelDiameter="0.188" wheelBase="0.452"/>
+	<PositionEstimation runThread="1" processingFrequency="20" debug="0" encoderTicksPerRev="300" wheelDiameter="0.16" wheelBase="0.452"/>
 
 	<!--
 		Jan Wietrzykowski is lazy and does not use the comments ;d
 	-->
 	<MovementConstraints runThread="true">
-		<odometry diam="188" base="452" encodersCPR="300" />
+		<odometry diam="160" base="452" encodersCPR="300" />
 		<point_cloud minDist="100" maxTimePoint="4000" maxTimeMap="4000" />
 		<camera_position_laser>
 			0.999975467433325   0.006201805494175   0.003256092768350	19.302285337921
