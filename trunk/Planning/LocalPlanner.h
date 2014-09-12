@@ -43,6 +43,7 @@ public:
 		int histResolution;
 		float threshold;
 		float steeringMargin;
+		float gauss3sig;
 	};
 
 private:

@@ -24,7 +24,7 @@
 		VFH_Threshold:		threshold for the direction to be considered a valid choice
 		VFH_SteeringMargin:	the dead_zone of steering deciding upon going straight, left, right
 	-->
-	<LocalPlanner runThread="1" avoidObstacles="1" VFH_HistResolution="10" VFH_Threshold="0" VFH_SteeringMargin="4"/>
+	<LocalPlanner runThread="1" avoidObstacles="1" VFH_HistResolution="10" VFH_Threshold="0" VFH_SteeringMargin="4" VFH_Gauss3sig="25"/>
 
 	<!--
 		runThread: 				1 - module ON, 0 - module OFF

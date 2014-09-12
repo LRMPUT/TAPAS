@@ -166,7 +166,7 @@ public:
 
 	cv::Mat getPosImuMapCenter();
 
-	void getLocalPlanningData(cv::Mat& MovementConstraints, cv::Mat& PosImuMapCenter, cv::Mat& GlobalMapCenter);
+	void getLocalPlanningData(cv::Mat& movementConstraints, cv::Mat& posImuMapCenter, cv::Mat& globalMapCenter);
 	//----------------------MENAGMENT OF MovementConstraints DEVICES
 	//Hokuyo
 	void openHokuyo(std::string port);
