@@ -227,7 +227,7 @@ void MovementConstraints::insertHokuyoConstraints(cv::Mat map,
 	//cout << "inserting into map" << endl;
 	for(int y = 0; y < MAP_SIZE; y++){
 		for(int x = 0; x < MAP_SIZE; x++){
-			static float heightThres = -100;
+			static float heightThres = -50;
 			static int numThres = 5;
 			//Point3f minPoint;
 			int count = 0;

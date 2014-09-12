@@ -59,7 +59,7 @@ private:
 	GlobalPlanner* globalPlanner;
 
 	bool startOperate;
-	bool runThread;
+	//bool runThread;
 
 
 	std::thread localPlannerThread;
