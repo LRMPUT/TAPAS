@@ -83,6 +83,15 @@ void LocalPlanner::stopLocalPlanner() {
 	startOperate = false;
 }
 
+void LocalPlanner::setPreciseSpeed() {
+
+}
+
+void LocalPlanner::setNormalSpeed() {
+
+}
+
+
 void LocalPlanner::run() {
 	while (localPlannerParams.runThread) {
 		if (startOperate) {

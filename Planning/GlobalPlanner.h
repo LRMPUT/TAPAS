@@ -13,6 +13,7 @@
 #include <mutex>
 #include <chrono>
 #include <vector>
+#include <chrono>
 //OpenCV
 #include <opencv2/opencv.hpp>
 //Trobot
@@ -33,6 +34,13 @@ enum OperationMode{
 	Autonomous
 };
 
+enum PlanningStage{
+	toGoal,
+	preciselyToGoal,
+	toStart,
+	preciselyToStart,
+};
+
 
 
 class GlobalPlanner {
@@ -42,8 +50,10 @@ public:
 	struct Parameters{
 		int runThread;
 		double processingFrequency;
+		int computeEveryNth;
 		int debug;
 		double subgoalThreshold;
+		double preciseToGoalMaxTime;
 		int runHomologation;
 		std::string mapFile;
 		double latitude, longitude;
@@ -102,6 +112,9 @@ private:
 	// Processing thread
 	std::thread globalPlannerThread;
 
+	// Sound thread
+	std::thread sayThread;
+
 	// Parameters
 	GlobalPlanner::Parameters globalPlannerParams;
 
@@ -119,10 +132,15 @@ private:
 	GlobalPlanInfo globalPlanInfo;
 	std::mutex mtxGlobalPlan;
 
+	// Stage of the planning
+	PlanningStage planningStage;
+
 	// Goal
 	int goalId[2];
 	double goalX, goalY;
 	double goalTheta;
+	std::chrono::high_resolution_clock::time_point startTime;
+	std::list<int> nodesToVisit;
 	std::mutex mtxGoalTheta;
 
 	// Robot position
@@ -131,18 +149,18 @@ private:
 
 	// Methods to call
 	void readOpenStreetMap(std::string mapName);
-	void setGoal();
+	void setLoadedGoal();
 	void updateRobotPosition(double &robotX, double &robotY);
 	void findStartingEdge(double robotX, double robotY);
 	void computeGlobalPlan(double robotX, double robotY);
+	void chooseNextSubGoal(double robotX, double robotY);
 
 	// Helping methods
 	void findClosestEdge(double X, double Y, int &id1, int &id2, double &minDistance);
 	bool areEdgesEqual(Edge e, Edge f);
 	void switchEdge(Edge &e);
 	void checkAndCorrectEdgeConvention(Edge &e);
-
-
+	void updateGoal();
 
 public:
 	GlobalPlanner(Robot* irobot, TiXmlElement* settings);

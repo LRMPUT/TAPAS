@@ -16,6 +16,7 @@ using namespace boost;
 int main()
 {
 	try{
+//		std::system("espeak \"I'm TAPAS\"");
 		cout<<"Starting program" << endl;
 		Robot robot("../settings.xml");
 		cout << "Robot created" << endl;
