@@ -154,22 +154,24 @@ float LocalPlanner::setGoalDirection(cv::Mat posLocalToGlobalMap) {
 	///// this part of code is only for  test purposes
 	// to test the straight ahead direction of movement:
 	// logic flow: get current orientation ane keep it
+	static const bool forwardRun = true;
 	static bool setStraighAheadDirection = false;
 	static float direction = 0;
 
-	/*if (!setStraighAheadDirection) {
-		float goalDirection = globalPlanner->getHeadingToGoal();
-		//Mat posLocalToGlobalMap = robot->getLocalMapPosInGlobalMap();
-		/// and convert this orentation to euler yaw
-		direction = RotMatToEulerYaw(posLocalToGlobalMap);
-		direction = 180 / PI * direction;
-		goalDirection = direction;
-		setStraighAheadDirection = true;
+	if(forwardRun){
+		if (!setStraighAheadDirection) {
+			float goalDirection = globalPlanner->getHeadingToGoal();
+			//Mat posLocalToGlobalMap = robot->getLocalMapPosInGlobalMap();
+			/// and convert this orentation to euler yaw
+			direction = RotMatToEulerYaw(posLocalToGlobalMap);
+			direction = 180 / PI * direction;
+			goalDirection = direction;
+			setStraighAheadDirection = true;
+		}
 	}
 	else{
-
-	}*/
-	direction = globalPlanner->getHeadingToGoal();
+		direction = globalPlanner->getHeadingToGoal();
+	}
 
 	return direction;
 }
@@ -263,6 +265,8 @@ void LocalPlanner::smoothHistogram(std::vector<float>& histSectors) {
 	cv::Mat gaussKernel = getGaussianKernel(kernelSize,
 											(localPlannerParams.gauss3sig/localPlannerParams.histResolution)/3,
 											CV_32FC1);
+	gaussKernel *= 1/gaussKernel.at<float>(kernelMid);
+	//cout << "gaussKernel = " << gaussKernel << endl;
 	vector<float> newHistSectors(histSectors.size(), 0);
 	for(int i = 0; i < histSectors.size(); i++){
 		for(int k = 0; k < kernelSize; k++){
@@ -379,23 +383,24 @@ void LocalPlanner::determineDriversCommand(cv::Mat posImuMapCenter,
 	{
 		cout<<"Straight"<<endl;
 
-		//globalPlanner->setMotorsVel(25, 25);
+		globalPlanner->setMotorsVel(25, 25);
 	}
 	else if (bestDirLocalMap > localYaw)	{
 		cout<<"Right"<<endl;
 
-		//globalPlanner->setMotorsVel(25, -25);
+		globalPlanner->setMotorsVel(40, -40);
 	}
 	else{
 		cout<<"Left"<<endl;
 
-		//globalPlanner->setMotorsVel(-25, 25);
+		globalPlanner->setMotorsVel(-40, 40);
 	}
+	cout << "End LocalPlanner::determineDriversCommand" << endl;
 	//getchar();
 }
 
 void LocalPlanner::stopThread() {
-	runThread = false;
+	localPlannerParams.runThread = false;
 	if (localPlannerThread.joinable()) {
 		localPlannerThread.join();
 	}
