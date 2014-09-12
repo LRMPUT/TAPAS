@@ -210,28 +210,29 @@ void MovementConstraints::insertHokuyoConstraints(cv::Mat map,
 {
 	//cout << "insertHokuyoConstraints()" << endl;
 	std::unique_lock<std::mutex> lckPointCloud(mtxPointCloud);
-	//Mat pointCloudImu = pointCloudImuMapCenter.rowRange(0, 4);
+	Mat pointCloudRobotMapCenter = imuOrigGlobal*pointCloudImuMapCenter.rowRange(0, 4);
+	lckPointCloud.unlock();
+
 	vector<vector<vector<Point3f> > > bins(MAP_SIZE, vector<vector<Point3f> >(MAP_SIZE, vector<Point3f>()));
 	for(int p = 0; p < pointCloudImuMapCenter.cols; p++){
-		int x = pointCloudImuMapCenter.at<float>(0, p)/MAP_RASTER_SIZE + MAP_SIZE/2;
-		int y = pointCloudImuMapCenter.at<float>(1, p)/MAP_RASTER_SIZE + MAP_SIZE/2;
+		int x = pointCloudRobotMapCenter.at<float>(0, p)/MAP_RASTER_SIZE + MAP_SIZE/2;
+		int y = pointCloudRobotMapCenter.at<float>(1, p)/MAP_RASTER_SIZE + MAP_SIZE/2;
 		if(x >= 0 && x < MAP_SIZE && y >= 0 && y < MAP_SIZE){
 			//cout << "(" << x << ", " << y << ")" << endl;
-			bins[x][y].push_back(Point3f(pointCloudImuMapCenter.at<float>(0, p),
-										pointCloudImuMapCenter.at<float>(1, p),
-										pointCloudImuMapCenter.at<float>(2, p)));
+			bins[x][y].push_back(Point3f(pointCloudRobotMapCenter.at<float>(0, p),
+											pointCloudRobotMapCenter.at<float>(1, p),
+											pointCloudRobotMapCenter.at<float>(2, p)));
 		}
 	}
-	lckPointCloud.unlock();
 	//cout << "inserting into map" << endl;
 	for(int y = 0; y < MAP_SIZE; y++){
 		for(int x = 0; x < MAP_SIZE; x++){
-			static float heightThres = 730;
+			static float heightThres = -100;
 			static int numThres = 5;
 			//Point3f minPoint;
 			int count = 0;
 			for(int p = 0; p < bins[x][y].size(); p++){
-				if(bins[x][y][p].z <= heightThres){	//if something is taller than camera position minus 730 mm
+				if(bins[x][y][p].z <= heightThres){	//if something is taller than ground minus 100 mm
 					count++;
 				}
 				//minPoint = bins[x][y][p];

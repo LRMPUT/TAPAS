@@ -522,7 +522,7 @@ void GlobalPlanner::computeGlobalPlan(double robotX, double robotY) {
 		}
 		// Let's move using the route
 		i = k;
-		nodesToVisit.push_back(i);
+		nodesToVisit.push_front(i);
 	}
 
 

@@ -141,6 +141,7 @@ void Constraints::updateGlobalPlanView(){
 	double scaleX = (globalPlan.maxX - globalPlan.minX)/ui->planningGlobalViewLabel->width();
 	double scaleY = (globalPlan.maxY - globalPlan.minY)
 			/ ui->planningGlobalViewLabel->height();
+	double scale = scaleX > scaleY ? scaleX : scaleY;
 //	printf("Scales: %f %f and edges size: %d, curEdge : %d\n", scaleX, scaleY,
 //			globalPlan.edges.size(), globalPlan.curEdge);
 	QPainter painter(&map);
@@ -148,10 +149,10 @@ void Constraints::updateGlobalPlanView(){
 	std::set<GlobalPlanner::Edge>::iterator it = globalPlan.edges.begin();
 	int e=0;
 	for(; it != globalPlan.edges.end(); ++it,e++){
-		int x1 = (it->x1 - globalPlan.minX)/scaleX;
-		int y1 = (it->y1 - globalPlan.minY)/scaleY;
-		int x2 = (it->x2 - globalPlan.minX)/scaleX;
-		int y2 = (it->y2 - globalPlan.minY)/scaleY;
+		int x1 = (it->x1 - globalPlan.minX)/scale;
+		int y1 = (it->y1 - globalPlan.minY)/scale;
+		int x2 = (it->x2 - globalPlan.minX)/scale;
+		int y2 = (it->y2 - globalPlan.minY)/scale;
 		if (e == globalPlan.curEdge) {
 //			printf("Drawing current edge !!! Number: %d || %d %d %d %d\n", e, x1, y1, x2, y2);
 			QPen myPen(Qt::red, 7, Qt::SolidLine);
@@ -175,15 +176,15 @@ void Constraints::updateGlobalPlanView(){
 	// Robot coordinates
 	painter.setPen(Qt::green);
 //	printf("Drawing robot's coordinates: %f %f\n",globalPlan.robotX,globalPlan.robotY);
-	int rX = (globalPlan.robotX - globalPlan.minX)/scaleX;
-	int rY = (globalPlan.robotY - globalPlan.minY)/scaleY;
+	int rX = (globalPlan.robotX - globalPlan.minX)/scale;
+	int rY = (globalPlan.robotY - globalPlan.minY)/scale;
 	painter.setBrush(Qt::green);
 	painter.drawEllipse(rX, rY, 6, 6);
 
 	painter.setPen(Qt::red);
 //	printf("Drawing goal's coordinates: %f %f\n",globalPlan.goalX,globalPlan.goalY);
-	int gX = (globalPlan.goalX - globalPlan.minX)/scaleX;
-	int gY = (globalPlan.goalY - globalPlan.minY)/scaleY;
+	int gX = (globalPlan.goalX - globalPlan.minX)/scale;
+	int gY = (globalPlan.goalY - globalPlan.minY)/scale;
 	painter.setBrush(Qt::red);
 	painter.drawEllipse(gX, gY, 6, 6);
 
