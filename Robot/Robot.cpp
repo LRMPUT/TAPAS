@@ -107,6 +107,10 @@ double Robot::getPosLatitude(double Y)
 	return positionEstimation->getPosLatitude(Y);
 }
 
+void Robot::fakeGPSStart(double lat, double lon)
+{
+	positionEstimation->fakeGPSStart(lat,lon);
+}
 //Imu
 void Robot::openImu(std::string port){
 	positionEstimation->openImu(port);

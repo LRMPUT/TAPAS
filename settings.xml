@@ -15,7 +15,7 @@
 		 // -> latitude="52.403535" longitude="16.949781" - NO WAY
 		 // -> latitude="52.403418" longitude="16.950173"
 	-->
-	<GlobalPlanner runThread="1" processingFrequency="5" debug ="1" subgoalThreshold="3" runHomologation="0" mapFile="ppMap.osm" latitude="52.403535" longitude="16.949781"/>
+	<GlobalPlanner runThread="1" processingFrequency="5" debug ="0" subgoalThreshold="3" runHomologation="0" mapFile="ppMap.osm" latitude="52.403535" longitude="16.949781"/>
 
 	<!--
 		runThread: 		1 - module ON, 0 - module OFF

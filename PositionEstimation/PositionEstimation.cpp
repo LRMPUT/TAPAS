@@ -419,3 +419,8 @@ void PositionEstimation::closeEncoders() {
 bool PositionEstimation::isEncodersOpen() {
 	return encoders.isPortOpen();
 }
+
+void PositionEstimation::fakeGPSStart(double lat, double lon)
+{
+	gps.fakeGPSStart(lat,lon);
+}

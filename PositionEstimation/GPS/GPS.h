@@ -73,6 +73,7 @@ public:
 	 */
 	static double nmea2Decimal(double value);
 	static double decimal2Nmea(double value);
+	static double decimal2radian(double val);
 	/*
 	 * @return Distance from Zero Point measured in meters, X (latitude - poludnikowo - szerokosc geograficzna).
 	 */
@@ -116,12 +117,15 @@ public:
 
 	bool isDataValid();
 
+
+	void fakeGPSStart(double lat, double lon);
+
 private:
 	double PosLat, PosLon;
 	double PosX, PosY;
 	double StartPosLat, StartPosLon;
 	trobot::SerialPort SerialPort;
-	double Radius;
+	double RadiusLon, RadiusLat;
 	char Buffer[BUFFER_SIZE];
 	void ClearBuffer();
 	volatile bool threadEnd;
