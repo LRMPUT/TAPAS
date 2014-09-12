@@ -26,10 +26,10 @@ class GlobalPlanner;
 using namespace std;
 using namespace cv;
 
-#define HIST_ALPHA 10
-#define HIST_SECTORS (360/HIST_ALPHA)
-#define HIST_THRESHOLD 0
-#define STEERING_MARGIN 4 // in degrees
+//#define HIST_ALPHA 10
+//#define HIST_SECTORS (360/HIST_ALPHA)
+//#define HIST_THRESHOLD 0
+//#define STEERING_MARGIN 4 // in degrees
 
 
 
@@ -47,6 +47,7 @@ public:
 
 private:
 	Parameters localPlannerParams;
+	int numHistSectors;
 
 	//parent class robot
 	Robot* robot;

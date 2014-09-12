@@ -17,9 +17,8 @@ LocalPlanner::LocalPlanner(Robot* irobot, GlobalPlanner* planer,
 		robot(irobot), globalPlanner(planer), startOperate(false) {
 	cout << "LocalPlanner()" << endl;
 
-
-
 	readSettings(settings);
+	numHistSectors = 360/localPlannerParams.histResolution;
 
 	localPlannerThread = std::thread(&LocalPlanner::run, this);
 
@@ -100,16 +99,16 @@ void LocalPlanner::executeVFH() {
 	robot->getLocalPlanData(constraints, posImuMapCenter,
 			posLocalToGlobalMap);
 	if(!constraints.empty() && !posImuMapCenter.empty() && !posLocalToGlobalMap.empty()){
-		vector<float> histSectors(HIST_SECTORS, 0);
+		vector<float> histSectors(numHistSectors, 0);
 		vector<int> freeSectors;
 		if ( localPlannerParams.avoidObstacles == 1)
 		{
 			//cout << "updateHistogram()" << endl;
 			updateHistogram(histSectors, posImuMapCenter, constraints);
-			//cout << "findFreeSectors()" << endl;
-			findFreeSectors(histSectors, freeSectors);
 			//cout << "smoothHistogram" << endl;
 			smoothHistogram(histSectors);
+			//cout << "findFreeSectors()" << endl;
+			findFreeSectors(histSectors, freeSectors);
 		}
 
 
@@ -204,6 +203,7 @@ void LocalPlanner::updateHistogram(std::vector<float>& histSectors,
 	float angPosition;
 	float density;
 
+	//TODO Change units to mm instead of cells
 	const float maxDistance = 1.41 * (float) MAP_SIZE * 1.41 * (float) MAP_SIZE;
 	const float hist_A = 1;
 	const float hist_B = hist_A / maxDistance;
@@ -227,8 +227,7 @@ void LocalPlanner::updateHistogram(std::vector<float>& histSectors,
 		for (int y = 0; y < MAP_SIZE; y++) {
 			///angular position
 //			angPosition = 180/PI*atan2(float(x - curRobCellX), y - curRobCellY);
-			angPosition = 180 / PI
-					* atan2(float(y - curRobCellY), float(x - curRobCellX));
+			angPosition = atan2(float(y - curRobCellY), float(x - curRobCellX)) * 180 / PI;
 			//cout<<"angPosition"<<angPosition<<endl;
 			/// value of obstacle vector
 			float c = pow(constraints.at<float>(x, y), 2);
@@ -240,13 +239,13 @@ void LocalPlanner::updateHistogram(std::vector<float>& histSectors,
 			/// update proper sector of histogram
 			if (angPosition > 179.999)
 				angPosition = -180.0;
-			histSectors.at(floor(((angPosition + 180) / HIST_ALPHA))) +=
+			histSectors.at(floor(((angPosition + 180) / localPlannerParams.histResolution))) +=
 					density;
 		}
 	}
 
-	for (int sect = 0; sect < HIST_SECTORS; sect++) {
-		std::cout << "Angular histogram values for " << sect * HIST_ALPHA - 180
+	for (int sect = 0; sect < numHistSectors; sect++) {
+		std::cout << "Angular histogram values for " << sect * localPlannerParams.histResolution - 180
 				<< " is " << histSectors.at(sect) << endl;
 	}
 }
@@ -256,7 +255,7 @@ void LocalPlanner::smoothHistogram(std::vector<float>& histSectors) {
 	cv::Mat src = cv::Mat::ones(10, 1, CV_32F), dst = cv::Mat(10, 1, CV_32F);
 
 	// 3 sigmas is 25 degrees
-	cv::GaussianBlur(src, dst, cv::Size(10, 1), (25.0 / HIST_ALPHA) / 3, 0);
+	cv::GaussianBlur(src, dst, cv::Size(10, 1), (25.0 / localPlannerParams.histResolution) / 3, 0);
 
 	for (int i = 0; i < 10; i++) {
 		printf("Tab value : %f\n", dst.at<float>(i));
@@ -274,9 +273,9 @@ void LocalPlanner::findFreeSectors(std::vector<float>& histSectors,
 	bool needToHigherThreshold = true;
 
 	for (int thresholdIndex = 0; thresholdIndex < 5; thresholdIndex++) {
-		for (int sec = 0; sec < HIST_SECTORS; sec++) {
+		for (int sec = 0; sec < numHistSectors; sec++) {
 
-			if (fabs(histSectors.at(sec)) <= HIST_THRESHOLD + thresholdIndex) {
+			if (fabs(histSectors.at(sec)) <= localPlannerParams.threshold + thresholdIndex) {
 				freeSectors.push_back(sec);
 				needToHigherThreshold = false;
 			}
@@ -287,8 +286,8 @@ void LocalPlanner::findFreeSectors(std::vector<float>& histSectors,
 	}
 	cout << "Wolne sektory:" << endl;
 	for (int i = 0; i < freeSectors.size(); i++) {
-		cout << "Free to go: " << freeSectors.at(i) * HIST_ALPHA << " "
-				<< (freeSectors.at(i) + 1) * HIST_ALPHA << endl;
+		cout << "Free to go: " << freeSectors.at(i) * localPlannerParams.histResolution << " "
+				<< (freeSectors.at(i) + 1) * localPlannerParams.histResolution << endl;
 	}
 }
 
@@ -306,7 +305,7 @@ float LocalPlanner::determineGoalInLocalMap(cv::Mat posLocalToGlobalMap,
 	//Mat posLocalToGlobalMap = robot->getLocalMapPosInGlobalMap();
 	/// and convert this orentation to euler yaw
 	globalYaw = RotMatToEulerYaw(posLocalToGlobalMap);
-	globalYaw = 180 / PI * globalYaw;
+	globalYaw = globalYaw * 180 / PI;
 	cout << "Global_YAW: " << globalYaw << endl;
 	// calculate difference between local and global map in orientation
 	localToGlobalDifference = goalDirGlobalMap - globalYaw;
@@ -321,8 +320,8 @@ float LocalPlanner::findOptimSector(const std::vector<int>& freeSectors,
 
 	cout << "calculateLocalDirection START" << endl;
 	// goal direction+offset/ sectors alpha
-	int goalSector = (goalDirLocalMap + 180) / HIST_ALPHA;
-	if (goalSector == HIST_ALPHA) {
+	int goalSector = (goalDirLocalMap + 180) / localPlannerParams.histResolution;
+	if (goalSector == localPlannerParams.histResolution) {
 		goalSector = 0;
 	}
 	cout << "Goal sector : " << goalSector << endl;
@@ -348,7 +347,7 @@ float LocalPlanner::findOptimSector(const std::vector<int>& freeSectors,
 		}
 	}
 
-	float bestDirection = bestSectorID * HIST_ALPHA - 180;
+	float bestDirection = bestSectorID * localPlannerParams.histResolution - 180;
 	cout << "FoundSector: " << bestSectorID << endl;
 	cout << "BestSector distance: " << bestSectorDistance << endl;
 	cout << "calculateLocalDirection END" << endl;
@@ -367,7 +366,7 @@ void LocalPlanner::determineDriversCommand(cv::Mat posImuMapCenter,
 	// if we achieve set point direction then go straight ahead
 	// 100 means that we are in target direction with 10 degree margin
 	if ((bestDirLocalMap - localYaw)
-			* (bestDirLocalMap - localYaw)< STEERING_MARGIN * STEERING_MARGIN)
+			* (bestDirLocalMap - localYaw)< localPlannerParams.steeringMargin * localPlannerParams.steeringMargin)
 	{
 		cout<<"Straight"<<endl;
 
