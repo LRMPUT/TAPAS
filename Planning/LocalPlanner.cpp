@@ -244,10 +244,10 @@ void LocalPlanner::updateHistogram(std::vector<float>& histSectors,
 		}
 	}
 
-	for (int sect = 0; sect < numHistSectors; sect++) {
-		std::cout << "Angular histogram values for " << sect * localPlannerParams.histResolution - 180
-				<< " is " << histSectors.at(sect) << endl;
-	}
+//	for (int sect = 0; sect < numHistSectors; sect++) {
+//		std::cout << "Angular histogram values for " << sect * localPlannerParams.histResolution - 180
+//				<< " is " << histSectors.at(sect) << endl;
+//	}
 }
 
 void LocalPlanner::smoothHistogram(std::vector<float>& histSectors) {
