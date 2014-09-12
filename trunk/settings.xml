@@ -2,8 +2,11 @@
 	<!--
 		runThread:				1 - module ON, 0 - module OFF
 		processingFrequency: 	The frequency of processing in global planner thread in Hz
+		computeEveryNth:		Recompute the globalPlan after Nth steps | Integer >0
 		debug:					1 - debug ON, 0 - debug OFF
-		subgoalThreshold:			next subgoal must be further than subgoalThreshold (in meters)
+		subgoalThreshold:		next subgoal must be further than subgoalThreshold (in meters)
+		preciseToGoalMaxTime:	Maximum time for precise localization (in ms)
+		sound:					1 - ON, 0 - OFF
 		runHomologation:		1 - overrides global Planner to perform Homologation
 		mapFile:				file in open street map used in navigation
 		latitude:				latitude N/S
@@ -15,7 +18,7 @@
 		 // -> latitude="52.403535" longitude="16.949781" - NO WAY
 		 // -> latitude="52.403418" longitude="16.950173"
 	-->
-	<GlobalPlanner runThread="1" processingFrequency="5" debug ="1" subgoalThreshold="3" runHomologation="0" mapFile="ppMap.osm" latitude="52.403418" longitude="16.950173"/>
+	<GlobalPlanner runThread="1" processingFrequency="5" computeEveryNth="25" debug ="1" subgoalThreshold="3" preciseToGoalMaxTime="25000" runHomologation="0" mapFile="ppMap.osm" latitude="52.403418" longitude="16.950173"/>
 
 	<!--
 		runThread: 		1 - module ON, 0 - module OFF

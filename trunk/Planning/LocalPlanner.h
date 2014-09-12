@@ -112,6 +112,9 @@ public:
 	void startLocalPlanner();
 	void stopLocalPlanner();
 
+	void setPreciseSpeed(); // TODO: IMPLEMENT THEM
+	void setNormalSpeed();  // TODO: IMPLEMENT THEM
+
 	void getVecFieldHist(std::vector<float>& retVecFieldHist, float& retGoalDirection, float& retBestDirection);
 	//	void setMotorsVel(float motLeft, float motRight);
 

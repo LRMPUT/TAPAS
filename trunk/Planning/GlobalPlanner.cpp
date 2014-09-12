@@ -35,7 +35,7 @@ public:
 };
 
 GlobalPlanner::GlobalPlanner(Robot* irobot, TiXmlElement* settings) :
-		robot(irobot), robotDrive1(NULL), robotDrive2(NULL), goalTheta(0.0) {
+		robot(irobot), robotDrive1(NULL), robotDrive2(NULL), goalTheta(0.0), planningStage(toGoal) {
 	cout << "GlobalPlanner()" << endl;
 	readSettings(settings);
 
@@ -44,7 +44,6 @@ GlobalPlanner::GlobalPlanner(Robot* irobot, TiXmlElement* settings) :
 
 	cout << "End GlobalPlanner()" << endl;
 }
-
 
 GlobalPlanner::~GlobalPlanner() {
 	cout << "~GlobalPlanner()" << endl;
@@ -55,18 +54,21 @@ GlobalPlanner::~GlobalPlanner() {
 
 // Reading settings
 
-void GlobalPlanner::readSettings(TiXmlElement* settings)
-{
+void GlobalPlanner::readSettings(TiXmlElement* settings) {
 	TiXmlElement* pGlobalPlanner;
 	pGlobalPlanner = settings->FirstChildElement("GlobalPlanner");
 
-	if (pGlobalPlanner->QueryIntAttribute("runThread", &globalPlannerParams.runThread)
-			!= TIXML_SUCCESS) {
+	if (pGlobalPlanner->QueryIntAttribute("runThread",
+			&globalPlannerParams.runThread) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner Thread";
 	}
 	if (pGlobalPlanner->QueryDoubleAttribute("processingFrequency",
 			&globalPlannerParams.processingFrequency) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner processing frequency";
+	}
+	if (pGlobalPlanner->QueryIntAttribute("computeEveryNth",
+			&globalPlannerParams.computeEveryNth) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner computeEveryNth";
 	}
 	if (pGlobalPlanner->QueryIntAttribute("debug", &globalPlannerParams.debug)
 			!= TIXML_SUCCESS) {
@@ -76,13 +78,17 @@ void GlobalPlanner::readSettings(TiXmlElement* settings)
 			&globalPlannerParams.subgoalThreshold) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner subgoalThreshold";
 	}
-	if (pGlobalPlanner->QueryIntAttribute("runHomologation", &globalPlannerParams.runHomologation)
-			!= TIXML_SUCCESS) {
+	if (pGlobalPlanner->QueryDoubleAttribute("preciseToGoalMaxTime",
+			&globalPlannerParams.preciseToGoalMaxTime) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner preciseToGoalMaxTime";
+	}
+	if (pGlobalPlanner->QueryIntAttribute("runHomologation",
+			&globalPlannerParams.runHomologation) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner runHomologation";
 	}
 
-	if (pGlobalPlanner->QueryStringAttribute("mapFile", &globalPlannerParams.mapFile)
-			!= TIXML_SUCCESS) {
+	if (pGlobalPlanner->QueryStringAttribute("mapFile",
+			&globalPlannerParams.mapFile) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner mapFile";
 	}
 
@@ -96,13 +102,20 @@ void GlobalPlanner::readSettings(TiXmlElement* settings)
 		throw "Bad settings file - wrong value for globalPlanner longitude";
 	}
 
-
 	printf("GlobalPlanner -- runThread: %d\n", globalPlannerParams.runThread);
+	printf("GlobalPlanner -- processing frequency: %f\n", globalPlannerParams.processingFrequency);
+	printf("GlobalPlanner -- computeEveryNth: %d\n", globalPlannerParams.computeEveryNth);
 	printf("GlobalPlanner -- debug: %d\n", globalPlannerParams.debug);
-	printf("GlobalPlanner -- runhomologation: %d\n", globalPlannerParams.runHomologation);
-	printf("GlobalPlanner -- mapFile: %s\n", globalPlannerParams.mapFile.c_str());
-	printf("GlobalPlanner -- goal latitude: %f \n", globalPlannerParams.latitude);
-	printf("GlobalPlanner -- goal longitude: %f \n", globalPlannerParams.longitude);
+	printf("GlobalPlanner -- subgoal threshold: %f\n", globalPlannerParams.subgoalThreshold);
+	printf("GlobalPlanner -- preciseToGoalMaxTime: %f\n", globalPlannerParams.preciseToGoalMaxTime);
+	printf("GlobalPlanner -- runhomologation: %d\n",
+			globalPlannerParams.runHomologation);
+	printf("GlobalPlanner -- mapFile: %s\n",
+			globalPlannerParams.mapFile.c_str());
+	printf("GlobalPlanner -- goal latitude: %f \n",
+			globalPlannerParams.latitude);
+	printf("GlobalPlanner -- goal longitude: %f \n",
+			globalPlannerParams.longitude);
 }
 
 
@@ -111,59 +124,65 @@ void GlobalPlanner::run() {
 //	localPlanner->startLocalPlanner();
 
 	if (globalPlannerParams.debug == 1)
-		std::cout<<"GlobalPlanner: Waiting for GPS set zero" <<std::endl;
+		std::cout << "GlobalPlanner: Waiting for GPS set zero" << std::endl;
 
-	while ((!robot->isGpsOpen() || robot->isSetZero() == false || robot->gpsGetFixStatus() == 1)
-			&& globalPlannerParams.runThread)
-	{
+	while ((!robot->isGpsOpen() || robot->isSetZero() == false
+			|| robot->gpsGetFixStatus() == 1) && globalPlannerParams.runThread) {
 		usleep(200);
 	}
 
 	if (globalPlannerParams.debug == 1)
-		std::cout<<"GlobalPlanner: We have fix and zero position" <<std::endl;
+		std::cout << "GlobalPlanner: We have fix and zero position"
+				<< std::endl;
 
-	if(globalPlannerParams.runThread){
+	if (globalPlannerParams.runThread) {
 		// Read the map of the tournament
 		readOpenStreetMap(globalPlannerParams.mapFile);
 
 		// Set the goal in the map
-		setGoal();
+		setLoadedGoal();
 	}
 	localPlanner->startLocalPlanner();
+	int loopTimeCounter = 0;
 	while (globalPlannerParams.runThread) {
 
-			// Where are we ?
-			double robotX, robotY;
-			updateRobotPosition(robotX, robotY);
+		// Where are we ?
+		double robotX, robotY;
+		updateRobotPosition(robotX, robotY);
 
-			// Where are we in the map
-			findStartingEdge(robotX, robotY);
+		// Where are we in the map
+		findStartingEdge(robotX, robotY);
 
+		// We compute new global plan
+		if (globalPlannerParams.computeEveryNth == 1
+				|| loopTimeCounter % globalPlannerParams.computeEveryNth == 0) {
+			loopTimeCounter = loopTimeCounter
+					% globalPlannerParams.computeEveryNth;
 			// Compute the route to follow
 			computeGlobalPlan(robotX, robotY);
 
-			// Let's compute the next target
-//			chooseNextSubGoal();
+		}
 
-			// Let's update out subgoal as current destination
+		// Let's compute the next target
+		chooseNextSubGoal(robotX, robotY);
+
+
+
+// Let's update out subgoal as current destination
 //			updateHeadingGoal();
 
-
-
-		std::chrono::milliseconds duration(int(1000.0/globalPlannerParams.processingFrequency));
+		std::chrono::milliseconds duration(
+				int(1000.0 / globalPlannerParams.processingFrequency));
 		std::this_thread::sleep_for(duration);
+		loopTimeCounter++;
 	}
 	localPlanner->stopLocalPlanner();
 
 }
 
-
 // Methods called in processing thread
 
 void GlobalPlanner::readOpenStreetMap(std::string mapName) {
-
-
-
 
 	if (globalPlannerParams.debug == 1)
 		std::cout << "GlobalPlanner: Reading OpenStreetMap" << std::endl;
@@ -190,13 +209,13 @@ void GlobalPlanner::readOpenStreetMap(std::string mapName) {
 			idConversion.insert(std::make_pair(strtol(pId, &end, 10), i));
 
 			// We need to convert from OSM's gps coordinates to Nmea format
-			double lon = GPS::decimal2Nmea(atof(pLon)*100);
-			double lat = GPS::decimal2Nmea(atof(pLat)*100);
+			double lon = GPS::decimal2Nmea(atof(pLon) * 100);
+			double lat = GPS::decimal2Nmea(atof(pLat) * 100);
 
 			// Adding the node
 			nodePosition.push_back(
-					std::make_pair(robot->getPosX(lat)/1000,
-							robot->getPosY(lon)/1000));
+					std::make_pair(robot->getPosX(lat) / 1000,
+							robot->getPosY(lon) / 1000));
 		}
 		i++;
 	}
@@ -218,11 +237,11 @@ void GlobalPlanner::readOpenStreetMap(std::string mapName) {
 			const char *value = pNode->Attribute("v");
 
 			// Is is a way we can walk on? Can add here more way tags if needed
-			if (strstr(key, "foot") || strstr(value, "foot") || strstr(value, "service")) {
+			if (strstr(key, "foot") || strstr(value, "foot")
+					|| strstr(value, "service")) {
 				footWay = true;
 				break;
 			}
-
 
 		}
 
@@ -253,11 +272,11 @@ void GlobalPlanner::readOpenStreetMap(std::string mapName) {
 	}
 
 	if (globalPlannerParams.debug == 1)
-		std::cout << "GlobalPlanner: Found " << edges.size() << " in read mapfile"<< std::endl;
-
+		std::cout << "GlobalPlanner: Found " << edges.size()
+				<< " in read mapfile" << std::endl;
 
 	// Adding edges to the global plan
-	std::unique_lock<std::mutex> lckGlobalPlan(mtxGlobalPlan);
+	std::unique_lock < std::mutex > lckGlobalPlan(mtxGlobalPlan);
 	globalPlanInfo.robotX = 0;
 	globalPlanInfo.robotY = 0;
 	double minX = 0, maxX = 0, minY = 0, maxY = 0;
@@ -295,10 +314,9 @@ void GlobalPlanner::readOpenStreetMap(std::string mapName) {
 
 	}
 
-	if (globalPlannerParams.debug == 1)
-	{
-		std::cout << "GlobalPlanner: mixX, maxX, minY, maxY : " << minX << ", " << maxX << ", " << minY << ", "
-				<< maxY << std::endl;
+	if (globalPlannerParams.debug == 1) {
+		std::cout << "GlobalPlanner: mixX, maxX, minY, maxY : " << minX << ", "
+				<< maxX << ", " << minY << ", " << maxY << std::endl;
 	}
 
 	globalPlanInfo.minX = minX;
@@ -307,33 +325,34 @@ void GlobalPlanner::readOpenStreetMap(std::string mapName) {
 	globalPlanInfo.maxY = maxY;
 	lckGlobalPlan.unlock();
 
-
 	if (globalPlannerParams.debug == 1)
-		std::cout<<"Global Planner: end readosmMap"<<std::endl;
+		std::cout << "Global Planner: end readosmMap" << std::endl;
 }
 
-void GlobalPlanner::setGoal() {
+void GlobalPlanner::updateGoal() {
+	// Updating global plan
+	std::unique_lock < std::mutex > lckGlobalPlan(mtxGlobalPlan);
+	globalPlanInfo.goalX = goalX;
+	globalPlanInfo.goalY = goalY;
+	lckGlobalPlan.unlock();
+	// Finding the edge that is the closest to the goal
+	double dist;
+	findClosestEdge(goalX, goalY, goalId[0], goalId[1], dist);
+}
+
+void GlobalPlanner::setLoadedGoal() {
 
 	// Recomputing from decimal coordinates to Nmea
 	double lon = GPS::decimal2Nmea(globalPlannerParams.longitude * 100);
 	double lat = GPS::decimal2Nmea(globalPlannerParams.latitude * 100);
 	if (globalPlannerParams.debug == 1)
-		std::cout << "GlobalPlanner: goal longitude and latitude: " << lat / 100 << " "
-			<< lon / 100 << std::endl;
-	goalX = robot->getPosX(lat)/1000;
-	goalY = robot->getPosY(lon)/1000;
-
+		std::cout << "GlobalPlanner: goal longitude and latitude: " << lat / 100
+				<< " " << lon / 100 << std::endl;
+	goalX = robot->getPosX(lat) / 1000;
+	goalY = robot->getPosY(lon) / 1000;
 
 	// Updating global plan
-	std::unique_lock<std::mutex> lckGlobalPlan(mtxGlobalPlan);
-		globalPlanInfo.goalX = goalX;
-		globalPlanInfo.goalY = goalY;
-	lckGlobalPlan.unlock();
-
-
-	// Finding the edge that is the closest to the goal
-	double dist;
-	findClosestEdge(goalX, goalY, goalId[0], goalId[1], dist);
+	updateGoal();
 }
 
 void GlobalPlanner::updateRobotPosition(double &robotX, double &robotY) {
@@ -342,19 +361,20 @@ void GlobalPlanner::updateRobotPosition(double &robotX, double &robotY) {
 	robotX = robotPosition.at<double>(0);
 	robotY = robotPosition.at<double>(1);
 
-	std::unique_lock<std::mutex> lckGlobalPlan(mtxGlobalPlan);
-		globalPlanInfo.robotX = robotX;
-		globalPlanInfo.robotY = robotY;
+	std::unique_lock < std::mutex > lckGlobalPlan(mtxGlobalPlan);
+	globalPlanInfo.robotX = robotX;
+	globalPlanInfo.robotY = robotY;
 
-		globalPlanInfo.minX = std::min(globalPlanInfo.minX, (float)robotX);
-		globalPlanInfo.maxX = std::max(globalPlanInfo.maxX, (float)robotX);
-		globalPlanInfo.minY = std::min(globalPlanInfo.minY, (float)robotY);
-		globalPlanInfo.maxY = std::max(globalPlanInfo.maxY, (float)robotY);
+	globalPlanInfo.minX = std::min(globalPlanInfo.minX, (float) robotX);
+	globalPlanInfo.maxX = std::max(globalPlanInfo.maxX, (float) robotX);
+	globalPlanInfo.minY = std::min(globalPlanInfo.minY, (float) robotY);
+	globalPlanInfo.maxY = std::max(globalPlanInfo.maxY, (float) robotY);
 
 	lckGlobalPlan.unlock();
 
 	if (globalPlannerParams.debug == 1)
-		std::cout << "Global Planner : robot position : " << robotX << " " <<robotY<<std::endl;
+		std::cout << "Global Planner : robot position : " << robotX << " "
+				<< robotY << std::endl;
 }
 
 void GlobalPlanner::findStartingEdge(double X, double Y) {
@@ -364,16 +384,17 @@ void GlobalPlanner::findStartingEdge(double X, double Y) {
 	findClosestEdge(X, Y, startingNodeIndex[0], startingNodeIndex[1], minDist);
 
 	// We have the two nodes that are connected with the closest edge
-	for (int i=0;i<2;i++)
-	{
+	for (int i = 0; i < 2; i++) {
 		std::pair<double, double> node = nodePosition[startingNodeIndex[i]];
 
 		// We compute the distance to this node
-		startingNodeDist[i] = sqrt( pow(node.first - X, 2) + pow(node.second - Y, 2) );
+		startingNodeDist[i] = sqrt(
+				pow(node.first - X, 2) + pow(node.second - Y, 2));
 
 		if (globalPlannerParams.debug == 1)
 			std::cout << "The closest edge's node is the one between "
-					<< startingNodeIndex[i] << " with distance = " << startingNodeDist[i] << std::endl;
+					<< startingNodeIndex[i] << " with distance = "
+					<< startingNodeDist[i] << std::endl;
 
 	}
 
@@ -401,20 +422,23 @@ void GlobalPlanner::findStartingEdge(double X, double Y) {
 			it = globalPlanInfo.edges.erase(it);
 			tmp.isChosen = false;
 			globalPlanInfo.edges.insert(tmp);
-		}
-		else
+		} else
 			++it;
 	}
 
 	lckGlobalPlan.unlock();
 
 	if (globalPlannerParams.debug == 1)
-		std::cout << "GlobalPlanner : Finished finding current edge " << std::endl;
+		std::cout << "GlobalPlanner : Finished finding current edge "
+				<< std::endl;
 
 }
 
 void GlobalPlanner::computeGlobalPlan(double robotX, double robotY) {
 	// Finding shortest path using Dijkstra
+
+	// Clear last route
+	nodesToVisit.clear();
 
 	// Containers for Dijkstra
 	std::vector<double> distance(edges.size(), -1.0);
@@ -423,14 +447,14 @@ void GlobalPlanner::computeGlobalPlan(double robotX, double robotY) {
 			std::vector<std::pair<double, int>>, myPQueueComparison> pqueue;
 
 	// Going through nodes
-	distance[ startingNodeIndex[0] ] = startingNodeDist[0];
-	distance[ startingNodeIndex[1] ] = startingNodeDist[1];
+	distance[startingNodeIndex[0]] = startingNodeDist[0];
+	distance[startingNodeIndex[1]] = startingNodeDist[1];
 
-	previous[ startingNodeIndex[0] ] = -2.0;
-	previous[ startingNodeIndex[1] ] = -2.0;
+	previous[startingNodeIndex[0]] = -2.0;
+	previous[startingNodeIndex[1]] = -2.0;
 
-	pqueue.push(std::make_pair(startingNodeDist[0],  startingNodeIndex[0]));
-	pqueue.push(std::make_pair(startingNodeDist[1],  startingNodeIndex[1]));
+	pqueue.push(std::make_pair(startingNodeDist[0], startingNodeIndex[0]));
+	pqueue.push(std::make_pair(startingNodeDist[1], startingNodeIndex[1]));
 
 	// We process the graph
 	while (!pqueue.empty()) {
@@ -453,7 +477,7 @@ void GlobalPlanner::computeGlobalPlan(double robotX, double robotY) {
 					(x - x2) * (x - x2) + (y - y2) * (y - y2));
 
 			// If it is a new node in processing or we found shorter path
-			if ( fabs(distance[*listIter] + 1) < 0.0000001
+			if (fabs(distance[*listIter] + 1) < 0.0000001
 					|| distance[*listIter]
 							> distance[idToProcess] + additionalDistance) {
 				distance[*listIter] = distance[idToProcess]
@@ -468,27 +492,25 @@ void GlobalPlanner::computeGlobalPlan(double robotX, double robotY) {
 	}
 
 	// Conclusions
-	if (globalPlannerParams.debug == 1)
-	{
+	if (globalPlannerParams.debug == 1) {
 		std::cout << "Global Planner : Printing ids from backward to get to id="
 				<< goalId[0] << " or " << goalId[1] << " from ids="
 				<< startingNodeIndex[0] << " or " << startingNodeIndex[1]
 				<< std::endl;
 
-		std::cout<<std::endl<<" GOAL DISTANCE : "  << distance[goalId[0]] << " or " << distance[goalId[1]] << std::endl;
+		std::cout << std::endl << " GOAL DISTANCE : " << distance[goalId[0]]
+				<< " or " << distance[goalId[1]] << std::endl;
 	}
 
 	// Let's check which node of the final edge is closer to us
 	int finalGoalId = goalId[0];
-	if ( distance[finalGoalId] > distance[goalId[1]] )
-		finalGoalId  = goalId[1];
+	if (distance[finalGoalId] > distance[goalId[1]])
+		finalGoalId = goalId[1];
 
 	// Print the route until we are in our position
 	int i = finalGoalId;
-	std::list<int> nodesToVisit;
 	nodesToVisit.push_back(i);
-	while( i != startingNodeIndex[0] && i != startingNodeIndex[1] )
-	{
+	while (i != startingNodeIndex[0] && i != startingNodeIndex[1]) {
 		int k = previous[i];
 
 		// We go using this edge
@@ -497,12 +519,13 @@ void GlobalPlanner::computeGlobalPlan(double robotX, double robotY) {
 		e.x2 = nodePosition[k].first, e.y2 = nodePosition[k].second;
 
 		std::unique_lock < std::mutex > lckGlobalPlan(mtxGlobalPlan);
-		std::set<GlobalPlanner::Edge>::iterator it = globalPlanInfo.edges.begin();
+		std::set<GlobalPlanner::Edge>::iterator it =
+				globalPlanInfo.edges.begin();
 
 		// We look for this edge
 		bool found = false;
 		for (; it != globalPlanInfo.edges.end(); i++) {
-			if ( areEdgesEqual(e, *it)) {
+			if (areEdgesEqual(e, *it)) {
 				// We mark them as chosen in our route
 				GlobalPlanner::Edge tmp = *it;
 				it = globalPlanInfo.edges.erase(it);
@@ -515,46 +538,92 @@ void GlobalPlanner::computeGlobalPlan(double robotX, double robotY) {
 
 		lckGlobalPlan.unlock();
 
-		if (globalPlannerParams.debug == 1)
-		{
+		if (globalPlannerParams.debug == 1) {
 			if (found == false)
-				std::cout<<"Global Planner: NIE ZNALEZIONO KRAWEDZI z drogi w grafie " << std::endl;
+				std::cout
+						<< "Global Planner: NIE ZNALEZIONO KRAWEDZI z drogi w grafie "
+						<< std::endl;
 		}
 		// Let's move using the route
 		i = k;
 		nodesToVisit.push_front(i);
 	}
+}
 
-
+void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY) {
 	// We check the global plan
-	for (std::list<int>::iterator it = nodesToVisit.begin(); it!=nodesToVisit.end(); ++it)
-	{
+	for (std::list<int>::iterator it = nodesToVisit.begin(); ;) {
 		std::pair<double, double> tmp = nodePosition[*it];
 		double dist = pow(tmp.first - robotX, 2) + pow(tmp.second - robotY, 2);
 
 		// This is the node we go to:
-		if ( sqrt(dist) > globalPlannerParams.subgoalThreshold)
-		{
-			std::unique_lock<std::mutex> lckGoalTheta(mtxGoalTheta);
+		if (sqrt(dist) > globalPlannerParams.subgoalThreshold) {
+			std::unique_lock < std::mutex > lckGoalTheta(mtxGoalTheta);
 			double x = tmp.first - robotX;
 			double y = tmp.second - robotY;
-			std::cout << "Global Planner : theta : " << tmp.first << " " <<tmp.second<<std::endl;
-			std::cout << "Global Planner : robot position : " << robotX << " " <<robotY<<std::endl;
-			std::cout<<"Global Planner : XY : " << x << " " << y << std::endl;
-			goalTheta = atan2(y,x) * 180.0 / 3.14159265;
+			std::cout << "Global Planner : theta : " << tmp.first << " "
+					<< tmp.second << std::endl;
+			std::cout << "Global Planner : robot position : " << robotX << " "
+					<< robotY << std::endl;
+			std::cout << "Global Planner : XY : " << x << " " << y << std::endl;
+			goalTheta = atan2(y, x) * 180.0 / 3.14159265;
 
 			lckGoalTheta.unlock();
 			break;
 		}
+
+		// We reach our goal -> let's precisely navigate towards it
+		if (nodesToVisit.size() == 1)
+		{
+			// One time
+			if ( planningStage != preciselyToGoal && planningStage != preciselyToStart)
+			{
+				planningStage = preciselyToGoal;
+				startTime = std::chrono::high_resolution_clock::now();
+				localPlanner->setPreciseSpeed();
+			}
+
+// Next time
+			std::chrono::milliseconds time = std::chrono::duration_cast
+					<std::chrono::milliseconds
+					> (std::chrono::high_resolution_clock::now() - startTime);
+			if (time.count() > globalPlannerParams.preciseToGoalMaxTime) {
+				planningStage = static_cast<PlanningStage>(((int) planningStage
+						+ 1) % 4);
+
+				// stopLocalPlanner
+				localPlanner->stopLocalPlanner();
+
+				// Let's beep !!!:D
+				system("espeak \"I'm TAPAS\"");
+
+				// Going back home :)
+				goalX = 0.0;
+				goalY = 0.0;
+				updateGoal();
+
+
+				// startLocalPlanner
+				localPlanner->setNormalSpeed();
+				localPlanner->startLocalPlanner();
+			}
+
+		}
+		else
+		{
+			it = nodesToVisit.begin();
+			nodesToVisit.pop_front();
+		}
 	}
 	if (globalPlannerParams.debug == 1)
-		std::cout<<"Global Planner: We are heading with theta = " << goalTheta << " (in degrees)"<< std::endl;
-
+		std::cout << "Global Planner: We are heading with theta = " << goalTheta
+				<< " (in degrees)" << std::endl;
 }
 
 // Helping methods
 
-void GlobalPlanner::findClosestEdge(double X, double Y, int &id1, int &id2, double &minDistance) {
+void GlobalPlanner::findClosestEdge(double X, double Y, int &id1, int &id2,
+		double &minDistance) {
 
 	minDistance = -1;
 	// For all nodes
@@ -588,14 +657,12 @@ void GlobalPlanner::findClosestEdge(double X, double Y, int &id1, int &id2, doub
 			double cb = -c_x * b_x - c_y * b_y;
 
 			// The distance is computed to the 1st vertex
-			if (ab <= 0 && cb >= 0)
-			{
-				d = sqrt( (x1 - X)*(x1 - X) + (y1 - Y)*(y1 - Y) );
+			if (ab <= 0 && cb >= 0) {
+				d = sqrt((x1 - X) * (x1 - X) + (y1 - Y) * (y1 - Y));
 			}
 			// ... and to the second vertex
-			else if (ab >= 0 && cb <= 0)
-			{
-				d = sqrt( (x2 - X)*(x2 - X) + (y2 - Y)*(y2 - Y) );
+			else if (ab >= 0 && cb <= 0) {
+				d = sqrt((x2 - X) * (x2 - X) + (y2 - Y) * (y2 - Y));
 			}
 
 			// Let's see if this edge is the closest one to the currently check position
@@ -609,22 +676,21 @@ void GlobalPlanner::findClosestEdge(double X, double Y, int &id1, int &id2, doub
 	if (globalPlannerParams.debug == 1)
 		std::cout << "Global Planner: the ids of the closest edge are : " << id1
 				<< " and " << id2 << " and the distance is " << minDistance
-				<< " meters"<< std::endl;
+				<< " meters" << std::endl;
 }
 
-bool GlobalPlanner::areEdgesEqual(Edge e, Edge f)
-{
+bool GlobalPlanner::areEdgesEqual(Edge e, Edge f) {
 	checkAndCorrectEdgeConvention(e);
 	checkAndCorrectEdgeConvention(f);
 
-	double d = fabs(e.x1 - f.x1) + fabs(e.y1 - f.y1) + fabs(e.x2 - f.x2) + fabs(e.y2 - f.y2);
-	if ( d > 0.000001)
+	double d = fabs(e.x1 - f.x1) + fabs(e.y1 - f.y1) + fabs(e.x2 - f.x2)
+			+ fabs(e.y2 - f.y2);
+	if (d > 0.000001)
 		return false;
 	return true;
 }
 
-void GlobalPlanner::switchEdge(Edge &e)
-{
+void GlobalPlanner::switchEdge(Edge &e) {
 	double a = e.x1;
 	e.x1 = e.x2;
 	e.x2 = a;
@@ -634,11 +700,10 @@ void GlobalPlanner::switchEdge(Edge &e)
 	e.y2 = a;
 }
 
-void GlobalPlanner::checkAndCorrectEdgeConvention(Edge &e)
-{
+void GlobalPlanner::checkAndCorrectEdgeConvention(Edge &e) {
 	if (e.x1 < e.x2)
 		switchEdge(e);
-	else if ( fabs(e.x1 - e.x2) < 0.000001 && e.y1 < e.y2 )
+	else if (fabs(e.x1 - e.x2) < 0.000001 && e.y1 < e.y2)
 		switchEdge(e);
 }
 
@@ -722,7 +787,6 @@ void GlobalPlanner::stopThread() {
 	}
 }
 
-
 //----------------------MODES OF OPERATION
 void GlobalPlanner::switchMode(OperationMode mode) {
 	currentMode = mode;
@@ -736,8 +800,14 @@ void GlobalPlanner::setMotorsVel(float motLeft, float motRight) {
 		robotDrive1->exitSafeStart();
 		robotDrive2->exitSafeStart();
 
-		robotDrive1->setMotorSpeed(max(min((int)(motLeft*ROBOT_DRIVE_MAX/100), ROBOT_DRIVE_MAX), -ROBOT_DRIVE_MAX));
-		robotDrive2->setMotorSpeed(max(min((int)(-motRight*ROBOT_DRIVE_MAX/100), ROBOT_DRIVE_MAX), -ROBOT_DRIVE_MAX));
+		robotDrive1->setMotorSpeed(
+				max(
+						min((int) (motLeft * ROBOT_DRIVE_MAX / 100),
+								ROBOT_DRIVE_MAX), -ROBOT_DRIVE_MAX));
+		robotDrive2->setMotorSpeed(
+				max(
+						min((int) (-motRight * ROBOT_DRIVE_MAX / 100),
+								ROBOT_DRIVE_MAX), -ROBOT_DRIVE_MAX));
 	}
 	lck.unlock();
 }
@@ -760,7 +830,7 @@ GlobalPlanner::GlobalPlanInfo GlobalPlanner::getGlobalPlan() {
 //	tmpEdge.y2 = 2.5;
 //
 //	x.edges.push_back(tmpEdge);
-	std::unique_lock<std::mutex> lckGlobalPlan(mtxGlobalPlan);
+	std::unique_lock < std::mutex > lckGlobalPlan(mtxGlobalPlan);
 	GlobalPlanInfo plan = globalPlanInfo;
 	lckGlobalPlan.unlock();
 
@@ -810,7 +880,7 @@ float GlobalPlanner::getHeadingToGoal() {
 
 	// indicate: go straight ahead
 
-	std::unique_lock<std::mutex> lckGoalTheta(mtxGoalTheta);
+	std::unique_lock < std::mutex > lckGoalTheta(mtxGoalTheta);
 	float returnValue = goalTheta;
 	//returnValue = 90.0;
 	lckGoalTheta.unlock();
