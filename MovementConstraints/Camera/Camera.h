@@ -156,6 +156,8 @@ class Camera {
 
 	std::thread cameraThread;
 
+	std::mutex mtxDevice;
+
 	std::mutex mtxConstr;
 
 	std::vector<cv::Mat> classifiedImage;
