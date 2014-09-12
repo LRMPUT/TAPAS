@@ -129,6 +129,7 @@ void GlobalPlanner::run() {
 		// Set the goal in the map
 		setGoal();
 	}
+	localPlanner->startLocalPlanner();
 	while (globalPlannerParams.runThread) {
 
 			// Where are we ?
@@ -152,7 +153,7 @@ void GlobalPlanner::run() {
 		std::chrono::milliseconds duration(int(1000.0/globalPlannerParams.processingFrequency));
 		std::this_thread::sleep_for(duration);
 	}
-//	localPlanner->stopLocalPlanner();
+	localPlanner->stopLocalPlanner();
 
 }
 
