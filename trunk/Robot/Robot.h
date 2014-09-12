@@ -97,6 +97,8 @@ public:
 	double getPosY(double latitude);
 	double getPosLatitude(double Y);
 
+	void fakeGPSStart(double lat, double lon);
+
 	//Imu
 	void openImu(std::string port);
 	void closeImu();

@@ -30,7 +30,7 @@ GPS::GPS() {
 	PosLon = 0.0;
 	StartPosLat = 0.0;
 	StartPosLon = 0.0;
-	Radius = 0.0;
+	RadiusLon = 0.0;
 	newMeasurement = false;
 	isSetZero = false;
 	dataValid = false;
@@ -43,7 +43,8 @@ GPS::GPS(Robot* irobot) : robot(irobot) {
 	PosLon = 0.0;
 	StartPosLat = 0.0;
 	StartPosLon = 0.0;
-	Radius = 0.0;
+	RadiusLon = 0.0;
+	RadiusLat = 0.0;
 	newMeasurement = false;
 	isSetZero = false;
 	dataValid = false;
@@ -56,7 +57,8 @@ GPS::GPS(const char *PortName, int BaudRate) {
 	PosLon = 0.0;
 	StartPosLat = 0.0;
 	StartPosLon = 0.0;
-	Radius = 0.0;
+	RadiusLon = 0.0;
+	RadiusLat = 0.0;
 	newMeasurement = false;
 	isSetZero = false;
 	dataValid = false;
@@ -111,29 +113,20 @@ std::chrono::high_resolution_clock::time_point GPS::getTimestamp() {
 
 
 double GPS::nmea2Decimal(double value) {
-	// Example:
-	// 1527.456 is 15 degrees and 27.456 minutes in Nmea
-	// floor(value/100.0) = 15
-	// (value/100.0 - floor(value/100.0)) = 27.456
-	// 27.456 * 100.0/60.0 to achieve value in decimal format
-	// We multiply times 100.0
-	double newValue = floor(value / 100.0)
-			+ (value / 100.0 - floor(value / 100.0)) * 100.0 / 60.0;
-	return newValue * 100.0;
+	return nmea_ndeg2degree(value) * 100.0;
 }
 
 double GPS::decimal2Nmea(double value) {
-	// Similarly to previous method
-	// This time, we take anything after decimal place and convert it to minutes
-	// We multiply times 100.0
-	double newValue = floor(value / 100.0)
-			+ (value / 100.0 - floor(value / 100.0)) * 60.0 / 100.0;
-	return newValue * 100.0;
+	return nmea_degree2ndeg(value/100);
+}
+
+double GPS::decimal2radian(double value) {
+	return  nmea_degree2radian(value);
 }
 
 double GPS::getPosX(){
 	newMeasurement = false;
-	PosX = (nmea_ndeg2radian(Info.lat) - nmea_ndeg2radian(StartPosLat))*Radius;
+	PosX = (nmea_ndeg2radian(Info.lat) - nmea_ndeg2radian(StartPosLat))*RadiusLat;
 	//cout << "Angular difference X = " << Info.lon << " - " << StartPosLon << " = " <<
 	//		 nmea_ndeg2radian(Info.lon - StartPosLon) << endl;
 	return PosX;
@@ -142,30 +135,36 @@ double GPS::getPosX(){
 double GPS::getPosX(double latitude)
 {
 //    cout<< "GPS: " << StartPosLat << " " << StartPosLon << " vs 1st: " << latitude <<endl;
-	return (nmea_ndeg2radian(latitude) - nmea_ndeg2radian(StartPosLat))*Radius;
+	cout<< "Conversion -- RadiusLat : "<< RadiusLat<<std::endl;
+//	printf("TEST : %.8f - %.8f =  %.8f\n", nmea_ndeg2radian(latitude), nmea_ndeg2radian(StartPosLat), nmea_ndeg2radian(latitude) - nmea_ndeg2radian(StartPosLat));
+
+	return (nmea_ndeg2radian(latitude) - nmea_ndeg2radian(StartPosLat))*RadiusLat;
 }
 
-double GPS::getPosLatitude(double Y)
+double GPS::getPosLatitude(double X)
 {
-	return nmea_radian2ndeg(Y/Radius + nmea_ndeg2radian(StartPosLat));
+	return nmea_radian2ndeg(X/EqRd + nmea_ndeg2radian(StartPosLat));
 }
 
 
 double GPS::getPosY(){
 	newMeasurement = false;
-	PosY = (nmea_ndeg2radian(Info.lon) - nmea_ndeg2radian(StartPosLon))*Radius;
+	PosY = (nmea_ndeg2radian(Info.lon) - nmea_ndeg2radian(StartPosLon))*RadiusLon;
 	return PosY;
 }
 
 double GPS::getPosY(double longitude)
 {
 //	cout<< "GPS: " << StartPosLat << " " << StartPosLon << " vs 2nd:" << longitude <<endl;
-	return (nmea_ndeg2radian(longitude) - nmea_ndeg2radian(StartPosLon))*Radius;
+//	cout<< "Conversion -- RadiusLon : "<< RadiusLon<<std::endl;
+//
+//	printf("TEST : %.8f - %.8f =  %.8f\n", nmea_ndeg2radian(longitude), nmea_ndeg2radian(StartPosLon), nmea_ndeg2radian(longitude) - nmea_ndeg2radian(StartPosLon));
+	return (nmea_ndeg2radian(longitude) - nmea_ndeg2radian(StartPosLon))*RadiusLon;
 }
 
 double GPS::getPosLongitude(double Y)
 {
-	return nmea_radian2ndeg(Y/Radius +nmea_ndeg2radian(StartPosLon));
+	return nmea_radian2ndeg(Y/RadiusLon +nmea_ndeg2radian(StartPosLon));
 }
 
 double GPS::getLat(){
@@ -269,13 +268,22 @@ int GPS::calculateRadius(){
 		return -1;
 	}
 	double StartPosLatRad = nmea_ndeg2radian(StartPosLat);
-	Radius = sqrt( ((pow( pow(EqRd,2.0)*cos(StartPosLatRad),2.0)) + (pow( pow( PlRd ,2.0)*sin(StartPosLatRad),2.0)))
+	RadiusLat = sqrt( ((pow( pow(EqRd,2.0)*cos(StartPosLatRad),2.0)) + (pow( pow( PlRd ,2.0)*sin(StartPosLatRad),2.0)))
 			/ ((pow( EqRd*cos(StartPosLatRad),2.0)) + (pow( PlRd*sin(StartPosLatRad),2.0))));
-	cout << "Radius = " << Radius << endl;
+	RadiusLon = RadiusLat * cos(StartPosLatRad);
+	cout << "Radius = " << RadiusLon << endl;
+	cout << "RadiusLat = " << RadiusLat << endl;
 	return 0;
 }
 
 bool GPS::getNewMeasurement()
 {
 	return newMeasurement;
+}
+
+void GPS::fakeGPSStart(double lat, double lon)
+{
+	StartPosLat = lat;
+	StartPosLon = lon;
+	calculateRadius();
 }

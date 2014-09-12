@@ -160,6 +160,10 @@ void GlobalPlanner::run() {
 // Methods called in processing thread
 
 void GlobalPlanner::readOpenStreetMap(std::string mapName) {
+
+
+
+
 	if (globalPlannerParams.debug == 1)
 		std::cout << "GlobalPlanner: Reading OpenStreetMap" << std::endl;
 
