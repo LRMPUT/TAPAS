@@ -69,8 +69,6 @@ public:
 				> (std::chrono::high_resolution_clock::now() - startTime);
 	}
 
-	void homologation();
-
 	//----------------------MENAGMENT OF GlobalPlanner DEVICES
 	//Robots Drive
 	void openRobotsDrive(std::string port1, std::string port2);

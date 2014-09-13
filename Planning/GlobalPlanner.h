@@ -14,6 +14,7 @@
 #include <chrono>
 #include <vector>
 #include <chrono>
+#include <queue>          // std::priority_queue
 //OpenCV
 #include <opencv2/opencv.hpp>
 //Trobot
@@ -47,6 +48,16 @@ class GlobalPlanner {
 	friend class Debug;
 
 public:
+	class myPQueueComparison {
+	public:
+		myPQueueComparison() {
+		}
+		bool operator()(const std::pair<double, int>& lhs,
+				const std::pair<double, int>&rhs) const {
+			return (lhs.first < rhs.first);
+		}
+	};
+
 	struct Parameters{
 		int runThread;
 		double processingFrequency;
@@ -120,7 +131,7 @@ private:
 	GlobalPlanner::Parameters globalPlannerParams;
 
 	// Processing thread method
-	void run();
+	void globalPlannerProcessing();
 
 	// Homologation
 	void processHomologation();
@@ -137,7 +148,7 @@ private:
 	PlanningStage planningStage;
 
 	// Goal
-	int goalId[2];
+	int goalId[2], goalType;
 	double goalX, goalY;
 	double goalTheta;
 	std::chrono::high_resolution_clock::time_point startTime;
@@ -145,24 +156,33 @@ private:
 	std::mutex mtxGoalTheta;
 
 	// Robot position
-	int startingNodeIndex[2];
-	double startingNodeDist[2];
+	int startId[2];
+	double startIdDist[2];
 
 	// Methods to call
 	void readOpenStreetMap(std::string mapName);
 	void setLoadedGoal();
-	void updateRobotPosition(double &robotX, double &robotY);
-	void findStartingEdge(double robotX, double robotY);
-	void computeGlobalPlan(double robotX, double robotY);
+	void updateRobotPosition(double &robotX, double &robotY, double &theta);
+	void findStartingEdge(double robotX, double robotY, int &distType);
+	void computeGlobalPlan(double robotX, double robotY, int startType);
 	void chooseNextSubGoal(double robotX, double robotY, bool &recomputePlan);
 
 	// Helping methods
 	void clearRouteInGlobalPlan();
-	void findClosestEdge(double X, double Y, int &id1, int &id2, double &minDistance);
+	// distanceType = 0 (first node), 1 (second node), 2 (edge)
+	void findClosestEdge(double X, double Y, int &id1, int &id2, double &minDistance, int& distanceType);
 	bool areEdgesEqual(Edge e, Edge f);
 	void switchEdge(Edge &e);
 	void checkAndCorrectEdgeConvention(Edge &e);
 	void updateGoal();
+	double computeDistance(std::pair<double, double> a, std::pair<double, double> b);
+	void dijkstraStartPreparation(int startType, std::vector<double> &distance,
+			std::vector<int> &previous,
+			std::priority_queue<std::pair<double, int>,
+					std::vector<std::pair<double, int> >, myPQueueComparison> &pqueue);
+	int findGoalNodeId(int finalGoalId, std::vector<double> distance);
+	void goDirectlyToTarget(double robotX, double robotY, bool& recomputePlan);
+	void setGoalDirection(double theta); // in radians
 
 public:
 	GlobalPlanner(Robot* irobot, TiXmlElement* settings);
@@ -171,8 +191,6 @@ public:
 	void readSettings(TiXmlElement* settings);
 
 	void stopThread();
-
-	void startHomologation();
 
 	float getHeadingToGoal();
 
