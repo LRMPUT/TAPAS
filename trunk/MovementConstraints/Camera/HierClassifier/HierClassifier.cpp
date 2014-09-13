@@ -123,6 +123,10 @@ HierClassifier::~HierClassifier(){
 }
 
 void HierClassifier::loadSettings(TiXmlElement* settings){
+	if(settings->QueryIntAttribute("debug", &debugLevel) != TIXML_SUCCESS){
+		throw "Bad settings file - wrong debug level";
+	}
+
 	TiXmlElement* pPtr = settings->FirstChildElement("cache");
 	if(!pPtr){
 		throw "Bad settings file - no cache setting for HierClassifier";
@@ -428,7 +432,7 @@ std::vector<cv::Mat> HierClassifier::classify(cv::Mat image,
 	}
 	Mat result(entries.size(), numLabels, CV_32FC1, Scalar(0));
 	for(int c = 0; c < classifiers.size(); c++){
-		cout << "Classifing using classifier " << c << endl;
+		//cout << "Classifing using classifier " << c << endl;
 		for(int e = 0; e < entries.size(); e++){
 			//cout << "classInfo.descBeg = " << classifiersInfo[c].descBeg << ", descEnd = " << classifiersInfo[c].descEnd << endl;
 			//cout << "descriptor.numCols = " << entries[e].descriptor.cols << endl;
@@ -458,8 +462,10 @@ std::vector<cv::Mat> HierClassifier::classify(cv::Mat image,
 
 	compTime += duration_cast<duration<double> >(end - start);
 	times++;
-	cout << "Classify Times: " << times << endl;
-	cout << "Classify Average computing time: " << compTime.count()/times << endl;
+	if(debugLevel >= 1){
+		cout << "Classify Times: " << times << endl;
+		cout << "Classify Average computing time: " << compTime.count()/times << endl;
+	}
 
 	return ret;
 }
@@ -530,7 +536,10 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 	}
 
 	high_resolution_clock::time_point endSorting = high_resolution_clock::now();
-	cout << "End sorting terrain, terrainRegion.size() = " << terrainRegion.size() << endl;
+
+	if(debugLevel >= 1){
+		cout << "End sorting terrain, terrainRegion.size() = " << terrainRegion.size() << endl;
+	}
 
 	vector<Entry> ret;
 	int endIm = 0;
@@ -719,10 +728,12 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 	compTime += duration_cast<duration<double> >(endComp - endSorting);
 	wholeTime += duration_cast<duration<double> >(endComp - start);
 	times++;
-	cout << "Times: " << times << endl;
-	cout << "Extract Average sorting time: " << sortingTime.count()/times << endl;
-	cout << "Extract Average computing time: " << compTime.count()/times << endl;
-	cout << "Extract Average whole time: " << wholeTime.count()/times << endl;
+	if(debugLevel >= 1){
+		cout << "Times: " << times << endl;
+		cout << "Extract Average sorting time: " << sortingTime.count()/times << endl;
+		cout << "Extract Average computing time: " << compTime.count()/times << endl;
+		cout << "Extract Average whole time: " << wholeTime.count()/times << endl;
+	}
 
 	return ret;
 }

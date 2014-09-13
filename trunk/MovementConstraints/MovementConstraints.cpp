@@ -30,8 +30,8 @@ MovementConstraints::MovementConstraints(Robot* irobot, TiXmlElement* settings) 
 
 MovementConstraints::~MovementConstraints() {
 	cout << "~MovementConstraints()" << endl;
-	stopThread();
 	delete camera;
+	stopThread();
 	cout << "End ~MovementConstraints()" << endl;
 }
 
