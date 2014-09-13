@@ -585,7 +585,7 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 			//waitKey();
 		}
 		else{
-			cout << "Warning - no terrain values for imageId " << pixels[begIm].imageId << endl;
+			//cout << "Warning - no terrain values for imageId " << pixels[begIm].imageId << endl;
 			valuesTer = Mat(6, 1, CV_32FC1, Scalar(0));
 		}
 

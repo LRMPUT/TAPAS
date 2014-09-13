@@ -95,6 +95,11 @@ void PositionEstimation::run() {
 		usleep(200);
 	};
 
+	while(!gps.isDataValid())
+	{
+		usleep(200);
+	}
+
 	if (parameters.runThread) {
 		gps.setZeroXY(gps.getLat(), gps.getLon());
 	}
@@ -372,6 +377,10 @@ bool PositionEstimation::isGpsOpen() {
 
 int PositionEstimation::gpsGetFixStatus() {
 	return gps.getFixStatus();
+}
+
+bool PositionEstimation::isGpsDataValid() {
+	return gps.isDataValid();
 }
 
 double PositionEstimation::getPosX(double longitude) {

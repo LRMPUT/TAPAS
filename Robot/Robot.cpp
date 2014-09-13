@@ -87,6 +87,11 @@ int Robot::gpsGetFixStatus()
 	return positionEstimation->gpsGetFixStatus();
 }
 
+bool Robot::isGpsDataValid()
+{
+	return positionEstimation->isGpsDataValid();
+}
+
 double Robot::getPosX(double longitude)
 {
 	return positionEstimation->getPosX(longitude);

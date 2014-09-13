@@ -154,7 +154,7 @@ private:
 	void updateRobotPosition(double &robotX, double &robotY);
 	void findStartingEdge(double robotX, double robotY);
 	void computeGlobalPlan(double robotX, double robotY);
-	void chooseNextSubGoal(double robotX, double robotY);
+	void chooseNextSubGoal(double robotX, double robotY, bool &recomputePlan);
 
 	// Helping methods
 	void clearRouteInGlobalPlan();

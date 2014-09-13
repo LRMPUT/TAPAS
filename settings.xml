@@ -29,8 +29,8 @@
 						sound="0"
 						runHomologation="0" 
 						mapFile="ppMap.osm" 
-						latitude="52.403418" 
-						longitude="16.950173"/>
+						latitude="52.401660" 
+						longitude="16.953071"/>
 
 	<!--
 		runThread: 				1 - module ON, 0 - module OFF
@@ -54,9 +54,9 @@
 						VFH_SteeringMargin="10" 
 						VFH_Gauss3sig="40" 
 						VFH_MaxDistance="3000" 
-						VFH_NormalSpeed="40" 
+						VFH_NormalSpeed="20" 
 						VFH_PreciseSpeed="20" 
-						VFH_TurnSpeed="80"/>
+						VFH_TurnSpeed="60"/>
 
 	<!--
 		runThread: 				1 - module ON, 0 - module OFF

@@ -135,7 +135,10 @@ void GlobalPlanner::run() {
 			|| robot->gpsGetFixStatus() == 1) && globalPlannerParams.runThread) {
 		usleep(200);
 	}
-
+	while (!robot->isGpsDataValid())
+	{
+		usleep(200);
+	}
 	if (globalPlannerParams.debug == 1)
 		std::cout << "GlobalPlanner: We have fix and zero position"
 				<< std::endl;
@@ -149,6 +152,7 @@ void GlobalPlanner::run() {
 	}
 	localPlanner->startLocalPlanner();
 	int loopTimeCounter = 0;
+	bool recomputePlan = false;
 	while (globalPlannerParams.runThread) {
 
 		// Where are we ?
@@ -160,16 +164,18 @@ void GlobalPlanner::run() {
 
 		// We compute new global plan
 		if (globalPlannerParams.computeEveryNth == 1
-				|| loopTimeCounter % globalPlannerParams.computeEveryNth == 0) {
+				|| recomputePlan ||loopTimeCounter % globalPlannerParams.computeEveryNth == 0) {
 			loopTimeCounter = loopTimeCounter
 					% globalPlannerParams.computeEveryNth;
 			// Compute the route to follow
 			computeGlobalPlan(robotX, robotY);
+			// We recomputed the plan
+			recomputePlan = false;
 
 		}
 
 		// Let's compute the next target
-		chooseNextSubGoal(robotX, robotY);
+		chooseNextSubGoal(robotX, robotY, recomputePlan);
 
 
 
@@ -415,11 +421,12 @@ void GlobalPlanner::findStartingEdge(double X, double Y) {
 	// Lets look for the edge in the visualization
 	int i = 0;
 	std::set<GlobalPlanner::Edge>::iterator it = globalPlanInfo.edges.begin();
-	for (; it != globalPlanInfo.edges.end(); i++) {
+	for (; it != globalPlanInfo.edges.end(); i++, ++it) {
 
 		// We found our edge
 		if (areEdgesEqual(e, *it)) {
 			globalPlanInfo.curEdge = i;
+			break;
 		}
 	}
 
@@ -552,85 +559,87 @@ void GlobalPlanner::computeGlobalPlan(double robotX, double robotY) {
 	}
 }
 
-void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY) {
-	// We check the global plan
-	for (std::list<int>::iterator it = nodesToVisit.begin(); ;) {
-		std::pair<double, double> tmp = nodePosition[*it];
-		double dist = pow(tmp.first - robotX, 2) + pow(tmp.second - robotY, 2);
+void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY, bool &recomputePlan) {
+	// We reach our goal -> let's precisely navigate towards it
+	if (nodesToVisit.size() == 0) {
 
-		// This is the node we go to:
-		if (sqrt(dist) > globalPlannerParams.subgoalThreshold) {
-			std::unique_lock < std::mutex > lckGoalTheta(mtxGoalTheta);
-			double x = tmp.first - robotX;
-			double y = tmp.second - robotY;
-			std::cout << "Global Planner : theta : " << tmp.first << " "
-					<< tmp.second << std::endl;
-			std::cout << "Global Planner : robot position : " << robotX << " "
-					<< robotY << std::endl;
-			std::cout << "Global Planner : XY : " << x << " " << y << std::endl;
-			goalTheta = atan2(y, x) * 180.0 / 3.14159265;
-
-			lckGoalTheta.unlock();
-			break;
+		// One time
+		if (planningStage != preciselyToGoal
+				&& planningStage != preciselyToStart) {
+			printf(
+					"Global planner: We are close to goal - precise navigation\n");
+			planningStage = preciselyToGoal;
+			startTime = std::chrono::high_resolution_clock::now();
+			localPlanner->setPreciseSpeed();
 		}
 
-		// We reach our goal -> let's precisely navigate towards it
-		if (nodesToVisit.size() == 0)
-		{
-			// One time
-			if ( planningStage != preciselyToGoal && planningStage != preciselyToStart)
-			{
-				planningStage = preciselyToGoal;
-				startTime = std::chrono::high_resolution_clock::now();
-				localPlanner->setPreciseSpeed();
+		std::unique_lock < std::mutex > lckGoalTheta(mtxGoalTheta);
+		double x = goalX - robotX;
+		double y = goalY - robotY;
+		goalTheta = atan2(y, x) * 180.0 / 3.14159265;
+		lckGoalTheta.unlock();
+
+		// Next time
+		std::chrono::milliseconds time = std::chrono::duration_cast
+				< std::chrono::milliseconds
+				> (std::chrono::high_resolution_clock::now() - startTime);
+		if (time.count() > globalPlannerParams.preciseToGoalMaxTime) {
+			printf(
+					"Global planner: We precisely reached the goal - let's go back\n");
+
+			planningStage = static_cast<PlanningStage>(((int) planningStage + 1)
+					% 4);
+
+			// stopLocalPlanner
+			localPlanner->stopLocalPlanner();
+
+			// Let's beep !!!:D
+			if (globalPlannerParams.sound == 1) {
+				system("espeak \"Target reached\"");
 			}
 
-			std::unique_lock < std::mutex > lckGoalTheta(mtxGoalTheta);
-				double x = goalX - robotX;
-				double y = goalY - robotY;
+			// Going back home :)
+			if (planningStage != preciselyToStart) {
+				goalX = 0.0;
+				goalY = 0.0;
+				updateGoal();
+				recomputePlan = true;
+
+				// startLocalPlanner
+				localPlanner->setNormalSpeed();
+				localPlanner->startLocalPlanner();
+			} else {
+				system("espeak \"Finished my job\"");
+			}
+		}
+	}
+	else
+	{
+		// We check the global plan
+		for (std::list<int>::iterator it = nodesToVisit.begin(); ;) {
+			std::pair<double, double> tmp = nodePosition[*it];
+			double dist = pow(tmp.first - robotX, 2) + pow(tmp.second - robotY, 2);
+
+			// This is the node we go to:
+			if (sqrt(dist) > globalPlannerParams.subgoalThreshold) {
+				std::unique_lock < std::mutex > lckGoalTheta(mtxGoalTheta);
+				double x = tmp.first - robotX;
+				double y = tmp.second - robotY;
+				std::cout << "Global Planner : theta : " << tmp.first << " "
+						<< tmp.second << std::endl;
+				std::cout << "Global Planner : robot position : " << robotX << " "
+						<< robotY << std::endl;
+				std::cout << "Global Planner : XY : " << x << " " << y << std::endl;
 				goalTheta = atan2(y, x) * 180.0 / 3.14159265;
-			lckGoalTheta.unlock();
 
-			// Next time
-			std::chrono::milliseconds time = std::chrono::duration_cast
-					<std::chrono::milliseconds
-					> (std::chrono::high_resolution_clock::now() - startTime);
-			if (time.count() > globalPlannerParams.preciseToGoalMaxTime) {
-				planningStage = static_cast<PlanningStage>(((int) planningStage
-						+ 1) % 4);
-
-				// stopLocalPlanner
-				localPlanner->stopLocalPlanner();
-
-				// Let's beep !!!:D
-				if (globalPlannerParams.sound == 1)
-				{
-					system("espeak \"Target reached\"");
-				}
-
-				// Going back home :)
-				if (planningStage != preciselyToStart)
-				{
-					goalX = 0.0;
-					goalY = 0.0;
-					updateGoal();
-
-
-					// startLocalPlanner
-					localPlanner->setNormalSpeed();
-					localPlanner->startLocalPlanner();
-				}
-				else
-				{
-					system("espeak \"Finished my job\"");
-				}
+				lckGoalTheta.unlock();
+				break;
 			}
-
-		}
-		else
-		{
-			it = nodesToVisit.begin();
-			nodesToVisit.pop_front();
+			else
+			{
+				it = nodesToVisit.begin();
+				nodesToVisit.pop_front();
+			}
 		}
 	}
 	if (globalPlannerParams.debug == 1)
