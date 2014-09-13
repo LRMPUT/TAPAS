@@ -116,6 +116,8 @@ public:
 
 	int gpsGetFixStatus();
 
+	bool isGpsDataValid();
+
 	double getPosX(double longitude);
 	double getPosLongitude(double X);
 

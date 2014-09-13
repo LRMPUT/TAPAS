@@ -16,7 +16,8 @@ LocalPlanner::LocalPlanner(Robot* irobot, GlobalPlanner* planer,
 		TiXmlElement* settings) :
 		robot(irobot),
 		globalPlanner(planer),
-		startOperate(false)
+		startOperate(false),
+		curSpeed(20)
 {
 	cout << "LocalPlanner()" << endl;
 
