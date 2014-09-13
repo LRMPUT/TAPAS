@@ -46,10 +46,6 @@ Robot::~Robot() {
 }
 
 
-void Robot::homologation(){
-	globalPlanner->startHomologation();
-}
-
 //----------------------MENAGMENT OF GlobalPlanner DEVICES
 //Robots Drive
 void Robot::openRobotsDrive(std::string port1, std::string port2){
