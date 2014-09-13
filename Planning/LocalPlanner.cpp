@@ -43,7 +43,10 @@ void LocalPlanner::readSettings(TiXmlElement* settings) {
 			!= TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for localPlanner runThread";
 	}
-
+	if (pLocalPlanner->QueryIntAttribute("debug", &localPlannerParams.debug)
+			!= TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for localPlanner debug";
+	}
 	if (pLocalPlanner->QueryIntAttribute("runThread", &localPlannerParams.avoidObstacles)
 			!= TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for localPlanner avoidObstacles";
@@ -84,15 +87,28 @@ void LocalPlanner::readSettings(TiXmlElement* settings) {
 	}
 
 	printf("LocalPlanner -- runThread: %d\n", localPlannerParams.runThread);
+	printf("LocalPlanner -- debug: %d\n", localPlannerParams.debug);
 	printf("LocalPlanner -- avoidObstacles: %d\n", localPlannerParams.avoidObstacles);
 	printf("LocalPlanner -- VFH_HistResolution: %d\n",
 			localPlannerParams.histResolution);
 	printf("LocalPlanner -- VFH_Threshold: %f\n", localPlannerParams.threshold);
 	printf("LocalPlanner -- VFH_SteeringMargin: %f\n",
-			localPlannerParams.steeringMargin);
+				localPlannerParams.steeringMargin);
+	printf("LocalPlanner -- VFH_Gauss3sig: %f\n",
+			localPlannerParams.gauss3sig);
+	printf("LocalPlanner -- VFH_MaxDistance: %f\n",
+			localPlannerParams.maxDistance);
+	printf("LocalPlanner -- VFH_NormalSpeed: %f\n",
+				localPlannerParams.normalSpeed);
+	printf("LocalPlanner -- VFH_PreciseSpeed: %f\n",
+				localPlannerParams.preciseSpeed);
+	printf("LocalPlanner -- VFH_TrunSpeed: %f\n",
+				localPlannerParams.turnSpeed);
+
 }
 
 void LocalPlanner::startLocalPlanner() {
+	cout<<"LocalPlanner::startLocalPlanner()"<<endl;
 	startOperate = true;
 }
 
@@ -346,10 +362,10 @@ float LocalPlanner::determineGoalInLocalMap(cv::Mat posLocalToGlobalMap,
 	/// and convert this orentation to euler yaw
 	globalYaw = RotMatToEulerYaw(posLocalToGlobalMap);
 	globalYaw = globalYaw * 180 / PI;
-	cout << "Global_YAW: " << globalYaw << endl;
+//	cout << "Global_YAW: " << globalYaw << endl;
 	// calculate difference between local and global map in orientation
 	localToGlobalDifference = goalDirGlobalMap - globalYaw;
-	cout << "Difference: " << localToGlobalDifference << endl;
+//	cout << "Difference: " << localToGlobalDifference << endl;
 
 	//cout<<"determineGoalInLocalMap"<<endl;
 	return goalDirGlobalMap - globalYaw;
@@ -358,13 +374,14 @@ float LocalPlanner::determineGoalInLocalMap(cv::Mat posLocalToGlobalMap,
 float LocalPlanner::findOptimSector(const std::vector<int>& freeSectors,
 									float goalDirLocalMap) {
 
-	cout << "calculateLocalDirection START" << endl;
+
+//	cout << "calculateLocalDirection START" << endl;
 	// goal direction+offset/ sectors alpha
 	int goalSector = (goalDirLocalMap + 180) / localPlannerParams.histResolution;
 	if (goalSector == localPlannerParams.histResolution) {
 		goalSector = 0;
 	}
-	cout << "Goal sector : " << goalSector << endl;
+//	cout << "Goal sector : " << goalSector << endl;
 	int foundSector = -1;
 	int selectedSector = 0;
 
@@ -401,15 +418,18 @@ void LocalPlanner::determineDriversCommand(cv::Mat posImuMapCenter,
 	//Mat posImuMapCenter = robot->getPosImuConstraintsMapCenter();
 	float localYaw = RotMatToEulerYaw(posImuMapCenter);
 	localYaw = localYaw * 180 / PI;
-	cout << "localYaw: " << localYaw << endl;
-	cout << "Best Direction: " << bestDirLocalMap << endl;
-
+	if (localPlannerParams.debug == 1)
+	{
+		cout << "localYaw: " << localYaw << endl;
+		cout << "Best Direction: " << bestDirLocalMap << endl;
+	}
 	// if we achieve set point direction then go straight ahead
 	// 100 means that we are in target direction with 10 degree margin
 	if ((bestDirLocalMap - localYaw)
 			* (bestDirLocalMap - localYaw)< localPlannerParams.steeringMargin * localPlannerParams.steeringMargin)
 	{
-		cout<<"Straight"<<endl;
+		if (localPlannerParams.debug == 1)
+			cout<<"Straight"<<endl;
 		std::unique_lock<std::mutex> lck(mtxCurSpeed);
 		float commandSpeed = curSpeed;
 		lck.unlock();
@@ -417,16 +437,18 @@ void LocalPlanner::determineDriversCommand(cv::Mat posImuMapCenter,
 		globalPlanner->setMotorsVel(commandSpeed, commandSpeed);
 	}
 	else if (bestDirLocalMap > localYaw)	{
-		cout<<"Right"<<endl;
+		if (localPlannerParams.debug == 1)
+			cout<<"Right"<<endl;
 
 		globalPlanner->setMotorsVel(localPlannerParams.turnSpeed, -localPlannerParams.turnSpeed);
 	}
 	else{
-		cout<<"Left"<<endl;
+		if (localPlannerParams.debug == 1)
+			cout<<"Left"<<endl;
 
 		globalPlanner->setMotorsVel(-localPlannerParams.turnSpeed, localPlannerParams.turnSpeed);
 	}
-	cout << "End LocalPlanner::determineDriversCommand" << endl;
+//	cout << "End LocalPlanner::determineDriversCommand" << endl;
 	//getchar();
 }
 
