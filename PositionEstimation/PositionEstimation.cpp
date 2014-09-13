@@ -95,7 +95,7 @@ void PositionEstimation::run() {
 		usleep(200);
 	};
 
-	while(!gps.isDataValid())
+	while(!gps.isDataValid() && parameters.runThread)
 	{
 		usleep(200);
 	}

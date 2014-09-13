@@ -49,6 +49,8 @@ public:
 		float normalSpeed;
 		float preciseSpeed;
 		float turnSpeed;
+		int turnTimeout;
+		int interruptTime;
 	};
 
 private:

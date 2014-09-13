@@ -37,8 +37,9 @@ GlobalPlanner::GlobalPlanner(Robot* irobot, TiXmlElement* settings) :
 
 GlobalPlanner::~GlobalPlanner() {
 	cout << "~GlobalPlanner()" << endl;
-	stopThread();
+	delete localPlanner;
 	closeRobotsDrive();
+	stopThread();
 	cout << "End ~GlobalPlanner()" << endl;
 }
 
@@ -124,13 +125,14 @@ void GlobalPlanner::globalPlannerProcessing() {
 
 	if ( globalPlannerParams.runHomologation == 1 )
 	{
+		// TODO: Sleep
+		localPlanner->startLocalPlanner();
 		while (globalPlannerParams.runThread)
 		{
 			double robotX, robotY, theta ;
 			updateRobotPosition(robotX, robotY, theta);
 			setGoalDirection(theta);
-
-			localPlanner->startLocalPlanner();
+			usleep(200000);
 		}
 	}
 	else
@@ -139,7 +141,7 @@ void GlobalPlanner::globalPlannerProcessing() {
 				|| robot->gpsGetFixStatus() == 1) && globalPlannerParams.runThread) {
 			usleep(200);
 		}
-		while (!robot->isGpsDataValid()) {
+		while (!robot->isGpsDataValid() && globalPlannerParams.runThread) {
 			usleep(200);
 		}
 		if (globalPlannerParams.debug == 1)
