@@ -232,7 +232,7 @@ void MovementConstraints::insertHokuyoConstraints(cv::Mat map,
 			//Point3f minPoint;
 			int count = 0;
 			for(int p = 0; p < bins[x][y].size(); p++){
-				if(bins[x][y][p].z <= heightThres){	//if something is taller than ground minus 100 mm
+				if(bins[x][y][p].z <= heightThres){	//if something is taller than ground minus 50 mm
 					count++;
 				}
 				//minPoint = bins[x][y][p];

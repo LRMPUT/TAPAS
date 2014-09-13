@@ -44,6 +44,10 @@ public:
 		float threshold;
 		float steeringMargin;
 		float gauss3sig;
+		float maxDistance;
+		float normalSpeed;
+		float preciseSpeed;
+		float turnSpeed;
 	};
 
 private:
@@ -59,7 +63,9 @@ private:
 	GlobalPlanner* globalPlanner;
 
 	bool startOperate;
-	//bool runThread;
+
+	std::mutex mtxCurSpeed;
+	float curSpeed;
 
 
 	std::thread localPlannerThread;

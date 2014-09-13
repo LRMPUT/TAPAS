@@ -107,6 +107,14 @@ void Camera::computeConstraints(std::chrono::high_resolution_clock::time_point n
 			}
 		}
 	}
+	int nhood[][2] = {{-1, -1},
+						{-1, 0},
+						{-1, 1},
+						{0, 1},
+						{1, 1},
+						{1, 0},
+						{1, -1},
+						{0, -1}};
 	std::unique_lock<std::mutex> lck(mtxConstr);
 	constraints = Mat(MAP_SIZE, MAP_SIZE, CV_32FC1, Scalar(0));
 	for(int y = 0; y < MAP_SIZE; y++){
@@ -118,6 +126,20 @@ void Camera::computeConstraints(std::chrono::high_resolution_clock::time_point n
 			else{
 				constraints.at<float>(x, y) = 0;
 			}
+		}
+	}
+	for(int y = 0; y < MAP_SIZE; y++){
+		for(int x = 0; x < MAP_SIZE; x++){
+		float maxNhVal = 0;
+		for(int n = 0; n < sizeof(nhood)/sizeof(nhood[0]); n++){
+			int nx = x + nhood[n][0];
+			int ny = y + nhood[n][1];
+			if(nx >= 0 && nx < MAP_SIZE && ny >= 0 && ny < MAP_SIZE){
+				maxNhVal = max(maxNhVal, constraints.at<float>(nx, ny));
+			}
+		}
+		constraints.at<float>(x, y) = min(constraints.at<float>(x, y), maxNhVal);
+		//cout << x << ":" << y << " = " << (float)votes.at<int>(x, y)/countVotes.at<int>(x, y) << endl;
 		}
 	}
 	curTimestamp = nextCurTimestamp;
