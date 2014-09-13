@@ -20,17 +20,17 @@
 		 // -> latitude="52.402261" longitude="16.952285" // Blisko mostku, po prawej wychodząc z CM 
 		 // -> latitude="52.403418" longitude="16.950173" // CW
 	-->
-	<GlobalPlanner 	runThread="1" 
-					processingFrequency="5" 
-					computeEveryNth="25" 
-					debug ="1" 
-					subgoalThreshold="8" 
-					preciseToGoalMaxTime="25000"
-					sound=""
-					runHomologation="0" 
-					mapFile="ppMap.osm" 
-					latitude="52.403418" 
-					longitude="16.950173"/>
+	<GlobalPlanner 		runThread="1" 
+						processingFrequency="5" 
+						computeEveryNth="25" 
+						debug ="1" 
+						subgoalThreshold="8" 
+						preciseToGoalMaxTime="25000"
+						sound="0"
+						runHomologation="0" 
+						mapFile="ppMap.osm" 
+						latitude="52.403418" 
+						longitude="16.950173"/>
 
 	<!--
 		runThread: 		1 - module ON, 0 - module OFF
@@ -39,7 +39,12 @@
 		VFH_Threshold:		threshold for the direction to be considered a valid choice
 		VFH_SteeringMargin:	the dead_zone of steering deciding upon going straight, left, right
 	-->
-	<LocalPlanner runThread="1" avoidObstacles="1" VFH_HistResolution="10" VFH_Threshold="0.5" VFH_SteeringMargin="10" VFH_Gauss3sig="40"/>
+	<LocalPlanner 		runThread="1" 
+						avoidObstacles="1" 
+						VFH_HistResolution="10"
+						VFH_Threshold="0.5" 
+						VFH_SteeringMargin="10" 
+						VFH_Gauss3sig="40"/>
 
 	<!--
 		runThread: 				1 - module ON, 0 - module OFF
@@ -52,7 +57,12 @@
 		IMUCovariance:
 		EncoderCovariance:	
 	-->
-	<PositionEstimation runThread="1" processingFrequency="20" debug="0" encoderTicksPerRev="300" wheelDiameter="0.16" wheelBase="0.452"/>
+	<PositionEstimation 	runThread="1" 
+							processingFrequency="20" 
+							debug="0" 
+							encoderTicksPerRev="300" 
+							wheelDiameter="0.16" 
+							wheelBase="0.452"/>
 
 	<!--
 		Jan Wietrzykowski is lazy and does not use the comments ;d
