@@ -14,7 +14,10 @@ using namespace std;
 
 LocalPlanner::LocalPlanner(Robot* irobot, GlobalPlanner* planer,
 		TiXmlElement* settings) :
-		robot(irobot), globalPlanner(planer), startOperate(false) {
+		robot(irobot),
+		globalPlanner(planer),
+		startOperate(false)
+{
 	cout << "LocalPlanner()" << endl;
 
 	readSettings(settings);
@@ -63,7 +66,22 @@ void LocalPlanner::readSettings(TiXmlElement* settings) {
 			&localPlannerParams.gauss3sig) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for VFH_Gauss3sig";
 	}
-
+	if (pLocalPlanner->QueryFloatAttribute("VFH_MaxDistance",
+			&localPlannerParams.maxDistance) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for VFH_MaxDistance";
+	}
+	if (pLocalPlanner->QueryFloatAttribute("VFH_NormalSpeed",
+			&localPlannerParams.normalSpeed) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for VFH_NormalSpeed";
+	}
+	if (pLocalPlanner->QueryFloatAttribute("VFH_PreciseSpeed",
+			&localPlannerParams.preciseSpeed) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for VFH_PreciseSpeed";
+	}
+	if (pLocalPlanner->QueryFloatAttribute("VFH_TurnSpeed",
+			&localPlannerParams.turnSpeed) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for VFH_TurnSpeed";
+	}
 
 	printf("LocalPlanner -- runThread: %d\n", localPlannerParams.runThread);
 	printf("LocalPlanner -- avoidObstacles: %d\n", localPlannerParams.avoidObstacles);
@@ -84,11 +102,15 @@ void LocalPlanner::stopLocalPlanner() {
 }
 
 void LocalPlanner::setPreciseSpeed() {
-
+	std::unique_lock<std::mutex> lck(mtxCurSpeed);
+	curSpeed = localPlannerParams.preciseSpeed;
+	lck.unlock();
 }
 
 void LocalPlanner::setNormalSpeed() {
-
+	std::unique_lock<std::mutex> lck(mtxCurSpeed);
+	curSpeed = localPlannerParams.normalSpeed;
+	lck.unlock();
 }
 
 
@@ -220,9 +242,8 @@ void LocalPlanner::updateHistogram(std::vector<float>& histSectors,
 	float density;
 
 	//TODO Change posImuMapCener to posRobotMapCenter
-	const float maxDistanceSq = 2*pow(MAP_SIZE * MAP_RASTER_SIZE, 2);
 	const float hist_A = 1;
-	const float hist_B = hist_A / maxDistanceSq;
+	const float hist_B = hist_A / localPlannerParams.maxDistance;
 	/// Get current Constraints Raster Map
 	//Mat constraints = robot->getMovementConstraints();
 	//Mat posImuMapCenter = robot->getPosImuConstraintsMapCenter();
@@ -246,9 +267,8 @@ void LocalPlanner::updateHistogram(std::vector<float>& histSectors,
 			//cout<<"angPosition"<<angPosition<<endl;
 			/// value of obstacle vector
 			float c = pow(constraints.at<float>(x, y), 2);
-			float d2 = pow((float) (cellX - curRobX), 2)
-					+ pow((float) (cellY - curRobY), 2);
-			density = c * (hist_A - hist_B * d2);
+			float d = sqrt(pow((float) (cellX - curRobX), 2)+ pow((float) (cellY - curRobY), 2));
+			density = c * pow(max(hist_A - hist_B * d, 0.0f), 2);
 
 			//cout << "map (" << x << ", " << y << "), histB = " << hist_B << ", c = " << c << ", d2 = " << d2 << ", density = " << density << endl;
 			/// update proper sector of histogram
@@ -390,18 +410,21 @@ void LocalPlanner::determineDriversCommand(cv::Mat posImuMapCenter,
 			* (bestDirLocalMap - localYaw)< localPlannerParams.steeringMargin * localPlannerParams.steeringMargin)
 	{
 		cout<<"Straight"<<endl;
+		std::unique_lock<std::mutex> lck(mtxCurSpeed);
+		float commandSpeed = curSpeed;
+		lck.unlock();
 
-		globalPlanner->setMotorsVel(40, 40);
+		globalPlanner->setMotorsVel(commandSpeed, commandSpeed);
 	}
 	else if (bestDirLocalMap > localYaw)	{
 		cout<<"Right"<<endl;
 
-		globalPlanner->setMotorsVel(80, -80);
+		globalPlanner->setMotorsVel(localPlannerParams.turnSpeed, -localPlannerParams.turnSpeed);
 	}
 	else{
 		cout<<"Left"<<endl;
 
-		globalPlanner->setMotorsVel(-80, 80);
+		globalPlanner->setMotorsVel(-localPlannerParams.turnSpeed, localPlannerParams.turnSpeed);
 	}
 	cout << "End LocalPlanner::determineDriversCommand" << endl;
 	//getchar();
