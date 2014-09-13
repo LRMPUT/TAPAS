@@ -54,6 +54,7 @@ public:
 		int debug;
 		double subgoalThreshold;
 		double preciseToGoalMaxTime;
+		int sound;
 		int runHomologation;
 		std::string mapFile;
 		double latitude, longitude;
@@ -156,6 +157,7 @@ private:
 	void chooseNextSubGoal(double robotX, double robotY);
 
 	// Helping methods
+	void clearRouteInGlobalPlan();
 	void findClosestEdge(double X, double Y, int &id1, int &id2, double &minDistance);
 	bool areEdgesEqual(Edge e, Edge f);
 	void switchEdge(Edge &e);

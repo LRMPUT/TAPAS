@@ -82,6 +82,10 @@ void GlobalPlanner::readSettings(TiXmlElement* settings) {
 			&globalPlannerParams.preciseToGoalMaxTime) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner preciseToGoalMaxTime";
 	}
+	if (pGlobalPlanner->QueryIntAttribute("sound", &globalPlannerParams.sound)
+			!= TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner sound";
+	}
 	if (pGlobalPlanner->QueryIntAttribute("runHomologation",
 			&globalPlannerParams.runHomologation) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner runHomologation";
@@ -108,6 +112,7 @@ void GlobalPlanner::readSettings(TiXmlElement* settings) {
 	printf("GlobalPlanner -- debug: %d\n", globalPlannerParams.debug);
 	printf("GlobalPlanner -- subgoal threshold: %f\n", globalPlannerParams.subgoalThreshold);
 	printf("GlobalPlanner -- preciseToGoalMaxTime: %f\n", globalPlannerParams.preciseToGoalMaxTime);
+	printf("GlobalPlanner -- sound: %f\n", globalPlannerParams.sound);
 	printf("GlobalPlanner -- runhomologation: %d\n",
 			globalPlannerParams.runHomologation);
 	printf("GlobalPlanner -- mapFile: %s\n",
@@ -416,14 +421,6 @@ void GlobalPlanner::findStartingEdge(double X, double Y) {
 		if (areEdgesEqual(e, *it)) {
 			globalPlanInfo.curEdge = i;
 		}
-		// We also invalidate the previously found route
-		if (it->isChosen == true) {
-			GlobalPlanner::Edge tmp = *it;
-			it = globalPlanInfo.edges.erase(it);
-			tmp.isChosen = false;
-			globalPlanInfo.edges.insert(tmp);
-		} else
-			++it;
 	}
 
 	lckGlobalPlan.unlock();
@@ -439,6 +436,11 @@ void GlobalPlanner::computeGlobalPlan(double robotX, double robotY) {
 
 	// Clear last route
 	nodesToVisit.clear();
+
+
+	// We also invalidate the previously found route
+	clearRouteInGlobalPlan();
+
 
 	// Containers for Dijkstra
 	std::vector<double> distance(edges.size(), -1.0);
@@ -573,7 +575,7 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY) {
 		}
 
 		// We reach our goal -> let's precisely navigate towards it
-		if (nodesToVisit.size() == 1)
+		if (nodesToVisit.size() == 0)
 		{
 			// One time
 			if ( planningStage != preciselyToGoal && planningStage != preciselyToStart)
@@ -583,7 +585,13 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY) {
 				localPlanner->setPreciseSpeed();
 			}
 
-// Next time
+			std::unique_lock < std::mutex > lckGoalTheta(mtxGoalTheta);
+				double x = goalX - robotX;
+				double y = goalY - robotY;
+				goalTheta = atan2(y, x) * 180.0 / 3.14159265;
+			lckGoalTheta.unlock();
+
+			// Next time
 			std::chrono::milliseconds time = std::chrono::duration_cast
 					<std::chrono::milliseconds
 					> (std::chrono::high_resolution_clock::now() - startTime);
@@ -595,17 +603,27 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY) {
 				localPlanner->stopLocalPlanner();
 
 				// Let's beep !!!:D
-				system("espeak \"I'm TAPAS\"");
+				if (globalPlannerParams.sound == 1)
+				{
+					system("espeak \"Target reached\"");
+				}
 
 				// Going back home :)
-				goalX = 0.0;
-				goalY = 0.0;
-				updateGoal();
+				if (planningStage != preciselyToStart)
+				{
+					goalX = 0.0;
+					goalY = 0.0;
+					updateGoal();
 
 
-				// startLocalPlanner
-				localPlanner->setNormalSpeed();
-				localPlanner->startLocalPlanner();
+					// startLocalPlanner
+					localPlanner->setNormalSpeed();
+					localPlanner->startLocalPlanner();
+				}
+				else
+				{
+					system("espeak \"Finished my job\"");
+				}
 			}
 
 		}
@@ -621,6 +639,23 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY) {
 }
 
 // Helping methods
+
+void GlobalPlanner::clearRouteInGlobalPlan()
+{
+	std::unique_lock < std::mutex > lckGlobalPlan(mtxGlobalPlan);
+	std::set<GlobalPlanner::Edge>::iterator it = globalPlanInfo.edges.begin();
+
+	for (; it != globalPlanInfo.edges.end();) {
+		if (it->isChosen == true) {
+			GlobalPlanner::Edge tmp = *it;
+			it = globalPlanInfo.edges.erase(it);
+			tmp.isChosen = false;
+			globalPlanInfo.edges.insert(tmp);
+		} else
+			++it;
+	}
+	lckGlobalPlan.unlock();
+}
 
 void GlobalPlanner::findClosestEdge(double X, double Y, int &id1, int &id2,
 		double &minDistance) {

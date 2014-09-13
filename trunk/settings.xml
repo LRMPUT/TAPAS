@@ -12,13 +12,25 @@
 		latitude:				latitude N/S
 		longitude:				longitude W/E 
 		 // Alternative coordinates in PP :
-		 // -> latitude="52.401680" longitude="16.951594" 
-		 // -> latitude="52.401306" longitude="16.951138"
-		 // -> latitude="52.402357" longitude="16.952361"
-		 // -> latitude="52.403535" longitude="16.949781" - NO WAY
-		 // -> latitude="52.403418" longitude="16.950173"
+		 // -> latitude="52.401979" longitude="16.953083" // Ławeczki, po prawej wychodząc z CM
+		 // -> latitude="52.401660" longitude="16.953071" // Blisko, na drodze wychodząc na wprost z CM
+		 // -> latitude="52.401886" longitude="16.953509" // Druga strona CM
+		 // -> latitude="52.401680" longitude="16.951594" // Wejście A8
+		 // -> latitude="52.401306" longitude="16.951138" // A8 to Elektryk, nie schody, nie rampa dla niepełnosprawnych, to dla aut
+		 // -> latitude="52.402261" longitude="16.952285" // Blisko mostku, po prawej wychodząc z CM 
+		 // -> latitude="52.403418" longitude="16.950173" // CW
 	-->
-	<GlobalPlanner runThread="1" processingFrequency="5" computeEveryNth="25" debug ="1" subgoalThreshold="3" preciseToGoalMaxTime="25000" runHomologation="0" mapFile="ppMap.osm" latitude="52.403418" longitude="16.950173"/>
+	<GlobalPlanner 	runThread="1" 
+					processingFrequency="5" 
+					computeEveryNth="25" 
+					debug ="1" 
+					subgoalThreshold="8" 
+					preciseToGoalMaxTime="25000"
+					sound=""
+					runHomologation="0" 
+					mapFile="ppMap.osm" 
+					latitude="52.403418" 
+					longitude="16.950173"/>
 
 	<!--
 		runThread: 		1 - module ON, 0 - module OFF
