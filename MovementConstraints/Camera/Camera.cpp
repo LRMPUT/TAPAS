@@ -74,7 +74,7 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 	if(learnEnabled){
 		learnFromDir(learningDirs);
 	}
-	else{
+	if(cacheLoadEnabled){
 		readCache("cache/cameraCache");
 	}
 }
@@ -884,7 +884,7 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 	}
 	hierClassifiers.front()->train(dataset, labels.size());
 
-	if(cacheEnabled){
+	if(cacheSaveEnabled){
 		saveCache("cache/cameraCache");
 	}
 }
@@ -1228,7 +1228,9 @@ void Camera::run(){
 	classifiedImage.resize(numCameras);
 
 	while(runThread){
-		cout << "Camera run" << endl;
+		if(debugLevel >= 1){
+			cout << "Camera run" << endl;
+		}
 		std::chrono::high_resolution_clock::time_point timeBegin;
 		std::chrono::high_resolution_clock::time_point timeEndMapSegments;
 		std::chrono::high_resolution_clock::time_point timeEndClassification;
@@ -1239,7 +1241,9 @@ void Camera::run(){
 		if(!curPosImuMapCenter.empty()){
 			timeBegin = std::chrono::high_resolution_clock::now();
 			vector<Mat> cameraData = this->getData();
-			cout << "Computing map segments" << endl;
+			if(debugLevel >= 1){
+				cout << "Computing map segments" << endl;
+			}
 #ifdef NO_CUDA
 			mapSegments = computeMapSegments(curPosImuMapCenter);
 #else
@@ -1255,7 +1259,9 @@ void Camera::run(){
 						Mat tmpPointCoords = cameraOrigImu[c] * pointCloudImu.rowRange(0, 4);
 						tmpPointCoords.copyTo(pointCloudCamera.rowRange(0, 4));
 					}
-					cout << "Classification" << endl;
+					if(debugLevel >= 1){
+						cout << "Classification" << endl;
+					}
 					vector<Mat> classRes = hierClassifiers[c]->classify(cameraData[c], pointCloudCamera, mapSegments[c], maskIgnore[c]);
 					timeEndClassification = std::chrono::high_resolution_clock::now();
 					//cout << "End classification" << endl;
@@ -1273,8 +1279,9 @@ void Camera::run(){
 					}
 					classifiedImage[c] = bestLabels;
 					//classifiedImage[c] = Mat(numRows, numCols, CV_32SC1, Scalar(0));
-
-					cout << "Copying classified image" << endl;
+					if(debugLevel >= 1){
+						cout << "Copying classified image" << endl;
+					}
 					std::unique_lock<std::mutex> lck(mtxClassIm);
 					classifiedImage[c].copyTo(sharedClassifiedImage);
 					cameraData[c].copyTo(sharedOriginalImage);
@@ -1284,10 +1291,11 @@ void Camera::run(){
 			computeConstraints(nextCurTimestamp);
 			timeEndConstraints = std::chrono::high_resolution_clock::now();
 		}
-		cout << "Map segments time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndMapSegments - timeBegin).count() << " ms" << endl;
-		cout << "Classification time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndClassification - timeEndMapSegments).count() << " ms" << endl;
-		cout << "Constraints time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndConstraints - timeEndClassification).count() << " ms" << endl;
-
+		if(debugLevel >= 1){
+			cout << "Map segments time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndMapSegments - timeBegin).count() << " ms" << endl;
+			cout << "Classification time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndClassification - timeEndMapSegments).count() << " ms" << endl;
+			cout << "Constraints time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndConstraints - timeEndClassification).count() << " ms" << endl;
+		}
 
 		std::chrono::milliseconds duration(200);
 		std::this_thread::sleep_for(duration);
@@ -1310,14 +1318,23 @@ void Camera::readSettings(TiXmlElement* settings){
 	if(settings->QueryIntAttribute("cols", &numCols) != TIXML_SUCCESS){
 		throw "Bad settings file - wrong number of cols";
 	}
+	if(settings->QueryIntAttribute("debug", &debugLevel) != TIXML_SUCCESS){
+		throw "Bad settings file - wrong debug level";
+	}
 
-	cacheEnabled = true;
+
+	cacheSaveEnabled = true;
 	TiXmlElement* pPtr = settings->FirstChildElement("cache");
 	if(!pPtr){
 		throw "Bad settings file - no cache setting for Camera";
 	}
-	if(pPtr->QueryBoolAttribute("enabled", &cacheEnabled) != TIXML_SUCCESS){
-		cout << "Warning - no cacheEnabled setting for Camera";
+	if(pPtr->QueryBoolAttribute("saveEnabled", &cacheSaveEnabled) != TIXML_SUCCESS){
+		cout << "Warning - no cacheSaveEnabled setting for Camera";
+	}
+
+	cacheLoadEnabled = true;
+	if(pPtr->QueryBoolAttribute("loadEnabled", &cacheLoadEnabled) != TIXML_SUCCESS){
+		cout << "Warning - no cacheLoadEnabled setting for Camera";
 	}
 
 	crossValidate = false;

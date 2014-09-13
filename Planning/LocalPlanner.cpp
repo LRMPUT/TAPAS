@@ -4,6 +4,7 @@
  *      Author: sebastian
  */
 
+#include <chrono>
 #include "LocalPlanner.h"
 
 using namespace cv;
@@ -414,8 +415,13 @@ float LocalPlanner::findOptimSector(const std::vector<int>& freeSectors,
 }
 
 void LocalPlanner::determineDriversCommand(cv::Mat posImuMapCenter,
-											float bestDirLocalMap) {
-
+											float bestDirLocalMap)
+{
+	static std::chrono::high_resolution_clock::time_point startTurnTime = std::chrono::high_resolution_clock::now();
+	static bool turningRightStarted = false;
+	static bool turningLeftStarted = false;
+	static std::chrono::high_resolution_clock::time_point startInterruptTime = std::chrono::high_resolution_clock::now();
+	static bool turningInterrupted = false;
 	//Mat posImuMapCenter = robot->getPosImuConstraintsMapCenter();
 	float localYaw = RotMatToEulerYaw(posImuMapCenter);
 	localYaw = localYaw * 180 / PI;
@@ -424,30 +430,70 @@ void LocalPlanner::determineDriversCommand(cv::Mat posImuMapCenter,
 		cout << "localYaw: " << localYaw << endl;
 		cout << "Best Direction: " << bestDirLocalMap << endl;
 	}
+	static const int turningTimeout = 5000;
+	static const int interruptTime = 1000;
 	// if we achieve set point direction then go straight ahead
 	// 100 means that we are in target direction with 10 degree margin
-	if ((bestDirLocalMap - localYaw)
-			* (bestDirLocalMap - localYaw)< localPlannerParams.steeringMargin * localPlannerParams.steeringMargin)
+	if((turningLeftStarted || turningRightStarted) &&
+		std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startTurnTime).count() > turningTimeout)
 	{
 		if (localPlannerParams.debug == 1)
+		{
+			cout << "Deadlock detected -> interrupting turning" << endl;
+		}
+		turningInterrupted = true;
+		startInterruptTime = std::chrono::high_resolution_clock::now();
+		turningRightStarted = false;
+		turningLeftStarted = false;
+	}
+
+	if(turningInterrupted &&
+		std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startInterruptTime).count() > interruptTime)
+	{
+		if (localPlannerParams.debug == 1){
+			cout<<"Interrupted"<<endl;
+		}
+		std::unique_lock<std::mutex> lck(mtxCurSpeed);
+		float commandSpeed = curSpeed;
+		lck.unlock();
+
+		globalPlanner->setMotorsVel(-commandSpeed, -commandSpeed);
+	}
+	else if (fabs(bestDirLocalMap - localYaw) < localPlannerParams.steeringMargin)
+	{
+		if (localPlannerParams.debug == 1){
 			cout<<"Straight"<<endl;
+		}
 		std::unique_lock<std::mutex> lck(mtxCurSpeed);
 		float commandSpeed = curSpeed;
 		lck.unlock();
 
 		globalPlanner->setMotorsVel(commandSpeed, commandSpeed);
+		turningRightStarted = false;
+		turningLeftStarted = false;
+		turningInterrupted = false;
 	}
 	else if (bestDirLocalMap > localYaw)	{
-		if (localPlannerParams.debug == 1)
+		if (localPlannerParams.debug == 1){
 			cout<<"Right"<<endl;
+		}
 
 		globalPlanner->setMotorsVel(localPlannerParams.turnSpeed, -localPlannerParams.turnSpeed);
+		turningRightStarted = true;
+		turningLeftStarted = false;
+		turningInterrupted = false;
+		startTurnTime = std::chrono::high_resolution_clock::now();
 	}
 	else{
-		if (localPlannerParams.debug == 1)
+		if (localPlannerParams.debug == 1){
 			cout<<"Left"<<endl;
+		}
 
 		globalPlanner->setMotorsVel(-localPlannerParams.turnSpeed, localPlannerParams.turnSpeed);
+		turningRightStarted = false;
+		turningLeftStarted = true;
+		turningInterrupted = false;
+		startTurnTime = std::chrono::high_resolution_clock::now();
 	}
 //	cout << "End LocalPlanner::determineDriversCommand" << endl;
 	//getchar();

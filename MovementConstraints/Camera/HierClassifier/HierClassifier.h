@@ -109,6 +109,8 @@ class HierClassifier {
 	/** Flaga informująca czy wczytywać i zapisywać cache. */
 	bool cacheEnabled;
 
+	int debugLevel;
+
 	//cv::Mat projectPointsTo3D(	cv::Mat disparity);
 
 	//cv::Mat projectPointsTo2D(	cv::Mat _3dImage);

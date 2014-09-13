@@ -41,9 +41,13 @@ class Camera {
 
 	std::vector<cv::VideoCapture> cameras;
 
-	bool cacheEnabled;
+	bool cacheSaveEnabled;
+
+	bool cacheLoadEnabled;
 
 	bool learnEnabled;
+
+	int debugLevel;
 
 	std::vector<boost::filesystem::path> learningDirs;
 

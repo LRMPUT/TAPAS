@@ -47,7 +47,7 @@
 	-->
 	
 	<LocalPlanner 		runThread="1" 
-						debug="0"
+						debug="1"
 						avoidObstacles="1" 
 						VFH_HistResolution="10"
 						VFH_Threshold="0.5" 
@@ -100,9 +100,9 @@
 			0	0	1	-810
 			0	0	0	1
 		</imu_position_global>
-		<Camera runThread="false" number="1" rows="480" cols="640">
-			<cache enabled="true" />
-			<HierClassifier>
+		<Camera runThread="false" number="1" rows="480" cols="640" debug="1">
+			<cache saveEnabled="true" loadEnabled="true"/>
+			<HierClassifier debug="1">
 				<cache enabled="true" />
 				<segmentation k="200" min_size="200" />
 				<descriptor>
