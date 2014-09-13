@@ -33,23 +33,30 @@
 						longitude="16.950173"/>
 
 	<!--
-		runThread: 		1 - module ON, 0 - module OFF
+		runThread: 				1 - module ON, 0 - module OFF
+		debug:					1 - debug ON, 0 - debug OFF
 		avoidObstacles:	        0 - run as globalPlanner wants, 1 - take into account the obstacles
 		VFH_HistResolution: 	resolution of directions in VFH in degrees
-		VFH_Threshold:		threshold for the direction to be considered a valid choice
-		VFH_SteeringMargin:	the dead_zone of steering deciding upon going straight, left, right
+		VFH_Threshold:			threshold for the direction to be considered a valid choice
+		VFH_SteeringMargin:		the dead_zone of steering deciding upon going straight, left, right
+		VFH_Gauss3sig:			sigma of the Gaussian used to smooth the histograms 
+		VFH_MaxDistance:		max distance of the obstacle (one with 0 in VFH)
+		VFH_NormalSpeed: 		Speed used in normal run
+		VFH_PreciseSpeed:		Speed used when approaching the target
+		VFH_TurnSpee:			Speed used to turn the robot
 	-->
-<<<<<<< .mine
-	<LocalPlanner runThread="1" avoidObstacles="1" VFH_HistResolution="10" VFH_Threshold="0.5" VFH_SteeringMargin="10"
-		VFH_Gauss3sig="40" VFH_MaxDistance="3000" VFH_NormalSpeed="40" VFH_PreciseSpeed="20" VFH_TurnSpeed="80"/>
-=======
+	
 	<LocalPlanner 		runThread="1" 
+						debug="0"
 						avoidObstacles="1" 
 						VFH_HistResolution="10"
 						VFH_Threshold="0.5" 
 						VFH_SteeringMargin="10" 
-						VFH_Gauss3sig="40"/>
->>>>>>> .r232
+						VFH_Gauss3sig="40" 
+						VFH_MaxDistance="3000" 
+						VFH_NormalSpeed="40" 
+						VFH_PreciseSpeed="20" 
+						VFH_TurnSpeed="80"/>
 
 	<!--
 		runThread: 				1 - module ON, 0 - module OFF

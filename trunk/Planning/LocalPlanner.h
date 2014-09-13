@@ -39,6 +39,7 @@ class LocalPlanner {
 public:
 	struct Parameters {
 		int runThread;
+		int debug;
 		int avoidObstacles;
 		int histResolution;
 		float threshold;
@@ -118,8 +119,8 @@ public:
 	void startLocalPlanner();
 	void stopLocalPlanner();
 
-	void setPreciseSpeed(); // TODO: IMPLEMENT THEM
-	void setNormalSpeed();  // TODO: IMPLEMENT THEM
+	void setPreciseSpeed();
+	void setNormalSpeed();
 
 	void getVecFieldHist(std::vector<float>& retVecFieldHist, float& retGoalDirection, float& retBestDirection);
 	//	void setMotorsVel(float motLeft, float motRight);
