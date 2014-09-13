@@ -74,6 +74,8 @@ bool IMU::isDataValid(){
 		return false;
 	}
 	else if ( usedIMUType == IMU_MICROSTRAIN_GX4_25){
+		if (imuNew==NULL)
+			return false;
 		return imuNew->isDataValid();
 	}
 }

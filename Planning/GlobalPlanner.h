@@ -183,6 +183,7 @@ private:
 	int findGoalNodeId(int finalGoalId, std::vector<double> distance);
 	void goDirectlyToTarget(double robotX, double robotY, bool& recomputePlan);
 	void setGoalDirection(double theta); // in radians
+	void setGoalDirectionInDegrees(double theta);
 
 public:
 	GlobalPlanner(Robot* irobot, TiXmlElement* settings);
