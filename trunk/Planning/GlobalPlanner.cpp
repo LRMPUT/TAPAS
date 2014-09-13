@@ -125,13 +125,17 @@ void GlobalPlanner::globalPlannerProcessing() {
 
 	if ( globalPlannerParams.runHomologation == 1 )
 	{
+		while(!robot->isImuDataValid())
+			usleep(200000);
+
 		// TODO: Sleep
 		localPlanner->startLocalPlanner();
 		while (globalPlannerParams.runThread)
 		{
-			double robotX, robotY, theta ;
-			updateRobotPosition(robotX, robotY, theta);
-			setGoalDirection(theta);
+			std::chrono::high_resolution_clock::time_point timestamp;
+			//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
+			cv::Mat imu = robot->getImuData(timestamp);
+			setGoalDirectionInDegrees(imu.at<float>(2,3));
 			usleep(200000);
 		}
 	}
@@ -880,6 +884,12 @@ int GlobalPlanner::findGoalNodeId(int finalGoalId,
 void GlobalPlanner::setGoalDirection(double theta) {
 	std::unique_lock < std::mutex > lckGoalTheta(mtxGoalTheta);
 	goalTheta = theta * 180.0 / 3.14159265;
+	lckGoalTheta.unlock();
+}
+
+void GlobalPlanner::setGoalDirectionInDegrees(double theta) {
+	std::unique_lock < std::mutex > lckGoalTheta(mtxGoalTheta);
+	goalTheta = theta;
 	lckGoalTheta.unlock();
 }
 

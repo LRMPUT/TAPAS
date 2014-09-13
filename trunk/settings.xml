@@ -73,7 +73,7 @@
 	-->
 	<PositionEstimation 	runThread="1" 
 							processingFrequency="20" 
-							debug="0" 
+							debug="1" 
 							encoderTicksPerRev="300" 
 							wheelDiameter="0.16" 
 							wheelBase="0.452"/>
