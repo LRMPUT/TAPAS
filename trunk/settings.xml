@@ -29,8 +29,8 @@
 						sound="0"
 						runHomologation="1" 
 						mapFile="ppMap.osm" 
-						latitude="52.401660" 
-						longitude="16.953071"/>
+						latitude="52.370629" 
+						longitude="16.908003"/>
 
 	<!--
 		runThread: 				1 - module ON, 0 - module OFF
