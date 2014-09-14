@@ -124,14 +124,10 @@ void GlobalPlanner::globalPlannerProcessing() {
 
 	if ( globalPlannerParams.runHomologation == 1 )
 	{
-<<<<<<< .mine
 		usleep(200000); // TODO
-=======
 		while(!robot->isImuDataValid())
 			usleep(200000);
 
-		// TODO: Sleep
->>>>>>> .r239
 		localPlanner->startLocalPlanner();
 		while (globalPlannerParams.runThread)
 		{
