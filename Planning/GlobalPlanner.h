@@ -176,10 +176,6 @@ private:
 	void checkAndCorrectEdgeConvention(Edge &e);
 	void updateGoal();
 	double computeDistance(std::pair<double, double> a, std::pair<double, double> b);
-	void dijkstraStartPreparation(int startType, std::vector<double> &distance,
-			std::vector<int> &previous,
-			std::priority_queue<std::pair<double, int>,
-					std::vector<std::pair<double, int> >, myPQueueComparison> &pqueue);
 	int findGoalNodeId(int finalGoalId, std::vector<double> distance);
 	void goDirectlyToTarget(double robotX, double robotY, bool& recomputePlan);
 	void setGoalDirection(double theta); // in radians
