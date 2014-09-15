@@ -530,7 +530,7 @@ void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 float LocalPlanner::determineCurSpeed(){
 	float curImuAccVariance = robot->getImuAccVariance();
 	std::unique_lock<std::mutex> lck(mtxCurSpeed);
-	static const float accVarianceLimit = 0.01;
+	static const float accVarianceLimit = 0.1;
 	float curSpeed = prevCurSpeed;
 	if(curImuAccVariance < accVarianceLimit/2){
 		curSpeed = min(curSpeed + 0.5f, curSpeedMax);
