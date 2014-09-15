@@ -206,6 +206,6 @@ cv::Mat Robot::getPosImuConstraintsMapCenter(){
 //	return movementConstraints->getPosGlobalMap();
 //}
 
-void Robot::getLocalPlanData(cv::Mat& MovementConstraints,cv::Mat& PosImuMapCenter, cv::Mat& GlobalMapCenter){
-	movementConstraints->getLocalPlanningData(MovementConstraints, PosImuMapCenter, GlobalMapCenter);
+void Robot::getLocalPlanData(cv::Mat& constraintsMap,cv::Mat& posRobotMapCenter, cv::Mat& globalMapCenter){
+	movementConstraints->getLocalPlanningData(constraintsMap, posRobotMapCenter, globalMapCenter);
 }

@@ -27,7 +27,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>10</number>
+     <number>9</number>
     </property>
     <widget class="QWidget" name="cameraTab">
      <attribute name="title">
@@ -1994,6 +1994,32 @@
       </property>
       <property name="text">
        <string>Homologation</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_39">
+      <property name="geometry">
+       <rect>
+        <x>620</x>
+        <y>140</y>
+        <width>191</width>
+        <height>20</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Imu acceleration variance:</string>
+      </property>
+     </widget>
+     <widget class="QLabel" name="constraintImuAccVarianceLabel">
+      <property name="geometry">
+       <rect>
+        <x>620</x>
+        <y>160</y>
+        <width>66</width>
+        <height>17</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>0</string>
       </property>
      </widget>
     </widget>

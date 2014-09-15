@@ -22,9 +22,9 @@ Constraints::Constraints(Ui::TrobotQtClass* iui, Debug* idebug) :
 {
 	QObject::connect(&timer, SIGNAL(timeout()), this, SLOT(updateViews()));
 
-	Mat cameraOrigImu, cameraOrigLaser, imuOrigGlobal;
-	debug->getTransformationMatrices(imuOrigGlobal, cameraOrigLaser, cameraOrigImu);
-	viewer = new Viewer(imuOrigGlobal, cameraOrigImu);
+	Mat cameraOrigImu, cameraOrigLaser, imuOrigRobot;
+	debug->getTransformationMatrices(imuOrigRobot, cameraOrigLaser, cameraOrigImu);
+	viewer = new Viewer(imuOrigRobot, cameraOrigImu);
 	ui->constraintMapViewScrollArea->setWidget(viewer);
 
 	//timer.setInterval(100);
@@ -84,6 +84,7 @@ void Constraints::updateMapView(){
 	float bestDirection;
 	debug->getVecFieldHist(vecFieldHist, goalDirection, bestDirection);
 	//cout << "vecFieldHist.size() = " << vecFieldHist.size() << endl;
+	float imuAccVariance = debug->getImuAccVariance();
 
 	stringstream tmp;
 	tmp.width(4);
@@ -97,6 +98,7 @@ void Constraints::updateMapView(){
 	}
 	//tmp << curPosImuMapCenter;
 	ui->constraintCurPosLabel->setText(QString(tmp.str().c_str()));
+	ui->constraintImuAccVarianceLabel->setText(QString("%1").arg(imuAccVariance));
 	//cout << "curPosImuMapCenter.size() = " << curPosImuMapCenter.size() << endl;
 	if(!pointCloudImuMapCenter.empty()){
 		viewer->updatePointCloud(pointCloudImuMapCenter);

@@ -22,7 +22,7 @@ private:
 	cv::Mat posImuMapCenter;
 	cv::Mat pointCloudMapCenter;
 	cv::Mat cameraOrigImu;
-	cv::Mat imuOrigGlobal;
+	cv::Mat imuOrigRobot;
 	cv::Mat constraintsMap;
 	std::vector<float> vecFieldHist;
 	float goalDirection;

@@ -145,9 +145,13 @@ void LocalPlanner::run() {
 		if (startOperate) {
 			executeVFH();
 		}
+		else{
+			globalPlanner->setMotorsVel(0, 0);
+		}
 		std::chrono::milliseconds duration(50);
 		std::this_thread::sleep_for(duration);
 	}
+	globalPlanner->setMotorsVel(0, 0);
 }
 
 void LocalPlanner::executeVFH() {
@@ -155,17 +159,17 @@ void LocalPlanner::executeVFH() {
 
 	//constraint data
 	Mat constraints;
-	Mat posImuMapCenter;
+	Mat posRobotMapCenter;
 	Mat posLocalToGlobalMap;
 
-	robot->getLocalPlanData(constraints, posImuMapCenter,
+	robot->getLocalPlanData(constraints, posRobotMapCenter,
 			posLocalToGlobalMap);
-	if(!constraints.empty() && !posImuMapCenter.empty() && !posLocalToGlobalMap.empty()){
+	if(!constraints.empty() && !posRobotMapCenter.empty() && !posLocalToGlobalMap.empty()){
 		vector<float> histSectors(numHistSectors, 0);
 		vector<int> freeSectors;
 
 		//cout << "updateHistogram()" << endl;
-		updateHistogram(histSectors, posImuMapCenter, constraints);
+		updateHistogram(histSectors, posRobotMapCenter, constraints);
 		//cout << "smoothHistogram" << endl;
 		smoothHistogram(histSectors);
 		//cout << "findFreeSectors()" << endl;
@@ -180,7 +184,7 @@ void LocalPlanner::executeVFH() {
 		/// optimal direction in the local map - nearest to the goal
 		bestDirLocalMap = findOptimSector(freeSectors, goalDirLocalMap);
 
-		determineDriversCommand(posImuMapCenter,
+		determineDriversCommand(posRobotMapCenter,
 								bestDirLocalMap);
 
 		std::unique_lock<std::mutex> lck(mtxVecFieldHist);
@@ -211,7 +215,7 @@ float LocalPlanner::setGoalDirection(cv::Mat posLocalToGlobalMap) {
 			float goalDirection = globalPlanner->getHeadingToGoal();
 			//Mat posLocalToGlobalMap = robot->getLocalMapPosInGlobalMap();
 			/// and convert this orentation to euler yaw
-			direction = RotMatToEulerYaw(posLocalToGlobalMap);
+			direction = rotMatToEulerYaw(posLocalToGlobalMap);
 			direction = 180 / PI * direction;
 			goalDirection = direction;
 			setStraighAheadDirection = true;
@@ -228,7 +232,7 @@ void LocalPlanner::localPlanerTest() {
 	executeVFH();
 }
 
-float LocalPlanner::RotMatToEulerYaw(Mat rotMat) {
+float LocalPlanner::rotMatToEulerYaw(Mat rotMat) {
 
 	float R11 = rotMat.at<float>(0, 0);
 	float R21 = rotMat.at<float>(1, 0);
@@ -252,22 +256,21 @@ float LocalPlanner::RotMatToEulerYaw(Mat rotMat) {
 }
 
 void LocalPlanner::updateHistogram(std::vector<float>& histSectors,
-									cv::Mat posImuMapCenter,
+									cv::Mat posRobotMapCenter,
 									cv::Mat constraints) {
 
 	float angPosition;
 	float density;
 
-	//TODO Change posImuMapCener to posRobotMapCenter
 	const float hist_A = 1;
 	const float hist_B = hist_A / localPlannerParams.maxDistance;
 	/// Get current Constraints Raster Map
 	//Mat constraints = robot->getMovementConstraints();
-	//Mat posImuMapCenter = robot->getPosImuConstraintsMapCenter();
+	//Mat posRobotMapCenter = robot->getPosImuConstraintsMapCenter();
 
 	// update position of the robot
-	float curRobX = posImuMapCenter.at<float>(0, 3);
-	float curRobY = posImuMapCenter.at<float>(1, 3);
+	float curRobX = posRobotMapCenter.at<float>(0, 3);
+	float curRobY = posRobotMapCenter.at<float>(1, 3);
 
 	//cout<<"RobotX"<<curRobCellX<<endl;
 	//cout<<"RobotY"<<curRobCellY<<endl;
@@ -361,7 +364,7 @@ float LocalPlanner::determineGoalInLocalMap(cv::Mat posLocalToGlobalMap,
 	/// get Orientation of Local Map in Global Map
 	//Mat posLocalToGlobalMap = robot->getLocalMapPosInGlobalMap();
 	/// and convert this orentation to euler yaw
-	globalYaw = RotMatToEulerYaw(posLocalToGlobalMap);
+	globalYaw = rotMatToEulerYaw(posLocalToGlobalMap);
 	globalYaw = globalYaw * 180 / PI;
 //	cout << "Global_YAW: " << globalYaw << endl;
 	// calculate difference between local and global map in orientation
@@ -413,7 +416,7 @@ float LocalPlanner::findOptimSector(const std::vector<int>& freeSectors,
 	return bestDirection;
 }
 
-void LocalPlanner::determineDriversCommand(cv::Mat posImuMapCenter,
+void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 											float bestDirLocalMap)
 {
 	static std::chrono::high_resolution_clock::time_point startTurnTime = std::chrono::high_resolution_clock::now();
@@ -421,8 +424,8 @@ void LocalPlanner::determineDriversCommand(cv::Mat posImuMapCenter,
 	static bool turningLeftStarted = false;
 	static std::chrono::high_resolution_clock::time_point startInterruptTime = std::chrono::high_resolution_clock::now();
 	static bool turnInterrupted = false;
-	//Mat posImuMapCenter = robot->getPosImuConstraintsMapCenter();
-	float localYaw = RotMatToEulerYaw(posImuMapCenter);
+	//Mat posRobotMapCenter = robot->getPosImuConstraintsMapCenter();
+	float localYaw = rotMatToEulerYaw(posRobotMapCenter);
 	localYaw = localYaw * 180 / PI;
 	if (localPlannerParams.debug == 1)
 	{

@@ -81,7 +81,7 @@ private:
 	void run();
 
 	void updateHistogram(std::vector<float>& histSectors,
-						cv::Mat posImuMapCenter,
+						cv::Mat posRobotMapCenter,
 						cv::Mat constraints);
 
 	void smoothHistogram(std::vector<float>& histSectors);
@@ -95,10 +95,10 @@ private:
 	float findOptimSector(const std::vector<int>& freeSectors,
 						float goalDirLocalMap);
 
-	void determineDriversCommand(cv::Mat posImuMapCenter,
+	void determineDriversCommand(cv::Mat posRobotMapCenter,
 								float bestDirLocalMap);
 
-	float RotMatToEulerYaw(Mat rotMat);
+	float rotMatToEulerYaw(Mat rotMat);
 
 	float setGoalDirection(cv::Mat posLocalToGlobalMap);
 

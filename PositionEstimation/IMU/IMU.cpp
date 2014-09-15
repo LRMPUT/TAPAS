@@ -83,7 +83,7 @@ bool IMU::isDataValid(){
 float IMU::getAccVariance(){
 	if ( usedIMUType == IMU_UM6){
 		throw "Not supported";
-		return false;
+		return -1;
 	}
 	else if ( usedIMUType == IMU_MICROSTRAIN_GX4_25){
 		if (imuNew==NULL)

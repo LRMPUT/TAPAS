@@ -53,7 +53,7 @@ void Viewer::drawConstraintsMap(){
 	if(!constraintsMap.empty()){
 		//cout << "drawing" << endl;
 		glPushMatrix();
-		multCurMatrix(imuOrigGlobal.inv());
+		multCurMatrix(imuOrigRobot.inv());
 
 		glDisable(GL_LIGHTING);
 		glBegin(GL_QUADS);
@@ -83,7 +83,7 @@ void Viewer::drawVecFieldHist(){
 		Mat eye33 = Mat::eye(3, 3, CV_32FC1);
 		eye33.copyTo(Mat(posNoOrient, Rect(0, 0, 3, 3)));
 		multCurMatrix(posNoOrient);
-		multCurMatrix(imuOrigGlobal.inv());
+		multCurMatrix(imuOrigRobot.inv());
 		glTranslatef(0, 0, -100);	//100 mm over ground;
 
 		int numSect = vecFieldHist.size();
@@ -189,7 +189,7 @@ void Viewer::draw()
 	glColor3f(1.0f,1.0f,1.0f);
 	//camera()->draw();
 	glPushMatrix();
-	multCurMatrix(imuOrigGlobal.inv());
+	multCurMatrix(imuOrigRobot.inv());
 	drawGrid(MAP_SIZE*MAP_RASTER_SIZE/2, MAP_SIZE);
 	drawAxis(1000);
 	glPopMatrix();
@@ -242,12 +242,12 @@ void Viewer::updateVecFieldHist(std::vector<float> newVecFieldHist, float newGoa
 	cameraOrigImu = newCameraOrigImu;
 }
 
-void Viewer::updateImuOrigGlobal(cv::Mat newImuOrigGlobal){
-	imuOrigGlobal = newImuOrigGlobal;
+void Viewer::updateImuOrigRobot(cv::Mat newImuOrigRobot){
+	imuOrigRobot = newImuOrigRobot;
 }*/
 
-Viewer::Viewer(cv::Mat iimuOrigGlobal, cv::Mat icameraOrigImu) {
-	iimuOrigGlobal.copyTo(imuOrigGlobal);
+Viewer::Viewer(cv::Mat iimuOrigRobot, cv::Mat icameraOrigImu) {
+	iimuOrigRobot.copyTo(imuOrigRobot);
 	icameraOrigImu.copyTo(cameraOrigImu);
 }
 
