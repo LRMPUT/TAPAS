@@ -26,8 +26,8 @@
 	<GlobalPlanner 		runThread="1" 
 						processingFrequency="5" 
 						computeEveryNth="25" 
-						debug ="1" 
-						subgoalThreshold="8" 
+						debug="1" 
+						subgoalThreshold="4" 
 						preciseToGoalMaxTime="25000"
 						changedPlanWaitingTime="30000"
 						changedPlanThreshold="40"
@@ -35,7 +35,7 @@
 						sound="0"
 						runHomologation="0" 
 						mapFile="ppMap.osm" 
-						latitude="52.401306" longitude="16.951138"/>
+						latitude="52.401660" longitude="16.953071" />
 
 	<!--
 		runThread: 				1 - module ON, 0 - module OFF
@@ -53,15 +53,15 @@
 	
 	<LocalPlanner 		runThread="1" 
 						debug="0"
-						avoidObstacles="0" 
+						avoidObstacles="1" 
 						VFH_HistResolution="10"
 						VFH_Threshold="0.5" 
 						VFH_SteeringMargin="10" 
 						VFH_Gauss3sig="50" 
 						VFH_MaxDistance="3000" 
-						VFH_NormalSpeed="20" 
+						VFH_NormalSpeed="45" 
 						VFH_PreciseSpeed="20" 
-						VFH_TurnSpeed="20"
+						VFH_TurnSpeed="60"
 						VFH_TurnTimeout="5000"
 						VFH_InterruptTime="1000" />
 

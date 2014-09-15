@@ -176,6 +176,7 @@ void GlobalPlanner::globalPlannerProcessing() {
 			// Set the goal in the map
 			setLoadedGoal();
 		}
+		localPlanner->setNormalSpeed();
 		localPlanner->startLocalPlanner();
 		int loopTimeCounter = 0;
 		bool recomputePlan = false;
@@ -605,31 +606,31 @@ void GlobalPlanner::computeGlobalPlan(double robotX, double robotY,
 
 
 	// Plan different by over some meters
-	std::chrono::milliseconds tmpTime = std::chrono::duration_cast
-					< std::chrono::milliseconds
-			> (std::chrono::high_resolution_clock::now()
-					- changePlanDelayStartTime);
-	if (fabs(currentPlanDistance+1) > 0.0001 && fabs(currentPlanDistance - previousPlanDistance)
-			> globalPlannerParams.changedPlanThreshold
-			&& tmpTime.count() > globalPlannerParams.changedPlanDelayTime)
-	{
-		weShouldWait = true;
-		localPlanner->stopLocalPlanner();
-		waitingStartTime = std::chrono::high_resolution_clock::now();
-	}
-	else if (weShouldWait == true)
-	{
-		std::chrono::milliseconds time = std::chrono::duration_cast
-					< std::chrono::milliseconds
-					> (std::chrono::high_resolution_clock::now() - waitingStartTime);
-		if (time.count() > globalPlannerParams.changedPlanWaitingTime)
-		{
-			weShouldWait = false;
-			localPlanner->startLocalPlanner();
-			changePlanDelayStartTime = std::chrono::high_resolution_clock::now();
-		}
-	}
-	previousPlanDistance = currentPlanDistance;
+//	std::chrono::milliseconds tmpTime = std::chrono::duration_cast
+//					< std::chrono::milliseconds
+//			> (std::chrono::high_resolution_clock::now()
+//					- changePlanDelayStartTime);
+//	if (fabs(currentPlanDistance+1) > 0.0001 && fabs(currentPlanDistance - previousPlanDistance)
+//			> globalPlannerParams.changedPlanThreshold
+//			&& tmpTime.count() > globalPlannerParams.changedPlanDelayTime)
+//	{
+//		weShouldWait = true;
+//		localPlanner->stopLocalPlanner();
+//		waitingStartTime = std::chrono::high_resolution_clock::now();
+//	}
+//	else if (weShouldWait == true)
+//	{
+//		std::chrono::milliseconds time = std::chrono::duration_cast
+//					< std::chrono::milliseconds
+//					> (std::chrono::high_resolution_clock::now() - waitingStartTime);
+//		if (time.count() > globalPlannerParams.changedPlanWaitingTime)
+//		{
+//			weShouldWait = false;
+//			localPlanner->startLocalPlanner();
+//			changePlanDelayStartTime = std::chrono::high_resolution_clock::now();
+//		}
+//	}
+//	previousPlanDistance = currentPlanDistance;
 
 
 	// Let's check which node or the node of the final edge is closer to us
@@ -809,8 +810,12 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY,
 				foundSubgoal = true;
 				break;
 			} else {
-				it = nodesToVisit.begin();
+				if (globalPlannerParams.debug == 1) {
+					std::cout << "Global Planner : removing node" << std::endl;
+				}
+
 				nodesToVisit.pop_front();
+				it = nodesToVisit.begin();
 			}
 		}
 		// We can go directly to target
