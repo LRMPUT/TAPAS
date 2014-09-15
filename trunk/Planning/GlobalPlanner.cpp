@@ -258,7 +258,7 @@ void GlobalPlanner::readOpenStreetMap(std::string mapName) {
 
 			// Is is a way we can walk on? Can add here more way tags if needed
 			if (strstr(key, "foot") || strstr(value, "foot")
-					|| strstr(value, "service")) {
+					|| strstr(value, "service") || strstr(value, "tertiary") || strstr(value, "residential")) {
 				footWay = true;
 				break;
 			}

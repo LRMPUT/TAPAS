@@ -14,6 +14,8 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <thread>
+#include <list>
+#include <mutex>
 
 // Microstrain dependencies
 extern "C" {
@@ -48,6 +50,9 @@ public:
 	void setMag(float* mag);
 	void setEuler(float roll, float pitch, float yaw);
 
+	// Get the variance of the accelerometer
+	float getAccVariance();
+
 	// ping device
 	void pingDevice();
 
@@ -76,6 +81,10 @@ private:
 
 	// Current data
 	float acc[3], gyro[3], mag[3], euler[3];
+
+	// hsitory to compute variance
+	std::mutex accHistoryMtx;
+	std::list<float> accHistory;
 
 	bool accValid, gyroValid, magValid, eulerValid;
 	// Timestamp of last measurement
