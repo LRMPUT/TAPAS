@@ -39,10 +39,10 @@ public:
 	~IMU_driver();
 
 	// Read data from gyro, accelerometer, magnetometer and euler angles.
-	float* getGyro();
-	float* getAccel();
-	float* getMag();
-	float* getEuler();
+	void getGyro(float* gyroValues);
+	void getAccel(float* accValues);
+	void getMag(float* magValues);
+	void getEuler(float* eulerValues);
 
 	// Set data from gyro, accelerometer, magnetometer and euler angles.
 	void setGyro(float* gyro);
@@ -80,6 +80,7 @@ private:
 	bool runThread;
 
 	// Current data
+	std::mutex accMtx, gyroMtx, magMtx, eulerMtx;
 	float acc[3], gyro[3], mag[3], euler[3];
 
 	// hsitory to compute variance

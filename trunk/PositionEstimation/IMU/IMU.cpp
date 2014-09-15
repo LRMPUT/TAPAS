@@ -117,10 +117,16 @@ cv::Mat IMU::getUM6Data(std::chrono::high_resolution_clock::time_point &timestam
 cv::Mat IMU::getGX4Data(std::chrono::high_resolution_clock::time_point &timestamp){
 	Mat ret(3, 4, CV_32FC1);
 
-	float* acc = imuNew->getAccel();
-	float* gyro = imuNew->getGyro();
-	float* mag = imuNew->getMag();
-	float* euler = imuNew->getEuler();
+	float *acc, *gyro, *mag, *euler;
+	acc = new float[3];
+	gyro = new float[3];
+	mag = new float[3];
+	euler = new float[3];
+
+	imuNew->getAccel(acc);
+	imuNew->getGyro(gyro);
+	imuNew->getMag(mag);
+	imuNew->getEuler(euler);
 
 	for(int i = 0; i < 3; i++){
 		ret.at<float>(i, 0) = acc[i];
@@ -128,6 +134,12 @@ cv::Mat IMU::getGX4Data(std::chrono::high_resolution_clock::time_point &timestam
 		ret.at<float>(i, 2) = mag[i];
 		ret.at<float>(i, 3) = euler[i];
 	}
+
+	delete []acc;
+	delete []gyro;
+	delete []mag;
+	delete []euler;
+
 	timestamp = imuNew->getTimestamp();
 	return ret;
 }
