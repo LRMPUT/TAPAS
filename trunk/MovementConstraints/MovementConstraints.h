@@ -66,7 +66,7 @@ private:
 	Robot* robot;
 
 	//CV_32FC1 4x4: camera origin position and orientation w.r.t. global coordinate system
-	cv::Mat imuOrigGlobal;
+	cv::Mat imuOrigRobot;
 
 	//CV_32FC1 4x4: camera origin position and orientation w.r.t. laser coordinate system
 	cv::Mat cameraOrigLaser;
@@ -166,7 +166,7 @@ public:
 
 	cv::Mat getPosImuMapCenter();
 
-	void getLocalPlanningData(cv::Mat& movementConstraints, cv::Mat& posImuMapCenter, cv::Mat& globalMapCenter);
+	void getLocalPlanningData(cv::Mat& retConstraintsMap, cv::Mat& posRobotMapCenter, cv::Mat& globalMapCenter);
 	//----------------------MENAGMENT OF MovementConstraints DEVICES
 	//Hokuyo
 	void openHokuyo(std::string port);

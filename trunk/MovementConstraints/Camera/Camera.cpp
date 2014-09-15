@@ -157,7 +157,7 @@ std::vector<cv::Mat> Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 		ret.push_back(Mat(numRows, numCols, CV_32SC1, Scalar(-1)));
 
 		//cout << "curPosImuMapCenter*cameraOrigImu[cam]" << endl;
-		Mat curPosCameraMapCenterGlobal = imuOrigGlobal*curPosImuMapCenter*cameraOrigImu[cam];
+		Mat curPosCameraMapCenterGlobal = imuOrigRobot*curPosImuMapCenter*cameraOrigImu[cam];
 		Mat invCameraMatrix = cameraMatrix[cam].inv();
 
 		for(int r = 0; r < numRows; r++){
@@ -214,7 +214,7 @@ std::vector<cv::Mat> Camera::computeMapSegmentsGpu(cv::Mat curPosImuMapCenter){
 		ret.push_back(Mat(numRows, numCols, CV_32SC1, Scalar(-1)));
 
 		//cout << "curPosImuMapCenter*cameraOrigImu[cam]" << endl;
-		Mat curPosCameraMapCenterGlobal = imuOrigGlobal*curPosImuMapCenter*cameraOrigImu[cam];
+		Mat curPosCameraMapCenterGlobal = imuOrigRobot*curPosImuMapCenter*cameraOrigImu[cam];
 		Mat curPosCameraMapCenterImu = curPosImuMapCenter*cameraOrigImu[cam];
 		Mat invCameraMatrix = cameraMatrix[cam].inv();
 
@@ -1380,7 +1380,7 @@ void Camera::readSettings(TiXmlElement* settings){
 		pLabel = pLabel->NextSiblingElement("label");
 	}
 
-	imuOrigGlobal = readMatrixSettings(settings, "imu_position_global", 4, 4);
+	imuOrigRobot = readMatrixSettings(settings, "imu_position_robot", 4, 4);
 
 	pPtr = settings->FirstChildElement("sensor");
 	cameraOrigImu.resize(numCameras);

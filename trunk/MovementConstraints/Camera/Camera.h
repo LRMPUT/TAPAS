@@ -64,7 +64,7 @@ class Camera {
 	//CV_32FC1 4x4: camera origin position and orientation w.r.t. IMU coordinate system
 	std::vector<cv::Mat> cameraOrigImu;
 
-	cv::Mat imuOrigGlobal;
+	cv::Mat imuOrigRobot;
 
 	//CV_32FC1 4x4: camera origin position and orientation w.r.t. laser coordinate system
 	std::vector<cv::Mat> cameraOrigLaser;

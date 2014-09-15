@@ -219,11 +219,15 @@ void Debug::getVecFieldHist(std::vector<float>& retVecFieldHist,
 	robot->globalPlanner->localPlanner->getVecFieldHist(retVecFieldHist, retGoalDirection, retBestDirection);
 }
 
-void Debug::getTransformationMatrices(cv::Mat& retImuOrigGlobal,
+float Debug::getImuAccVariance(){
+	return robot->getImuAccVariance();
+}
+
+void Debug::getTransformationMatrices(cv::Mat& retImuOrigRobot,
 									cv::Mat& retCameraOrigLaser,
 									cv::Mat& retCameraOrigImu)
 {
-	robot->movementConstraints->imuOrigGlobal.copyTo(retImuOrigGlobal);
+	robot->movementConstraints->imuOrigRobot.copyTo(retImuOrigRobot);
 	robot->movementConstraints->cameraOrigLaser.copyTo(retCameraOrigLaser);
 	robot->movementConstraints->cameraOrigImu.copyTo(retCameraOrigImu);
 }

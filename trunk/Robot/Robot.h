@@ -147,7 +147,7 @@ public:
 
 	//cv::Mat getLocalMapPosInGlobalMap();
 
-	void getLocalPlanData(cv::Mat& MovementConstraints,cv::Mat& PosImuMapCenter, cv::Mat& GlobalMapCenter);
+	void getLocalPlanData(cv::Mat& constraintsMap,cv::Mat& posRobotMapCenter, cv::Mat& globalMapCenter);
 };
 
 #endif /* ROBOT_H_ */

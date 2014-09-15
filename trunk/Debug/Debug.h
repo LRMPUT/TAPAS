@@ -74,8 +74,10 @@ public:
 						float& retGoalDirection,
 						float& retBestDirection);
 
+	float getImuAccVariance();
+
 	//----------------------ACCESS TO SETTINGS
-	void getTransformationMatrices(cv::Mat& retImuOrigGlobal,
+	void getTransformationMatrices(cv::Mat& retImuOrigRobot,
 									cv::Mat& retCameraOrigLaser,
 									cv::Mat& retCameraOrigImu);
 };

@@ -75,7 +75,7 @@ void MovementConstraints::readSettings(TiXmlElement* settings){
 
 	cameraOrigLaser = readMatrixSettings(settings, "camera_position_laser", 4, 4);
 	cameraOrigImu = readMatrixSettings(settings, "imu_position_camera", 4, 4).t();
-	imuOrigGlobal = readMatrixSettings(settings, "imu_position_global", 4, 4);
+	imuOrigRobot = readMatrixSettings(settings, "imu_position_robot", 4, 4);
 	//groundPlane = readMatrixSettings(settings, "ground_plane_global", 4, 1);
 }
 
@@ -210,7 +210,7 @@ void MovementConstraints::insertHokuyoConstraints(cv::Mat map,
 {
 	//cout << "insertHokuyoConstraints()" << endl;
 	std::unique_lock<std::mutex> lckPointCloud(mtxPointCloud);
-	Mat pointCloudRobotMapCenter = imuOrigGlobal*pointCloudImuMapCenter.rowRange(0, 4);
+	Mat pointCloudRobotMapCenter = imuOrigRobot*pointCloudImuMapCenter.rowRange(0, 4);
 	lckPointCloud.unlock();
 
 	vector<vector<vector<Point3f> > > bins(MAP_SIZE, vector<vector<Point3f> >(MAP_SIZE, vector<Point3f>()));
@@ -316,7 +316,7 @@ void MovementConstraints::updatePointCloud(){
 						pointCloudSettings);
 	}
 	else{
-		//cout << "Hokuyo closed" << endl;
+		cout << "Hokuyo closed" << endl;
 	}
 
 	//cout << "End processPointCloud()" << endl;
@@ -518,12 +518,14 @@ cv::Mat MovementConstraints::getPosImuMapCenter(){
 	return ret;
 }
 
-void MovementConstraints::getLocalPlanningData(cv::Mat& movementConstraints,cv::Mat& posImuMapCenter, cv::Mat& globalMapCenter){
+void MovementConstraints::getLocalPlanningData(cv::Mat& retConstraintsMap,cv::Mat& posRobotMapCenter, cv::Mat& globalMapCenter){
 
 	std::unique_lock<std::mutex> lckMap(mtxMap);
 	std::unique_lock<std::mutex> lckPC(mtxPointCloud);
-	constraintsMap.copyTo(movementConstraints);
-	curPosCloudMapCenter.copyTo(posImuMapCenter);
+	constraintsMap.copyTo(retConstraintsMap);
+	Mat retPosRobotMapCenter = curPosCloudMapCenter*imuOrigRobot;
+	posRobotMapCenter = retPosRobotMapCenter;
+	//curPosCloudMapCenter.copyTo(posImuMapCenter);
 	posMapCenterGlobal.copyTo(globalMapCenter);
 	lckPC.unlock();
 	lckMap.unlock();

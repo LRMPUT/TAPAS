@@ -96,12 +96,12 @@
   		0.750272785796941  -0.026801810405667   0.660584899805829 0
 			0	0	0	1
 		</imu_position_camera>
-		<imu_position_global>
+		<imu_position_robot>
 			1	0	0	-220
 			0	1	0	0
 			0	0	1	-810
 			0	0	0	1
-		</imu_position_global>
+		</imu_position_robot>
 		<Camera runThread="false" number="1" rows="480" cols="640" debug="1">
 			<cache saveEnabled="true" loadEnabled="true"/>
 			<HierClassifier debug="1">
@@ -186,12 +186,12 @@
 				<label text="pavement" id="1"/>
 			</labels>
 
-			<imu_position_global>
+			<imu_position_robot>
 				1	0	0	-220
 				0	1	0	0
 				0	0	1	-810
 				0	0	0	1
-			</imu_position_global>
+			</imu_position_robot>
 
 			<sensor id="left">
 				<imu_position_camera>
