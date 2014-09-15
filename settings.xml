@@ -22,6 +22,13 @@
 		 // -> latitude="52.401306" longitude="16.951138" // A8 to Elektryk, nie schody, nie rampa dla niepełnosprawnych, to dla aut
 		 // -> latitude="52.402261" longitude="16.952285" // Blisko mostku, po prawej wychodząc z CM 
 		 // -> latitude="52.403418" longitude="16.950173" // CW
+		 
+		 // MALTA
+		 // -> latitude="52.406590" longitude="16.955018" 
+		 // -> latitude="52.407100" longitude="16.956102"
+		 // -> latitude="52.406838" longitude="16.956617"
+		 // -> latitude="52.406019" longitude="16.956263"
+		 // -> latitude="52.405588" longitude="16.955419"
 	-->
 	<GlobalPlanner 		runThread="1" 
 						processingFrequency="5" 
@@ -35,7 +42,8 @@
 						sound="0"
 						runHomologation="0" 
 						mapFile="ppMap.osm" 
-						latitude="52.401660" longitude="16.953071" />
+						latitude="52.406019" longitude="16.956263"/>
+
 
 	<!--
 		runThread: 				1 - module ON, 0 - module OFF
