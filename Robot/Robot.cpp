@@ -130,6 +130,10 @@ bool Robot::isImuDataValid(){
 	return positionEstimation->isImuDataValid();
 }
 
+float Robot::getImuAccVariance() {
+	return positionEstimation->getImuAccVariance();
+}
+
 //Encoders
 void Robot::openEncoders(std::string port){
 	positionEstimation->openEncoders(port);

@@ -132,6 +132,7 @@ public:
 	bool isImuOpen();
 	bool isImuDataValid();
 
+	float getImuAccVariance();
 
 	//Encoders
 	void openEncoders(std::string port);

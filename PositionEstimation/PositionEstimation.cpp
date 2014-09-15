@@ -416,6 +416,11 @@ bool PositionEstimation::isImuDataValid(){
 	return imu.isDataValid();
 }
 
+float PositionEstimation::getImuAccVariance()
+{
+	return imu.getAccVariance();
+}
+
 //Encoders
 void PositionEstimation::openEncoders(std::string port) {
 	encoders.openPort(port, 115200);

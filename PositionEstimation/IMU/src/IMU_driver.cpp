@@ -1,13 +1,12 @@
 /*
- * IMU_driver.cpp
+` * IMU_driver.cpp
  *
  *  Created on: Sep 1, 2014
  *      Author: smi
  */
 
 #include "../include/IMU_driver.h"
-
-#define PI (3.14159265359)
+#include<cmath>
 
 // Global pointer to instance of IMUDriver
 IMU_driver* pointerToIMUDriver;
@@ -377,6 +376,15 @@ void IMU_driver::setAccel(float * _accel) {
 	for (int i = 0; i < 3; i++){
 		acc[i] = _accel[i];
 	}
+
+	std::unique_lock < std::mutex > lckHistoryAcc(accHistoryMtx);
+	accHistory.push_back( sqrt(acc[0]*acc[0] + acc[1]*acc[1] + acc[2]*acc[2]) );
+	if ( accHistory.size() > 200 )
+	{
+		accHistory.pop_front();
+	}
+	lckHistoryAcc.unlock();
+
 	accValid = true;
 }
 
@@ -397,10 +405,30 @@ float* IMU_driver::getEuler() {
 	return euler;
 }
 void IMU_driver::setEuler(float roll, float pitch, float yaw) {
-	euler[0] = roll*180/PI;
-	euler[1] = pitch*180/PI;
-	euler[2] = yaw*180/PI;
+	euler[0] = roll*180/M_PI;
+	euler[1] = pitch*180/M_PI;
+	euler[2] = yaw*180/M_PI;
 	eulerValid = true;
+}
+
+
+float IMU_driver::getAccVariance()
+{
+	std::unique_lock < std::mutex > lckHistoryAcc(accHistoryMtx);
+
+	float mean = 0;
+	for (std::list<float>::iterator it = accHistory.begin();it!=accHistory.end();++it)
+		mean += *it;
+	mean /= accHistory.size();
+
+	float variance = 0;
+	for (std::list<float>::iterator it = accHistory.begin();it!=accHistory.end();++it)
+			variance += pow(*it- mean, 2);
+	variance /= (accHistory.size() - 1);
+
+	lckHistoryAcc.unlock();
+
+	return variance;
 }
 
 // get Timestamp of last orientation update

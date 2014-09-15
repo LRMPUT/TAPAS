@@ -50,6 +50,7 @@ public:
 	void closePort();
 	bool isPortOpen();
 	bool isDataValid();
+	float getAccVariance();
 
 	//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
 	cv::Mat getData(std::chrono::high_resolution_clock::time_point &timestamp);
