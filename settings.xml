@@ -1,13 +1,16 @@
 <Robot>
 	<!--
 		runThread:				1 - module ON, 0 - module OFF
-		processingFrequency: 	The frequency of processing in global planner thread in Hz
-		computeEveryNth:		Recompute the globalPlan after Nth steps | Integer >0
+		processingFrequency: 			The frequency of processing in global planner thread in Hz
+		computeEveryNth:			Recompute the globalPlan globalPlannerParams.changedPlanDelayTimeglobalPlannerParams.changedPlanDelayTimeafter Nth steps | Integer >0
 		debug:					1 - debug ON, 0 - debug OFF
-		subgoalThreshold:		next subgoal must be further than subgoalThreshold (in meters)
-		preciseToGoalMaxTime:	Maximum time for precise localization (in ms)
+		subgoalThreshold:			next subgoal must be further than subgoalThreshold (in meters)
+		preciseToGoalMaxTime:			Maximum time for precise localization (in ms)
+		changedPlanWaitingTime:			Maximum time we wait for a plan to stabilize in case of rapid change (in ms)
+		changedPlanThreshold:			Minimal changed in overall plan distance to active some anti-drastic change plan (in meters)
+		changedPlanDelayTime:			Minimal time between consecutive anti-drastic change plan behaviours (in ms)
 		sound:					1 - ON, 0 - OFF
-		runHomologation:		1 - overrides global Planner to perform Homologation
+		runHomologation:			1 - overrides global Planner to perform Homologation
 		mapFile:				file in open street map used in navigation
 		latitude:				latitude N/S
 		longitude:				longitude W/E 
@@ -26,11 +29,13 @@
 						debug ="1" 
 						subgoalThreshold="8" 
 						preciseToGoalMaxTime="25000"
+						changedPlanWaitingTime="30000"
+						changedPlanThreshold="40"
+						changedPlanDelayTime="300000"
 						sound="0"
 						runHomologation="0" 
-						mapFile="debiec.osm" 
-						latitude="52.370629" 
-						longitude="16.908003"/>
+						mapFile="ppMap.osm" 
+						latitude="52.401306" longitude="16.951138"/>
 
 	<!--
 		runThread: 				1 - module ON, 0 - module OFF
@@ -47,7 +52,7 @@
 	-->
 	
 	<LocalPlanner 		runThread="1" 
-						debug="1"
+						debug="0"
 						avoidObstacles="0" 
 						VFH_HistResolution="10"
 						VFH_Threshold="0.5" 

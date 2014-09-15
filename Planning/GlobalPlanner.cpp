@@ -25,11 +25,14 @@ using namespace std;
 
 GlobalPlanner::GlobalPlanner(Robot* irobot, TiXmlElement* settings) :
 		robot(irobot), robotDrive1(NULL), robotDrive2(NULL), goalTheta(0.0), planningStage(
-				toGoal) {
+				toGoal), weShouldWait(false), previousPlanDistance(-1.0) {
 	cout << "GlobalPlanner()" << endl;
 	readSettings(settings);
 
 	localPlanner = new LocalPlanner(robot, this, settings);
+
+	changePlanDelayStartTime = std::chrono::high_resolution_clock::now();
+
 	globalPlannerThread = std::thread(&GlobalPlanner::globalPlannerProcessing,
 			this);
 
@@ -74,6 +77,18 @@ void GlobalPlanner::readSettings(TiXmlElement* settings) {
 			&globalPlannerParams.preciseToGoalMaxTime) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner preciseToGoalMaxTime";
 	}
+	if (pGlobalPlanner->QueryDoubleAttribute("changedPlanWaitingTime",
+			&globalPlannerParams.changedPlanWaitingTime) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner changedPlanWaitingTime";
+	}
+	if (pGlobalPlanner->QueryDoubleAttribute("changedPlanThreshold",
+			&globalPlannerParams.changedPlanThreshold) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner changedPlanThreshold";
+	}
+	if (pGlobalPlanner->QueryDoubleAttribute("changedPlanDelayTime",
+			&globalPlannerParams.changedPlanThreshold) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner changedPlanDelayTime";
+	}
 	if (pGlobalPlanner->QueryIntAttribute("sound", &globalPlannerParams.sound)
 			!= TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner sound";
@@ -108,6 +123,10 @@ void GlobalPlanner::readSettings(TiXmlElement* settings) {
 			globalPlannerParams.subgoalThreshold);
 	printf("GlobalPlanner -- preciseToGoalMaxTime: %f\n",
 			globalPlannerParams.preciseToGoalMaxTime);
+	printf("GlobalPlanner -- changedPlanWaitingTime: %f\n",
+			globalPlannerParams.changedPlanWaitingTime);
+	printf("GlobalPlanner -- changedPlanThreshold: %f\n",
+			globalPlannerParams.changedPlanThreshold);
 	printf("GlobalPlanner -- sound: %d\n", globalPlannerParams.sound);
 	printf("GlobalPlanner -- runhomologation: %d\n",
 			globalPlannerParams.runHomologation);
@@ -528,7 +547,8 @@ void GlobalPlanner::computeGlobalPlan(double robotX, double robotY,
 		}
 	}
 
-	cout << "PQUEUE SIZE : " << pqueue.size() << " startType == "  << startType<< endl;
+	cout << "PQUEUE SIZE : " << pqueue.size() << " startType == " << startType
+			<< " goalType == " << goalType<< endl;
 	// We process the graph
 	while (!pqueue.empty()) {
 
@@ -574,6 +594,43 @@ void GlobalPlanner::computeGlobalPlan(double robotX, double robotY,
 		std::cout << std::endl << " GOAL DISTANCE : " << distance[goalId[0]]
 				<< " or " << distance[goalId[1]] << std::endl;
 	}
+
+	// Drastic change of plans - wait a little bit
+	startTime = std::chrono::high_resolution_clock::now();
+	double currentPlanDistance = std::min(distance[goalId[0]],distance[goalId[1]]);
+	if ( goalType < 2 )
+	{
+		currentPlanDistance = distance[goalId[ goalType]];
+	}
+
+
+	// Plan different by over some meters
+	std::chrono::milliseconds tmpTime = std::chrono::duration_cast
+					< std::chrono::milliseconds
+			> (std::chrono::high_resolution_clock::now()
+					- changePlanDelayStartTime);
+	if (fabs(currentPlanDistance+1) > 0.0001 && fabs(currentPlanDistance - previousPlanDistance)
+			> globalPlannerParams.changedPlanThreshold
+			&& tmpTime.count() > globalPlannerParams.changedPlanDelayTime)
+	{
+		weShouldWait = true;
+		localPlanner->stopLocalPlanner();
+		waitingStartTime = std::chrono::high_resolution_clock::now();
+	}
+	else if (weShouldWait == true)
+	{
+		std::chrono::milliseconds time = std::chrono::duration_cast
+					< std::chrono::milliseconds
+					> (std::chrono::high_resolution_clock::now() - waitingStartTime);
+		if (time.count() > globalPlannerParams.changedPlanWaitingTime)
+		{
+			weShouldWait = false;
+			localPlanner->startLocalPlanner();
+			changePlanDelayStartTime = std::chrono::high_resolution_clock::now();
+		}
+	}
+	previousPlanDistance = currentPlanDistance;
+
 
 	// Let's check which node or the node of the final edge is closer to us
 	int finalGoalId = findGoalNodeId(finalGoalId, distance);
@@ -715,8 +772,11 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY,
 	// There is only goal ahead -> let's precisely navigate towards it
 	if (nodesToVisit.size() == 0) {
 
-		if (globalPlannerParams.debug == 1)
-			std::cout << "Global Planner : we are heading directly to target" << std::endl;
+		if (globalPlannerParams.debug == 1) {
+			std::cout << "Global Planner : we are heading directly to target"
+					<< std::endl;
+			usleep(1000 * 4000);
+		}
 
 		// Let's go directly to target
 		goDirectlyToTarget(robotX, robotY, recomputePlan);
@@ -756,7 +816,10 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY,
 		// We can go directly to target
 		if (foundSubgoal == false) {
 			if (globalPlannerParams.debug == 1)
+			{
 				std::cout << "Global Planner : we are heading directly to target" << std::endl;
+				usleep(1000*4000);
+			}
 			goDirectlyToTarget(robotX, robotY, recomputePlan);
 		}
 	}
