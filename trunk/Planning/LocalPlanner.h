@@ -68,8 +68,9 @@ private:
 	bool startOperate;
 
 	std::mutex mtxCurSpeed;
-	float curSpeed;
+	float curSpeedMax;
 
+	float prevCurSpeed;
 
 	std::thread localPlannerThread;
 
@@ -97,6 +98,8 @@ private:
 
 	void determineDriversCommand(cv::Mat posRobotMapCenter,
 								float bestDirLocalMap);
+
+	float determineCurSpeed();
 
 	float rotMatToEulerYaw(Mat rotMat);
 

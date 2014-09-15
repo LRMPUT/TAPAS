@@ -7,6 +7,7 @@
 
 #include "../include/IMU_driver.h"
 #include<cmath>
+#include<chrono>
 
 // Global pointer to instance of IMUDriver
 IMU_driver* pointerToIMUDriver;
@@ -180,10 +181,14 @@ IMU_driver::IMU_driver() : accValid(false), gyroValid(false), magValid(false), e
 }
 
 IMU_driver::~IMU_driver() {
+	printf("~IMU_driver\n");
 	runThread = false;
-	processingThread.join();
+	if(processingThread.joinable()){
+		processingThread.join();
+	}
 	mip_sdk_port_close(&device_interface.port_handle);
 	pointerToIMUDriver = NULL;
+	printf("End ~IMU_driver\n");
 }
 
 void IMU_driver::updateIMU() {
@@ -200,7 +205,7 @@ void IMU_driver::updateIMU() {
 void IMU_driver::openPort(std::string& device) {
 	char deviceName[100];
 	strcpy(deviceName, device.c_str());
-	if (mip_interface_init(deviceName, 115200, &device_interface,
+	if (mip_interface_init(deviceName, 230400, &device_interface,
 	DEFAULT_PACKET_TIMEOUT_MS) != MIP_INTERFACE_OK)
 		printf("IMU: Not connected to the IMU\n");
 
@@ -299,7 +304,7 @@ void IMU_driver::openPort(std::string& device) {
 	data_stream_format_descriptors[2] = MIP_AHRS_DATA_MAG_SCALED;
 
 	u16 data_stream_format_decimation[10];
-	data_stream_format_decimation[0] = 0x32;
+	data_stream_format_decimation[0] = 0x05;
 	data_stream_format_decimation[1] = 0x32;
 	data_stream_format_decimation[2] = 0x32;
 
@@ -321,7 +326,7 @@ void IMU_driver::openPort(std::string& device) {
 	data_stream_format_descriptors[1] = 0x00;
 	data_stream_format_descriptors[2] = 0x00;
 
-	data_stream_format_decimation[0] = 0x32;
+	data_stream_format_decimation[0] = 0x0a;
 	data_stream_format_decimation[1] = 0x00;
 	data_stream_format_decimation[2] = 0x00;
 
@@ -373,14 +378,22 @@ float* IMU_driver::getAccel() {
 }
 
 void IMU_driver::setAccel(float * _accel) {
+	static std::chrono::high_resolution_clock::time_point startTime = std::chrono::high_resolution_clock::now();
+	static bool printed = false;
 	for (int i = 0; i < 3; i++){
 		acc[i] = _accel[i];
 	}
 
 	std::unique_lock < std::mutex > lckHistoryAcc(accHistoryMtx);
 	accHistory.push_back( sqrt(acc[0]*acc[0] + acc[1]*acc[1] + acc[2]*acc[2]) );
+
 	if ( accHistory.size() > 200 )
 	{
+		if(printed == false){
+			printf("Imu accHistory time diff = %d ms\n",
+					std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startTime).count());
+			printed = true;
+		}
 		accHistory.pop_front();
 	}
 	lckHistoryAcc.unlock();

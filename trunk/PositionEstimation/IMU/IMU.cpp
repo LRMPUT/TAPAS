@@ -87,7 +87,7 @@ float IMU::getAccVariance(){
 	}
 	else if ( usedIMUType == IMU_MICROSTRAIN_GX4_25){
 		if (imuNew==NULL)
-			return false;
+			return -1;
 		return imuNew->getAccVariance();
 	}
 }
