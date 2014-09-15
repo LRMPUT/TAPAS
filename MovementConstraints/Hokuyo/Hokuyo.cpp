@@ -55,7 +55,8 @@ void Hokuyo::run(){
 
 Hokuyo::Hokuyo() :
 		curMeas(4, HOKUYO_SCANS, CV_32SC1),
-		runThread(false)
+		runThread(false),
+		dataValid(false)
 {
 
 }
@@ -77,6 +78,7 @@ void Hokuyo::openPort(std::string port){
 }
 
 void Hokuyo::closePort(){
+	dataValid = false;
 	runThread = false;
 	if(readingThread.joinable()){
 		readingThread.join();

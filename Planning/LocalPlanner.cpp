@@ -18,7 +18,8 @@ LocalPlanner::LocalPlanner(Robot* irobot, GlobalPlanner* planer,
 		robot(irobot),
 		globalPlanner(planer),
 		startOperate(false),
-		curSpeed(20)
+		curSpeedMax(20),
+		prevCurSpeed(20)
 {
 	cout << "LocalPlanner()" << endl;
 
@@ -129,13 +130,13 @@ void LocalPlanner::stopLocalPlanner() {
 
 void LocalPlanner::setPreciseSpeed() {
 	std::unique_lock<std::mutex> lck(mtxCurSpeed);
-	curSpeed = localPlannerParams.preciseSpeed;
+	prevCurSpeed = curSpeedMax = localPlannerParams.preciseSpeed;
 	lck.unlock();
 }
 
 void LocalPlanner::setNormalSpeed() {
 	std::unique_lock<std::mutex> lck(mtxCurSpeed);
-	curSpeed = localPlannerParams.normalSpeed;
+	prevCurSpeed = curSpeedMax = localPlannerParams.normalSpeed;
 	lck.unlock();
 }
 
@@ -459,22 +460,20 @@ void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 			if (localPlannerParams.debug >= 1){
 				cout<<"Interrupted"<<endl;
 			}
-			std::unique_lock<std::mutex> lck(mtxCurSpeed);
-			float commandSpeed = curSpeed;
-			lck.unlock();
 
-			globalPlanner->setMotorsVel(-commandSpeed, -commandSpeed);
+			float curSpeed = determineCurSpeed();
+
+			globalPlanner->setMotorsVel(-curSpeed, -curSpeed);
 		}
 		else if (fabs(bestDirLocalMap - localYaw) < localPlannerParams.steeringMargin)
 		{
 			if (localPlannerParams.debug >= 1){
 				cout<<"Straight"<<endl;
 			}
-			std::unique_lock<std::mutex> lck(mtxCurSpeed);
-			float commandSpeed = curSpeed;
-			lck.unlock();
 
-			globalPlanner->setMotorsVel(commandSpeed, commandSpeed);
+			float curSpeed = determineCurSpeed();
+
+			globalPlanner->setMotorsVel(curSpeed, curSpeed);
 			turningRightStarted = false;
 			turningLeftStarted = false;
 			turnInterrupted = false;
@@ -512,11 +511,10 @@ void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 			if (localPlannerParams.debug >= 1){
 				cout<<"Straight"<<endl;
 			}
-			std::unique_lock<std::mutex> lck(mtxCurSpeed);
-			float commandSpeed = curSpeed;
-			lck.unlock();
 
-			globalPlanner->setMotorsVel(commandSpeed, commandSpeed);
+			float curSpeed = determineCurSpeed();
+
+			globalPlanner->setMotorsVel(curSpeed, curSpeed);
 		}
 		else{
 			if (localPlannerParams.debug >= 1){
@@ -527,6 +525,28 @@ void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 	}
 //	cout << "End LocalPlanner::determineDriversCommand" << endl;
 	//getchar();
+}
+
+float LocalPlanner::determineCurSpeed(){
+	float curImuAccVariance = robot->getImuAccVariance();
+	std::unique_lock<std::mutex> lck(mtxCurSpeed);
+	static const float accVarianceLimit = 0.01;
+	float curSpeed = prevCurSpeed;
+	if(curImuAccVariance < accVarianceLimit/2){
+		curSpeed = min(curSpeed + 0.5f, curSpeedMax);
+		if (localPlannerParams.debug >= 1){
+			cout<<"Speeding up"<<endl;
+		}
+	}
+	if(curImuAccVariance > accVarianceLimit){
+		curSpeed = max(curSpeed - 0.5f, 0.0f);
+		if (localPlannerParams.debug >= 1){
+			cout<<"Slowing down"<<endl;
+		}
+	}
+	prevCurSpeed = curSpeed;
+	lck.unlock();
+	return curSpeed;
 }
 
 void LocalPlanner::stopThread() {

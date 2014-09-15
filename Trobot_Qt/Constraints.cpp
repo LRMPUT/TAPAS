@@ -98,7 +98,7 @@ void Constraints::updateMapView(){
 	}
 	//tmp << curPosImuMapCenter;
 	ui->constraintCurPosLabel->setText(QString(tmp.str().c_str()));
-	ui->constraintImuAccVarianceLabel->setText(QString("%1").arg(imuAccVariance));
+	ui->constraintImuAccVarianceLabel->setText(QString("%1").arg(imuAccVariance, 5, 'f'));
 	//cout << "curPosImuMapCenter.size() = " << curPosImuMapCenter.size() << endl;
 	if(!pointCloudImuMapCenter.empty()){
 		viewer->updatePointCloud(pointCloudImuMapCenter);
