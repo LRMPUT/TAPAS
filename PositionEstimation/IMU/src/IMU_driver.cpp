@@ -361,28 +361,41 @@ bool IMU_driver::isDataValid(){
 }
 
 //Read data from gyro.
-float* IMU_driver::getGyro() {
-	return gyro;
+void IMU_driver::getGyro(float* gyroValues) {
+	std::unique_lock < std::mutex > lckGyro(gyroMtx);
+	for (int i = 0; i < 3; i++) {
+		gyroValues[i] = gyro[i];
+	}
+	lckGyro.unlock();
 }
 
 void IMU_driver::setGyro(float * _gyro) {
+	std::unique_lock < std::mutex > lckGyro(gyroMtx);
 	for (int i = 0; i < 3; i++){
 		gyro[i] = _gyro[i];
 	}
+	lckGyro.unlock();
 	gyroValid = true;
 }
 
 //Read data from accelerometer.
-float* IMU_driver::getAccel() {
-	return acc;
+void IMU_driver::getAccel(float *accValues) {
+	std::unique_lock < std::mutex > lckAcc(accMtx);
+	for (int i = 0; i < 3; i++) {
+		accValues[i] = acc[i];
+	}
+	lckAcc.unlock();
 }
 
 void IMU_driver::setAccel(float * _accel) {
 	static std::chrono::high_resolution_clock::time_point startTime = std::chrono::high_resolution_clock::now();
 	static bool printed = false;
+
+	std::unique_lock < std::mutex > lckAcc(accMtx);
 	for (int i = 0; i < 3; i++){
 		acc[i] = _accel[i];
 	}
+	lckAcc.unlock();
 
 	std::unique_lock < std::mutex > lckHistoryAcc(accHistoryMtx);
 	accHistory.push_back( sqrt(acc[0]*acc[0] + acc[1]*acc[1] + acc[2]*acc[2]) );
@@ -402,25 +415,38 @@ void IMU_driver::setAccel(float * _accel) {
 }
 
 //Read data from magnetometer.
-float* IMU_driver::getMag() {
-	return mag;
+void IMU_driver::getMag(float* magValues) {
+	std::unique_lock < std::mutex > lckMag(magMtx);
+	for (int i = 0; i < 3; i++) {
+		magValues[i] = mag[i];
+	}
+	lckMag.unlock();
 }
 
 void IMU_driver::setMag(float * _mag) {
+	std::unique_lock < std::mutex > lckMag(magMtx);
 	for (int i = 0; i < 3; i++){
 		mag[i] = _mag[i];
 	}
+	lckMag.unlock();
 	magValid = true;
 }
 
 //Read Euler angles.
-float* IMU_driver::getEuler() {
-	return euler;
+void IMU_driver::getEuler(float *eulerValues) {
+	std::unique_lock < std::mutex > lckEuler(eulerMtx);
+	for (int i = 0; i < 3; i++) {
+		eulerValues[i] = euler[i];
+	}
+	lckEuler.unlock();
 }
+
 void IMU_driver::setEuler(float roll, float pitch, float yaw) {
+	std::unique_lock < std::mutex > lckEuler(eulerMtx);
 	euler[0] = roll*180/M_PI;
 	euler[1] = pitch*180/M_PI;
 	euler[2] = yaw*180/M_PI;
+	lckEuler.unlock();
 	eulerValid = true;
 }
 
