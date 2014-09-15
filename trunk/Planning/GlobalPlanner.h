@@ -65,6 +65,9 @@ public:
 		int debug;
 		double subgoalThreshold;
 		double preciseToGoalMaxTime;
+		double changedPlanWaitingTime;
+		double changedPlanThreshold;
+		double changedPlanDelayTime;
 		int sound;
 		int runHomologation;
 		std::string mapFile;
@@ -146,6 +149,11 @@ private:
 
 	// Stage of the planning
 	PlanningStage planningStage;
+
+	// Anti alternative road
+	bool weShouldWait;
+	std::chrono::high_resolution_clock::time_point waitingStartTime, changePlanDelayStartTime;
+	double previousPlanDistance;
 
 	// Goal
 	int goalId[2], goalType;
