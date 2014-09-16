@@ -15,6 +15,7 @@
 #include "IMU/IMU.h"
 #include "Util/ExtendedKalmanFilter.h"
 #include <thread>
+#include <fstream>
 
 //TinyXML
 #include <tinyxml.h>
@@ -38,6 +39,10 @@ private:
 		int encoderTicksPerRev;
 		double wheelDiameter;
 		double wheelBase;
+		double predictionVariance;
+		double gpsVariance;
+		double imuVariance;
+		double encoderVariance;
 	};
 
 	Parameters parameters;
@@ -68,6 +73,9 @@ private:
 	//Parent class Robot
 	Robot* robot;
 
+	// Logger
+	std::ofstream logStream;
+
 	// The cycle of the position estimation thread
 	void run();
 
@@ -80,6 +88,9 @@ public:
 
 	// Stopping the position estimation thread
 	void stopThread();
+
+	// Saving current estimate to file
+	void saveTrajectoryToFile();
 
 	// Initializing the filter
 	void kalmanSetup();

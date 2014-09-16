@@ -82,16 +82,21 @@
 		encoderTickPerRev:		number of encoder ticks per one revolution
 		wheelDiameter:			wheel diameter in meters
 		wheelBase:				wheel base in meters
-		GPSCovariance:	
-		IMUCovariance:
-		EncoderCovariance:	
+		predictionVariance:		Variance of the predict -> 10
+		gpsVariance:			Variance of the GPS -> 100m
+		imuVariance:			Variance of the IMU -> 0.01745329251 rad (it is equal to 1 degree)
+		encoderVariance:		Variance of the Encoders -> 0.01 m/s
 	-->
 	<PositionEstimation 	runThread="1" 
 							processingFrequency="20" 
 							debug="0" 
 							encoderTicksPerRev="300" 
 							wheelDiameter="0.16" 
-							wheelBase="0.452"/>
+							wheelBase="0.452"
+							predictionVariance="10"
+							gpsVariance="100"
+							imuVariance="0.01745329251"
+							encoderVariance="0.01"/>
 
 	<!--
 		Jan Wietrzykowski is lazy and does not use the comments ;d
