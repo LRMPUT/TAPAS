@@ -143,7 +143,7 @@ double GPS::getPosX(double latitude)
 
 double GPS::getPosLatitude(double X)
 {
-	return nmea_radian2ndeg(X/EqRd + nmea_ndeg2radian(StartPosLat));
+	return nmea_radian2ndeg(X/RadiusLat + nmea_ndeg2radian(StartPosLat));
 }
 
 

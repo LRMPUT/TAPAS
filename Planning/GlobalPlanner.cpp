@@ -73,6 +73,14 @@ void GlobalPlanner::readSettings(TiXmlElement* settings) {
 			&globalPlannerParams.subgoalThreshold) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner subgoalThreshold";
 	}
+	if (pGlobalPlanner->QueryDoubleAttribute("subgoalThreshold2",
+			&globalPlannerParams.subgoalThreshold2) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner subgoalThreshold2";
+	}
+	if (pGlobalPlanner->QueryDoubleAttribute("subgoalAngularThreshold",
+			&globalPlannerParams.subgoalAngularThreshold) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner subgoalAngularThreshold";
+	}
 	if (pGlobalPlanner->QueryDoubleAttribute("preciseToGoalMaxTime",
 			&globalPlannerParams.preciseToGoalMaxTime) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner preciseToGoalMaxTime";
@@ -121,6 +129,10 @@ void GlobalPlanner::readSettings(TiXmlElement* settings) {
 	printf("GlobalPlanner -- debug: %d\n", globalPlannerParams.debug);
 	printf("GlobalPlanner -- subgoal threshold: %f\n",
 			globalPlannerParams.subgoalThreshold);
+	printf("GlobalPlanner -- subgoal threshold2: %f\n",
+			globalPlannerParams.subgoalThreshold2);
+	printf("GlobalPlanner -- subgoal angular threshold: %f\n",
+			globalPlannerParams.subgoalAngularThreshold);
 	printf("GlobalPlanner -- preciseToGoalMaxTime: %f\n",
 			globalPlannerParams.preciseToGoalMaxTime);
 	printf("GlobalPlanner -- changedPlanWaitingTime: %f\n",
@@ -786,16 +798,22 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY,
 	else {
 		// We check the global plan
 		bool foundSubgoal = false;
+
+		double originalGoalTheta = goalTheta;
 		for (std::list<int>::iterator it = nodesToVisit.begin();;) {
 			std::pair<double, double> tmp = nodePosition[*it];
 			double dist = pow(tmp.first - robotX, 2)
 					+ pow(tmp.second - robotY, 2);
 
-			// This is the node we go to (because it is further away than threshold):
-			if (sqrt(dist) > globalPlannerParams.subgoalThreshold) {
-				double x = tmp.first - robotX;
-				double y = tmp.second - robotY;
-				setGoalDirection(atan2(y, x));
+			double x = tmp.first - robotX;
+			double y = tmp.second - robotY;
+			double direction = atan2(y,x);
+			double directionDifference = fabs(direction - originalGoalTheta)*180.0/M_PI;
+
+			// This is the node we go to (because it is further away than threshold or the direction is the same):
+			if (sqrt(dist) > globalPlannerParams.subgoalThreshold && foundSubgoal == false) {
+
+				setGoalDirection(direction);
 
 				if (globalPlannerParams.debug == 1) {
 					std::cout << "Global Planner : node : " << tmp.first << " "
@@ -808,8 +826,35 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY,
 				}
 
 				foundSubgoal = true;
-				break;
-			} else {
+			} else if (sqrt(dist) > globalPlannerParams.subgoalThreshold
+					&& sqrt(dist) < globalPlannerParams.subgoalThreshold2
+					&& directionDifference
+							< globalPlannerParams.subgoalAngularThreshold) {
+
+				setGoalDirection(direction);
+
+				std::list<int>::iterator it2 = nodesToVisit.begin();
+				while(it2!=it)
+				{
+					nodesToVisit.pop_front();
+					it2 = nodesToVisit.begin();
+				}
+
+				if (globalPlannerParams.debug == 1) {
+					std::cout << "Global Planner : angular choice - node : " << tmp.first << " "
+							<< tmp.second << std::endl;
+					std::cout << "Global Planner : angular choice - robot position : " << robotX
+							<< " " << robotY << std::endl;
+					std::cout << "Global Planner : angular choice - distance to subgoal : " << x
+							<< " " << y << " : Dist = " << sqrt(x * x + y * y)
+							<< std::endl;
+				}
+
+			}
+			else {
+				if (foundSubgoal)
+					break;
+
 				if (globalPlannerParams.debug == 1) {
 					std::cout << "Global Planner : removing node" << std::endl;
 				}
