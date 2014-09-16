@@ -232,7 +232,7 @@ void MovementConstraints::insertHokuyoConstraints(cv::Mat map,
 	lckPointCloud.unlock();
 
 	vector<vector<vector<Point3f> > > bins(MAP_SIZE, vector<vector<Point3f> >(MAP_SIZE, vector<Point3f>()));
-	for(int p = 0; p < pointCloudImuMapCenter.cols; p++){
+	for(int p = 0; p < pointCloudRobotMapCenter.cols; p++){
 		int x = pointCloudRobotMapCenter.at<float>(0, p)/MAP_RASTER_SIZE + MAP_SIZE/2;
 		int y = pointCloudRobotMapCenter.at<float>(1, p)/MAP_RASTER_SIZE + MAP_SIZE/2;
 		if(x >= 0 && x < MAP_SIZE && y >= 0 && y < MAP_SIZE){

@@ -502,12 +502,12 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 	Mat imageHSV;
 	cvtColor(imageBGR, imageHSV, CV_BGR2HSV);
 	vector<Pixel> pixels;
-	pixels.resize(imageHSV.rows * imageHSV.cols);
+	//pixels.resize(imageHSV.rows * imageHSV.cols);
 	for(int r = 0; r < imageHSV.rows; r++){
 		for(int c = 0; c < imageHSV.cols; c++){
-			//if(maskIgnore.at<int>(r, c) == 0){
-				pixels[r * imageHSV.cols + c] = Pixel(r, c, regionsOnImage.at<int>(r, c));
-			//}
+			if(maskIgnore.at<int>(r, c) == 0){
+				pixels.push_back(Pixel(r, c, regionsOnImage.at<int>(r, c)));
+			}
 		}
 	}
 	sort(pixels.begin(), pixels.end());
@@ -557,7 +557,9 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 				break;
 			}
 		}
-		//cout << "segment id = " << pixels[beg].imageId << ", beg = " << beg << ", end = " << end << endl;
+		if(debugLevel >= 1){
+			cout << "segment id = " << pixels[begIm].imageId << ", begIm = " << begIm << ", endIm = " << endIm << endl;
+		}
 		values = Mat(1, endIm - begIm, CV_8UC3);
 		for(int p = begIm; p < endIm; p++){
 			values.at<Vec3b>(p - begIm) = imageHSV.at<Vec3b>(pixels[p].r, pixels[p].c);
@@ -602,125 +604,133 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 			valuesTer = Mat(6, 1, CV_32FC1, Scalar(0));
 		}
 
-		int channelsHS[] = {0, 1};
-		float rangeH[] = {0, 60};
-		float rangeS[] = {0, 256};
-		const float* rangesHS[] = {rangeH, rangeS};
-		int sizeHS[] = {histHLen, histSLen};
-		int channelsV[] = {2};
-		float rangeV[] = {0, 256};
-		const float* rangesV[] = {rangeV};
-		int sizeV[] = {histVLen};
-		calcHist(&values, 1, channelsHS, Mat(), histogramHS, 2, sizeHS, rangesHS);
-		calcHist(&values, 1, channelsV, Mat(), histogramV, 1, sizeV, rangesV);
-		histogramHS = histogramHS.reshape(0, 1);
-		histogramV = histogramV.reshape(0, 1);
-		normalize(histogramHS, histogramHS);
-		normalize(histogramV, histogramV);
-		//cout << "V size = " << histogramV.size() << ", HS size = " << histogramHS.size() << endl;
+		if(endIm - begIm > 0){
+			int channelsHS[] = {0, 1};
+			float rangeH[] = {0, 60};
+			float rangeS[] = {0, 256};
+			const float* rangesHS[] = {rangeH, rangeS};
+			int sizeHS[] = {histHLen, histSLen};
+			int channelsV[] = {2};
+			float rangeV[] = {0, 256};
+			const float* rangesV[] = {rangeV};
+			int sizeV[] = {histVLen};
+			calcHist(&values, 1, channelsHS, Mat(), histogramHS, 2, sizeHS, rangesHS);
+			calcHist(&values, 1, channelsV, Mat(), histogramV, 1, sizeV, rangesV);
+			histogramHS = histogramHS.reshape(0, 1);
+			histogramV = histogramV.reshape(0, 1);
+			normalize(histogramHS, histogramHS);
+			normalize(histogramV, histogramV);
+
+			if(debugLevel >= 1){
+				cout << "V size = " << histogramV.size() << ", HS size = " << histogramHS.size() << endl;
+			}
 
 
-		values = values.reshape(1, 3);
-		//cout << "values size = " << values.size() << endl;
-		Mat covarHSV;
-		Mat meanHSV;
-		calcCovarMatrix(values,
-						covarHSV,
-						meanHSV,
-						CV_COVAR_NORMAL | CV_COVAR_SCALE | CV_COVAR_COLS,
-						CV_32F);
-		//cout << "Calculated covar matrix" << endl;
-		covarHSV = covarHSV.reshape(0, 1);
-		meanHSV = meanHSV.reshape(0, 1);
-		//normalize(covarHSV, covarHSV);
-		//normalize(meanHSV, meanHSV);
+			values = values.reshape(1, 3);
+			//cout << "values size = " << values.size() << endl;
+			Mat covarHSV;
+			Mat meanHSV;
+			calcCovarMatrix(values,
+							covarHSV,
+							meanHSV,
+							CV_COVAR_NORMAL | CV_COVAR_SCALE | CV_COVAR_COLS,
+							CV_32F);
 
-		Mat covarLaser, meanLaser;
-		calcCovarMatrix(valuesTer.rowRange(4, 6),
-						covarLaser,
-						meanLaser,
-						CV_COVAR_NORMAL | CV_COVAR_SCALE | CV_COVAR_COLS,
-						CV_32F);
-		covarLaser = covarLaser.reshape(0, 1);
-		meanLaser = meanLaser.reshape(0, 1);
-		//normalize(covarLaser, covarLaser);
-		//normalize(meanLaser, meanLaser);
-		//cout << "covarLaser = " << covarLaser << endl;
-		//cout << "meanLaser = " << meanLaser << endl;
+			if(debugLevel >= 1){
+				cout << "Calculated covar matrix" << endl;
+			}
+			covarHSV = covarHSV.reshape(0, 1);
+			meanHSV = meanHSV.reshape(0, 1);
+			//normalize(covarHSV, covarHSV);
+			//normalize(meanHSV, meanHSV);
 
-		//cout << "Entry " << ret.size() << endl;
-		//cout << "histHS = " << histogramHS << endl;
-		//cout << "histV = " << histogramV << endl;
-		//cout << "covarHSV = " << covarHSV << endl;
-		//cout << "meanHSV = " << meanHSV << endl;
+			Mat covarLaser, meanLaser;
+			calcCovarMatrix(valuesTer.rowRange(4, 6),
+							covarLaser,
+							meanLaser,
+							CV_COVAR_NORMAL | CV_COVAR_SCALE | CV_COVAR_COLS,
+							CV_32F);
+			covarLaser = covarLaser.reshape(0, 1);
+			meanLaser = meanLaser.reshape(0, 1);
+			//normalize(covarLaser, covarLaser);
+			//normalize(meanLaser, meanLaser);
+			//cout << "covarLaser = " << covarLaser << endl;
+			//cout << "meanLaser = " << meanLaser << endl;
 
-		Mat kurtLaser(1, 2, CV_32FC1);
-		Mat tmpVal;
-		valuesTer.rowRange(4, 6).copyTo(tmpVal);
-		//cout << "tmpVal = " << tmpVal << endl;
-		//cout << "mean(0) = " << meanLaser.at<float>(0) << ", mean(1) = " << meanLaser.at<float>(1) << endl;
-		//cout << "stdDev^4(0) = " << pow(covarLaser.at<float>(0), 2) << ", stdDev^4(3) = " << pow(covarLaser.at<float>(3), 2) << endl;
-		tmpVal.rowRange(0, 1) -= meanLaser.at<float>(0);
-		tmpVal.rowRange(1, 2) -= meanLaser.at<float>(1);
+			//cout << "Entry " << ret.size() << endl;
+			//cout << "histHS = " << histogramHS << endl;
+			//cout << "histV = " << histogramV << endl;
+			//cout << "covarHSV = " << covarHSV << endl;
+			//cout << "meanHSV = " << meanHSV << endl;
 
-		pow(tmpVal, 4, tmpVal);
-		kurtLaser.at<float>(0) = sum(tmpVal.rowRange(0, 1))(0);
-		if(tmpVal.cols * pow(covarLaser.at<float>(0), 2) != 0){
-			kurtLaser.at<float>(0) = kurtLaser.at<float>(0) / (tmpVal.cols * pow(covarLaser.at<float>(0), 2)) - 3;
-		}
-		kurtLaser.at<float>(1) = sum(tmpVal.rowRange(1, 2))(0);
-		if(tmpVal.cols * pow(covarLaser.at<float>(3), 2) != 0){
-			kurtLaser.at<float>(1) = kurtLaser.at<float>(1) / (tmpVal.cols * pow(covarLaser.at<float>(3), 2)) - 3;
-		}
+			Mat kurtLaser(1, 2, CV_32FC1);
+			Mat tmpVal;
+			valuesTer.rowRange(4, 6).copyTo(tmpVal);
+			//cout << "tmpVal = " << tmpVal << endl;
+			//cout << "mean(0) = " << meanLaser.at<float>(0) << ", mean(1) = " << meanLaser.at<float>(1) << endl;
+			//cout << "stdDev^4(0) = " << pow(covarLaser.at<float>(0), 2) << ", stdDev^4(3) = " << pow(covarLaser.at<float>(3), 2) << endl;
+			tmpVal.rowRange(0, 1) -= meanLaser.at<float>(0);
+			tmpVal.rowRange(1, 2) -= meanLaser.at<float>(1);
 
-		Mat histogramDI;
-		int channelsDI[] = {0, 1};
-		float rangeD[] = {1500, 2500};
-		float rangeI[] = {1800, 4000};
-		const float* rangesDI[] = {rangeD, rangeI};
-		int sizeDI[] = {histDLen, histILen};
-		Mat valHistD = valuesTer.rowRange(4, 5);
-		Mat valHistI = valuesTer.rowRange(5, 6);
-		Mat valuesHistDI[] = {valHistD, valHistI};
-		calcHist(valuesHistDI, 2, channelsDI, Mat(), histogramDI, 2, sizeDI, rangesDI);
-		histogramDI = histogramDI.reshape(0, 1);
-		normalize(histogramDI, histogramDI);
+			pow(tmpVal, 4, tmpVal);
+			kurtLaser.at<float>(0) = sum(tmpVal.rowRange(0, 1))(0);
+			if(tmpVal.cols * pow(covarLaser.at<float>(0), 2) != 0){
+				kurtLaser.at<float>(0) = kurtLaser.at<float>(0) / (tmpVal.cols * pow(covarLaser.at<float>(0), 2)) - 3;
+			}
+			kurtLaser.at<float>(1) = sum(tmpVal.rowRange(1, 2))(0);
+			if(tmpVal.cols * pow(covarLaser.at<float>(3), 2) != 0){
+				kurtLaser.at<float>(1) = kurtLaser.at<float>(1) / (tmpVal.cols * pow(covarLaser.at<float>(3), 2)) - 3;
+			}
 
-		//cout << "histogramDI = " << histogramDI << endl;
+			Mat histogramDI;
+			int channelsDI[] = {0, 1};
+			float rangeD[] = {1500, 2500};
+			float rangeI[] = {1800, 4000};
+			const float* rangesDI[] = {rangeD, rangeI};
+			int sizeDI[] = {histDLen, histILen};
+			Mat valHistD = valuesTer.rowRange(4, 5);
+			Mat valHistI = valuesTer.rowRange(5, 6);
+			Mat valuesHistDI[] = {valHistD, valHistI};
+			calcHist(valuesHistDI, 2, channelsDI, Mat(), histogramDI, 2, sizeDI, rangesDI);
+			histogramDI = histogramDI.reshape(0, 1);
+			normalize(histogramDI, histogramDI);
 
-		Entry tmp;
-		tmp.imageId = pixels[begIm].imageId;
-		tmp.weight = (endIm - begIm) + (endTer - begTer);
-		tmp.descriptor = Mat(1, histHLen*histSLen +
-							histVLen +
-							meanHSVLen +
-							covarHSVLen +
-							histDLen*histILen +
-							meanLaserLen +
-							covarLaserLen,
-							CV_32FC1);
+			//cout << "histogramDI = " << histogramDI << endl;
 
-		int begCol = 0;
-		histogramHS.copyTo(tmp.descriptor.colRange(begCol, begCol + histHLen*histSLen));
-		begCol += histHLen*histSLen;
-		histogramV.copyTo(tmp.descriptor.colRange(begCol, begCol + histVLen));
-		begCol += histVLen;
-		meanHSV.copyTo(tmp.descriptor.colRange(begCol, begCol + meanHSVLen));
-		begCol += meanHSVLen;
-		covarHSV.copyTo(tmp.descriptor.colRange(begCol, begCol + covarHSVLen));
-		begCol += covarHSVLen;
-		histogramDI.copyTo(tmp.descriptor.colRange(begCol, begCol + histDLen*histILen));
-		begCol += histDLen*histILen;
-		meanLaser.copyTo(tmp.descriptor.colRange(begCol, begCol + meanLaserLen));
-		begCol += meanLaserLen;
-		covarLaser.copyTo(tmp.descriptor.colRange(begCol, begCol + covarLaserLen));
-		begCol += covarLaserLen;
-		//kurtLaser.copyTo(tmp.descriptor.colRange(begCol, begCol + kurtLaserLen));
-		//begCol += kurtLaserLen;
-		//cout << "descriptor = " << tmp.descriptor << endl;
+			Entry tmp;
+			tmp.imageId = pixels[begIm].imageId;
+			tmp.weight = (endIm - begIm) + (endTer - begTer);
+			tmp.descriptor = Mat(1, histHLen*histSLen +
+								histVLen +
+								meanHSVLen +
+								covarHSVLen +
+								histDLen*histILen +
+								meanLaserLen +
+								covarLaserLen,
+								CV_32FC1);
 
-		if(tmp.weight > entryWeightThreshold){
-			ret.push_back(tmp);
+			int begCol = 0;
+			histogramHS.copyTo(tmp.descriptor.colRange(begCol, begCol + histHLen*histSLen));
+			begCol += histHLen*histSLen;
+			histogramV.copyTo(tmp.descriptor.colRange(begCol, begCol + histVLen));
+			begCol += histVLen;
+			meanHSV.copyTo(tmp.descriptor.colRange(begCol, begCol + meanHSVLen));
+			begCol += meanHSVLen;
+			covarHSV.copyTo(tmp.descriptor.colRange(begCol, begCol + covarHSVLen));
+			begCol += covarHSVLen;
+			histogramDI.copyTo(tmp.descriptor.colRange(begCol, begCol + histDLen*histILen));
+			begCol += histDLen*histILen;
+			meanLaser.copyTo(tmp.descriptor.colRange(begCol, begCol + meanLaserLen));
+			begCol += meanLaserLen;
+			covarLaser.copyTo(tmp.descriptor.colRange(begCol, begCol + covarLaserLen));
+			begCol += covarLaserLen;
+			//kurtLaser.copyTo(tmp.descriptor.colRange(begCol, begCol + kurtLaserLen));
+			//begCol += kurtLaserLen;
+			//cout << "descriptor = " << tmp.descriptor << endl;
+
+			if(endIm - begIm > entryWeightThreshold){
+				ret.push_back(tmp);
+			}
 		}
 	}
 

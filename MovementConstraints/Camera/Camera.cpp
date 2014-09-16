@@ -818,9 +818,6 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 		cout << "Assigning manual ids" << endl;
 		//rectangle(manualRegionsOnImages[i], Point(0, 0), Point(images[i].cols, 100), Scalar(0, 0, 0), -1);
 		map<int, int> assignedManualId = hierClassifiers.front()->assignManualId(autoRegionsOnImage, manualRegionsOnImages[i]);
-		imshow("original", images[i]);
-		imshow("segments", hierClassifiers.front()->colorSegments(autoRegionsOnImage));
-		waitKey(100);
 		cout << "Extracting entries" << endl;
 		bool debug = false;
 		//cout << "Looking for class " << 1 << endl;
@@ -833,13 +830,40 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 		}
 		//cout << "terrains[i].size() = " << terrains[i].size() << endl;
 		vector<Entry> newData = hierClassifiers.front()->extractEntries(images[i], terrains[i], autoRegionsOnImage, maskIgnore.front());
+
 		for(int e = 0; e < newData.size(); e++){
 			if(mapRegionIdToLabel[i].count(assignedManualId[newData[e].imageId]) > 0){
 				newData[e].label = mapRegionIdToLabel[i][assignedManualId[newData[e].imageId]];
 				dataset.push_back(newData[e]);
 			}
 		}
+
+
+		vector<Scalar> colors;
+		colors.push_back(Scalar(0, 255, 0));	//grass - green
+		colors.push_back(Scalar(0, 0, 255));	//wood - red
+		colors.push_back(Scalar(0, 255, 255));	//yellow - ceramic
+		colors.push_back(Scalar(255, 0, 0));	//blue - asphalt
+
+		Mat coloredOriginal = images[i].clone();
+
+		for(int e = 0; e < newData.size(); e++){
+			if(mapRegionIdToLabel[i].count(assignedManualId[newData[e].imageId]) > 0){
+				int label = newData[e].label;
+				if(label < 0 || label > 1){
+					throw "Bad label";
+				}
+				coloredOriginal.setTo(colors[label], autoRegionsOnImage == newData[e].imageId);
+			}
+		}
+		Mat visualization = coloredOriginal * 0.25 + images[i] * 0.75;
+		//ret.setTo(Scalar(0, 0, 0), maskIgnore.front() != 0);
+
+		imshow("original", visualization);
+		imshow("segments", hierClassifiers.front()->colorSegments(autoRegionsOnImage));
+		waitKey(100);
 	}
+
 	ofstream dataFile("data.log");
 	dataFile.precision(15);
 	for(int e = 0; e < dataset.size(); e++){

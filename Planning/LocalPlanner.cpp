@@ -413,11 +413,12 @@ float LocalPlanner::findOptimSector(const std::vector<int>& freeSectors,
 //	cout << "Free sector size : " << freeSectors.size() << endl;
 	int bestSectorID = -1;
 	int bestSectorDistance = -1;
+	int numSectors = 360/localPlannerParams.histResolution;
 	for (int i = 0; i < freeSectors.size(); i++) {
 		//cout << "Free vs goal : " << freeSectors[i] << " " << goalSector
 		//		<< endl;
-		int distance = (freeSectors[i] - goalSector)
-				* (freeSectors[i] - goalSector);
+		int backwards = (freeSectors[i] < numSectors/4 || freeSectors[i] > 3*numSectors/4) ? 5 : 0;
+		int distance = abs(freeSectors[i] - goalSector) + backwards; // (freeSectors[i] - goalSector)*(freeSectors[i] - goalSector) + backwards
 		//cout << "Distance " << distance << endl;
 		if (bestSectorID == -1 || bestSectorDistance > distance) {
 			bestSectorDistance = distance;
