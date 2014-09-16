@@ -30,6 +30,7 @@ void Hokuyo::run(){
 		//int count = 0;
 		std::unique_lock<std::mutex> lck(mtx);
 
+		curMeas = Mat(4, distance.size(), CV_32SC1);
 		curTimestamp = std::chrono::high_resolution_clock::now();
 		for(int i = 0; i < distance.size(); i++){
 			double angle = hokuyo.index2rad(i);
@@ -54,7 +55,6 @@ void Hokuyo::run(){
 }
 
 Hokuyo::Hokuyo() :
-		curMeas(4, HOKUYO_SCANS, CV_32SC1),
 		runThread(false),
 		dataValid(false)
 {
@@ -71,7 +71,7 @@ void Hokuyo::openPort(std::string port){
 	{
 		cout << "Hokuyo product type : "<<hokuyo.product_type() << endl;
 		//cout << hokuyo.deg2index(-135) << " " << hokuyo.deg2index(135) << endl;
-		hokuyo.set_scanning_parameter(hokuyo.deg2index(-135), hokuyo.deg2index(135));
+		hokuyo.set_scanning_parameter(hokuyo.deg2step(-100), hokuyo.deg2step(100));
 		runThread = true;
 		readingThread = std::thread(&Hokuyo::run, this);
 	}

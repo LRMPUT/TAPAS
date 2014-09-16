@@ -41,7 +41,7 @@
 						changedPlanDelayTime="300000"
 						sound="0"
 						runHomologation="0" 
-						mapFile="ppMap.osm" 
+						mapFile="maltaMap.osm" 
 						latitude="52.406019" longitude="16.956263"/>
 
 
@@ -72,7 +72,7 @@
 						VFH_TurnSpeed="60"
 						VFH_TurnTimeout="5000"
 						VFH_InterruptTime="1000"
-						VFH_INterruptSpeed="30"
+						VFH_InterruptSpeed="30"
 						VFH_ImuAccVarianceLimit="0.1" />
 
 	<!--
