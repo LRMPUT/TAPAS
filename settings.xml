@@ -71,7 +71,9 @@
 						VFH_PreciseSpeed="20" 
 						VFH_TurnSpeed="60"
 						VFH_TurnTimeout="5000"
-						VFH_InterruptTime="1000" />
+						VFH_InterruptTime="1000"
+						VFH_INterruptSpeed="30"
+						VFH_ImuAccVarianceLimit="0.1" />
 
 	<!--
 		runThread: 				1 - module ON, 0 - module OFF
@@ -97,6 +99,7 @@
 	<MovementConstraints runThread="true">
 		<odometry diam="160" base="452" encodersCPR="300" />
 		<point_cloud minDist="100" maxTimePoint="4000" maxTimeMap="4000" />
+		<laser_constraints lowerThreshold="50" upperThreshold="100" minPts="5" />
 		<camera_position_laser>
 			0.999975467433325   0.006201805494175   0.003256092768350	19.302285337921
   		-0.006965113845532   0.831082312695594   0.556105814313842 -581.986641194198
@@ -115,7 +118,7 @@
 			0	0	1	-810
 			0	0	0	1
 		</imu_position_robot>
-		<Camera runThread="false" number="1" rows="480" cols="640" debug="1">
+		<Camera runThread="false" number="1" rows="480" cols="640" entryWeightThreshold="100" debug="1">
 			<cache saveEnabled="true" loadEnabled="true"/>
 			<HierClassifier debug="1">
 				<cache enabled="true" />

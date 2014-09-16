@@ -51,6 +51,8 @@ public:
 		float turnSpeed;
 		int turnTimeout;
 		int interruptTime;
+		float interruptSpeed;
+		float imuAccVarianceLimit;
 	};
 
 private:

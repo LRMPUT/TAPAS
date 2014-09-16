@@ -99,9 +99,11 @@ void Camera::computeConstraints(std::chrono::high_resolution_clock::time_point n
 				int y = mapSegments[cam].at<int>(r, c) % MAP_SIZE;
 				if(x >= 0 && x < MAP_SIZE && y >= 0 && y < MAP_SIZE){
 					//cout << "(" << x << ", " << y << "), label " << classifiedImage[cam].at<int>(r, c) << endl;
-					countVotes.at<int>(x, y)++;
-					if(classifiedImage[cam].at<int>(r, c) != DRIVABLE_LABEL){
-						votes.at<int>(x, y)++;
+					if(classifiedImage[cam].at<int>(r, c) >= 0){
+						countVotes.at<int>(x, y)++;
+						if(classifiedImage[cam].at<int>(r, c) != DRIVABLE_LABEL){
+							votes.at<int>(x, y)++;
+						}
 					}
 				}
 			}
@@ -1262,10 +1264,14 @@ void Camera::run(){
 					if(debugLevel >= 1){
 						cout << "Classification" << endl;
 					}
-					vector<Mat> classRes = hierClassifiers[c]->classify(cameraData[c], pointCloudCamera, mapSegments[c], maskIgnore[c]);
+					vector<Mat> classRes = hierClassifiers[c]->classify(cameraData[c],
+																		pointCloudCamera,
+																		mapSegments[c],
+																		maskIgnore[c],
+																		entryWeightThreshold);
 					timeEndClassification = std::chrono::high_resolution_clock::now();
 					//cout << "End classification" << endl;
-					Mat bestLabels(numRows, numCols, CV_32SC1, Scalar(0));
+					Mat bestLabels(numRows, numCols, CV_32SC1, Scalar(-1));
 					Mat bestScore(numRows, numCols, CV_32FC1, Scalar(-1));
 					for(int l = 0; l < labels.size(); l++){
 						Mat cmp;
@@ -1317,6 +1323,9 @@ void Camera::readSettings(TiXmlElement* settings){
 	}
 	if(settings->QueryIntAttribute("cols", &numCols) != TIXML_SUCCESS){
 		throw "Bad settings file - wrong number of cols";
+	}
+	if(settings->QueryIntAttribute("entryWeightThreshold", &entryWeightThreshold) != TIXML_SUCCESS){
+		throw "Bad settings file - wrong entryWeightThreshold";
 	}
 	if(settings->QueryIntAttribute("debug", &debugLevel) != TIXML_SUCCESS){
 		throw "Bad settings file - wrong debug level";
