@@ -193,8 +193,8 @@ void MovementConstraints::updateConstraintsMap(){
 		//cout << "updating cur pos" << endl;
 		updateCurPosCloudMapCenter();
 
-		lckPointCloud.lock();
 		std::unique_lock<std::mutex> lckMap(mtxMap);
+		lckPointCloud.lock();
 		//cout << "locked" << endl;
 		//cout << "Calculating new coords" << endl;
 		if(!pointCloudImuMapCenter.empty()){
@@ -208,8 +208,8 @@ void MovementConstraints::updateConstraintsMap(){
 		curPosCloudMapCenter = Mat::eye(4, 4, CV_32FC1);
 		//cout << "Map moved" << endl;
 		timestampMap = timestampMapCur;
-		lckMap.unlock();
 		lckPointCloud.unlock();
+		lckMap.unlock();
 	}
 	std::unique_lock<std::mutex> lckMap(mtxMap);
 	constraintsMap = Scalar(0);
@@ -249,7 +249,7 @@ void MovementConstraints::insertHokuyoConstraints(cv::Mat map,
 			int count = 0;
 			float sumVal = 0;
 			for(int p = 0; p < bins[x][y].size(); p++){
-				float val = fabs(bins[x][y][p].z) - laserLowerThreshold;
+				float val = bins[x][y][p].z - laserLowerThreshold;
 				val = min(max(val/(laserUpperThreshold - laserLowerThreshold), 0.0f), 1.0f);
 				if(val > 0){
 					count++;
@@ -321,7 +321,7 @@ void MovementConstraints::updatePointCloud(){
 
 	updateCurPosCloudMapCenter();
 
-	if(hokuyo.isOpen()){
+	if(hokuyo.isDataValid()){
 		std::chrono::high_resolution_clock::time_point hokuyoTimestamp;
 		Mat hokuyoData = hokuyo.getData(hokuyoTimestamp);
 		processPointCloud(hokuyoData,
@@ -464,6 +464,7 @@ void MovementConstraints::processPointCloud(cv::Mat hokuyoData,
 		}
 	}
 
+	std::unique_lock<std::mutex> lck(mtxPointCloud);
 	//cout << "Moving pointCloudImuMapCenter, pointsSkipped = " << pointsSkipped << endl;
 	Mat tmpAllPoints(hokuyoCurPoints.rows, pointCloudImuMapCenter.cols + hokuyoCurPoints.cols - pointsSkipped, CV_32FC1);
 	if(!pointCloudImuMapCenter.empty()){
@@ -493,10 +494,9 @@ void MovementConstraints::processPointCloud(cv::Mat hokuyoData,
 		cout << "curPointCloudCameraMapCenter copied" << endl;
 		pointsInfo.push(PointsPacket(hokuyoTimestamp, hokuyoCurPoints.cols));
 
-		std::unique_lock<std::mutex> lck(mtxPointCloud);
 		pointCloudImuMapCenter = tmpAllPoints;
-		lck.unlock();
 	}
+	lck.unlock();
 }
 
 const MovementConstraints::PointCloudSettings& MovementConstraints::getPointCloudSettings(){
