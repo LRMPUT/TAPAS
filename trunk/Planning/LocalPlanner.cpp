@@ -96,6 +96,14 @@ void LocalPlanner::readSettings(TiXmlElement* settings) {
 			&localPlannerParams.interruptTime) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for VFH_InterruptTime";
 	}
+	if (pLocalPlanner->QueryFloatAttribute("VFH_InterruptSpeed",
+			&localPlannerParams.interruptSpeed) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for VFH_InterruptSpeed";
+	}
+	if (pLocalPlanner->QueryFloatAttribute("VFH_ImuAccVarianceLimit",
+			&localPlannerParams.imuAccVarianceLimit) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for VFH_ImuAccVarianceLimit";
+	}
 
 	printf("LocalPlanner -- runThread: %d\n", localPlannerParams.runThread);
 	printf("LocalPlanner -- debug: %d\n", localPlannerParams.debug);
@@ -113,8 +121,16 @@ void LocalPlanner::readSettings(TiXmlElement* settings) {
 				localPlannerParams.normalSpeed);
 	printf("LocalPlanner -- VFH_PreciseSpeed: %f\n",
 				localPlannerParams.preciseSpeed);
-	printf("LocalPlanner -- VFH_TrunSpeed: %f\n",
+	printf("LocalPlanner -- VFH_TurnSpeed: %f\n",
 				localPlannerParams.turnSpeed);
+	printf("LocalPlanner -- VFH_TurnTimeout: %d\n",
+				localPlannerParams.turnTimeout);
+	printf("LocalPlanner -- VFH_InterruptTime: %d\n",
+				localPlannerParams.interruptTime);
+	printf("LocalPlanner -- VFH_InterruptSpeed: %f\n",
+				localPlannerParams.interruptSpeed);
+	printf("LocalPlanner -- VFH_ImuAccVarianceLimit: %f\n",
+				localPlannerParams.imuAccVarianceLimit);
 
 }
 
@@ -463,7 +479,7 @@ void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 
 			float curSpeed = determineCurSpeed();
 
-			globalPlanner->setMotorsVel(-curSpeed, -curSpeed);
+			globalPlanner->setMotorsVel(-localPlannerParams.interruptSpeed, -localPlannerParams.interruptSpeed);
 		}
 		else if (fabs(bestDirLocalMap - localYaw) < localPlannerParams.steeringMargin)
 		{
@@ -532,13 +548,13 @@ float LocalPlanner::determineCurSpeed(){
 	std::unique_lock<std::mutex> lck(mtxCurSpeed);
 	static const float accVarianceLimit = 0.1;
 	float curSpeed = prevCurSpeed;
-	if(curImuAccVariance < accVarianceLimit/2){
+	if(curImuAccVariance < localPlannerParams.imuAccVarianceLimit/2){
 		curSpeed = min(curSpeed + 0.5f, curSpeedMax);
 		if (localPlannerParams.debug >= 1){
 			cout<<"Speeding up"<<endl;
 		}
 	}
-	if(curImuAccVariance > accVarianceLimit){
+	if(curImuAccVariance > localPlannerParams.imuAccVarianceLimit){
 		curSpeed = max(curSpeed - 0.5f, 0.0f);
 		if (localPlannerParams.debug >= 1){
 			cout<<"Slowing down"<<endl;

@@ -73,6 +73,23 @@ void MovementConstraints::readSettings(TiXmlElement* settings){
 		cout << "Warning - bad point_cloud maxTimeMap";
 	}
 
+	TiXmlElement* pLaserConstraints = settings->FirstChildElement("laser_constraints");
+	if(!pLaserConstraints){
+		throw "Bad settings file - no laser_constraints settings";
+	}
+	if(pLaserConstraints->QueryFloatAttribute("lowerThreshold", &laserLowerThreshold) != TIXML_SUCCESS){
+		cout << "Warning - bad laser_constraints lowerThreshold";
+	}
+	if(pLaserConstraints->QueryFloatAttribute("upperThreshold", &laserUpperThreshold) != TIXML_SUCCESS){
+		cout << "Warning - bad laser_constraints upperThreshold";
+	}
+	if(pLaserConstraints->QueryFloatAttribute("upperThreshold", &laserUpperThreshold) != TIXML_SUCCESS){
+		cout << "Warning - bad laser_constraints upperThreshold";
+	}
+	if(pLaserConstraints->QueryIntAttribute("minPts", &laserMinPts) != TIXML_SUCCESS){
+		cout << "Warning - bad laser_constraints minPts";
+	}
+
 	cameraOrigLaser = readMatrixSettings(settings, "camera_position_laser", 4, 4);
 	cameraOrigImu = readMatrixSettings(settings, "imu_position_camera", 4, 4).t();
 	imuOrigRobot = readMatrixSettings(settings, "imu_position_robot", 4, 4);
@@ -227,18 +244,20 @@ void MovementConstraints::insertHokuyoConstraints(cv::Mat map,
 	//cout << "inserting into map" << endl;
 	for(int y = 0; y < MAP_SIZE; y++){
 		for(int x = 0; x < MAP_SIZE; x++){
-			static float heightThres = -50;
-			static int numThres = 5;
 			//Point3f minPoint;
 			int count = 0;
+			float sumVal = 0;
 			for(int p = 0; p < bins[x][y].size(); p++){
-				if(bins[x][y][p].z <= heightThres){	//if something is taller than ground minus 50 mm
+				float val = fabs(bins[x][y][p].z) - laserLowerThreshold;
+				val = min(max(val/(laserUpperThreshold - laserLowerThreshold), 0.0f), 1.0f);
+				if(val > 0){
 					count++;
 				}
+				sumVal += val;
 				//minPoint = bins[x][y][p];
 			}
-			if(count >= numThres){ //at least 5 points
-				map.at<float>(x, y) = 1;
+			if(count >= laserMinPts){ //at least 5 points
+				map.at<float>(x, y) = max(map.at<float>(x, y), sumVal/count);
 				//cout << "Constraint at (" << x << ", " << y << ")" << endl;
 				//cout << "Point = " << minPoint << endl;
 			}

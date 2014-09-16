@@ -186,7 +186,8 @@ public:
 	std::vector<cv::Mat> classify(cv::Mat image,
 								  cv::Mat terrain = cv::Mat(),
 								  cv::Mat segmentation = cv::Mat(),
-								  cv::Mat maskIgnore = cv::Mat());
+								  cv::Mat maskIgnore = cv::Mat(),
+				  	  	  	  	  int entryWeightThreshold = 0);
 	
 	/** \brief Funkcja ekstrahująca wektor cech.
 
@@ -194,7 +195,8 @@ public:
 	std::vector<Entry> extractEntries(cv::Mat image,
 										cv::Mat terrain,
 										cv::Mat regionsOnImage,
-										cv::Mat maskIgnore = cv::Mat());
+										cv::Mat maskIgnore = cv::Mat(),
+										int entryWeightThreshold = 0);
 
 	std::vector<Entry> extractEntriesGPU(cv::Mat imageBGR,
 										cv::Mat terrain,

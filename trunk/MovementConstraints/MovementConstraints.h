@@ -73,8 +73,9 @@ private:
 
 	cv::Mat cameraOrigImu;
 
-	//CV_32FC1 4x1: ground plane equation [A, B, C, D]'
-	cv::Mat groundPlane;
+	float laserLowerThreshold, laserUpperThreshold;
+
+	int laserMinPts;
 
 	//Point Cloud from Hokuyo
 	std::mutex mtxPointCloud;

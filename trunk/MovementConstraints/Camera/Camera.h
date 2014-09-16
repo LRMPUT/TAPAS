@@ -49,6 +49,8 @@ class Camera {
 
 	int debugLevel;
 
+	int entryWeightThreshold;
+
 	std::vector<boost::filesystem::path> learningDirs;
 
 	/** \brief Flaga informująca o tym czy dokonywać cross validation.

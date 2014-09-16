@@ -404,7 +404,8 @@ void HierClassifier::train(const std::vector<Entry>& data,
 std::vector<cv::Mat> HierClassifier::classify(cv::Mat image,
 							  	  	  	  	  cv::Mat terrain,
 							  	  	  	  	  cv::Mat segmentation,
-							  	  	  	  	  cv::Mat maskIgnore)
+							  	  	  	  	  cv::Mat maskIgnore,
+							  	  	  	  	  int entryWeightThreshold)
 {
 
 
@@ -446,12 +447,14 @@ std::vector<cv::Mat> HierClassifier::classify(cv::Mat image,
 	vector<Mat> ret;
 	ret.resize(numLabels);
 	for(int l = 0; l < numLabels; l++){
-		ret[l] = Mat(image.rows, image.cols, CV_32FC1);
+		ret[l] = Mat(image.rows, image.cols, CV_32FC1, Scalar(-2));
 	}
 	for(int l = 0; l < numLabels; l++){
 		for(int r = 0; r < image.rows; r++){
 			for(int c = 0; c < image.cols; c++){
-				ret[l].at<float>(r, c) = result.at<float>(imageIdToEntry[regionsOnImage.at<int>(r, c)], l);
+				if(imageIdToEntry.count(regionsOnImage.at<int>(r, c)) > 0){
+					ret[l].at<float>(r, c) = result.at<float>(imageIdToEntry[regionsOnImage.at<int>(r, c)], l);
+				}
 			}
 		}
 	}
@@ -486,7 +489,8 @@ bool operator<(const Pixel& left, const Pixel& right){
 std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 													cv::Mat terrain,
 													cv::Mat regionsOnImage,
-													cv::Mat maskIgnore)
+													cv::Mat maskIgnore,
+													int entryWeightThreshold)
 {
 	using namespace std::chrono;
 	high_resolution_clock::time_point start = high_resolution_clock::now();
@@ -715,7 +719,9 @@ std::vector<Entry> HierClassifier::extractEntries(	cv::Mat imageBGR,
 		//begCol += kurtLaserLen;
 		//cout << "descriptor = " << tmp.descriptor << endl;
 
-		ret.push_back(tmp);
+		if(tmp.weight > entryWeightThreshold){
+			ret.push_back(tmp);
+		}
 	}
 
 	static duration<double> sortingTime = duration<double>::zero();
