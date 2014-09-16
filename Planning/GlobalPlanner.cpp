@@ -739,7 +739,7 @@ void GlobalPlanner::goDirectlyToTarget(double robotX, double robotY,
 
 		// Let's beep !!!:D
 		if (globalPlannerParams.sound == 1) {
-			int tmp = system("espeak \"Target reached\"");
+			int tmp = system("espeak -v en-us+1 -s 150 \"Target reached. I'm going home.\"");
 		}
 
 		// Going back home :)
@@ -756,7 +756,7 @@ void GlobalPlanner::goDirectlyToTarget(double robotX, double robotY,
 				 printf("Global planner: robot finished it's job\n");
 			 }
 			 if (globalPlannerParams.sound == 1) {
-				 int tmp = system("espeak \"Finished my job\"");
+				 int tmp = system("espeak -v en-us+1 -s 150 \"Finished my job\"");
 			 }
 		} else if (globalPlannerParams.debug == 1) {
 				printf("Global planner: Error in global planner state\n");

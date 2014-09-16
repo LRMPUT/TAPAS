@@ -22,6 +22,8 @@ PositionEstimation::PositionEstimation(Robot* irobot, TiXmlElement* settings) :
 
 	readSettings(settings);
 
+	// Open Log file
+	logStream.open("positionEstimation.log");
 	/* KALMAN:
 	 * - we track 2 values -> global position
 	 *
@@ -47,6 +49,7 @@ PositionEstimation::~PositionEstimation() {
 	closeGps();
 	closeImu();
 	delete EKF;
+	logStream.close();
 	cout << "End ~PositionEstimation()" << endl;
 }
 
@@ -77,6 +80,25 @@ void PositionEstimation::readSettings(TiXmlElement* settings) {
 			&parameters.wheelBase) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for positionEstimation wheel base";
 	}
+
+
+
+	if (pPositionEstimation->QueryDoubleAttribute("predictionVariance",
+					&parameters.predictionVariance) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for positionEstimation predictionVariance";
+	}
+	if (pPositionEstimation->QueryDoubleAttribute("gpsVariance",
+			&parameters.gpsVariance) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for positionEstimation gpsVariance";
+	}
+	if (pPositionEstimation->QueryDoubleAttribute("imuVariance",
+			&parameters.imuVariance) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for positionEstimation imuVariance";
+	}
+	if (pPositionEstimation->QueryDoubleAttribute("encoderVariance",
+			&parameters.encoderVariance) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for positionEstimation encoderVariance";
+	}
 	printf("positionEstimation -- runThread: %d\n", parameters.runThread);
 	printf("positionEstimation -- debug: %d\n", parameters.debug);
 	printf("positionEstimation -- encoderTicksPerRev : %d\n",
@@ -84,6 +106,11 @@ void PositionEstimation::readSettings(TiXmlElement* settings) {
 	printf("positionEstimation -- wheelDiameter : %f\n",
 			parameters.wheelDiameter);
 	printf("positionEstimation -- wheelBase : %f\n", parameters.wheelBase);
+
+	printf("positionEstimation -- predictionVariance : %f\n", parameters.predictionVariance);
+	printf("positionEstimation -- gpsVariance : %f\n", parameters.gpsVariance);
+	printf("positionEstimation -- imuVariance : %f\n", parameters.imuVariance);
+	printf("positionEstimation -- encoderVariance : %f\n", parameters.encoderVariance);
 }
 
 void PositionEstimation::run() {
@@ -107,7 +134,12 @@ void PositionEstimation::run() {
 	while (parameters.runThread) {
 		gettimeofday(&start, NULL);
 
+		// Perform EKF
 		KalmanLoop();
+
+		// Save trajectory to file
+		saveTrajectoryToFile();
+
 
 		// Thread sleep, so that the position is not updated too often
 		// Right now 1 ms as Robot Drive has it's own sleep
@@ -138,8 +170,16 @@ void PositionEstimation::stopThread() {
 	}
 }
 
+
+void PositionEstimation::saveTrajectoryToFile() {
+	std::chrono::milliseconds currentTime = robot->getGlobalTime();
+	logStream << currentTime.count() << " " << state.at<double>(0) << " " << state.at<double>(1) << " " <<state.at<double>(2) << " " << state.at<double>(3) << std::endl;
+}
+
+
 void PositionEstimation::kalmanSetup() {
-	EKF = new ExtendedKalmanFilter();
+	EKF = new ExtendedKalmanFilter(parameters.predictionVariance,
+			parameters.gpsVariance, parameters.imuVariance, parameters.encoderVariance);
 
 	state = cv::Mat(4, 1, CV_64F);
 	setZeroPosition();
