@@ -69,8 +69,9 @@
 						VFH_HistResolution="10"
 						VFH_Threshold="0.5" 
 						VFH_SteeringMargin="10" 
-						VFH_Gauss3sig="50" 
-						VFH_MaxDistance="3000" 
+						VFH_Gauss3sig="50"
+						VFH_MaxDistance="3000"
+						VFH_BackwardsPenalty="5" 
 						VFH_NormalSpeed="60" 
 						VFH_PreciseSpeed="20" 
 						VFH_TurnSpeed="80"
@@ -203,10 +204,8 @@
 					<info desc_beg="0" desc_end="7" />
 				</Classifier>
 			</HierClassifier>
-			<learning enabled="false">
-				"../MovementConstraints/Camera/database/przejazd3",
-				"../MovementConstraints/Camera/database/przejazd4",
-				"../MovementConstraints/Camera/database/przejazd5"
+			<learning enabled="true">
+				"../MovementConstraints/Camera/database/przejazd1"
 			</learning>
 			<labels>
 				<label text="grass" id="0"/>

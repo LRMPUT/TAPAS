@@ -512,10 +512,11 @@ void Camera::processDir(boost::filesystem::path dir,
 			//hokuyoCurPoints = Mat(6, hokuyoCurPointsDist.cols, CV_32FC1, Scalar(1));
 			hokuyoData = Mat(0, 4, CV_32SC1);
 
-			static const float startAngle = -100*PI/180;
 			static const float stepAngle = 0.25*PI/180;
+			float startAngle = -(hokuyoCurPointsDist.cols - 1)/2 * stepAngle;
+			cout << "startAngle = " << startAngle << endl;
 			for(int i = 0; i < hokuyoCurPointsDist.cols; i++){
-				if(hokuyoCurPointsDist.at<int>(i) > 500){
+				if(hokuyoCurPointsDist.at<int>(i) > 100){
 					Mat curPoint(1, 4, CV_32FC1);
 					curPoint.at<int>(0) = hokuyoCurPointsDist.at<int>(i)*cos(startAngle + i*stepAngle);
 					curPoint.at<int>(1) = hokuyoCurPointsDist.at<int>(i)*sin(startAngle + i*stepAngle);
@@ -698,7 +699,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			}
 		}
 		imshow("test", image);
-		waitKey(100);
+		waitKey();
 
 		TiXmlDocument data(	dir.string() +
 							string("/") +
@@ -829,7 +830,11 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 			}
 		}
 		//cout << "terrains[i].size() = " << terrains[i].size() << endl;
-		vector<Entry> newData = hierClassifiers.front()->extractEntries(images[i], terrains[i], autoRegionsOnImage, maskIgnore.front());
+		vector<Entry> newData = hierClassifiers.front()->extractEntries(images[i],
+																		terrains[i],
+																		autoRegionsOnImage,
+																		maskIgnore.front(),
+																		entryWeightThreshold);
 
 		for(int e = 0; e < newData.size(); e++){
 			if(mapRegionIdToLabel[i].count(assignedManualId[newData[e].imageId]) > 0){

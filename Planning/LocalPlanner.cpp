@@ -76,6 +76,10 @@ void LocalPlanner::readSettings(TiXmlElement* settings) {
 			&localPlannerParams.maxDistance) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for VFH_MaxDistance";
 	}
+	if (pLocalPlanner->QueryFloatAttribute("VFH_BackwardsPenalty",
+			&localPlannerParams.backwardsPenalty) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for VFH_BackwardsPenalty";
+	}
 	if (pLocalPlanner->QueryFloatAttribute("VFH_NormalSpeed",
 			&localPlannerParams.normalSpeed) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for VFH_NormalSpeed";
@@ -417,8 +421,9 @@ float LocalPlanner::findOptimSector(const std::vector<int>& freeSectors,
 	for (int i = 0; i < freeSectors.size(); i++) {
 		//cout << "Free vs goal : " << freeSectors[i] << " " << goalSector
 		//		<< endl;
-		int backwards = (freeSectors[i] < numSectors/4 || freeSectors[i] > 3*numSectors/4) ? 5 : 0;
-		int distance = abs(freeSectors[i] - goalSector) + backwards; // (freeSectors[i] - goalSector)*(freeSectors[i] - goalSector) + backwards
+		int isBackwards = (freeSectors[i] < numSectors/4 || freeSectors[i] > 3*numSectors/4) ? 1 : 0;
+		int distance = min(abs(freeSectors[i] - goalSector), abs(abs(freeSectors[i] - goalSector) - numSectors))
+				+ isBackwards*localPlannerParams.backwardsPenalty; // (freeSectors[i] - goalSector)*(freeSectors[i] - goalSector) + backwards
 		//cout << "Distance " << distance << endl;
 		if (bestSectorID == -1 || bestSectorDistance > distance) {
 			bestSectorDistance = distance;

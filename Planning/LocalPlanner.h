@@ -46,6 +46,7 @@ public:
 		float steeringMargin;
 		float gauss3sig;
 		float maxDistance;
+		float backwardsPenalty;
 		float normalSpeed;
 		float preciseSpeed;
 		float turnSpeed;
