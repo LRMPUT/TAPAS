@@ -36,9 +36,9 @@
 						processingFrequency="5" 
 						computeEveryNth="25" 
 						debug="1" 
-						subgoalThreshold="2" 
-						subgoalThreshold2="6"
-						subgoalAngularThreshold="5"
+						subgoalThreshold="4" 
+						subgoalThreshold2="10"
+						subgoalAngularThreshold="10"
 						preciseToGoalMaxTime="25000"
 						changedPlanWaitingTime="30000"
 						changedPlanThreshold="40"
@@ -71,12 +71,12 @@
 						VFH_SteeringMargin="10" 
 						VFH_Gauss3sig="50" 
 						VFH_MaxDistance="3000" 
-						VFH_NormalSpeed="45" 
+						VFH_NormalSpeed="60" 
 						VFH_PreciseSpeed="20" 
-						VFH_TurnSpeed="60"
+						VFH_TurnSpeed="80"
 						VFH_TurnTimeout="5000"
 						VFH_InterruptTime="1000"
-						VFH_InterruptSpeed="30"
+						VFH_InterruptSpeed="40"
 						VFH_ImuAccVarianceLimit="0.1" />
 
 	<!--
@@ -108,7 +108,7 @@
 	<MovementConstraints runThread="true">
 		<odometry diam="160" base="452" encodersCPR="300" />
 		<point_cloud minDist="100" maxTimePoint="4000" maxTimeMap="4000" />
-		<laser_constraints lowerThreshold="50" upperThreshold="100" minPts="5" />
+		<laser_constraints lowerThreshold="50" upperThreshold="80" minPts="5" />
 		<camera_position_laser>
 			0.999975467433325   0.006201805494175   0.003256092768350	19.302285337921
   		-0.006965113845532   0.831082312695594   0.556105814313842 -581.986641194198
@@ -127,7 +127,7 @@
 			0	0	1	-810
 			0	0	0	1
 		</imu_position_robot>
-		<Camera runThread="false" number="1" rows="480" cols="640" entryWeightThreshold="100" debug="1">
+		<Camera runThread="false" number="1" rows="480" cols="640" entryWeightThreshold="400" debug="1">
 			<cache saveEnabled="true" loadEnabled="true"/>
 			<HierClassifier debug="1">
 				<cache enabled="true" />
@@ -203,8 +203,10 @@
 					<info desc_beg="0" desc_end="7" />
 				</Classifier>
 			</HierClassifier>
-			<learning enabled="0">
-				"../MovementConstraints/Camera/database/przejazd1"
+			<learning enabled="false">
+				"../MovementConstraints/Camera/database/przejazd3",
+				"../MovementConstraints/Camera/database/przejazd4",
+				"../MovementConstraints/Camera/database/przejazd5"
 			</learning>
 			<labels>
 				<label text="grass" id="0"/>
