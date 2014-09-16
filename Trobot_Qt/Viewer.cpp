@@ -57,16 +57,15 @@ void Viewer::drawConstraintsMap(){
 
 		glDisable(GL_LIGHTING);
 		glBegin(GL_QUADS);
-		glColor3f(0.0, 0.0, 1.0);
+		//glColor3f(0.0, 0.0, 1.0);
 		for(int y = 0; y < MAP_SIZE; y++){
 			for(int x = 0; x < MAP_SIZE; x++){
-				if(constraintsMap.at<float>(x, y) > 0.5){
-					//cout << "drawing QUAD at (" << x << ", " << y << ")" << endl;
-					glVertex3f((x - MAP_SIZE/2) * MAP_RASTER_SIZE, (y - MAP_SIZE/2)*MAP_RASTER_SIZE, 0);
-					glVertex3f((x + 1 - MAP_SIZE/2)*MAP_RASTER_SIZE, (y - MAP_SIZE/2)*MAP_RASTER_SIZE, 0);
-					glVertex3f((x + 1 - MAP_SIZE/2)*MAP_RASTER_SIZE, (y + 1 - MAP_SIZE/2)*MAP_RASTER_SIZE, 0);
-					glVertex3f((x - MAP_SIZE/2)*MAP_RASTER_SIZE, (y + 1 - MAP_SIZE/2)*MAP_RASTER_SIZE, 0);
-				}
+				glColor4f(0.0, 0.0, 1.0, constraintsMap.at<float>(x, y));
+				//cout << "drawing QUAD at (" << x << ", " << y << ")" << endl;
+				glVertex3f((x - MAP_SIZE/2) * MAP_RASTER_SIZE, (y - MAP_SIZE/2)*MAP_RASTER_SIZE, 0);
+				glVertex3f((x + 1 - MAP_SIZE/2)*MAP_RASTER_SIZE, (y - MAP_SIZE/2)*MAP_RASTER_SIZE, 0);
+				glVertex3f((x + 1 - MAP_SIZE/2)*MAP_RASTER_SIZE, (y + 1 - MAP_SIZE/2)*MAP_RASTER_SIZE, 0);
+				glVertex3f((x - MAP_SIZE/2)*MAP_RASTER_SIZE, (y + 1 - MAP_SIZE/2)*MAP_RASTER_SIZE, 0);
 			}
 		}
 		glEnd();
@@ -90,6 +89,7 @@ void Viewer::drawVecFieldHist(){
 		float alpha = (float)360/numSect;
 		float startAngle = 270;
 
+		glDisable(GL_LIGHTING);
 		GLUquadricObj *quadric=gluNewQuadric();
 		gluQuadricNormals(quadric, GLU_SMOOTH);
 
@@ -107,6 +107,7 @@ void Viewer::drawVecFieldHist(){
 		}
 
 		gluDeleteQuadric(quadric);
+		glEnable(GL_LIGHTING);
 
 		glColor4f(0.0, 1.0, 1.0, 1.0);
 		static const float arrowLen = 1000;

@@ -75,7 +75,7 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 		learnFromDir(learningDirs);
 	}
 	if(cacheLoadEnabled){
-//		readCache("cache/cameraCache");
+		readCache("cache/cameraCache");
 	}
 }
 
@@ -512,7 +512,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			//hokuyoCurPoints = Mat(6, hokuyoCurPointsDist.cols, CV_32FC1, Scalar(1));
 			hokuyoData = Mat(0, 4, CV_32SC1);
 
-			static const float startAngle = -135*PI/180;
+			static const float startAngle = -100*PI/180;
 			static const float stepAngle = 0.25*PI/180;
 			for(int i = 0; i < hokuyoCurPointsDist.cols; i++){
 				if(hokuyoCurPointsDist.at<int>(i) > 500){
@@ -1586,10 +1586,11 @@ cv::Mat Camera::getClassifiedImage(){
 	colors.push_back(Scalar(0, 0, 255));	//wood - red
 	colors.push_back(Scalar(0, 255, 255));	//yellow - ceramic
 	colors.push_back(Scalar(255, 0, 0));	//blue - asphalt
-	Mat coloredOriginal(numRows, numCols, CV_8UC3);
-	Mat ret;
 
 	std::unique_lock<std::mutex> lck(mtxClassIm);
+	Mat coloredOriginal = sharedOriginalImage.clone();
+	Mat ret;
+
 	if(!sharedClassifiedImage.empty()){
 		for(int l = 0; l < labels.size(); l++){
 			coloredOriginal.setTo(colors[l], sharedClassifiedImage == l);

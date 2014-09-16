@@ -65,6 +65,7 @@ void MovementConstraints::readSettings(TiXmlElement* settings){
 	if(pPtCloud->QueryIntAttribute("minDist", &pointCloudSettings.minLaserDist) != TIXML_SUCCESS){
 		cout << "Warning - bad point_cloud minDist";
 	}
+	cout << "pointCloudSettings.minLaserDist = " <<  pointCloudSettings.minLaserDist << endl;
 
 	if(pPtCloud->QueryIntAttribute("maxTimePoint", &pointCloudSettings.pointCloudTimeout) != TIXML_SUCCESS){
 		cout << "Warning - bad point_cloud maxTimePoint";
@@ -485,9 +486,11 @@ void MovementConstraints::processPointCloud(cv::Mat hokuyoData,
 		tmpCurPoints.copyTo(curPointCloudCameraMapCenter.rowRange(0, 4));
 		hokuyoCurPoints.rowRange(4, 6).copyTo(curPointCloudCameraMapCenter.rowRange(4, 6));
 		//cout << hokuyoCurPointsGlobal.channels() << ", " << hokuyoAllPointsGlobal.channels() << endl;
+		cout << pointCloudImuMapCenter.size() << " " << curPointCloudCameraMapCenter.size() << " " << tmpAllPoints.size() << endl;
+		cout << "pointsSkipped = " << pointsSkipped << endl;
 		curPointCloudCameraMapCenter.copyTo(tmpAllPoints.colRange(pointCloudImuMapCenter.cols - pointsSkipped,
 																	pointCloudImuMapCenter.cols + hokuyoCurPoints.cols - pointsSkipped));
-
+		cout << "curPointCloudCameraMapCenter copied" << endl;
 		pointsInfo.push(PointsPacket(hokuyoTimestamp, hokuyoCurPoints.cols));
 
 		std::unique_lock<std::mutex> lck(mtxPointCloud);
