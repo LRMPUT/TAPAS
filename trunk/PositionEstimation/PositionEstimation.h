@@ -74,7 +74,7 @@ private:
 	Robot* robot;
 
 	// Logger
-	std::ofstream logStream;
+	std::ofstream logStream, logGpxStream;
 
 	// The cycle of the position estimation thread
 	void run();

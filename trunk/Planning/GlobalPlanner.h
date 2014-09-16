@@ -63,7 +63,7 @@ public:
 		double processingFrequency;
 		int computeEveryNth;
 		int debug;
-		double subgoalThreshold;
+		double subgoalThreshold, subgoalThreshold2, subgoalAngularThreshold;
 		double preciseToGoalMaxTime;
 		double changedPlanWaitingTime;
 		double changedPlanThreshold;

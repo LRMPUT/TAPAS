@@ -24,6 +24,8 @@ PositionEstimation::PositionEstimation(Robot* irobot, TiXmlElement* settings) :
 
 	// Open Log file
 	logStream.open("positionEstimation.log");
+	logGpxStream.open("positionEstimation.log");
+
 	/* KALMAN:
 	 * - we track 2 values -> global position
 	 *
@@ -50,6 +52,8 @@ PositionEstimation::~PositionEstimation() {
 	closeImu();
 	delete EKF;
 	logStream.close();
+	logGpxStream<<"</trkseg></trk></gpx>"<<std::endl;
+	logGpxStream.close();
 	cout << "End ~PositionEstimation()" << endl;
 }
 
@@ -80,9 +84,6 @@ void PositionEstimation::readSettings(TiXmlElement* settings) {
 			&parameters.wheelBase) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for positionEstimation wheel base";
 	}
-
-
-
 	if (pPositionEstimation->QueryDoubleAttribute("predictionVariance",
 					&parameters.predictionVariance) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for positionEstimation predictionVariance";
@@ -129,7 +130,20 @@ void PositionEstimation::run() {
 
 	if (parameters.runThread) {
 		gps.setZeroXY(gps.getLat(), gps.getLon());
+
+		logStream<<"Log of position estimation: timestamp (in ms), X[m], Y[m], v[m/s], theta[rad]" << std::endl;
+
+		logGpxStream << "<gpx version=\"1.0\">" << std::endl;
+		logGpxStream << "<wpt lat=\"" << robot->getPosLatitude(0.0)
+				<< "\" lon=\"" << robot->getPosLongitude(0.0)
+				<< "\"><name>Start</name></wpt>" << std::endl;
+		logGpxStream << "<trk><trkseg>" << std::endl;
+
 	}
+
+
+
+
 	struct timeval start, end;
 	while (parameters.runThread) {
 		gettimeofday(&start, NULL);
@@ -174,6 +188,11 @@ void PositionEstimation::stopThread() {
 void PositionEstimation::saveTrajectoryToFile() {
 	std::chrono::milliseconds currentTime = robot->getGlobalTime();
 	logStream << currentTime.count() << " " << state.at<double>(0) << " " << state.at<double>(1) << " " <<state.at<double>(2) << " " << state.at<double>(3) << std::endl;
+
+	logGpxStream << "<trkpt time=\"" << currentTime.count()<<"\" lat=\""
+			<< robot->getPosLatitude(state.at<double>(0) * 1000) << "\" lon=\""
+			<< robot->getPosLongitude(state.at<double>(1) * 1000) << "\"></trkpt>" << std::endl;
+
 }
 
 

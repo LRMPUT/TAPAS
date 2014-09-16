@@ -91,11 +91,11 @@ public:
 
 	bool isGpsDataValid();
 
-	double getPosX(double longitude);
-	double getPosLongitude(double X);
+	double getPosX(double latitude);
+	double getPosLatitude(double X);
 
-	double getPosY(double latitude);
-	double getPosLatitude(double Y);
+	double getPosY(double longitude);
+	double getPosLongitude(double Y);
 
 	void fakeGPSStart(double lat, double lon);
 

@@ -37,10 +37,10 @@ Robot::~Robot() {
 	cout << "~Robot()" << endl;
 	cout << "delete globalPlanner" << endl;
 	delete globalPlanner;
-	cout << "delete positionEstimation" << endl;
-	delete positionEstimation;
 	cout << "delete movementConstraints" << endl;
 	delete movementConstraints;
+	cout << "delete positionEstimation" << endl;
+	delete positionEstimation;
 	//positionEstimation.stopThread();
 	cout << "End ~Robot()" << endl;
 }
@@ -88,24 +88,24 @@ bool Robot::isGpsDataValid()
 	return positionEstimation->isGpsDataValid();
 }
 
-double Robot::getPosX(double longitude)
+double Robot::getPosX(double latitude)
 {
-	return positionEstimation->getPosX(longitude);
+	return positionEstimation->getPosX(latitude);
 }
 
-double Robot::getPosLongitude(double X)
+double Robot::getPosLatitude(double X)
 {
-	return positionEstimation->getPosLongitude(X);
+	return positionEstimation->getPosLatitude(X);
 }
 
-double Robot::getPosY(double latitude)
+double Robot::getPosY(double longitude)
 {
-	return positionEstimation->getPosY(latitude);
+	return positionEstimation->getPosY(longitude);
 }
 
-double Robot::getPosLatitude(double Y)
+double Robot::getPosLongitude(double Y)
 {
-	return positionEstimation->getPosLatitude(Y);
+	return positionEstimation->getPosLongitude(Y);
 }
 
 void Robot::fakeGPSStart(double lat, double lon)

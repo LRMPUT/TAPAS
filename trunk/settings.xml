@@ -5,6 +5,8 @@
 		computeEveryNth:			Recompute the globalPlan globalPlannerParams.changedPlanDelayTimeglobalPlannerParams.changedPlanDelayTimeafter Nth steps | Integer >0
 		debug:					1 - debug ON, 0 - debug OFF
 		subgoalThreshold:			next subgoal must be further than subgoalThreshold (in meters)
+		subgoalThreshold2:			next subgoal must be NOT further than subgoalThreshold2 (in meters)
+		subgoalAngularThreshold:			next subgoal after first found must be compatible with the previously computed direction (degree)
 		preciseToGoalMaxTime:			Maximum time for precise localization (in ms)
 		changedPlanWaitingTime:			Maximum time we wait for a plan to stabilize in case of rapid change (in ms)
 		changedPlanThreshold:			Minimal changed in overall plan distance to active some anti-drastic change plan (in meters)
@@ -34,7 +36,9 @@
 						processingFrequency="5" 
 						computeEveryNth="25" 
 						debug="1" 
-						subgoalThreshold="4" 
+						subgoalThreshold="2" 
+						subgoalThreshold2="6"
+						subgoalAngularThreshold="5"
 						preciseToGoalMaxTime="25000"
 						changedPlanWaitingTime="30000"
 						changedPlanThreshold="40"
