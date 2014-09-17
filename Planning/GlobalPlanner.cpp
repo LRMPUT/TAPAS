@@ -754,13 +754,12 @@ void GlobalPlanner::goDirectlyToTarget(double robotX, double robotY,
 		// stopLocalPlanner
 		localPlanner->stopLocalPlanner();
 
-		// Let's beep !!!:D
-		if (globalPlannerParams.sound == 1) {
-			int tmp = system("espeak -v en-us+1 -s 150 \"Target reached. I'm going home.\"");
-		}
-
 		// Going back home :)
 		if (planningStage == toStart) {
+			// Let's beep !!!:D
+			if (globalPlannerParams.sound == 1) {
+				int tmp = system("espeak -v en-us+1 -s 150 \"Target reached. I'm going home.\"");
+			}
 			goalX = 0.0;
 			goalY = 0.0;
 			updateGoal();
@@ -773,7 +772,7 @@ void GlobalPlanner::goDirectlyToTarget(double robotX, double robotY,
 				 printf("Global planner: robot finished it's job\n");
 			 }
 			 if (globalPlannerParams.sound == 1) {
-				 int tmp = system("espeak -v en-us+1 -s 150 \"Finished my job\"");
+				 int tmp = system("espeak -v en-us+1 -s 150 \"I'm home. I finished my job.\"");
 			 }
 		} else if (globalPlannerParams.debug == 1) {
 				printf("Global planner: Error in global planner state\n");
@@ -854,7 +853,7 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY,
 							<< " " << y << " : Dist = " << sqrt(x * x + y * y)
 							<< std::endl;
 				}
-
+				nodesToVisit.pop_front();
 			}
 			else {
 				if (foundSubgoal)
