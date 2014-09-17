@@ -24,7 +24,7 @@ LocalPlanner::LocalPlanner(Robot* irobot, GlobalPlanner* planer,
 	cout << "LocalPlanner()" << endl;
 
 	readSettings(settings);
-	numHistSectors = 360/localPlannerParams.histResolution;
+	numHistSectors = (float)360/localPlannerParams.histResolution + 0.5;
 
 	localPlannerThread = std::thread(&LocalPlanner::run, this);
 
@@ -187,14 +187,14 @@ void LocalPlanner::executeVFH() {
 			posLocalToGlobalMap);
 	if(!constraints.empty() && !posRobotMapCenter.empty() && !posLocalToGlobalMap.empty()){
 		vector<float> histSectors(numHistSectors, 0);
-		vector<int> freeSectors;
+		//vector<int> freeSectors;
 
 		//cout << "updateHistogram()" << endl;
 		updateHistogram(histSectors, posRobotMapCenter, constraints);
 		//cout << "smoothHistogram" << endl;
 		smoothHistogram(histSectors);
 		//cout << "findFreeSectors()" << endl;
-		findFreeSectors(histSectors, freeSectors);
+		//findFreeSectors(histSectors, freeSectors);
 
 
 		float goalDirGlobalMap = setGoalDirection(posLocalToGlobalMap);
@@ -203,7 +203,9 @@ void LocalPlanner::executeVFH() {
 
 		float bestDirLocalMap = 0;
 		/// optimal direction in the local map - nearest to the goal
-		bestDirLocalMap = findOptimSector(freeSectors, goalDirLocalMap);
+		bestDirLocalMap = findOptimSector(histSectors,
+										posRobotMapCenter,
+										goalDirLocalMap);
 
 		determineDriversCommand(posRobotMapCenter,
 								bestDirLocalMap);
@@ -346,7 +348,7 @@ void LocalPlanner::smoothHistogram(std::vector<float>& histSectors) {
 	histSectors = newHistSectors;
 }
 
-void LocalPlanner::findFreeSectors(std::vector<float>& histSectors,
+/*void LocalPlanner::findFreeSectors(std::vector<float>& histSectors,
 									std::vector<int>& freeSectors) {
 
 	freeSectors.clear();
@@ -365,12 +367,12 @@ void LocalPlanner::findFreeSectors(std::vector<float>& histSectors,
 			break;
 		}
 	}
-	/*cout << "Wolne sektory:" << endl;
-	for (int i = 0; i < freeSectors.size(); i++) {
-		cout << "Free to go: " << freeSectors.at(i) * localPlannerParams.histResolution << " "
-				<< (freeSectors.at(i) + 1) * localPlannerParams.histResolution << endl;
-	}*/
-}
+//	cout << "Wolne sektory:" << endl;
+//	for (int i = 0; i < freeSectors.size(); i++) {
+//		cout << "Free to go: " << freeSectors.at(i) * localPlannerParams.histResolution << " "
+//				<< (freeSectors.at(i) + 1) * localPlannerParams.histResolution << endl;
+//	}
+}*/
 
 /// return Goal Direction converted from Global Map to
 /// local MAP
@@ -396,43 +398,39 @@ float LocalPlanner::determineGoalInLocalMap(cv::Mat posLocalToGlobalMap,
 	return goalDirGlobalMap - globalYaw;
 }
 
-float LocalPlanner::findOptimSector(const std::vector<int>& freeSectors,
+float LocalPlanner::findOptimSector(const std::vector<float>& histSectors,
+									cv::Mat posRobotMapCenter,
 									float goalDirLocalMap) {
 
 
 //	cout << "calculateLocalDirection START" << endl;
 	// goal direction+offset/ sectors alpha
-	int goalSector = (goalDirLocalMap + 180) / localPlannerParams.histResolution;
-	if (goalSector == localPlannerParams.histResolution) {
-		goalSector = 0;
-	}
-//	cout << "Goal sector : " << goalSector << endl;
-	int foundSector = -1;
-	int selectedSector = 0;
 
-	if (freeSectors.size() == 0) {
-		std::cout << "No free sectors -- I'm stuck !!!!" << std::endl;
-	}
+	float robotDirLocalMap = rotMatToEulerYaw(posRobotMapCenter);
+	robotDirLocalMap = robotDirLocalMap * 180 / PI;
+
 	/// if goal sector is free sector
 //	cout << "Free sector size : " << freeSectors.size() << endl;
 	int bestSectorID = -1;
-	int bestSectorDistance = -1;
-	int numSectors = 360/localPlannerParams.histResolution;
-	for (int i = 0; i < freeSectors.size(); i++) {
+	int bestSectorScore = -1;
+	for (int i = 0; i < histSectors.size(); i++) {
 		//cout << "Free vs goal : " << freeSectors[i] << " " << goalSector
 		//		<< endl;
-		int isBackwards = (freeSectors[i] < numSectors/4 || freeSectors[i] > 3*numSectors/4) ? 1 : 0;
-		int distance = min(abs(freeSectors[i] - goalSector), abs(abs(freeSectors[i] - goalSector) - numSectors))
-				+ isBackwards*localPlannerParams.backwardsPenalty; // (freeSectors[i] - goalSector)*(freeSectors[i] - goalSector) + backwards
-		//cout << "Distance " << distance << endl;
-		if (bestSectorID == -1 || bestSectorDistance > distance) {
-			bestSectorDistance = distance;
-			bestSectorID = freeSectors[i];
+		float sectorDirLocalMap = (i + 0.5) * localPlannerParams.histResolution - 180;
+		float sectorToRobotDiff = min(fabs(sectorDirLocalMap - robotDirLocalMap), fabs(fabs(sectorDirLocalMap - robotDirLocalMap) - 360));
+
+		int score = min(fabs(goalDirLocalMap - sectorDirLocalMap), fabs(fabs(goalDirLocalMap - sectorDirLocalMap) - 360))/180;	//angular distance to goal penalty
+		score += (sectorToRobotDiff > 90) ? localPlannerParams.backwardsPenalty : 0.0f;
+		score += histSectors[i];
+
+		if (bestSectorID == -1 || bestSectorScore > score) {
+			bestSectorScore = score;
+			bestSectorID = i;
 		}
 	}
 
 	//middle of best sector
-	float bestDirection = bestSectorID * localPlannerParams.histResolution + localPlannerParams.histResolution/2 - 180;
+	float bestDirection = (bestSectorID + 0.5) * localPlannerParams.histResolution - 180;
 //	cout << "FoundSector: " << bestSectorID << endl;
 //	cout << "BestSector distance: " << bestSectorDistance << endl;
 //	cout << "calculateLocalDirection END" << endl;

@@ -90,14 +90,15 @@ private:
 
 	void smoothHistogram(std::vector<float>& histSectors);
 
-	void findFreeSectors(std::vector<float>& histSectors,
-						std::vector<int>& freeSectors);
+//	void findFreeSectors(std::vector<float>& histSectors,
+//						std::vector<int>& freeSectors);
 
 	float determineGoalInLocalMap(cv::Mat posLocalToGlobalMap,
 								float goalDirGlobalMap);
 
-	float findOptimSector(const std::vector<int>& freeSectors,
-						float goalDirLocalMap);
+	float findOptimSector(const std::vector<float>& histSectors,
+							cv::Mat posRobotMapCenter,
+							float goalDirLocalMap);
 
 	void determineDriversCommand(cv::Mat posRobotMapCenter,
 								float bestDirLocalMap);
