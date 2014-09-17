@@ -54,13 +54,16 @@ void IMU::openPort(std::string port){
 }
 
 void IMU::closePort(){
+	std::cout<<"IMU::closePort"<<std::endl;
 	if(imu != NULL || (imuNew != NULL)){
 		if ( usedIMUType == IMU_UM6)
 			delete imu;
 		else if ( usedIMUType == IMU_MICROSTRAIN_GX4_25)
 			delete imuNew;
 		imu = NULL;
+		imuNew = NULL;
 	}
+	std::cout<<"End IMU::closePort"<<std::endl;
 }
 
 bool IMU::isPortOpen(){

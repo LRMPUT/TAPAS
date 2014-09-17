@@ -43,10 +43,10 @@
 						changedPlanWaitingTime="30000"
 						changedPlanThreshold="40"
 						changedPlanDelayTime="300000"
-						sound="0"
+						sound="1"
 						runHomologation="0" 
 						mapFile="maltaMap.osm" 
-						latitude="52.406019" longitude="16.956263"/>
+						latitude="52.407100" longitude="16.956102"/>
 
 
 	<!--
@@ -71,10 +71,10 @@
 						VFH_SteeringMargin="10" 
 						VFH_Gauss3sig="50"
 						VFH_MaxDistance="3000"
-						VFH_BackwardsPenalty="5" 
+						VFH_BackwardsPenalty="1" 
 						VFH_NormalSpeed="60" 
 						VFH_PreciseSpeed="20" 
-						VFH_TurnSpeed="80"
+						VFH_TurnSpeed="90"
 						VFH_TurnTimeout="5000"
 						VFH_InterruptTime="1000"
 						VFH_InterruptSpeed="40"
@@ -204,7 +204,7 @@
 					<info desc_beg="0" desc_end="7" />
 				</Classifier>
 			</HierClassifier>
-			<learning enabled="true">
+			<learning enabled="false">
 				"../MovementConstraints/Camera/database/przejazd1"
 			</learning>
 			<labels>

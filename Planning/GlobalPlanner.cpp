@@ -153,6 +153,9 @@ void GlobalPlanner::readSettings(TiXmlElement* settings) {
 // Main processing thread
 void GlobalPlanner::globalPlannerProcessing() {
 
+	//localPlanner->setNormalSpeed();
+	//localPlanner->startLocalPlanner();
+
 	if ( globalPlannerParams.runHomologation == 1 )
 	{
 		usleep(200000); // TODO
