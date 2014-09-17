@@ -32,6 +32,13 @@
 		 // -> latitude="52.406838" longitude="16.956617"
 		 // -> latitude="52.406019" longitude="16.956263"
 		 // -> latitude="52.405588" longitude="16.955419"
+
+		 // MALTA - on the road
+		 // -> latitude="52.407537" longitude="16.956452" // Przy moscie
+		 // -> latitude="52.406512" longitude="16.955068" // Dalej od wody, na wysokosci kolka
+		 // -> latitude="52.406731" longitude="16.956404" // Kolo kolka
+		 // -> latitude="52.407065" longitude="16.955223" // Dalej od wodu, dalej niz kolko
+		 // -> latitude="52.406938" longitude="16.956827" // Przy wodzie, dalej niz kolko
 	-->
 	<GlobalPlanner 		runThread="1" 
 						processingFrequency="5" 
