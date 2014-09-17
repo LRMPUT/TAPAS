@@ -9,11 +9,13 @@
 #include<cmath>
 #include<chrono>
 
+
 // Global pointer to instance of IMUDriver
 IMU_driver* pointerToIMUDriver;
 
 void filter_packet_callback(void *user_ptr, u8 *packet, u16 packet_size,
 		u8 callback_type) {
+	//printf("filter_packet_callback\n");
 	mip_field_header *field_header;
 	u8 *field_data;
 	u16 field_offset = 0;
@@ -76,6 +78,7 @@ void filter_packet_callback(void *user_ptr, u8 *packet, u16 packet_size,
 
 void ahrs_packet_callback(void *user_ptr, u8 *packet, u16 packet_size,
 		u8 callback_type) {
+	//printf("ahrs_packet_callback\n");
 	mip_field_header *field_header;
 	u8 *field_data;
 	u16 field_offset = 0;

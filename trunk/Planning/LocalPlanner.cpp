@@ -412,16 +412,24 @@ float LocalPlanner::findOptimSector(const std::vector<float>& histSectors,
 	/// if goal sector is free sector
 //	cout << "Free sector size : " << freeSectors.size() << endl;
 	int bestSectorID = -1;
-	int bestSectorScore = -1;
+	float bestSectorScore = -1;
 	for (int i = 0; i < histSectors.size(); i++) {
 		//cout << "Free vs goal : " << freeSectors[i] << " " << goalSector
 		//		<< endl;
 		float sectorDirLocalMap = (i + 0.5) * localPlannerParams.histResolution - 180;
 		float sectorToRobotDiff = min(fabs(sectorDirLocalMap - robotDirLocalMap), fabs(fabs(sectorDirLocalMap - robotDirLocalMap) - 360));
 
-		int score = min(fabs(goalDirLocalMap - sectorDirLocalMap), fabs(fabs(goalDirLocalMap - sectorDirLocalMap) - 360))/180;	//angular distance to goal penalty
+		float score = min(fabs(goalDirLocalMap - sectorDirLocalMap), fabs(fabs(goalDirLocalMap - sectorDirLocalMap) - 360))/180;	//angular distance to goal penalty
 		score += (sectorToRobotDiff > 90) ? localPlannerParams.backwardsPenalty : 0.0f;
 		score += histSectors[i];
+
+		if(localPlannerParams.debug >= 2){
+			cout << "sector " << i << ", score angular = ";
+			cout <<	min(fabs(goalDirLocalMap - sectorDirLocalMap), fabs(fabs(goalDirLocalMap - sectorDirLocalMap) - 360))/180;
+			cout << ", score backwards = " << ((sectorToRobotDiff > 90) ? localPlannerParams.backwardsPenalty : 0.0f);
+			cout << ", score histogram = " << histSectors[i] << endl;
+			cout << "score = " << score << endl;
+		}
 
 		if (bestSectorID == -1 || bestSectorScore > score) {
 			bestSectorScore = score;
@@ -431,9 +439,10 @@ float LocalPlanner::findOptimSector(const std::vector<float>& histSectors,
 
 	//middle of best sector
 	float bestDirection = (bestSectorID + 0.5) * localPlannerParams.histResolution - 180;
-//	cout << "FoundSector: " << bestSectorID << endl;
-//	cout << "BestSector distance: " << bestSectorDistance << endl;
-//	cout << "calculateLocalDirection END" << endl;
+	if(localPlannerParams.debug >= 1){
+		cout << "FoundSector: " << bestSectorID << endl;
+		cout << "BestSector score: " << bestSectorScore << endl;
+	}
 	return bestDirection;
 }
 
@@ -498,7 +507,20 @@ void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 			turningLeftStarted = false;
 			turnInterrupted = false;
 		}
-		else if (bestDirLocalMap > localYaw)	{
+		else if ((bestDirLocalMap - localYaw > 0) && (bestDirLocalMap - localYaw < 20))	{
+			if (localPlannerParams.debug >= 1){
+				cout<<"Gently right"<<endl;
+			}
+
+			globalPlanner->setMotorsVel(localPlannerParams.turnSpeed, 20);
+			if(!turningRightStarted){
+				startTurnTime = std::chrono::high_resolution_clock::now();
+			}
+			turningRightStarted = true;
+			turningLeftStarted = false;
+			turnInterrupted = false;
+		}
+		else if (bestDirLocalMap - localYaw > 0)	{
 			if (localPlannerParams.debug >= 1){
 				cout<<"Right"<<endl;
 			}
@@ -509,6 +531,19 @@ void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 			}
 			turningRightStarted = true;
 			turningLeftStarted = false;
+			turnInterrupted = false;
+		}
+		else if ((bestDirLocalMap - localYaw < 0) && (bestDirLocalMap - localYaw > -20))	{
+			if (localPlannerParams.debug >= 1){
+				cout<<"Gently left"<<endl;
+			}
+
+			globalPlanner->setMotorsVel(20, localPlannerParams.turnSpeed);
+			if(!turningLeftStarted){
+				startTurnTime = std::chrono::high_resolution_clock::now();
+			}
+			turningRightStarted = false;
+			turningLeftStarted = true;
 			turnInterrupted = false;
 		}
 		else{

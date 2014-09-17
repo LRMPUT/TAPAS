@@ -249,7 +249,7 @@ void MovementConstraints::insertHokuyoConstraints(cv::Mat map,
 			int count = 0;
 			float sumVal = 0;
 			for(int p = 0; p < bins[x][y].size(); p++){
-				float val = bins[x][y][p].z - laserLowerThreshold;
+				float val = -bins[x][y][p].z - laserLowerThreshold;
 				val = min(max(val/(laserUpperThreshold - laserLowerThreshold), 0.0f), 1.0f);
 				if(val > 0){
 					count++;
@@ -546,7 +546,10 @@ void MovementConstraints::getLocalPlanningData(cv::Mat& retConstraintsMap,cv::Ma
 	std::unique_lock<std::mutex> lckMap(mtxMap);
 	std::unique_lock<std::mutex> lckPC(mtxPointCloud);
 	constraintsMap.copyTo(retConstraintsMap);
-	Mat retPosRobotMapCenter = curPosCloudMapCenter*imuOrigRobot;
+	Mat retPosRobotMapCenter;
+	if(!curPosCloudMapCenter.empty() && !imuOrigRobot.empty()){
+		retPosRobotMapCenter = curPosCloudMapCenter*imuOrigRobot;
+	}
 	posRobotMapCenter = retPosRobotMapCenter;
 	//curPosCloudMapCenter.copyTo(posImuMapCenter);
 	posMapCenterGlobal.copyTo(globalMapCenter);

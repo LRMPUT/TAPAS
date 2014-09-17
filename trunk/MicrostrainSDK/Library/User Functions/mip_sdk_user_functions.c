@@ -384,8 +384,10 @@ u16 mip_sdk_port_close(void *port_handle)
  int local_port_handle = *((int *)port_handle);
 
  if(port_handle == NULL)
-  return MIP_USER_FUNCTION_ERROR;
-
+ {
+	 printf("PORT_HANDLE IS NULL \n");
+	 return MIP_USER_FUNCTION_ERROR;
+ }
  //Close the serial port
  close(local_port_handle);
 
