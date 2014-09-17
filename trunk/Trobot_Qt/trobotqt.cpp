@@ -55,7 +55,7 @@ TrobotQt::TrobotQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
 	robot.openHokuyo("/dev/robots/hokuyo");
 	robot.openGps("/dev/robots/gps");
 	robot.openRobotsDrive("/dev/robots/driverLeft", "/dev/robots/driverRight");
-	robot.openCamera(vector<string>(1, "/dev/video0"));
+	//robot.openCamera(vector<string>(1, "/dev/video0"));
 
 	cout << "End TrobotQt::TrobotQt" << endl;
 }
