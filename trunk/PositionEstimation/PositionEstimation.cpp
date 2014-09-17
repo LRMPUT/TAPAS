@@ -24,7 +24,7 @@ PositionEstimation::PositionEstimation(Robot* irobot, TiXmlElement* settings) :
 
 	// Open Log file
 	logStream.open("positionEstimation.log");
-	logGpxStream.open("positionEstimation.log");
+	logGpxStream.open("positionEstimation.gpx");
 
 	/* KALMAN:
 	 * - we track 2 values -> global position
