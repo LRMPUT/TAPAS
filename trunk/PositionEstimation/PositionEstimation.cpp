@@ -189,9 +189,15 @@ void PositionEstimation::saveTrajectoryToFile() {
 	std::chrono::milliseconds currentTime = robot->getGlobalTime();
 	logStream << currentTime.count() << " " << state.at<double>(0) << " " << state.at<double>(1) << " " <<state.at<double>(2) << " " << state.at<double>(3) << std::endl;
 
-	logGpxStream << "<trkpt time=\"" << currentTime.count()<<"\" lat=\""
-			<< robot->getPosLatitude(state.at<double>(0) * 1000) << "\" lon=\""
-			<< robot->getPosLongitude(state.at<double>(1) * 1000) << "\"></trkpt>" << std::endl;
+
+	double x = robot->getPosLatitude(state.at<double>(0) * 1000);
+	double y = robot->getPosLongitude(state.at<double>(1) * 1000);
+	x = GPS::nmea2Decimal(x)/100;
+	y = GPS::nmea2Decimal(y)/100;
+
+	logGpxStream << std::fixed << std::setprecision(10) << "<trkpt time=\"" << currentTime.count()<<"\" lat=\""
+			<< x << "\" lon=\""
+			<< y << "\"></trkpt>" << std::endl;
 
 }
 

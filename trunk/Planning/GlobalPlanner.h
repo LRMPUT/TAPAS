@@ -71,7 +71,8 @@ public:
 		int sound;
 		int runHomologation;
 		std::string mapFile;
-		double latitude, longitude;
+		double goalLatitude, goalLongitude;
+		double startLatitude, startLongitude;
 	};
 
 	struct Edge{

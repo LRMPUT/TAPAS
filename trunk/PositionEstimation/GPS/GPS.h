@@ -13,6 +13,7 @@
 #include <boost/asio/serial_port.hpp>
 #include <chrono>
 #include <iostream>
+#include <mutex>
 
 #include "../../Trobot/include/SerialPort.h"
 
@@ -145,6 +146,8 @@ private:
 	boost::thread m_Thread;
 	nmeaINFO Info;
 	nmeaPARSER Parser;
+
+	std::mutex gpsDataMtx;
 };
 
 #endif /* GPS_H_ */
