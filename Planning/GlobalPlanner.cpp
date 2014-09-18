@@ -121,6 +121,16 @@ void GlobalPlanner::readSettings(TiXmlElement* settings) {
 		throw "Bad settings file - wrong value for globalPlanner goalLongitude";
 	}
 
+	if (pGlobalPlanner->QueryDoubleAttribute("startLatitude",
+			&globalPlannerParams.startLatitude) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner startLatitude";
+	}
+
+	if (pGlobalPlanner->QueryDoubleAttribute("startLongitude",
+			&globalPlannerParams.startLongitude) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner startLongitude";
+	}
+
 	printf("GlobalPlanner -- runThread: %d\n", globalPlannerParams.runThread);
 	printf("GlobalPlanner -- processing frequency: %f\n",
 			globalPlannerParams.processingFrequency);
@@ -150,7 +160,7 @@ void GlobalPlanner::readSettings(TiXmlElement* settings) {
 			globalPlannerParams.goalLongitude);
 	printf("GlobalPlanner -- start latitude: %f \n",
 			globalPlannerParams.startLatitude);
-	printf("GlobalPlanner -- goal longitude: %f \n",
+	printf("GlobalPlanner -- start longitude: %f \n",
 			globalPlannerParams.startLongitude);
 }
 

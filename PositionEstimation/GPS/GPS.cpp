@@ -243,15 +243,18 @@ void GPS::monitorSerialPort()
 		}
 		cout << endl;*/
 		if(cnt > 0){
+			std::unique_lock<std::mutex> gpsLck(gpsDataMtx);
 			int packetsRead = nmea_parse(&Parser, Buffer, cnt, &Info);
+			gpsLck.unlock();
+
 			//cout << "GPS parsed " << packetsRead << endl;
 			if(packetsRead > 0){
 				timestamp = std::chrono::high_resolution_clock::now();
 
-				std::unique_lock<std::mutex> gpsLck(gpsDataMtx);
+
 				PosLat = nmea_ndeg2degree(Info.lat);
 				PosLon = nmea_ndeg2degree(Info.lon);
-				gpsLck.unlock();
+
 
 				newMeasurement = true;
 				dataValid = true;
