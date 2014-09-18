@@ -49,6 +49,8 @@ public:
 		float backwardsPenalty;
 		float normalSpeed;
 		float preciseSpeed;
+		float gentleTurnMargin;
+		float gentleTurnDiff;
 		float turnSpeed;
 		int turnTimeout;
 		int interruptTime;

@@ -157,85 +157,92 @@ void GlobalPlanner::readSettings(TiXmlElement* settings) {
 // Main processing thread
 void GlobalPlanner::globalPlannerProcessing() {
 
-	//localPlanner->setNormalSpeed();
-	//localPlanner->startLocalPlanner();
-
-	if ( globalPlannerParams.runHomologation == 1 )
-	{
-		usleep(200000); // TODO
-		while(!robot->isImuDataValid())
-			usleep(200000);
-
-		localPlanner->startLocalPlanner();
-		while (globalPlannerParams.runThread)
+	try{
+		if ( globalPlannerParams.runHomologation == 1 )
 		{
+			usleep(200000); // TODO
+			while(!robot->isImuDataValid())
+				usleep(200000);
+
+			localPlanner->startLocalPlanner();
+
 			std::chrono::high_resolution_clock::time_point timestamp;
 			//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
 			cv::Mat imu = robot->getImuData(timestamp);
 			setGoalDirectionInDegrees(imu.at<float>(2,3));
-			usleep(200000);
-		}
-	} else {
-		while ((!robot->isGpsOpen() || robot->isSetZero() == false
-				|| robot->gpsGetFixStatus() == 1)
-				&& globalPlannerParams.runThread) {
-			usleep(200);
-		}
-		while (!robot->isGpsDataValid() && globalPlannerParams.runThread) {
-			usleep(200);
-		}
-		if (globalPlannerParams.debug == 1)
-			std::cout << "Global Planner : We have fix and zero position"
-					<< std::endl;
 
-		if (globalPlannerParams.runThread) {
-			// Read the map of the tournament
-			readOpenStreetMap(globalPlannerParams.mapFile);
-
-			// Set the goal in the map
-			setLoadedGoal();
-		}
-		localPlanner->setNormalSpeed();
-		localPlanner->startLocalPlanner();
-		int loopTimeCounter = 0;
-		bool recomputePlan = false;
-		int startType = 0;
-		while (globalPlannerParams.runThread) {
-			std::cout << std::endl << "Global Planner : New iteration"
-					<< std::endl << std::endl;
-
-			// Where are we ?
-			double robotX, robotY, theta;
-			updateRobotPosition(robotX, robotY, theta);
-
-			// Where are we in the map
-			findStartingEdge(robotX, robotY, startType);
-
-			// We compute new global plan
-			if (globalPlannerParams.computeEveryNth == 1 || recomputePlan
-					|| loopTimeCounter % globalPlannerParams.computeEveryNth
-							== 0) {
-				loopTimeCounter = loopTimeCounter
-						% globalPlannerParams.computeEveryNth;
-				// Compute the route to follow
-				computeGlobalPlan(robotX, robotY, startType);
-				// We recomputed the plan
-				recomputePlan = false;
-
+			while (globalPlannerParams.runThread)
+			{
+				usleep(200000);
 			}
+		} else {
+			while ((!robot->isGpsOpen() || robot->isSetZero() == false
+					|| robot->gpsGetFixStatus() == 1)
+					&& globalPlannerParams.runThread) {
+				usleep(200);
+			}
+			while (!robot->isGpsDataValid() && globalPlannerParams.runThread) {
+				usleep(200);
+			}
+			if (globalPlannerParams.debug == 1)
+				std::cout << "Global Planner : We have fix and zero position"
+						<< std::endl;
 
-			// Let's compute the next target
-			chooseNextSubGoal(robotX, robotY, recomputePlan);
+			if (globalPlannerParams.runThread) {
+				// Read the map of the tournament
+				readOpenStreetMap(globalPlannerParams.mapFile);
 
-			// Let's update out subgoal as current destination
-			//			updateHeadingGoal();
+				// Set the goal in the map
+				setLoadedGoal();
+			}
+			localPlanner->setNormalSpeed();
+			localPlanner->startLocalPlanner();
+			int loopTimeCounter = 0;
+			bool recomputePlan = false;
+			int startType = 0;
+			while (globalPlannerParams.runThread) {
+				std::cout << std::endl << "Global Planner : New iteration"
+						<< std::endl << std::endl;
 
-			std::chrono::milliseconds duration(
-					int(1000.0 / globalPlannerParams.processingFrequency));
-			std::this_thread::sleep_for(duration);
-			loopTimeCounter++;
+				// Where are we ?
+				double robotX, robotY, theta;
+				updateRobotPosition(robotX, robotY, theta);
+
+				// Where are we in the map
+				findStartingEdge(robotX, robotY, startType);
+
+				// We compute new global plan
+				if (globalPlannerParams.computeEveryNth == 1 || recomputePlan
+						|| loopTimeCounter % globalPlannerParams.computeEveryNth
+								== 0) {
+					loopTimeCounter = loopTimeCounter
+							% globalPlannerParams.computeEveryNth;
+					// Compute the route to follow
+					computeGlobalPlan(robotX, robotY, startType);
+					// We recomputed the plan
+					recomputePlan = false;
+
+				}
+
+				// Let's compute the next target
+				chooseNextSubGoal(robotX, robotY, recomputePlan);
+
+				// Let's update out subgoal as current destination
+				//			updateHeadingGoal();
+
+				std::chrono::milliseconds duration(
+						int(1000.0 / globalPlannerParams.processingFrequency));
+				std::this_thread::sleep_for(duration);
+				loopTimeCounter++;
+			}
+			localPlanner->stopLocalPlanner();
 		}
-		localPlanner->stopLocalPlanner();
+	}
+	catch(char const* error){
+		cout << error << endl;
+	}
+	catch(...){
+		cout << "GlobalPlanner unrecognized exception" << endl;
 	}
 }
 

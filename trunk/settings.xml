@@ -92,7 +92,9 @@
 						VFH_MaxDistance="3000"
 						VFH_BackwardsPenalty="1" 
 						VFH_NormalSpeed="60" 
-						VFH_PreciseSpeed="20" 
+						VFH_PreciseSpeed="20"
+						VFH_GentleTurnMargin="20"
+						VFH_GentleTurnSpeedDiff="70"
 						VFH_TurnSpeed="90"
 						VFH_TurnTimeout="5000"
 						VFH_InterruptTime="1000"
@@ -125,7 +127,7 @@
 	<!--
 		Jan Wietrzykowski is lazy and does not use the comments ;d
 	-->
-	<MovementConstraints runThread="true">
+	<MovementConstraints runThread="true" debug="1">
 		<odometry diam="160" base="452" encodersCPR="300" />
 		<point_cloud minDist="100" maxTimePoint="4000" maxTimeMap="4000" />
 		<laser_constraints lowerThreshold="50" upperThreshold="80" minPts="5" />
@@ -223,8 +225,10 @@
 					<info desc_beg="0" desc_end="7" />
 				</Classifier>
 			</HierClassifier>
-			<learning enabled="false">
-				"../MovementConstraints/Camera/database/przejazd1"
+			<learning enabled="true">
+				"../MovementConstraints/Camera/database/przejazd3"
+				
+				"../MovementConstraints/Camera/database/przejazd4"
 			</learning>
 			<labels>
 				<label text="grass" id="0"/>

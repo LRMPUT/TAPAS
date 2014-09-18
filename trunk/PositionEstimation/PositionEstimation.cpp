@@ -115,65 +115,73 @@ void PositionEstimation::readSettings(TiXmlElement* settings) {
 }
 
 void PositionEstimation::run() {
-	while (!gps.isOpen() && parameters.runThread)
-		usleep(200);
-	while ((gps.getFixStatus() == 1 || (fabs(gps.getLat()) < 0.00001)
-			|| (fabs(gps.getLon()) < 0.000001)) && parameters.runThread)
-	{
-		usleep(200);
-	};
+	try{
+		while (!gps.isOpen() && parameters.runThread)
+			usleep(200);
+		while ((gps.getFixStatus() == 1 || (fabs(gps.getLat()) < 0.00001)
+				|| (fabs(gps.getLon()) < 0.000001)) && parameters.runThread)
+		{
+			usleep(200);
+		};
 
-	while(!gps.isDataValid() && parameters.runThread)
-	{
-		usleep(200);
-	}
-
-	if (parameters.runThread) {
-		gps.setZeroXY(gps.getLat(), gps.getLon());
-
-		logStream<<"Log of position estimation: timestamp (in ms), X[m], Y[m], v[m/s], theta[rad]" << std::endl;
-
-		logGpxStream << "<gpx version=\"1.0\">" << std::endl;
-		logGpxStream << "<wpt lat=\"" << robot->getPosLatitude(0.0)
-				<< "\" lon=\"" << robot->getPosLongitude(0.0)
-				<< "\"><name>Start</name></wpt>" << std::endl;
-		logGpxStream << "<trk><trkseg>" << std::endl;
-
-	}
-
-
-
-
-	struct timeval start, end;
-	while (parameters.runThread) {
-		gettimeofday(&start, NULL);
-
-		// Perform EKF
-		KalmanLoop();
-
-		// Save trajectory to file
-		saveTrajectoryToFile();
-
-
-		// Thread sleep, so that the position is not updated too often
-		// Right now 1 ms as Robot Drive has it's own sleep
-		std::chrono::milliseconds duration(int(1000.0/parameters.processingFrequency));
-		std::this_thread::sleep_for(duration);
-
-		gettimeofday(&end, NULL);
-
-		long seconds = end.tv_sec - start.tv_sec;
-		long useconds = end.tv_usec - start.tv_usec;
-		long mtime = ((seconds) * 1000 + useconds / 1000.0) + 0.5;
-
-		if (mtime == 0)
-			mtime = 1;
-		if (parameters.debug == 1) {
-			printf("PE: X:%5.5f \tY:%5.5f \tS:%5.5f \tA:%5.5f\n",
-					state.at<double>(0), state.at<double>(1),
-					state.at<double>(2), state.at<double>(3));
+		while(!gps.isDataValid() && parameters.runThread)
+		{
+			usleep(200);
 		}
-		//cout << "PE:: framerate: " << 1000.0 / mtime << endl;
+
+		if (parameters.runThread) {
+			gps.setZeroXY(gps.getLat(), gps.getLon());
+
+			logStream<<"Log of position estimation: timestamp (in ms), X[m], Y[m], v[m/s], theta[rad]" << std::endl;
+
+			logGpxStream << "<gpx version=\"1.0\">" << std::endl;
+			logGpxStream << "<wpt lat=\"" << robot->getPosLatitude(0.0)
+					<< "\" lon=\"" << robot->getPosLongitude(0.0)
+					<< "\"><name>Start</name></wpt>" << std::endl;
+			logGpxStream << "<trk><trkseg>" << std::endl;
+
+		}
+
+
+
+
+		struct timeval start, end;
+		while (parameters.runThread) {
+			gettimeofday(&start, NULL);
+
+			// Perform EKF
+			KalmanLoop();
+
+			// Save trajectory to file
+			saveTrajectoryToFile();
+
+
+			// Thread sleep, so that the position is not updated too often
+			// Right now 1 ms as Robot Drive has it's own sleep
+			std::chrono::milliseconds duration(int(1000.0/parameters.processingFrequency));
+			std::this_thread::sleep_for(duration);
+
+			gettimeofday(&end, NULL);
+
+			long seconds = end.tv_sec - start.tv_sec;
+			long useconds = end.tv_usec - start.tv_usec;
+			long mtime = ((seconds) * 1000 + useconds / 1000.0) + 0.5;
+
+			if (mtime == 0)
+				mtime = 1;
+			if (parameters.debug == 1) {
+				printf("PE: X:%5.5f \tY:%5.5f \tS:%5.5f \tA:%5.5f\n",
+						state.at<double>(0), state.at<double>(1),
+						state.at<double>(2), state.at<double>(3));
+			}
+			//cout << "PE:: framerate: " << 1000.0 / mtime << endl;
+		}
+	}
+	catch(char const* error){
+		cout << error << endl;
+	}
+	catch(...){
+		cout << "PositionEstimation unrecognized exception" << endl;
 	}
 }
 

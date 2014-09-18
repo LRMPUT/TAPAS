@@ -56,7 +56,11 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 	if(!settings){
 		throw "Bad settings file - entry Camera not found";
 	}
+
 	readSettings(settings);
+
+	cameras.resize(numCameras);
+	classifiedImage.resize(numCameras);
 
 #ifndef NO_CUDA
 	int devCount;
@@ -80,6 +84,10 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 }
 
 Camera::~Camera(){
+	runThread = false;
+	if(cameraThread.joinable()){
+		cameraThread.join();
+	}
 	close();
 	for(int i = 0; i < hierClassifiers.size(); i++){
 		delete hierClassifiers[i];
@@ -91,18 +99,20 @@ void Camera::computeConstraints(std::chrono::high_resolution_clock::time_point n
 
 	Mat votes(MAP_SIZE, MAP_SIZE, CV_32SC1, Scalar(0));
 	Mat countVotes(MAP_SIZE, MAP_SIZE, CV_32SC1, Scalar(0));
-	for(int cam = 0; cam < numCameras; cam++){
-		for(int r = 0; r < numRows; r++){
-			for(int c = 0; c < numCols; c++){
-				//cout << mapSegments[cam].at<int>(r, c) << endl;
-				int x = mapSegments[cam].at<int>(r, c) / MAP_SIZE;
-				int y = mapSegments[cam].at<int>(r, c) % MAP_SIZE;
-				if(x >= 0 && x < MAP_SIZE && y >= 0 && y < MAP_SIZE){
-					//cout << "(" << x << ", " << y << "), label " << classifiedImage[cam].at<int>(r, c) << endl;
-					if(classifiedImage[cam].at<int>(r, c) >= 0){
-						countVotes.at<int>(x, y)++;
-						if(classifiedImage[cam].at<int>(r, c) != DRIVABLE_LABEL){
-							votes.at<int>(x, y)++;
+	for(int cam = 0; cam < mapSegments.size(); cam++){
+		if(!mapSegments[cam].empty() && !classifiedImage[cam].empty()){
+			for(int r = 0; r < numRows; r++){
+				for(int c = 0; c < numCols; c++){
+					//cout << mapSegments[cam].at<int>(r, c) << endl;
+					int x = mapSegments[cam].at<int>(r, c) / MAP_SIZE;
+					int y = mapSegments[cam].at<int>(r, c) % MAP_SIZE;
+					if(x >= 0 && x < MAP_SIZE && y >= 0 && y < MAP_SIZE){
+						//cout << "(" << x << ", " << y << "), label " << classifiedImage[cam].at<int>(r, c) << endl;
+						if(classifiedImage[cam].at<int>(r, c) >= 0){
+							countVotes.at<int>(x, y)++;
+							if(classifiedImage[cam].at<int>(r, c) != DRIVABLE_LABEL){
+								votes.at<int>(x, y)++;
+							}
 						}
 					}
 				}
@@ -699,7 +709,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			}
 		}
 		imshow("test", image);
-		waitKey();
+		waitKey(100);
 
 		TiXmlDocument data(	dir.string() +
 							string("/") +
@@ -910,6 +920,7 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 		cout << "label " << it->first << ", weight = " << it->second << endl;
 	}
 
+	cout << "crossValidate = " << crossValidate << endl;
 	if(crossValidate){
 		hierClassifiers.front()->crossValidateSVMs(dataset);
 	}
@@ -1256,84 +1267,92 @@ void Camera::GenerateColorHistHSVGpu(
 //Run as separate thread
 void Camera::run(){
 
-	classifiedImage.resize(numCameras);
-
-	while(runThread){
-		if(debugLevel >= 1){
-			cout << "Camera run" << endl;
-		}
-		std::chrono::high_resolution_clock::time_point timeBegin;
-		std::chrono::high_resolution_clock::time_point timeEndMapSegments;
-		std::chrono::high_resolution_clock::time_point timeEndClassification;
-		std::chrono::high_resolution_clock::time_point timeEndConstraints;
-		Mat curPosImuMapCenter;
-		std::chrono::high_resolution_clock::time_point nextCurTimestamp = std::chrono::high_resolution_clock::now();
-		Mat pointCloudImu = movementConstraints->getPointCloud(curPosImuMapCenter);
-		if(!curPosImuMapCenter.empty()){
-			timeBegin = std::chrono::high_resolution_clock::now();
-			vector<Mat> cameraData = this->getData();
+	try{
+		while(runThread){
 			if(debugLevel >= 1){
-				cout << "Computing map segments" << endl;
+				cout << "Camera run" << endl;
 			}
-#ifdef NO_CUDA
-			mapSegments = computeMapSegments(curPosImuMapCenter);
-#else
-			mapSegments = computeMapSegmentsGpu(curPosImuMapCenter);
-#endif
-			timeEndMapSegments = std::chrono::high_resolution_clock::now();
-			for(int c = 0; c < numCameras; c++){
-				if(!cameraData[c].empty()){
-					Mat pointCloudCamera;
-					if(!pointCloudImu.empty()){
-						Mat pointCloudCamera(pointCloudImu.rows, pointCloudImu.cols, CV_32FC1);
-						pointCloudImu.rowRange(4, 6).copyTo(pointCloudCamera.rowRange(4, 6));
-						Mat tmpPointCoords = cameraOrigImu[c] * pointCloudImu.rowRange(0, 4);
-						tmpPointCoords.copyTo(pointCloudCamera.rowRange(0, 4));
-					}
-					if(debugLevel >= 1){
-						cout << "Classification" << endl;
-					}
-					vector<Mat> classRes = hierClassifiers[c]->classify(cameraData[c],
-																		pointCloudCamera,
-																		mapSegments[c],
-																		maskIgnore[c],
-																		entryWeightThreshold);
-					timeEndClassification = std::chrono::high_resolution_clock::now();
-					//cout << "End classification" << endl;
-					Mat bestLabels(numRows, numCols, CV_32SC1, Scalar(-1));
-					Mat bestScore(numRows, numCols, CV_32FC1, Scalar(-1));
-					for(int l = 0; l < labels.size(); l++){
-						Mat cmp;
-						//cout << "classRes[l].size() = " << classRes[l].size() << endl;
-						//cout << "bestScore.rows = " << bestScore.rows << endl;
-						compare(bestScore, classRes[l], cmp, CMP_LE);
-						//cout << "bestLabels.size() = " << bestLabels.size() << endl;
-						bestLabels.setTo(l, cmp);
-						//cout << "max" << endl;
-						bestScore = max(bestScore, classRes[l]);
-					}
-					classifiedImage[c] = bestLabels;
-					//classifiedImage[c] = Mat(numRows, numCols, CV_32SC1, Scalar(0));
-					if(debugLevel >= 1){
-						cout << "Copying classified image" << endl;
-					}
-					std::unique_lock<std::mutex> lck(mtxClassIm);
-					classifiedImage[c].copyTo(sharedClassifiedImage);
-					cameraData[c].copyTo(sharedOriginalImage);
-					lck.unlock();
+			std::chrono::high_resolution_clock::time_point timeBegin;
+			std::chrono::high_resolution_clock::time_point timeEndMapSegments;
+			std::chrono::high_resolution_clock::time_point timeEndClassification;
+			std::chrono::high_resolution_clock::time_point timeEndConstraints;
+			Mat curPosImuMapCenter;
+			std::chrono::high_resolution_clock::time_point nextCurTimestamp = std::chrono::high_resolution_clock::now();
+			Mat pointCloudImu = movementConstraints->getPointCloud(curPosImuMapCenter);
+			if(!curPosImuMapCenter.empty()){
+				timeBegin = std::chrono::high_resolution_clock::now();
+				vector<Mat> cameraData = this->getData();
+				if(debugLevel >= 1){
+					cout << "Computing map segments" << endl;
 				}
+	#ifdef NO_CUDA
+				mapSegments = computeMapSegments(curPosImuMapCenter);
+	#else
+				mapSegments = computeMapSegmentsGpu(curPosImuMapCenter);
+	#endif
+				timeEndMapSegments = std::chrono::high_resolution_clock::now();
+				for(int c = 0; c < numCameras; c++){
+					if(cameras[c].isOpened()){
+						if(!cameraData[c].empty()){
+							Mat pointCloudCamera;
+							if(!pointCloudImu.empty()){
+								Mat pointCloudCamera(pointCloudImu.rows, pointCloudImu.cols, CV_32FC1);
+								pointCloudImu.rowRange(4, 6).copyTo(pointCloudCamera.rowRange(4, 6));
+								Mat tmpPointCoords = cameraOrigImu[c] * pointCloudImu.rowRange(0, 4);
+								tmpPointCoords.copyTo(pointCloudCamera.rowRange(0, 4));
+							}
+							if(debugLevel >= 1){
+								cout << "Classification" << endl;
+							}
+							vector<Mat> classRes = hierClassifiers[c]->classify(cameraData[c],
+																				pointCloudCamera,
+																				mapSegments[c],
+																				maskIgnore[c],
+																				entryWeightThreshold);
+							timeEndClassification = std::chrono::high_resolution_clock::now();
+							//cout << "End classification" << endl;
+							Mat bestLabels(numRows, numCols, CV_32SC1, Scalar(-1));
+							Mat bestScore(numRows, numCols, CV_32FC1, Scalar(-1));
+							for(int l = 0; l < labels.size(); l++){
+								Mat cmp;
+								//cout << "classRes[l].size() = " << classRes[l].size() << endl;
+								//cout << "bestScore.rows = " << bestScore.rows << endl;
+								compare(bestScore, classRes[l], cmp, CMP_LE);
+								//cout << "bestLabels.size() = " << bestLabels.size() << endl;
+								bestLabels.setTo(l, cmp);
+								//cout << "max" << endl;
+								bestScore = max(bestScore, classRes[l]);
+							}
+							classifiedImage[c] = bestLabels;
+							//classifiedImage[c] = Mat(numRows, numCols, CV_32SC1, Scalar(0));
+							if(debugLevel >= 1){
+								cout << "Copying classified image" << endl;
+							}
+							std::unique_lock<std::mutex> lck(mtxClassIm);
+							classifiedImage[c].copyTo(sharedClassifiedImage);
+							cameraData[c].copyTo(sharedOriginalImage);
+							lck.unlock();
+						}
+					}
+				}
+				computeConstraints(nextCurTimestamp);
+				timeEndConstraints = std::chrono::high_resolution_clock::now();
 			}
-			computeConstraints(nextCurTimestamp);
-			timeEndConstraints = std::chrono::high_resolution_clock::now();
-		}
-		if(debugLevel >= 1){
-			cout << "Map segments time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndMapSegments - timeBegin).count() << " ms" << endl;
-			cout << "Classification time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndClassification - timeEndMapSegments).count() << " ms" << endl;
-			cout << "Constraints time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndConstraints - timeEndClassification).count() << " ms" << endl;
-		}
+			if(debugLevel >= 1){
+				cout << "Map segments time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndMapSegments - timeBegin).count() << " ms" << endl;
+				cout << "Classification time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndClassification - timeEndMapSegments).count() << " ms" << endl;
+				cout << "Constraints time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndConstraints - timeEndClassification).count() << " ms" << endl;
+			}
 
-		std::chrono::milliseconds duration(200);
-		std::this_thread::sleep_for(duration);
+			std::chrono::milliseconds duration(100);
+			std::this_thread::sleep_for(duration);
+		}
+	}
+	catch(char const* error){
+		cout << error << endl;
+	}
+	catch(...){
+		cout << "Camera unrecognized exception" << endl;
 	}
 }
 
@@ -1633,24 +1652,17 @@ cv::Mat Camera::getClassifiedImage(){
 }
 
 void Camera::open(std::vector<std::string> device){
-	cameras.resize(device.size());
-	for(int i = 0; i < device.size(); i++){
+	for(int i = 0; i < min((int)device.size(), numCameras); i++){
 		cout << "Opening device: " << device[i] << endl;
 		cameras[i].open(0);
 		if(!cameras[i].isOpened()){
 			throw "Cannot open camera device";
 		}
 	}
-	runThread = true;
-	cameraThread = std::thread(&Camera::run, this);
 }
 
 void Camera::close(){
 	cout << "Closing cameras" << endl;
-	runThread = false;
-	if(cameraThread.joinable()){
-		cameraThread.join();
-	}
 	for(int i = 0; i < cameras.size(); i++){
 		cameras[i].release();
 	}
