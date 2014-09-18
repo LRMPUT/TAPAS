@@ -1158,7 +1158,7 @@ void HierClassifier::crossValidateSVMs(const std::vector<Entry>& entries)
 {
 	clearData();
 	prepareData(entries);
-	for(int c = 1; c < weakClassifiersSet.size(); c++){
+	for(int c = 0; c < weakClassifiersSet.size(); c++){
 		if(weakClassifiersSet[c]->type() == Classifier::SVM){
 			cout << "Cross validating classifier " << c << endl;
 			weakClassifiersSet[c]->crossValidate(dataClassifiers[c]);

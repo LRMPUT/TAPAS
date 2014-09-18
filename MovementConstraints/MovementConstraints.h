@@ -105,6 +105,8 @@ private:
 
 	bool runThread;
 
+	int debugLevel;
+
 	PointCloudSettings pointCloudSettings;
 
 	// Main loop of MovementContraints thread.

@@ -88,6 +88,14 @@ void LocalPlanner::readSettings(TiXmlElement* settings) {
 			&localPlannerParams.preciseSpeed) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for VFH_PreciseSpeed";
 	}
+	if (pLocalPlanner->QueryFloatAttribute("VFH_GentleTurnMargin",
+			&localPlannerParams.gentleTurnMargin) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for VFH_GentleTurnMargin";
+	}
+	if (pLocalPlanner->QueryFloatAttribute("VFH_GentleTurnDiff",
+			&localPlannerParams.gentleTurnDiff) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for VFH_GentleTurnDiff";
+	}
 	if (pLocalPlanner->QueryFloatAttribute("VFH_TurnSpeed",
 			&localPlannerParams.turnSpeed) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for VFH_TurnSpeed";
@@ -162,17 +170,25 @@ void LocalPlanner::setNormalSpeed() {
 
 
 void LocalPlanner::run() {
-	while (localPlannerParams.runThread) {
-		if (startOperate) {
-			executeVFH();
+	try{
+		while (localPlannerParams.runThread) {
+			if (startOperate) {
+				executeVFH();
+			}
+			else{
+				globalPlanner->setMotorsVel(0, 0);
+			}
+			std::chrono::milliseconds duration(50);
+			std::this_thread::sleep_for(duration);
 		}
-		else{
-			globalPlanner->setMotorsVel(0, 0);
-		}
-		std::chrono::milliseconds duration(50);
-		std::this_thread::sleep_for(duration);
+		globalPlanner->setMotorsVel(0, 0);
 	}
-	globalPlanner->setMotorsVel(0, 0);
+	catch(char const* error){
+		cout << error << endl;
+	}
+	catch(...){
+		cout << "LocalPlanner unrecognized exception" << endl;
+	}
 }
 
 void LocalPlanner::executeVFH() {
@@ -507,12 +523,12 @@ void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 			turningLeftStarted = false;
 			turnInterrupted = false;
 		}
-		else if ((bestDirLocalMap - localYaw > 0) && (bestDirLocalMap - localYaw < 20))	{
+		else if ((bestDirLocalMap - localYaw > 0) && (bestDirLocalMap - localYaw < localPlannerParams.gentleTurnMargin))	{
 			if (localPlannerParams.debug >= 1){
 				cout<<"Gently right"<<endl;
 			}
 
-			globalPlanner->setMotorsVel(localPlannerParams.turnSpeed, 20);
+			globalPlanner->setMotorsVel(localPlannerParams.turnSpeed, localPlannerParams.turnSpeed - localPlannerParams.gentleTurnDiff);
 			if(!turningRightStarted){
 				startTurnTime = std::chrono::high_resolution_clock::now();
 			}
@@ -533,12 +549,12 @@ void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 			turningLeftStarted = false;
 			turnInterrupted = false;
 		}
-		else if ((bestDirLocalMap - localYaw < 0) && (bestDirLocalMap - localYaw > -20))	{
+		else if ((bestDirLocalMap - localYaw < 0) && (bestDirLocalMap - localYaw > -localPlannerParams.gentleTurnMargin))	{
 			if (localPlannerParams.debug >= 1){
 				cout<<"Gently left"<<endl;
 			}
 
-			globalPlanner->setMotorsVel(20, localPlannerParams.turnSpeed);
+			globalPlanner->setMotorsVel(localPlannerParams.turnSpeed - localPlannerParams.gentleTurnDiff, localPlannerParams.turnSpeed);
 			if(!turningLeftStarted){
 				startTurnTime = std::chrono::high_resolution_clock::now();
 			}
@@ -561,7 +577,7 @@ void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 		}
 	}
 	else{
-		if (fabs(bestDirLocalMap - localYaw) < localPlannerParams.steeringMargin)
+		if (fabs(bestDirLocalMap - localYaw) < localPlannerParams.gentleTurnMargin)
 		{
 			if (localPlannerParams.debug >= 1){
 				cout<<"Straight"<<endl;
@@ -587,7 +603,7 @@ float LocalPlanner::determineCurSpeed(){
 	std::unique_lock<std::mutex> lck(mtxCurSpeed);
 	static const float accVarianceLimit = 0.1;
 	float curSpeed = prevCurSpeed;
-	if(curImuAccVariance < localPlannerParams.imuAccVarianceLimit/2){
+	if(curImuAccVariance < localPlannerParams.imuAccVarianceLimit){
 		curSpeed = min(curSpeed + 0.5f, curSpeedMax);
 		if (localPlannerParams.debug >= 1){
 			cout<<"Speeding up"<<endl;

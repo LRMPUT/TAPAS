@@ -42,6 +42,9 @@ void MovementConstraints::readSettings(TiXmlElement* settings){
 	if(settings->QueryBoolAttribute("runThread", &runThread) != TIXML_SUCCESS){
 		throw "Bad settings file - no runThread setting for MovementConstraints";
 	}
+	if(settings->QueryIntAttribute("debug", &debugLevel) != TIXML_SUCCESS){
+		throw "Bad settings file - no debug setting for MovementConstraints";
+	}
 
 	TiXmlElement* pOdom = settings->FirstChildElement("odometry");
 	if(!pOdom){
@@ -117,38 +120,46 @@ cv::Mat MovementConstraints::readMatrixSettings(TiXmlElement* parent, const char
 
 // Main loop of MovementContraints thread.
 void MovementConstraints::run(){
-#ifndef ROBOT_OFFLINE
-	while(runThread){
-		if(robot->isEncodersOpen() && robot->isImuOpen()){
+	try{
+	#ifndef ROBOT_OFFLINE
+		while(runThread){
+			if(robot->isEncodersOpen() && robot->isImuOpen()){
+				//cout << "robot->isEncodersOpen() = " << robot->isEncodersOpen() << ", robot->isImuOpen() = " << robot->isImuOpen() << endl;
+				break;
+			}
 			//cout << "robot->isEncodersOpen() = " << robot->isEncodersOpen() << ", robot->isImuOpen() = " << robot->isImuOpen() << endl;
-			break;
+			std::chrono::milliseconds duration(100);
+			std::this_thread::sleep_for(duration);
 		}
-		//cout << "robot->isEncodersOpen() = " << robot->isEncodersOpen() << ", robot->isImuOpen() = " << robot->isImuOpen() << endl;
-		std::chrono::milliseconds duration(100);
-		std::this_thread::sleep_for(duration);
-	}
-	while(runThread && !robot->isImuDataValid()){
-		//cout << "Waiting for isImuDataValid()" << endl;
-		std::chrono::milliseconds duration(100);
-		std::this_thread::sleep_for(duration);
-	}
-#endif
-
-	int i = 0;
-	while (runThread) {
-		//cout << "Processing points cloud" << endl;
-		//cout << "robot->isEncodersOpen() = " << robot->isEncodersOpen() << ", robot->isImuOpen() = " << robot->isImuOpen() << endl;
-		//updateConstraintsMap(0, 0, 0);
-		updatePointCloud();
-
-		if(i >= 25){
-			updateConstraintsMap();
-			i = 0;
+		while(runThread && !robot->isImuDataValid()){
+			//cout << "Waiting for isImuDataValid()" << endl;
+			std::chrono::milliseconds duration(100);
+			std::this_thread::sleep_for(duration);
 		}
-		//20 ms sleep
-		std::chrono::milliseconds duration(20);
-		std::this_thread::sleep_for(duration);
-		i++;
+	#endif
+
+		int i = 0;
+		while (runThread) {
+			//cout << "Processing points cloud" << endl;
+			//cout << "robot->isEncodersOpen() = " << robot->isEncodersOpen() << ", robot->isImuOpen() = " << robot->isImuOpen() << endl;
+			//updateConstraintsMap(0, 0, 0);
+			updatePointCloud();
+
+			if(i >= 25){
+				updateConstraintsMap();
+				i = 0;
+			}
+			//20 ms sleep
+			std::chrono::milliseconds duration(20);
+			std::this_thread::sleep_for(duration);
+			i++;
+		}
+	}
+	catch(char const* error){
+		cout << error << endl;
+	}
+	catch(...){
+		cout << "MovementConstraints unrecognized exception" << endl;
 	}
 }
 
@@ -317,7 +328,9 @@ void MovementConstraints::updateCurPosCloudMapCenter(){
 }
 
 void MovementConstraints::updatePointCloud(){
-	//cout << "processPointCloud()" << endl;
+	cout << "processPointCloud()" << endl;
+
+	throw (int)-1;
 
 	updateCurPosCloudMapCenter();
 
@@ -475,23 +488,31 @@ void MovementConstraints::processPointCloud(cv::Mat hokuyoData,
 							copyTo(tmpAllPoints.colRange(0, pointCloudImuMapCenter.cols - pointsSkipped));
 		}
 	}
-	cout << "countPoints = " << countPoints << ", hokuyoCurPoints.size = " << hokuyoCurPoints.size() << endl;
+//	if(debugLevel >= 1){
+//		cout << "countPoints = " << countPoints << ", hokuyoCurPoints.size = " << hokuyoCurPoints.size() << endl;
+//	}
 	if(countPoints > 0){
 
 		//cout << "Moving to camera orig" << endl;
 		hokuyoCurPoints.rowRange(0, 4) = cameraOrigLaser.inv()*hokuyoCurPoints.rowRange(0, 4);
 		//cout << "Addding hokuyoCurPoints" << endl;
-		cout << "Addding hokuyoCurPoints" << endl;
+//		if(debugLevel >= 1){
+//			cout << "Addding hokuyoCurPoints" << endl;
+//		}
 		Mat curPointCloudCameraMapCenter(hokuyoCurPoints.rows, hokuyoCurPoints.cols, CV_32FC1);
 		Mat tmpCurPoints = curPosCloudMapCenter*cameraOrigImu*hokuyoCurPoints.rowRange(0, 4);
 		tmpCurPoints.copyTo(curPointCloudCameraMapCenter.rowRange(0, 4));
 		hokuyoCurPoints.rowRange(4, 6).copyTo(curPointCloudCameraMapCenter.rowRange(4, 6));
 		//cout << hokuyoCurPointsGlobal.channels() << ", " << hokuyoAllPointsGlobal.channels() << endl;
 		cout << pointCloudImuMapCenter.size() << " " << curPointCloudCameraMapCenter.size() << " " << tmpAllPoints.size() << endl;
-		cout << "pointsSkipped = " << pointsSkipped << endl;
+//		if(debugLevel >= 1){
+//			cout << "pointsSkipped = " << pointsSkipped << endl;
+//		}
 		curPointCloudCameraMapCenter.copyTo(tmpAllPoints.colRange(pointCloudImuMapCenter.cols - pointsSkipped,
 																	pointCloudImuMapCenter.cols + hokuyoCurPoints.cols - pointsSkipped));
-		cout << "curPointCloudCameraMapCenter copied" << endl;
+//		if(debugLevel >= 1){
+//			cout << "curPointCloudCameraMapCenter copied" << endl;
+//		}
 		pointsInfo.push(PointsPacket(hokuyoTimestamp, hokuyoCurPoints.cols));
 
 		pointCloudImuMapCenter = tmpAllPoints;
