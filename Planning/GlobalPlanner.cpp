@@ -111,14 +111,14 @@ void GlobalPlanner::readSettings(TiXmlElement* settings) {
 		throw "Bad settings file - wrong value for globalPlanner mapFile";
 	}
 
-	if (pGlobalPlanner->QueryDoubleAttribute("latitude",
-			&globalPlannerParams.latitude) != TIXML_SUCCESS) {
-		throw "Bad settings file - wrong value for globalPlanner latitude";
+	if (pGlobalPlanner->QueryDoubleAttribute("goalLatitude",
+			&globalPlannerParams.goalLatitude) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner goalLatitude";
 	}
 
-	if (pGlobalPlanner->QueryDoubleAttribute("longitude",
-			&globalPlannerParams.longitude) != TIXML_SUCCESS) {
-		throw "Bad settings file - wrong value for globalPlanner longitude";
+	if (pGlobalPlanner->QueryDoubleAttribute("goalLongitude",
+			&globalPlannerParams.goalLongitude) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner goalLongitude";
 	}
 
 	printf("GlobalPlanner -- runThread: %d\n", globalPlannerParams.runThread);
@@ -145,9 +145,13 @@ void GlobalPlanner::readSettings(TiXmlElement* settings) {
 	printf("GlobalPlanner -- mapFile: %s\n",
 			globalPlannerParams.mapFile.c_str());
 	printf("GlobalPlanner -- goal latitude: %f \n",
-			globalPlannerParams.latitude);
+			globalPlannerParams.goalLatitude);
 	printf("GlobalPlanner -- goal longitude: %f \n",
-			globalPlannerParams.longitude);
+			globalPlannerParams.goalLongitude);
+	printf("GlobalPlanner -- start latitude: %f \n",
+			globalPlannerParams.startLatitude);
+	printf("GlobalPlanner -- goal longitude: %f \n",
+			globalPlannerParams.startLongitude);
 }
 
 // Main processing thread
@@ -400,8 +404,8 @@ void GlobalPlanner::updateGoal() {
 void GlobalPlanner::setLoadedGoal() {
 
 	// Recomputing from decimal coordinates to Nmea
-	double lon = GPS::decimal2Nmea(globalPlannerParams.longitude * 100);
-	double lat = GPS::decimal2Nmea(globalPlannerParams.latitude * 100);
+	double lon = GPS::decimal2Nmea(globalPlannerParams.goalLongitude * 100);
+	double lat = GPS::decimal2Nmea(globalPlannerParams.goalLatitude * 100);
 	if (globalPlannerParams.debug == 1)
 		std::cout << "Global Planner : goal longitude and latitude: "
 				<< lat / 100 << " " << lon / 100 << std::endl;
@@ -756,12 +760,19 @@ void GlobalPlanner::goDirectlyToTarget(double robotX, double robotY,
 
 		// Going back home :)
 		if (planningStage == toStart) {
+
+			// Changing to Nmea
+			double lat = GPS::decimal2Nmea(globalPlannerParams.startLatitude*100);
+			double lon = GPS::decimal2Nmea(globalPlannerParams.startLongitude*100);
+
+			// Computing the position in local map
+			goalX = robot->getPosX(lat)/1000;
+			goalY = robot->getPosY(lon)/1000;
+
 			// Let's beep !!!:D
 			if (globalPlannerParams.sound == 1) {
 				int tmp = system("espeak -v en-us+1 -s 150 \"Target reached. I'm going home.\"");
 			}
-			goalX = 0.0;
-			goalY = 0.0;
 			updateGoal();
 			recomputePlan = true;
 			// startLocalPlanner

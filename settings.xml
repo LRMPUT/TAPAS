@@ -14,8 +14,10 @@
 		sound:					1 - ON, 0 - OFF
 		runHomologation:			1 - overrides global Planner to perform Homologation
 		mapFile:				file in open street map used in navigation
-		latitude:				latitude N/S
-		longitude:				longitude W/E 
+		goalLatitude:				latitude N/S
+		goalLongitude:				longitude W/E 
+		startLatitude:				latitude N/S
+		startLongitude:				longitude W/E
 		 // Alternative coordinates in PP :
 		 // -> latitude="52.401979" longitude="16.953083" // Ławeczki, po prawej wychodząc z CM
 		 // -> latitude="52.401660" longitude="16.953071" // Blisko, na drodze wychodząc na wprost z CM
@@ -39,6 +41,14 @@
 		 // -> latitude="52.406731" longitude="16.956404" // Kolo kolka
 		 // -> latitude="52.407065" longitude="16.955223" // Dalej od wodu, dalej niz kolko
 		 // -> latitude="52.406938" longitude="16.956827" // Przy wodzie, dalej niz kolko
+
+		 // Robotour - Pilzen, Czechy
+		 // -> startLatitude="49.725131" startLongitude="13.367541" // Glowny start
+		 // -> startLatitude="49.722581" startLongitude="13.364215" // Na koncu prostej
+		 // -> startLatitude="49.720559" startLongitude="13.361688" // Najdalej od startu
+		 // -> startLatitude="49.723972" startLongitude="13.367407" // Kawalek od startu
+		 // -> startLatitude="49.723369" startLongitude="13.366425" // Kolo poczatku prostej
+		 // -> startLatitude="49.721867" startLongitude="13.365127" // Obok konca prostej
 	-->
 	<GlobalPlanner 		runThread="1" 
 						processingFrequency="5" 
@@ -53,8 +63,9 @@
 						changedPlanDelayTime="300000"
 						sound="1"
 						runHomologation="0" 
-						mapFile="maltaMap.osm" 
-						latitude="52.406512" longitude="16.955068"/>
+						mapFile="robotourMap.osm"
+						goalLatitude="49.722581" goalLongitude="13.364215"
+						startLatitude="49.725131" startLongitude="13.367541"/>
 
 
 	<!--

@@ -126,19 +126,21 @@ double GPS::decimal2radian(double value) {
 
 double GPS::getPosX(){
 	newMeasurement = false;
+
+	std::unique_lock<std::mutex> gpsLck(gpsDataMtx);
 	PosX = (nmea_ndeg2radian(Info.lat) - nmea_ndeg2radian(StartPosLat))*RadiusLat;
-	//cout << "Angular difference X = " << Info.lon << " - " << StartPosLon << " = " <<
-	//		 nmea_ndeg2radian(Info.lon - StartPosLon) << endl;
+	gpsLck.unlock();
+
 	return PosX;
 }
 
-double GPS::getPosX(double latitude)
+double GPS::getPosX(double startLatitude)
 {
 //    cout<< "GPS: " << StartPosLat << " " << StartPosLon << " vs 1st: " << latitude <<endl;
 //	cout<< "Conversion -- RadiusLat : "<< RadiusLat<<std::endl;
 //	printf("TEST : %.8f - %.8f =  %.8f\n", nmea_ndeg2radian(latitude), nmea_ndeg2radian(StartPosLat), nmea_ndeg2radian(latitude) - nmea_ndeg2radian(StartPosLat));
 
-	return (nmea_ndeg2radian(latitude) - nmea_ndeg2radian(StartPosLat))*RadiusLat;
+	return (nmea_ndeg2radian(startLatitude) - nmea_ndeg2radian(StartPosLat))*RadiusLat;
 }
 
 double GPS::getPosLatitude(double X)
@@ -149,17 +151,19 @@ double GPS::getPosLatitude(double X)
 
 double GPS::getPosY(){
 	newMeasurement = false;
+	std::unique_lock<std::mutex> gpsLck(gpsDataMtx);
 	PosY = (nmea_ndeg2radian(Info.lon) - nmea_ndeg2radian(StartPosLon))*RadiusLon;
+	gpsLck.unlock();
 	return PosY;
 }
 
-double GPS::getPosY(double longitude)
+double GPS::getPosY(double startLongitude)
 {
 //	cout<< "GPS: " << StartPosLat << " " << StartPosLon << " vs 2nd:" << longitude <<endl;
 //	cout<< "Conversion -- RadiusLon : "<< RadiusLon<<std::endl;
 //
 //	printf("TEST : %.8f - %.8f =  %.8f\n", nmea_ndeg2radian(longitude), nmea_ndeg2radian(StartPosLon), nmea_ndeg2radian(longitude) - nmea_ndeg2radian(StartPosLon));
-	return (nmea_ndeg2radian(longitude) - nmea_ndeg2radian(StartPosLon))*RadiusLon;
+	return (nmea_ndeg2radian(startLongitude) - nmea_ndeg2radian(StartPosLon))*RadiusLon;
 }
 
 double GPS::getPosLongitude(double Y)
@@ -243,8 +247,12 @@ void GPS::monitorSerialPort()
 			//cout << "GPS parsed " << packetsRead << endl;
 			if(packetsRead > 0){
 				timestamp = std::chrono::high_resolution_clock::now();
+
+				std::unique_lock<std::mutex> gpsLck(gpsDataMtx);
 				PosLat = nmea_ndeg2degree(Info.lat);
 				PosLon = nmea_ndeg2degree(Info.lon);
+				gpsLck.unlock();
+
 				newMeasurement = true;
 				dataValid = true;
 			}
