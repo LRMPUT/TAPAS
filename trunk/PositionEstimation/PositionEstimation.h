@@ -43,6 +43,7 @@ private:
 		double gpsVariance;
 		double imuVariance;
 		double encoderVariance;
+		double startLatitude, startLongitude, goalLatitude, goalLongitude;
 	};
 
 	Parameters parameters;

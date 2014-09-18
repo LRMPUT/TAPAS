@@ -52,7 +52,7 @@ PositionEstimation::~PositionEstimation() {
 	closeImu();
 	delete EKF;
 	logStream.close();
-	logGpxStream<<"</trkseg></trk></gpx>"<<std::endl;
+	logGpxStream << "</trkseg></trk></gpx>" << std::endl;
 	logGpxStream.close();
 	cout << "End ~PositionEstimation()" << endl;
 }
@@ -85,7 +85,7 @@ void PositionEstimation::readSettings(TiXmlElement* settings) {
 		throw "Bad settings file - wrong value for positionEstimation wheel base";
 	}
 	if (pPositionEstimation->QueryDoubleAttribute("predictionVariance",
-					&parameters.predictionVariance) != TIXML_SUCCESS) {
+			&parameters.predictionVariance) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for positionEstimation predictionVariance";
 	}
 	if (pPositionEstimation->QueryDoubleAttribute("gpsVariance",
@@ -100,6 +100,28 @@ void PositionEstimation::readSettings(TiXmlElement* settings) {
 			&parameters.encoderVariance) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for positionEstimation encoderVariance";
 	}
+
+	TiXmlElement* pGlobalPlanner = settings->FirstChildElement("GlobalPlanner");
+	if (pGlobalPlanner->QueryDoubleAttribute("goalLatitude",
+			&parameters.goalLatitude) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner goalLatitude";
+	}
+
+	if (pGlobalPlanner->QueryDoubleAttribute("goalLongitude",
+			&parameters.goalLongitude) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner goalLongitude";
+	}
+
+	if (pGlobalPlanner->QueryDoubleAttribute("startLatitude",
+			&parameters.startLatitude) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner startLatitude";
+	}
+
+	if (pGlobalPlanner->QueryDoubleAttribute("startLongitude",
+			&parameters.startLongitude) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for globalPlanner startLongitude";
+	}
+
 	printf("positionEstimation -- runThread: %d\n", parameters.runThread);
 	printf("positionEstimation -- debug: %d\n", parameters.debug);
 	printf("positionEstimation -- encoderTicksPerRev : %d\n",
@@ -108,42 +130,50 @@ void PositionEstimation::readSettings(TiXmlElement* settings) {
 			parameters.wheelDiameter);
 	printf("positionEstimation -- wheelBase : %f\n", parameters.wheelBase);
 
-	printf("positionEstimation -- predictionVariance : %f\n", parameters.predictionVariance);
+	printf("positionEstimation -- predictionVariance : %f\n",
+			parameters.predictionVariance);
 	printf("positionEstimation -- gpsVariance : %f\n", parameters.gpsVariance);
 	printf("positionEstimation -- imuVariance : %f\n", parameters.imuVariance);
-	printf("positionEstimation -- encoderVariance : %f\n", parameters.encoderVariance);
+	printf("positionEstimation -- encoderVariance : %f\n",
+			parameters.encoderVariance);
+	printf("positionEstimation -- start lat/lon : %f/%f\n",
+			parameters.startLatitude, parameters.startLongitude);
+	printf("positionEstimation -- goal lat/lon : %f/%f\n",
+			parameters.goalLatitude, parameters.goalLongitude);
 }
 
 void PositionEstimation::run() {
-	try{
+	try {
 		while (!gps.isOpen() && parameters.runThread)
 			usleep(200);
 		while ((gps.getFixStatus() == 1 || (fabs(gps.getLat()) < 0.00001)
-				|| (fabs(gps.getLon()) < 0.000001)) && parameters.runThread)
-		{
+				|| (fabs(gps.getLon()) < 0.000001)) && parameters.runThread) {
 			usleep(200);
 		};
 
-		while(!gps.isDataValid() && parameters.runThread)
-		{
+		while (!gps.isDataValid() && parameters.runThread) {
 			usleep(200);
 		}
 
 		if (parameters.runThread) {
 			gps.setZeroXY(gps.getLat(), gps.getLon());
 
-			logStream<<"Log of position estimation: timestamp (in ms), X[m], Y[m], v[m/s], theta[rad]" << std::endl;
+			logStream
+					<< "Log of position estimation: timestamp (in ms), X[m], Y[m], v[m/s], theta[rad]"
+					<< std::endl;
 
 			logGpxStream << "<gpx version=\"1.0\">" << std::endl;
-			logGpxStream << "<wpt lat=\"" << robot->getPosLatitude(0.0)
-					<< "\" lon=\"" << robot->getPosLongitude(0.0)
+			logGpxStream << std::fixed << std::setprecision(10) << "<wpt lat=\""
+					<< parameters.startLatitude << "\" lon=\""
+					<< parameters.startLongitude
 					<< "\"><name>Start</name></wpt>" << std::endl;
+			logGpxStream << std::fixed << std::setprecision(10) << "<wpt lat=\""
+					<< parameters.goalLatitude << "\" lon=\""
+					<< parameters.goalLongitude << "\"><name>Goal</name></wpt>"
+					<< std::endl;
 			logGpxStream << "<trk><trkseg>" << std::endl;
 
 		}
-
-
-
 
 		struct timeval start, end;
 		while (parameters.runThread) {
@@ -155,10 +185,10 @@ void PositionEstimation::run() {
 			// Save trajectory to file
 			saveTrajectoryToFile();
 
-
 			// Thread sleep, so that the position is not updated too often
 			// Right now 1 ms as Robot Drive has it's own sleep
-			std::chrono::milliseconds duration(int(1000.0/parameters.processingFrequency));
+			std::chrono::milliseconds duration(
+					int(1000.0 / parameters.processingFrequency));
 			std::this_thread::sleep_for(duration);
 
 			gettimeofday(&end, NULL);
@@ -176,11 +206,9 @@ void PositionEstimation::run() {
 			}
 			//cout << "PE:: framerate: " << 1000.0 / mtime << endl;
 		}
-	}
-	catch(char const* error){
+	} catch (char const* error) {
 		cout << error << endl;
-	}
-	catch(...){
+	} catch (...) {
 		cout << "PositionEstimation unrecognized exception" << endl;
 	}
 }
@@ -192,27 +220,27 @@ void PositionEstimation::stopThread() {
 	}
 }
 
-
 void PositionEstimation::saveTrajectoryToFile() {
 	std::chrono::milliseconds currentTime = robot->getGlobalTime();
-	logStream << currentTime.count() << " " << state.at<double>(0) << " " << state.at<double>(1) << " " <<state.at<double>(2) << " " << state.at<double>(3) << std::endl;
-
+	logStream << currentTime.count() << " " << state.at<double>(0) << " "
+			<< state.at<double>(1) << " " << state.at<double>(2) << " "
+			<< state.at<double>(3) << std::endl;
 
 	double x = robot->getPosLatitude(state.at<double>(0) * 1000);
 	double y = robot->getPosLongitude(state.at<double>(1) * 1000);
-	x = GPS::nmea2Decimal(x)/100;
-	y = GPS::nmea2Decimal(y)/100;
+	x = GPS::nmea2Decimal(x) / 100;
+	y = GPS::nmea2Decimal(y) / 100;
 
-	logGpxStream << std::fixed << std::setprecision(10) << "<trkpt time=\"" << currentTime.count()<<"\" lat=\""
-			<< x << "\" lon=\""
-			<< y << "\"></trkpt>" << std::endl;
+	logGpxStream << std::fixed << std::setprecision(10) << "<trkpt time=\""
+			<< currentTime.count() << "\" lat=\"" << x << "\" lon=\"" << y
+			<< "\"></trkpt>" << std::endl;
 
 }
 
-
 void PositionEstimation::kalmanSetup() {
 	EKF = new ExtendedKalmanFilter(parameters.predictionVariance,
-			parameters.gpsVariance, parameters.imuVariance, parameters.encoderVariance);
+			parameters.gpsVariance, parameters.imuVariance,
+			parameters.encoderVariance);
 
 	state = cv::Mat(4, 1, CV_64F);
 	setZeroPosition();
@@ -263,7 +291,7 @@ void PositionEstimation::KalmanLoop() {
 				printf("Gps update --> values %f %f\n",
 						gps_data.at<double>(0, 0), gps_data.at<double>(1, 0));
 			}
-			std::unique_lock<std::mutex> gpsLck(positionEstimationMtx);
+			std::unique_lock < std::mutex > gpsLck(positionEstimationMtx);
 			state = EKF->correctGPS(gps_data);
 			gpsLck.unlock();
 
@@ -334,7 +362,7 @@ void PositionEstimation::KalmanLoop() {
 //				printf("Encoder encoder_dt: %.10f\n", encoder_dt );
 				printf("Encoder speed update: %f\n", distance / encoder_dt);
 			}
-			std::unique_lock<std::mutex> encoderLck(positionEstimationMtx);
+			std::unique_lock < std::mutex > encoderLck(positionEstimationMtx);
 			state = EKF->correctEncoder(speed);
 			encoderLck.unlock();
 
@@ -381,7 +409,7 @@ void PositionEstimation::KalmanLoop() {
 					- imuZeroAngle) * M_PI / 180.0;
 //			printf("IMU new update: %f\n", imuData.at<float>(11));
 
-			std::unique_lock<std::mutex> imuLck(positionEstimationMtx);
+			std::unique_lock < std::mutex > imuLck(positionEstimationMtx);
 			state = EKF->correctIMU(orientation);
 			imuLck.unlock();
 		}
@@ -389,7 +417,7 @@ void PositionEstimation::KalmanLoop() {
 }
 
 void PositionEstimation::setZeroPosition() {
-	std::unique_lock<std::mutex> zeroLck(positionEstimationMtx);
+	std::unique_lock < std::mutex > zeroLck(positionEstimationMtx);
 	state.at<double>(0) = 0.0;
 	state.at<double>(1) = 0.0;
 	state.at<double>(2) = 0.0;
@@ -427,8 +455,8 @@ cv::Mat PositionEstimation::getImuData(
 //----------------------ACCESS TO COMPUTED DATA
 //CV_64FC1 3x1: x, y, fi
 const cv::Mat PositionEstimation::getEstimatedPosition() {
-	std::unique_lock<std::mutex> pe(positionEstimationMtx);
-	cv::Mat stateCpy = cv::Mat(3,1,CV_64FC1);
+	std::unique_lock < std::mutex > pe(positionEstimationMtx);
+	cv::Mat stateCpy = cv::Mat(3, 1, CV_64FC1);
 	stateCpy = state.clone();
 	pe.unlock();
 	return stateCpy;
@@ -485,12 +513,11 @@ bool PositionEstimation::isImuOpen() {
 	return imu.isPortOpen();
 }
 
-bool PositionEstimation::isImuDataValid(){
+bool PositionEstimation::isImuDataValid() {
 	return imu.isDataValid();
 }
 
-float PositionEstimation::getImuAccVariance()
-{
+float PositionEstimation::getImuAccVariance() {
 	return imu.getAccVariance();
 }
 
@@ -507,7 +534,6 @@ bool PositionEstimation::isEncodersOpen() {
 	return encoders.isPortOpen();
 }
 
-void PositionEstimation::fakeGPSStart(double lat, double lon)
-{
-	gps.fakeGPSStart(lat,lon);
+void PositionEstimation::fakeGPSStart(double lat, double lon) {
+	gps.fakeGPSStart(lat, lon);
 }
