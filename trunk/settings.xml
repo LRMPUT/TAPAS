@@ -225,10 +225,12 @@
 					<info desc_beg="0" desc_end="7" />
 				</Classifier>
 			</HierClassifier>
-			<learning enabled="false">
-				"../MovementConstraints/Camera/database/przejazd3"
-				
-				"../MovementConstraints/Camera/database/przejazd4"
+			<learning enabled="true">
+				"../MovementConstraints/Camera/database/przejazd6"
+				"../MovementConstraints/Camera/database/przejazd7"
+				"../MovementConstraints/Camera/database/przejazd9"
+				"../MovementConstraints/Camera/database/przejazd10"
+				"../MovementConstraints/Camera/database/przejazd11"
 			</learning>
 			<labels>
 				<label text="grass" id="0"/>
@@ -264,55 +266,47 @@
 					-0.002321429512793 0.042019134230480 -0.000280334014614 0.001284356067402 0.000000000000000 
 				</dist_coeffs>
 				<mask_ignore>
-					<polygon>
-						<pt>
-						<x>97</x>
-						<y>403</y>
-						</pt>
-						<pt>
-						<x>67</x>
-						<y>480</y>
-						</pt>
-						<pt>
-						<x>551</x>
-						<y>480</y>
-						</pt>
-						<pt>
-						<x>522</x>
-						<y>398</y>
-						</pt>
-						<pt>
-						<x>465</x>
-						<y>400</y>
-						</pt>
-						<pt>
-						<x>460</x>
-						<y>382</y>
-						</pt>
-						<pt>
-						<x>344</x>
-						<y>382</y>
-						</pt>
-						<pt>
-						<x>337</x>
-						<y>337</y>
-						</pt>
-						<pt>
-						<x>283</x>
-						<y>337</y>
-						</pt>
-						<pt>
-						<x>279</x>
-						<y>384</y>
-						</pt>
-						<pt>
-						<x>161</x>
-						<y>385</y>
-						</pt>
-						<pt>
-						<x>154</x>
+				 <polygon>
+					 <pt>
+						<x>61</x>
+						<y>479</y>
+					 </pt>
+					 <pt>
+						<x>58</x>
 						<y>406</y>
-						</pt>
+					 </pt>
+					 <pt>
+						<x>139</x>
+						<y>363</y>
+					 </pt>
+					 <pt>
+						<x>279</x>
+						<y>363</y>
+					 </pt>
+					 <pt>
+						<x>281</x>
+						<y>340</y>
+					 </pt>
+					 <pt>
+						<x>338</x>
+						<y>338</y>
+					 </pt>
+					 <pt>
+						<x>346</x>
+						<y>360</y>
+					 </pt>
+					 <pt>
+						<x>477</x>
+						<y>359</y>
+					 </pt>
+					 <pt>
+						<x>557</x>
+						<y>399</y>
+					 </pt>
+					 <pt>
+						<x>558</x>
+						<y>479</y>
+					 </pt>
 					</polygon>
 				</mask_ignore>
 			</sensor>
