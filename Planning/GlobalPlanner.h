@@ -137,6 +137,9 @@ private:
 	// Processing thread method
 	void globalPlannerProcessing();
 
+	// Start the competition
+	bool startGlobalPlannerCompetition;
+
 	// Homologation
 	void processHomologation();
 
@@ -195,6 +198,8 @@ public:
 	virtual ~GlobalPlanner();
 
 	void readSettings(TiXmlElement* settings);
+
+	void startCompetition();
 
 	void stopThread();
 

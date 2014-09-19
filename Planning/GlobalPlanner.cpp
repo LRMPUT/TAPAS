@@ -25,7 +25,7 @@ using namespace std;
 
 GlobalPlanner::GlobalPlanner(Robot* irobot, TiXmlElement* settings) :
 		robot(irobot), robotDrive1(NULL), robotDrive2(NULL), goalTheta(0.0), planningStage(
-				toGoal), weShouldWait(false), previousPlanDistance(-1.0) {
+				toGoal), weShouldWait(false), previousPlanDistance(-1.0), startGlobalPlannerCompetition(false) {
 	cout << "GlobalPlanner()" << endl;
 	readSettings(settings);
 
@@ -164,6 +164,11 @@ void GlobalPlanner::readSettings(TiXmlElement* settings) {
 			globalPlannerParams.startLongitude);
 }
 
+// Start the competation
+void GlobalPlanner::startCompetition() {
+	 startGlobalPlannerCompetition = true;
+}
+
 // Main processing thread
 void GlobalPlanner::globalPlannerProcessing() {
 
@@ -205,6 +210,9 @@ void GlobalPlanner::globalPlannerProcessing() {
 				// Set the goal in the map
 				setLoadedGoal();
 			}
+
+			while( !startGlobalPlannerCompetition && globalPlannerParams.runThread);
+
 			localPlanner->setNormalSpeed();
 			localPlanner->startLocalPlanner();
 			int loopTimeCounter = 0;

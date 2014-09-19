@@ -45,6 +45,10 @@ Robot::~Robot() {
 	cout << "End ~Robot()" << endl;
 }
 
+void Robot::startCompetition() {
+	globalPlanner->startCompetition();
+}
+
 
 //----------------------MENAGMENT OF GlobalPlanner DEVICES
 //Robots Drive
