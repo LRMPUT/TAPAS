@@ -50,7 +50,7 @@ public:
 		float normalSpeed;
 		float preciseSpeed;
 		float gentleTurnMargin;
-		float gentleTurnDiff;
+		float gentleTurnSpeedDiff;
 		float turnSpeed;
 		int turnTimeout;
 		int interruptTime;

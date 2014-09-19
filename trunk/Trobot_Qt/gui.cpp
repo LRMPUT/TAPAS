@@ -16,6 +16,12 @@ int main(int argc, char *argv[])
 		return a.exec();
 	}
 	catch(char const* error){
-		cout << error << endl;
+		cout << "Char exception in main: " << error << endl;
+	}
+	catch(std::exception& e){
+		cout << "Std exception in main: " << e.what() << endl;
+	}
+	catch(...){
+		cout << "Unexpected exception in main" << endl;
 	}
 }

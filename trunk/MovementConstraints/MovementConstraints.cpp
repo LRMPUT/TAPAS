@@ -156,10 +156,16 @@ void MovementConstraints::run(){
 		}
 	}
 	catch(char const* error){
-		cout << error << endl;
+		cout << "Char exception in MovementConstraints: " << error << endl;
+		exit(1);
+	}
+	catch(std::exception& e){
+		cout << "Std exception in MovementConstraints: " << e.what() << endl;
+		exit(1);
 	}
 	catch(...){
-		cout << "MovementConstraints unrecognized exception" << endl;
+		cout << "Unexpected exception in MovementConstraints" << endl;
+		exit(1);
 	}
 }
 
@@ -328,9 +334,7 @@ void MovementConstraints::updateCurPosCloudMapCenter(){
 }
 
 void MovementConstraints::updatePointCloud(){
-	cout << "processPointCloud()" << endl;
-
-	throw (int)-1;
+	//cout << "processPointCloud()" << endl;
 
 	updateCurPosCloudMapCenter();
 
@@ -504,7 +508,7 @@ void MovementConstraints::processPointCloud(cv::Mat hokuyoData,
 		tmpCurPoints.copyTo(curPointCloudCameraMapCenter.rowRange(0, 4));
 		hokuyoCurPoints.rowRange(4, 6).copyTo(curPointCloudCameraMapCenter.rowRange(4, 6));
 		//cout << hokuyoCurPointsGlobal.channels() << ", " << hokuyoAllPointsGlobal.channels() << endl;
-		cout << pointCloudImuMapCenter.size() << " " << curPointCloudCameraMapCenter.size() << " " << tmpAllPoints.size() << endl;
+//		cout << pointCloudImuMapCenter.size() << " " << curPointCloudCameraMapCenter.size() << " " << tmpAllPoints.size() << endl;
 //		if(debugLevel >= 1){
 //			cout << "pointsSkipped = " << pointsSkipped << endl;
 //		}

@@ -36,7 +36,7 @@ Constraints::~Constraints(){
 }
 
 void Constraints::updateCameraView(){
-	//cout << "Updating camera view" << endl;
+	cout << "Updating camera view" << endl;
 	Mat image;
 	vector<Point2f> pointCloudCamera = debug->getPointCloudCamera(image);
 	//cout << "Got point cloud camera" << endl;
@@ -115,6 +115,7 @@ void Constraints::updateMapView(){
 }
 
 void Constraints::updateClassificationView(){
+	cout << "Constraints::updateClassificationView()" << endl;
 	Mat image = debug->getClassifiedImage();
 	QPixmap map;
 	double scaleX = 640 / ui->constraintClassificationViewLabel->width();

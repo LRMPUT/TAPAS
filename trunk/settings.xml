@@ -149,9 +149,9 @@
 			0	0	1	-810
 			0	0	0	1
 		</imu_position_robot>
-		<Camera runThread="false" number="1" rows="480" cols="640" entryWeightThreshold="400" debug="1">
+		<Camera runThread="true" number="1" rows="480" cols="640" entryWeightThreshold="400" debug="1">
 			<cache saveEnabled="true" loadEnabled="true"/>
-			<HierClassifier debug="1">
+			<HierClassifier debug="0">
 				<cache enabled="true" />
 				<segmentation k="200" min_size="200" />
 				<descriptor>
@@ -225,7 +225,7 @@
 					<info desc_beg="0" desc_end="7" />
 				</Classifier>
 			</HierClassifier>
-			<learning enabled="true">
+			<learning enabled="false">
 				"../MovementConstraints/Camera/database/przejazd3"
 				
 				"../MovementConstraints/Camera/database/przejazd4"
