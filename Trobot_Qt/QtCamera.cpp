@@ -38,7 +38,7 @@ std::vector<cv::Mat> QtCamera::getFrame(){
 }
 
 void QtCamera::refresh(){
-	cout << "QtCamera::refresh()" << endl;
+//	cout << "QtCamera::refresh()" << endl;
 	if(robot->isCameraOpen()){
 		vector<Mat> frames = getFrame();
 		Mat frameDisp;

@@ -184,6 +184,9 @@ void GlobalPlanner::globalPlannerProcessing() {
 				usleep(200);
 			}
 
+			std::chrono::seconds durationStart(60);
+			std::this_thread::sleep_for(durationStart);
+
 			std::chrono::high_resolution_clock::time_point timestamp;
 			//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
 			cv::Mat imu = robot->getImuData(timestamp);
@@ -212,19 +215,8 @@ void GlobalPlanner::globalPlannerProcessing() {
 				// Read the map of the tournament
 				readOpenStreetMap(globalPlannerParams.mapFile);
 
-				// Set the goal in the map
-				setLoadedGoal();
-			}
-
-			while (!startGlobalPlannerCompetition
-					&& globalPlannerParams.runThread) {
-				usleep(200);
-				// Where are we ?
-				double robotX, robotY, theta;
-				updateRobotPosition(robotX, robotY, theta);
-				cout << "Global Planner started competition" << endl;
-
 				// Program failed, but we reached the goal and we restart the fun
+				planningStage = toGoal;
 				std::ifstream i;
 				i.open("targetReached");
 				int state;
@@ -233,52 +225,72 @@ void GlobalPlanner::globalPlannerProcessing() {
 					planningStage = toStart;
 				i.close();
 
-				localPlanner->setNormalSpeed();
-				localPlanner->startLocalPlanner();
-				int loopTimeCounter = 0;
-				bool recomputePlan = false;
-				int startType = 0;
-				while (globalPlannerParams.runThread) {
-					std::cout << std::endl << "Global Planner : New iteration"
-							<< std::endl << std::endl;
+				// Set the goal in the map
+				setLoadedGoal(planningStage);
 
-					// Where are we ?
-					double robotX, robotY, theta;
-					updateRobotPosition(robotX, robotY, theta);
-
-					// Where are we in the map
-					findStartingEdge(robotX, robotY, startType);
-
-					// We compute new global plan
-					if (globalPlannerParams.computeEveryNth == 1
-							|| recomputePlan
-							|| loopTimeCounter
-									% globalPlannerParams.computeEveryNth
-									== 0) {
-						loopTimeCounter = loopTimeCounter
-								% globalPlannerParams.computeEveryNth;
-						// Compute the route to follow
-						computeGlobalPlan(robotX, robotY, startType);
-						// We recomputed the plan
-						recomputePlan = false;
-
-					}
-
-					// Let's compute the next target
-					chooseNextSubGoal(robotX, robotY, recomputePlan);
-
-					// Let's update out subgoal as current destination
-					//			updateHeadingGoal();
-
-					std::chrono::milliseconds duration(
-							int(
-									1000.0
-											/ globalPlannerParams.processingFrequency));
-					std::this_thread::sleep_for(duration);
-					loopTimeCounter++;
-				}
-				localPlanner->stopLocalPlanner();
 			}
+
+			while (!startGlobalPlannerCompetition
+					&& globalPlannerParams.runThread) {
+				usleep(200);
+			}
+
+			std::chrono::seconds durationStart(1);
+			std::this_thread::sleep_for(durationStart);
+
+			// Where are we ?
+			double robotX, robotY, theta;
+			updateRobotPosition(robotX, robotY, theta);
+			cout << "Global Planner started competition" << endl;
+
+
+
+
+			localPlanner->setNormalSpeed();
+			localPlanner->startLocalPlanner();
+			int loopTimeCounter = 0;
+			bool recomputePlan = false;
+			int startType = 0;
+			while (globalPlannerParams.runThread) {
+				std::cout << std::endl << "Global Planner : New iteration"
+						<< std::endl << std::endl;
+
+				// Where are we ?
+				double robotX, robotY, theta;
+				updateRobotPosition(robotX, robotY, theta);
+
+				// Where are we in the map
+				findStartingEdge(robotX, robotY, startType);
+
+				// We compute new global plan
+				if (globalPlannerParams.computeEveryNth == 1
+						|| recomputePlan
+						|| loopTimeCounter
+								% globalPlannerParams.computeEveryNth
+								== 0) {
+					loopTimeCounter = loopTimeCounter
+							% globalPlannerParams.computeEveryNth;
+					// Compute the route to follow
+					computeGlobalPlan(robotX, robotY, startType);
+					// We recomputed the plan
+					recomputePlan = false;
+
+				}
+
+				// Let's compute the next target
+				chooseNextSubGoal(robotX, robotY, recomputePlan);
+
+				// Let's update out subgoal as current destination
+				//			updateHeadingGoal();
+
+				std::chrono::milliseconds duration(
+						int(
+								1000.0
+										/ globalPlannerParams.processingFrequency));
+				std::this_thread::sleep_for(duration);
+				loopTimeCounter++;
+			}
+			localPlanner->stopLocalPlanner();
 		}
 	} catch (char const* error) {
 		cout << "Char exception in GlobalPlanner: " << error << endl;
@@ -454,11 +466,19 @@ void GlobalPlanner::updateGoal() {
 	findClosestEdge(goalX, goalY, goalId[0], goalId[1], dist, goalType);
 }
 
-void GlobalPlanner::setLoadedGoal() {
+void GlobalPlanner::setLoadedGoal(PlanningStage planningStage){
+
+	double lonDecimal = globalPlannerParams.goalLongitude;
+	double latDecimal = globalPlannerParams.goalLatitude;
+	if (planningStage == toStart)
+	{
+		lonDecimal = globalPlannerParams.startLongitude;
+		latDecimal = globalPlannerParams.startLatitude;
+	}
 
 	// Recomputing from decimal coordinates to Nmea
-	double lon = GPS::decimal2Nmea(globalPlannerParams.goalLongitude * 100);
-	double lat = GPS::decimal2Nmea(globalPlannerParams.goalLatitude * 100);
+	double lon = GPS::decimal2Nmea(lonDecimal * 100);
+	double lat = GPS::decimal2Nmea(latDecimal * 100);
 	if (globalPlannerParams.debug == 1)
 		std::cout << "Global Planner : goal longitude and latitude: "
 				<< lat / 100 << " " << lon / 100 << std::endl;

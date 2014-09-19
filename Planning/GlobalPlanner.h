@@ -173,7 +173,7 @@ private:
 
 	// Methods to call
 	void readOpenStreetMap(std::string mapName);
-	void setLoadedGoal();
+	void setLoadedGoal(PlanningStage planningStage);
 	void updateRobotPosition(double &robotX, double &robotY, double &theta);
 	void findStartingEdge(double robotX, double robotY, int &distType);
 	void computeGlobalPlan(double robotX, double robotY, int startType);
