@@ -218,53 +218,66 @@ void GPS::join()
 
 void GPS::monitorSerialPort()
 {
-	cout << "Starting monitoring serial port" << endl;
-	boost::posix_time::milliseconds SleepTime(200);
-    nmea_zero_INFO(&Info);
-    nmea_parser_init(&Parser);
-	nmea_parser_buff_clear(&Parser);
-	while(1){
-		circular_buffer<char> data = SerialPort.getDataRead();
-		//cout << "Read " << data.size() << endl;
+	try{
+		cout << "Starting monitoring serial port" << endl;
+		boost::posix_time::milliseconds SleepTime(200);
+		nmea_zero_INFO(&Info);
+		nmea_parser_init(&Parser);
+		nmea_parser_buff_clear(&Parser);
+		while(1){
+			circular_buffer<char> data = SerialPort.getDataRead();
+			//cout << "Read " << data.size() << endl;
 
-		int cnt = 0;
-		circular_buffer<char>::array_range rg = data.array_one();
-		memcpy(Buffer, rg.first, rg.second);
-		cnt += rg.second;
+			int cnt = 0;
+			circular_buffer<char>::array_range rg = data.array_one();
+			memcpy(Buffer, rg.first, rg.second);
+			cnt += rg.second;
 
-		rg = data.array_two();
-		memcpy(Buffer + cnt, rg.first, rg.second);
-		cnt += rg.second;
+			rg = data.array_two();
+			memcpy(Buffer + cnt, rg.first, rg.second);
+			cnt += rg.second;
 
-		//int cnt = data.size();
-		/*for(int i = 0; i < data.size(); i++){
-			//Buffer[i] = data[i];
-			cout << Buffer[i];
-		}
-		cout << endl;*/
-		if(cnt > 0){
-			std::unique_lock<std::mutex> gpsLck(gpsDataMtx);
-			int packetsRead = nmea_parse(&Parser, Buffer, cnt, &Info);
-			gpsLck.unlock();
-
-			//cout << "GPS parsed " << packetsRead << endl;
-			if(packetsRead > 0){
-				timestamp = std::chrono::high_resolution_clock::now();
-
-
-				PosLat = nmea_ndeg2degree(Info.lat);
-				PosLon = nmea_ndeg2degree(Info.lon);
-
-
-				newMeasurement = true;
-				dataValid = true;
+			//int cnt = data.size();
+			/*for(int i = 0; i < data.size(); i++){
+				//Buffer[i] = data[i];
+				cout << Buffer[i];
 			}
+			cout << endl;*/
+			if(cnt > 0){
+
+				int packetsRead = nmea_parse(&Parser, Buffer, cnt, &Info);
+
+				//cout << "GPS parsed " << packetsRead << endl;
+				if(packetsRead > 0){
+					timestamp = std::chrono::high_resolution_clock::now();
+
+
+					PosLat = nmea_ndeg2degree(Info.lat);
+					PosLon = nmea_ndeg2degree(Info.lon);
+
+
+					newMeasurement = true;
+					dataValid = true;
+				}
+			}
+			if(threadEnd == true){
+				return;
+			}
+			//cout << "GPS parse sleeping" << endl;
+			boost::this_thread::sleep(SleepTime);
 		}
-		if(threadEnd == true){
-			return;
-		}
-		//cout << "GPS parse sleeping" << endl;
-		boost::this_thread::sleep(SleepTime);
+	}
+	catch(char const* error){
+		cout << "Char exception in Gps: " << error << endl;
+		exit(1);
+	}
+	catch(std::exception& e){
+		cout << "Std exception in Gps: " << e.what() << endl;
+		exit(1);
+	}
+	catch(...){
+		cout << "Unexpected exception in Gps" << endl;
+		exit(1);
 	}
 }
 void GPS::ClearBuffer(){

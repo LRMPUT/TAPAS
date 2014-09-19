@@ -207,9 +207,16 @@ void PositionEstimation::run() {
 			//cout << "PE:: framerate: " << 1000.0 / mtime << endl;
 		}
 	} catch (char const* error) {
-		cout << error << endl;
-	} catch (...) {
-		cout << "PositionEstimation unrecognized exception" << endl;
+		cout << "Char exception in PositionEstimation " << error << endl;
+		exit(1);
+	}
+	catch(std::exception& e){
+		cout << "Std exception in PositionEstimation: " << e.what() << endl;
+		exit(1);
+	}
+	catch(...){
+		cout << "Unexpected exception in PositionEstimation" << endl;
+		exit(1);
 	}
 }
 

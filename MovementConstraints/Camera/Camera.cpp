@@ -81,6 +81,7 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 	if(cacheLoadEnabled){
 		readCache("cache/cameraCache");
 	}
+	cameraThread = std::thread(&Camera::run, this);
 }
 
 Camera::~Camera(){
@@ -1349,10 +1350,16 @@ void Camera::run(){
 		}
 	}
 	catch(char const* error){
-		cout << error << endl;
+		cout << "Char exception in Camera: " << error << endl;
+		exit(1);
+	}
+	catch(std::exception& e){
+		cout << "Std exception in Camera: " << e.what() << endl;
+		exit(1);
 	}
 	catch(...){
-		cout << "Camera unrecognized exception" << endl;
+		cout << "Unexpected exception in Camera" << endl;
+		exit(1);
 	}
 }
 
@@ -1636,10 +1643,10 @@ cv::Mat Camera::getClassifiedImage(){
 	colors.push_back(Scalar(255, 0, 0));	//blue - asphalt
 
 	std::unique_lock<std::mutex> lck(mtxClassIm);
-	Mat coloredOriginal = sharedOriginalImage.clone();
 	Mat ret;
 
-	if(!sharedClassifiedImage.empty()){
+	if(!sharedClassifiedImage.empty() && !sharedOriginalImage.empty()){
+		Mat coloredOriginal = sharedOriginalImage.clone();
 		for(int l = 0; l < labels.size(); l++){
 			coloredOriginal.setTo(colors[l], sharedClassifiedImage == l);
 		}
@@ -1666,10 +1673,9 @@ void Camera::close(){
 	for(int i = 0; i < cameras.size(); i++){
 		cameras[i].release();
 	}
-	cameras.clear();
 	cout << "End closing cameras" << endl;
 }
 
 bool Camera::isOpen(){
-	return (cameras.size() > 0);
+	return cameras.front().isOpened();
 }

@@ -92,9 +92,9 @@ void LocalPlanner::readSettings(TiXmlElement* settings) {
 			&localPlannerParams.gentleTurnMargin) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for VFH_GentleTurnMargin";
 	}
-	if (pLocalPlanner->QueryFloatAttribute("VFH_GentleTurnDiff",
-			&localPlannerParams.gentleTurnDiff) != TIXML_SUCCESS) {
-		throw "Bad settings file - wrong value for VFH_GentleTurnDiff";
+	if (pLocalPlanner->QueryFloatAttribute("VFH_GentleTurnSpeedDiff",
+			&localPlannerParams.gentleTurnSpeedDiff) != TIXML_SUCCESS) {
+		throw "Bad settings file - wrong value for VFH_GentleTurnSpeedDiff";
 	}
 	if (pLocalPlanner->QueryFloatAttribute("VFH_TurnSpeed",
 			&localPlannerParams.turnSpeed) != TIXML_SUCCESS) {
@@ -188,6 +188,7 @@ void LocalPlanner::run() {
 	}
 	catch(...){
 		cout << "LocalPlanner unrecognized exception" << endl;
+		exit(-1);
 	}
 }
 
@@ -528,7 +529,7 @@ void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 				cout<<"Gently right"<<endl;
 			}
 
-			globalPlanner->setMotorsVel(localPlannerParams.turnSpeed, localPlannerParams.turnSpeed - localPlannerParams.gentleTurnDiff);
+			globalPlanner->setMotorsVel(localPlannerParams.turnSpeed, localPlannerParams.turnSpeed - localPlannerParams.gentleTurnSpeedDiff);
 			if(!turningRightStarted){
 				startTurnTime = std::chrono::high_resolution_clock::now();
 			}
@@ -554,7 +555,7 @@ void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 				cout<<"Gently left"<<endl;
 			}
 
-			globalPlanner->setMotorsVel(localPlannerParams.turnSpeed - localPlannerParams.gentleTurnDiff, localPlannerParams.turnSpeed);
+			globalPlanner->setMotorsVel(localPlannerParams.turnSpeed - localPlannerParams.gentleTurnSpeedDiff, localPlannerParams.turnSpeed);
 			if(!turningLeftStarted){
 				startTurnTime = std::chrono::high_resolution_clock::now();
 			}

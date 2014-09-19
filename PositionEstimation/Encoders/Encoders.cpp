@@ -29,70 +29,84 @@ Encoders::~Encoders() {
 }
 
 void Encoders::run(){
-	while(runThread){
+	try{
+		while(runThread){
 
-		serialPort.startReadCount();
-		serialPort.write("req");
-		//cout << "Data sent" << endl;
-		static boost::circular_buffer<char> data(50);
-		int left, right;
-		bool readEncoders = false;
-		int count = 0;
-		static const int countLimit = 60;
-		while(!readEncoders && count < countLimit){
-			boost::circular_buffer<char> newData = serialPort.getDataRead();
-			//cout << "Data received" << endl;
-			//cout << "newData:" << endl;
-			for(int i = 0; i < newData.size(); i++){
-				//cout << newData[i];
-				data.push_back(newData[i]);
-			}
-			//cout << endl;
-			/*cout << "data:" << endl;
-			for(int i = 0; i < data.size(); i++){
-				cout << data[i];
-			}
-			cout << endl;*/
-			int posBeg = searchBufferR(data, "E ");
-			int posEnd = searchBufferR(data, "_");
-			//cout << "posBeg = " << posBeg << ", posEnd = " << posEnd << endl;
-			static const int bufferLen = 40;
-			char buffer[bufferLen];
-			if(posBeg >= 0){
-				for(int i = 0; i < posBeg; i++){
-					data.pop_front();
+			serialPort.startReadCount();
+			serialPort.write("req");
+			//cout << "Data sent" << endl;
+			static boost::circular_buffer<char> data(50);
+			int left, right;
+			bool readEncoders = false;
+			int count = 0;
+			static const int countLimit = 60;
+			while(!readEncoders && count < countLimit){
+				boost::circular_buffer<char> newData = serialPort.getDataRead();
+				//cout << "Data received" << endl;
+				//cout << "newData:" << endl;
+				for(int i = 0; i < newData.size(); i++){
+					//cout << newData[i];
+					data.push_back(newData[i]);
 				}
-				if(posBeg < posEnd && posEnd >= 0){
-					for(int i = posBeg; i < posEnd; i++){
-						buffer[i - posBeg] = data.front();
+				//cout << endl;
+				/*cout << "data:" << endl;
+				for(int i = 0; i < data.size(); i++){
+					cout << data[i];
+				}
+				cout << endl;*/
+				int posBeg = searchBufferR(data, "E ");
+				int posEnd = searchBufferR(data, "_");
+				//cout << "posBeg = " << posBeg << ", posEnd = " << posEnd << endl;
+				static const int bufferLen = 40;
+				char buffer[bufferLen];
+				if(posBeg >= 0){
+					for(int i = 0; i < posBeg; i++){
 						data.pop_front();
 					}
-					buffer[posEnd - posBeg] = 0;
-					sscanf(buffer, "E %d %d", &left, &right);
-					readEncoders = true;
+					if(posBeg < posEnd && posEnd >= 0){
+						for(int i = posBeg; i < posEnd; i++){
+							buffer[i - posBeg] = data.front();
+							data.pop_front();
+						}
+						buffer[posEnd - posBeg] = 0;
+						sscanf(buffer, "E %d %d", &left, &right);
+						readEncoders = true;
+					}
 				}
+				usleep(1000);
+				count++;
 			}
-			usleep(1000);
-			count++;
-		}
 
-		std::unique_lock<std::mutex> lck(mtx);
-		curTimestamp = std::chrono::high_resolution_clock::now();
-		if(count == countLimit){
-			curEnc.at<int>(0) = -1;
-			curEnc.at<int>(1) = -1;
-			//throw "No encoders data received";
-		}
-		else{
-			curEnc.at<int>(0) = -left;	//rotates in an opposite direction
-			curEnc.at<int>(1) = right;
-			dataValid = true;
-		}
-		//std::cout<<"Circular buffer result : " << -left << " " << right << std::endl;
-		lck.unlock();
+			std::unique_lock<std::mutex> lck(mtx);
+			curTimestamp = std::chrono::high_resolution_clock::now();
+			if(count == countLimit){
+				curEnc.at<int>(0) = -1;
+				curEnc.at<int>(1) = -1;
+				//throw "No encoders data received";
+			}
+			else{
+				curEnc.at<int>(0) = -left;	//rotates in an opposite direction
+				curEnc.at<int>(1) = right;
+				dataValid = true;
+			}
+			//std::cout<<"Circular buffer result : " << -left << " " << right << std::endl;
+			lck.unlock();
 
-		std::chrono::milliseconds duration(20);
-		std::this_thread::sleep_for(duration);
+			std::chrono::milliseconds duration(20);
+			std::this_thread::sleep_for(duration);
+		}
+	}
+	catch(char const* error){
+		cout << "Char exception in Encoders: " << error << endl;
+		exit(1);
+	}
+	catch(std::exception& e){
+		cout << "Std exception in Encoders: " << e.what() << endl;
+		exit(1);
+	}
+	catch(...){
+		cout << "Unexpected exception in Encoders" << endl;
+		exit(1);
 	}
 }
 

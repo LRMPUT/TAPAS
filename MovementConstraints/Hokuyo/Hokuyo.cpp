@@ -14,44 +14,58 @@ using namespace std;
 using namespace cv;
 
 void Hokuyo::run(){
-	hokuyo.start_measurement(	qrk::Urg_driver::Distance_intensity,
-								qrk::Urg_driver::Infinity_times,
-								0);
-	while(runThread){
-		vector<long int> distance;
-		vector<unsigned short> intensity;
+	try{
+		hokuyo.start_measurement(	qrk::Urg_driver::Distance_intensity,
+									qrk::Urg_driver::Infinity_times,
+									0);
+		while(runThread){
+			vector<long int> distance;
+			vector<unsigned short> intensity;
 
-		//cout << "is_open: " << hokuyo.is_open() << endl;
-		//cout << "status: " << hokuyo.status() << endl;
-		//1 measurement doesn't work with Distance_intensity
-		hokuyo.get_distance_intensity(distance, intensity);
-		//hokuyo.get_distance_intensity(distance, intensity);
-		//cout << "distance.size() = " << distance.size() << ", intensity.size() = " << intensity.size() << endl;
-		//int count = 0;
-		std::unique_lock<std::mutex> lck(mtx);
+			//cout << "is_open: " << hokuyo.is_open() << endl;
+			//cout << "status: " << hokuyo.status() << endl;
+			//1 measurement doesn't work with Distance_intensity
+			hokuyo.get_distance_intensity(distance, intensity);
+			//hokuyo.get_distance_intensity(distance, intensity);
+			//cout << "distance.size() = " << distance.size() << ", intensity.size() = " << intensity.size() << endl;
+			//int count = 0;
+			std::unique_lock<std::mutex> lck(mtx);
 
-		curMeas = Mat(4, distance.size(), CV_32SC1);
-		curTimestamp = std::chrono::high_resolution_clock::now();
-		for(int i = 0; i < distance.size(); i++){
-			double angle = hokuyo.index2rad(i);
-			//cout << "Point " << i << " = " << distance[i] << ", " << intensity[i] << endl;
-			//cout << "Point " << i << " = (" << data[i]*cos(angle) << ", " << data[i]*sin(angle) << ")" << endl;
-			//if(distance[i] == 0){
-			//	count++;
-			//}
-			curMeas.at<int>(0, i) = distance[i]*cos(angle);
-			curMeas.at<int>(1, i) = distance[i]*sin(angle);
-			curMeas.at<int>(2, i) = distance[i];
-			curMeas.at<int>(3, i) = intensity[i];
+			curMeas = Mat(4, distance.size(), CV_32SC1);
+			curTimestamp = std::chrono::high_resolution_clock::now();
+			for(int i = 0; i < distance.size(); i++){
+				double angle = hokuyo.index2rad(i);
+				//cout << "Point " << i << " = " << distance[i] << ", " << intensity[i] << endl;
+				//cout << "Point " << i << " = (" << data[i]*cos(angle) << ", " << data[i]*sin(angle) << ")" << endl;
+				//if(distance[i] == 0){
+				//	count++;
+				//}
+				curMeas.at<int>(0, i) = distance[i]*cos(angle);
+				curMeas.at<int>(1, i) = distance[i]*sin(angle);
+				curMeas.at<int>(2, i) = distance[i];
+				curMeas.at<int>(3, i) = intensity[i];
+			}
+			dataValid = true;
+			lck.unlock();
+			//cout << "Number of zeros: " << count << endl;
+
+			std::chrono::milliseconds duration(20);
+			std::this_thread::sleep_for(duration);
 		}
-		dataValid = true;
-		lck.unlock();
-		//cout << "Number of zeros: " << count << endl;
-
-		std::chrono::milliseconds duration(20);
-		std::this_thread::sleep_for(duration);
+		hokuyo.stop_measurement();
 	}
-	hokuyo.stop_measurement();
+	catch(char const* error){
+		cout << "Char exception in Hokuyo: " << error << endl;
+		exit(1);
+	}
+	catch(std::exception& e){
+		cout << "Std exception in Hokuyo: " << e.what() << endl;
+		exit(1);
+	}
+	catch(...){
+		cout << "Unexpected exception in Hokuyo" << endl;
+		exit(1);
+	}
 }
 
 Hokuyo::Hokuyo() :

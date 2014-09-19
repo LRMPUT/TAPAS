@@ -253,6 +253,7 @@ void GlobalPlanner::globalPlannerProcessing() {
 	}
 	catch(...){
 		cout << "GlobalPlanner unrecognized exception" << endl;
+		exit(-1.0);
 	}
 }
 

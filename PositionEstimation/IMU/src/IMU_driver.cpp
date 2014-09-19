@@ -8,6 +8,7 @@
 #include "../include/IMU_driver.h"
 #include<cmath>
 #include<chrono>
+#include <iostream>
 
 
 // Global pointer to instance of IMUDriver
@@ -195,14 +196,28 @@ IMU_driver::~IMU_driver() {
 }
 
 void IMU_driver::updateIMU() {
-	printf("IMU: Started update thread --> will provide the data\n");
-	while (runThread) {
-		//Update the parser
-		mip_interface_update(&device_interface);
-		//Be nice to other programs
-		usleep(10);
+	try{
+		printf("IMU: Started update thread --> will provide the data\n");
+		while (runThread) {
+			//Update the parser
+			mip_interface_update(&device_interface);
+			//Be nice to other programs
+			usleep(10);
+		}
+		printf("IMU: Finished update thread --> no more new data\n");
 	}
-	printf("IMU: Finished update thread --> no more new data\n");
+	catch(char const* error){
+		std::cout << "Char exception in Imu: " << error << std::endl;
+		exit(1);
+	}
+	catch(std::exception& e){
+		std::cout << "Std exception in Imu: " << e.what() << std::endl;
+		exit(1);
+	}
+	catch(...){
+		std::cout << "Unexpected exception in Imu" << std::endl;
+		exit(1);
+	}
 }
 
 void IMU_driver::openPort(std::string& device) {
