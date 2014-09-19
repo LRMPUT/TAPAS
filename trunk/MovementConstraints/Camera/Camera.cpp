@@ -96,7 +96,7 @@ Camera::~Camera(){
 }
 
 void Camera::computeConstraints(std::chrono::high_resolution_clock::time_point nextCurTimestamp){
-	cout << "Computing constraints" << endl;
+//	cout << "Computing constraints" << endl;
 
 	Mat votes(MAP_SIZE, MAP_SIZE, CV_32SC1, Scalar(0));
 	Mat countVotes(MAP_SIZE, MAP_SIZE, CV_32SC1, Scalar(0));
@@ -160,7 +160,7 @@ void Camera::computeConstraints(std::chrono::high_resolution_clock::time_point n
 }
 
 std::vector<cv::Mat> Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
-	cout << "Computing map segments" << endl;
+//	cout << "Computing map segments" << endl;
 	//cout << "curPosMapCenter = " << curPosImuMapCenter << endl;
 	//namedWindow("test");
 	//mapSegments.clear();
@@ -212,13 +212,13 @@ std::vector<cv::Mat> Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 			}
 		}
 	}
-	cout << "End computing map segments" << endl;
+//	cout << "End computing map segments" << endl;
 	return ret;
 }
 
 #ifndef NO_CUDA
 std::vector<cv::Mat> Camera::computeMapSegmentsGpu(cv::Mat curPosImuMapCenter){
-	cout << "Computing map segments" << endl;
+//	cout << "Computing map segments" << endl;
 	//namedWindow("test");
 	//mapSegments.clear();
 	vector<Mat> ret;

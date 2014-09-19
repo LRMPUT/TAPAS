@@ -62,9 +62,9 @@
 						changedPlanThreshold="40"
 						changedPlanDelayTime="300000"
 						sound="1"
-						runHomologation="0" 
+						runHomologation="1" 
 						mapFile="robotourMap.osm"
-						goalLatitude="49.722581" goalLongitude="13.364215"
+						goalLatitude="49.723369" goalLongitude="13.366425"
 						startLatitude="49.725131" startLongitude="13.367541"/>
 
 
@@ -83,8 +83,8 @@
 	-->
 	
 	<LocalPlanner 		runThread="1" 
-						debug="0"
-						avoidObstacles="1" 
+						debug="1"
+						avoidObstacles="0" 
 						VFH_HistResolution="10"
 						VFH_Threshold="0.5" 
 						VFH_SteeringMargin="10" 
@@ -97,8 +97,8 @@
 						VFH_GentleTurnSpeedDiff="70"
 						VFH_TurnSpeed="90"
 						VFH_TurnTimeout="5000"
-						VFH_InterruptTime="1000"
-						VFH_InterruptSpeed="40"
+						VFH_InterruptTime="500"
+						VFH_InterruptSpeed="60"
 						VFH_ImuAccVarianceLimit="0.1" />
 
 	<!--
@@ -127,7 +127,7 @@
 	<!--
 		Jan Wietrzykowski is lazy and does not use the comments ;d
 	-->
-	<MovementConstraints runThread="true" debug="1">
+	<MovementConstraints runThread="true" debug="0">
 		<odometry diam="160" base="452" encodersCPR="300" />
 		<point_cloud minDist="100" maxTimePoint="4000" maxTimeMap="4000" />
 		<laser_constraints lowerThreshold="50" upperThreshold="80" minPts="5" />
@@ -149,7 +149,7 @@
 			0	0	1	-810
 			0	0	0	1
 		</imu_position_robot>
-		<Camera runThread="true" number="1" rows="480" cols="640" entryWeightThreshold="400" debug="1">
+		<Camera runThread="true" number="1" rows="480" cols="640" entryWeightThreshold="400" debug="0">
 			<cache saveEnabled="true" loadEnabled="true"/>
 			<HierClassifier debug="0">
 				<cache enabled="true" />

@@ -184,11 +184,16 @@ void LocalPlanner::run() {
 		globalPlanner->setMotorsVel(0, 0);
 	}
 	catch(char const* error){
-		cout << error << endl;
+		cout << "Char exception in LocalPlanner: " << error << endl;
+		exit(1);
+	}
+	catch(std::exception& e){
+		cout << "Std exception in LocalPlanner: " << e.what() << endl;
+		exit(1);
 	}
 	catch(...){
-		cout << "LocalPlanner unrecognized exception" << endl;
-		exit(-1);
+		cout << "Unexpected exception in LocalPlanner" << endl;
+		exit(1);
 	}
 }
 
@@ -578,15 +583,26 @@ void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 		}
 	}
 	else{
-		if (fabs(bestDirLocalMap - localYaw) < localPlannerParams.gentleTurnMargin)
-		{
+		if (fabs(bestDirLocalMap - localYaw) < localPlannerParams.steeringMargin){
 			if (localPlannerParams.debug >= 1){
 				cout<<"Straight"<<endl;
 			}
 
-			float curSpeed = determineCurSpeed();
+			globalPlanner->setMotorsVel(localPlannerParams.normalSpeed, localPlannerParams.normalSpeed);
+		}
+		else if ((bestDirLocalMap - localYaw > 0) && (bestDirLocalMap - localYaw < localPlannerParams.gentleTurnMargin))	{
+			if (localPlannerParams.debug >= 1){
+				cout<<"Gently right"<<endl;
+			}
 
-			globalPlanner->setMotorsVel(curSpeed, curSpeed);
+			globalPlanner->setMotorsVel(localPlannerParams.turnSpeed, localPlannerParams.turnSpeed - localPlannerParams.gentleTurnSpeedDiff);
+		}
+		else if ((bestDirLocalMap - localYaw < 0) && (bestDirLocalMap - localYaw > -localPlannerParams.gentleTurnMargin))	{
+			if (localPlannerParams.debug >= 1){
+				cout<<"Gently left"<<endl;
+			}
+
+			globalPlanner->setMotorsVel(localPlannerParams.turnSpeed - localPlannerParams.gentleTurnSpeedDiff, localPlannerParams.turnSpeed);
 		}
 		else{
 			if (localPlannerParams.debug >= 1){

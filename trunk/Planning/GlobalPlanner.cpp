@@ -166,6 +166,7 @@ void GlobalPlanner::readSettings(TiXmlElement* settings) {
 
 // Start the competation
 void GlobalPlanner::startCompetition() {
+	cout << "GlobalPlanner::startCompetition()" << endl;
 	 startGlobalPlannerCompetition = true;
 }
 
@@ -175,16 +176,20 @@ void GlobalPlanner::globalPlannerProcessing() {
 	try{
 		if ( globalPlannerParams.runHomologation == 1 )
 		{
-			usleep(200000); // TODO
 			while(!robot->isImuDataValid())
 				usleep(200000);
 
-			localPlanner->startLocalPlanner();
+			while( !startGlobalPlannerCompetition && globalPlannerParams.runThread){
+				usleep(200);
+			}
 
 			std::chrono::high_resolution_clock::time_point timestamp;
 			//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
 			cv::Mat imu = robot->getImuData(timestamp);
 			setGoalDirectionInDegrees(imu.at<float>(2,3));
+
+			localPlanner->setNormalSpeed();
+			localPlanner->startLocalPlanner();
 
 			while (globalPlannerParams.runThread)
 			{
@@ -211,7 +216,12 @@ void GlobalPlanner::globalPlannerProcessing() {
 				setLoadedGoal();
 			}
 
-			while( !startGlobalPlannerCompetition && globalPlannerParams.runThread);
+			while( !startGlobalPlannerCompetition && globalPlannerParams.runThread){
+				usleep(200);
+				// Where are we ?
+				double robotX, robotY, theta;
+				updateRobotPosition(robotX, robotY, theta);
+			cout << "Global Planner started competition" << endl;
 
 			localPlanner->setNormalSpeed();
 			localPlanner->startLocalPlanner();
@@ -257,11 +267,16 @@ void GlobalPlanner::globalPlannerProcessing() {
 		}
 	}
 	catch(char const* error){
-		cout << error << endl;
+		cout << "Char exception in GlobalPlanner: " << error << endl;
+		exit(1);
+	}
+	catch(std::exception& e){
+		cout << "Std exception in GlobalPlanner: " << e.what() << endl;
+		exit(1);
 	}
 	catch(...){
-		cout << "GlobalPlanner unrecognized exception" << endl;
-		exit(-1.0);
+		cout << "Unexpected exception in GlobalPlanner" << endl;
+		exit(1);
 	}
 }
 
