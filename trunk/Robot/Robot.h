@@ -69,6 +69,9 @@ public:
 				> (std::chrono::high_resolution_clock::now() - startTime);
 	}
 
+	// Start the program
+	void startCompetition();
+
 	//----------------------MENAGMENT OF GlobalPlanner DEVICES
 	//Robots Drive
 	void openRobotsDrive(std::string port1, std::string port2);
