@@ -25,7 +25,8 @@ using namespace std;
 
 GlobalPlanner::GlobalPlanner(Robot* irobot, TiXmlElement* settings) :
 		robot(irobot), robotDrive1(NULL), robotDrive2(NULL), goalTheta(0.0), planningStage(
-				toGoal), weShouldWait(false), previousPlanDistance(-1.0), startGlobalPlannerCompetition(false) {
+				toGoal), weShouldWait(false), previousPlanDistance(-1.0), startGlobalPlannerCompetition(
+				false) {
 	cout << "GlobalPlanner()" << endl;
 	readSettings(settings);
 
@@ -167,32 +168,31 @@ void GlobalPlanner::readSettings(TiXmlElement* settings) {
 // Start the competation
 void GlobalPlanner::startCompetition() {
 	cout << "GlobalPlanner::startCompetition()" << endl;
-	 startGlobalPlannerCompetition = true;
+	startGlobalPlannerCompetition = true;
 }
 
 // Main processing thread
 void GlobalPlanner::globalPlannerProcessing() {
 
-	try{
-		if ( globalPlannerParams.runHomologation == 1 )
-		{
-			while(!robot->isImuDataValid())
+	try {
+		if (globalPlannerParams.runHomologation == 1) {
+			while (!robot->isImuDataValid())
 				usleep(200000);
 
-			while( !startGlobalPlannerCompetition && globalPlannerParams.runThread){
+			while (!startGlobalPlannerCompetition
+					&& globalPlannerParams.runThread) {
 				usleep(200);
 			}
 
 			std::chrono::high_resolution_clock::time_point timestamp;
 			//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
 			cv::Mat imu = robot->getImuData(timestamp);
-			setGoalDirectionInDegrees(imu.at<float>(2,3));
+			setGoalDirectionInDegrees(imu.at<float>(2, 3));
 
 			localPlanner->setNormalSpeed();
 			localPlanner->startLocalPlanner();
 
-			while (globalPlannerParams.runThread)
-			{
+			while (globalPlannerParams.runThread) {
 				usleep(200000);
 			}
 		} else {
@@ -216,65 +216,68 @@ void GlobalPlanner::globalPlannerProcessing() {
 				setLoadedGoal();
 			}
 
-			while( !startGlobalPlannerCompetition && globalPlannerParams.runThread){
+			while (!startGlobalPlannerCompetition
+					&& globalPlannerParams.runThread) {
 				usleep(200);
 				// Where are we ?
 				double robotX, robotY, theta;
 				updateRobotPosition(robotX, robotY, theta);
-			cout << "Global Planner started competition" << endl;
+				cout << "Global Planner started competition" << endl;
 
-			localPlanner->setNormalSpeed();
-			localPlanner->startLocalPlanner();
-			int loopTimeCounter = 0;
-			bool recomputePlan = false;
-			int startType = 0;
-			while (globalPlannerParams.runThread) {
-				std::cout << std::endl << "Global Planner : New iteration"
-						<< std::endl << std::endl;
+				localPlanner->setNormalSpeed();
+				localPlanner->startLocalPlanner();
+				int loopTimeCounter = 0;
+				bool recomputePlan = false;
+				int startType = 0;
+				while (globalPlannerParams.runThread) {
+					std::cout << std::endl << "Global Planner : New iteration"
+							<< std::endl << std::endl;
 
-				// Where are we ?
-				double robotX, robotY, theta;
-				updateRobotPosition(robotX, robotY, theta);
+					// Where are we ?
+					double robotX, robotY, theta;
+					updateRobotPosition(robotX, robotY, theta);
 
-				// Where are we in the map
-				findStartingEdge(robotX, robotY, startType);
+					// Where are we in the map
+					findStartingEdge(robotX, robotY, startType);
 
-				// We compute new global plan
-				if (globalPlannerParams.computeEveryNth == 1 || recomputePlan
-						|| loopTimeCounter % globalPlannerParams.computeEveryNth
-								== 0) {
-					loopTimeCounter = loopTimeCounter
-							% globalPlannerParams.computeEveryNth;
-					// Compute the route to follow
-					computeGlobalPlan(robotX, robotY, startType);
-					// We recomputed the plan
-					recomputePlan = false;
+					// We compute new global plan
+					if (globalPlannerParams.computeEveryNth == 1
+							|| recomputePlan
+							|| loopTimeCounter
+									% globalPlannerParams.computeEveryNth
+									== 0) {
+						loopTimeCounter = loopTimeCounter
+								% globalPlannerParams.computeEveryNth;
+						// Compute the route to follow
+						computeGlobalPlan(robotX, robotY, startType);
+						// We recomputed the plan
+						recomputePlan = false;
 
+					}
+
+					// Let's compute the next target
+					chooseNextSubGoal(robotX, robotY, recomputePlan);
+
+					// Let's update out subgoal as current destination
+					//			updateHeadingGoal();
+
+					std::chrono::milliseconds duration(
+							int(
+									1000.0
+											/ globalPlannerParams.processingFrequency));
+					std::this_thread::sleep_for(duration);
+					loopTimeCounter++;
 				}
-
-				// Let's compute the next target
-				chooseNextSubGoal(robotX, robotY, recomputePlan);
-
-				// Let's update out subgoal as current destination
-				//			updateHeadingGoal();
-
-				std::chrono::milliseconds duration(
-						int(1000.0 / globalPlannerParams.processingFrequency));
-				std::this_thread::sleep_for(duration);
-				loopTimeCounter++;
+				localPlanner->stopLocalPlanner();
 			}
-			localPlanner->stopLocalPlanner();
 		}
-	}
-	catch(char const* error){
+	} catch (char const* error) {
 		cout << "Char exception in GlobalPlanner: " << error << endl;
 		exit(1);
-	}
-	catch(std::exception& e){
+	} catch (std::exception& e) {
 		cout << "Std exception in GlobalPlanner: " << e.what() << endl;
 		exit(1);
-	}
-	catch(...){
+	} catch (...) {
 		cout << "Unexpected exception in GlobalPlanner" << endl;
 		exit(1);
 	}
@@ -611,7 +614,7 @@ void GlobalPlanner::computeGlobalPlan(double robotX, double robotY,
 	}
 
 	cout << "PQUEUE SIZE : " << pqueue.size() << " startType == " << startType
-			<< " goalType == " << goalType<< endl;
+			<< " goalType == " << goalType << endl;
 	// We process the graph
 	while (!pqueue.empty()) {
 
@@ -660,47 +663,46 @@ void GlobalPlanner::computeGlobalPlan(double robotX, double robotY,
 
 	// Drastic change of plans - wait a little bit
 	startTime = std::chrono::high_resolution_clock::now();
-	double currentPlanDistance = std::min(distance[goalId[0]],distance[goalId[1]]);
-	if ( goalType < 2 )
-	{
-		currentPlanDistance = distance[goalId[ goalType]];
+	double currentPlanDistance = std::min(distance[goalId[0]],
+			distance[goalId[1]]);
+	if (goalType < 2) {
+		currentPlanDistance = distance[goalId[goalType]];
 	}
-
 
 	// Plan different by over some meters
 	std::chrono::milliseconds tmpTime = std::chrono::duration_cast
-					< std::chrono::milliseconds
+			< std::chrono::milliseconds
 			> (std::chrono::high_resolution_clock::now()
 					- changePlanDelayStartTime);
-	if (fabs(previousPlanDistance+1) > 0.0001 && fabs(currentPlanDistance - previousPlanDistance)
-			> globalPlannerParams.changedPlanThreshold
-			&& tmpTime.count() > globalPlannerParams.changedPlanDelayTime && !weShouldWait)
-	{
+	if (fabs(previousPlanDistance + 1) > 0.0001
+			&& fabs(currentPlanDistance - previousPlanDistance)
+					> globalPlannerParams.changedPlanThreshold
+			&& tmpTime.count() > globalPlannerParams.changedPlanDelayTime
+			&& !weShouldWait) {
 		weShouldWait = true;
 		localPlanner->stopLocalPlanner();
 		waitingStartTime = std::chrono::high_resolution_clock::now();
-	}
-	else if (weShouldWait == true)
-	{
-		std::chrono::milliseconds time = std::chrono::duration_cast
-					< std::chrono::milliseconds
-					> (std::chrono::high_resolution_clock::now() - waitingStartTime);
-		if (time.count() > globalPlannerParams.changedPlanWaitingTime)
-		{
+	} else if (weShouldWait == true) {
+		std::chrono::milliseconds time =
+				std::chrono::duration_cast < std::chrono::milliseconds
+						> (std::chrono::high_resolution_clock::now()
+								- waitingStartTime);
+		if (time.count() > globalPlannerParams.changedPlanWaitingTime) {
 			weShouldWait = false;
 			localPlanner->startLocalPlanner();
-			changePlanDelayStartTime = std::chrono::high_resolution_clock::now();
+			changePlanDelayStartTime =
+					std::chrono::high_resolution_clock::now();
 		}
 	}
 	previousPlanDistance = currentPlanDistance;
-
 
 	// Let's check which node or the node of the final edge is closer to us
 	int finalGoalId = findGoalNodeId(finalGoalId, distance);
 
 	if (globalPlannerParams.debug == 1) {
-			std::cout << "Global Planner : FinalGoalid =" << finalGoalId << std::endl;
-			std::cout << "Global Planner : startType =" << startType << std::endl;
+		std::cout << "Global Planner : FinalGoalid =" << finalGoalId
+				<< std::endl;
+		std::cout << "Global Planner : startType =" << startType << std::endl;
 	}
 	nodesToVisit.push_back(finalGoalId);
 
@@ -709,8 +711,8 @@ void GlobalPlanner::computeGlobalPlan(double robotX, double robotY,
 	while (true) {
 
 		if (globalPlannerParams.debug == 1)
-			std::cout << "Global Planner : " << i << " " << previous[i]<<std::endl;
-
+			std::cout << "Global Planner : " << i << " " << previous[i]
+					<< std::endl;
 
 		if ((startType == 0 || startType == 2) && i == startId[0]) {
 			break;
@@ -766,7 +768,8 @@ void GlobalPlanner::goDirectlyToTarget(double robotX, double robotY,
 	if (planningStage != preciselyToGoal && planningStage != preciselyToStart) {
 
 		if (globalPlannerParams.debug == 1)
-			printf("Global planner: We are close to goal - precise navigation\n");
+			printf(
+					"Global planner: We are close to goal - precise navigation\n");
 
 		// We change to precise navigation
 		planningStage = static_cast<PlanningStage>(((int) (planningStage) + 1)
@@ -780,7 +783,6 @@ void GlobalPlanner::goDirectlyToTarget(double robotX, double robotY,
 	double y = goalY - robotY;
 	setGoalDirection(atan2(y, x));
 
-
 	// Next time
 	std::chrono::milliseconds time = std::chrono::duration_cast
 			< std::chrono::milliseconds
@@ -789,7 +791,7 @@ void GlobalPlanner::goDirectlyToTarget(double robotX, double robotY,
 
 		if (globalPlannerParams.debug == 1) {
 			printf(
-				"Global planner: We precisely reached the goal - let's change the plan\n");
+					"Global planner: We precisely reached the goal - let's change the plan\n");
 		}
 
 		// Going back to normal operation
@@ -803,16 +805,20 @@ void GlobalPlanner::goDirectlyToTarget(double robotX, double robotY,
 		if (planningStage == toStart) {
 
 			// Changing to Nmea
-			double lat = GPS::decimal2Nmea(globalPlannerParams.startLatitude*100);
-			double lon = GPS::decimal2Nmea(globalPlannerParams.startLongitude*100);
+			double lat = GPS::decimal2Nmea(
+					globalPlannerParams.startLatitude * 100);
+			double lon = GPS::decimal2Nmea(
+					globalPlannerParams.startLongitude * 100);
 
 			// Computing the position in local map
-			goalX = robot->getPosX(lat)/1000;
-			goalY = robot->getPosY(lon)/1000;
+			goalX = robot->getPosX(lat) / 1000;
+			goalY = robot->getPosY(lon) / 1000;
 
 			// Let's beep !!!:D
 			if (globalPlannerParams.sound == 1) {
-				int tmp = system("espeak -v en-us+1 -s 150 \"Target reached. I'm going home.\"");
+				int tmp =
+						system(
+								"espeak -v en-us+1 -s 150 \"Target reached. I'm going home.\"");
 			}
 			updateGoal();
 			recomputePlan = true;
@@ -820,14 +826,16 @@ void GlobalPlanner::goDirectlyToTarget(double robotX, double robotY,
 			localPlanner->setNormalSpeed();
 			localPlanner->startLocalPlanner();
 		} else if (planningStage == toGoal) {
-			 if (globalPlannerParams.debug == 1) {
-				 printf("Global planner: robot finished it's job\n");
-			 }
-			 if (globalPlannerParams.sound == 1) {
-				 int tmp = system("espeak -v en-us+1 -s 150 \"I'm home. I finished my job.\"");
-			 }
+			if (globalPlannerParams.debug == 1) {
+				printf("Global planner: robot finished it's job\n");
+			}
+			if (globalPlannerParams.sound == 1) {
+				int tmp =
+						system(
+								"espeak -v en-us+1 -s 150 \"I'm home. I finished my job.\"");
+			}
 		} else if (globalPlannerParams.debug == 1) {
-				printf("Global planner: Error in global planner state\n");
+			printf("Global planner: Error in global planner state\n");
 		}
 	}
 }
@@ -835,7 +843,8 @@ void GlobalPlanner::goDirectlyToTarget(double robotX, double robotY,
 void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY,
 		bool &recomputePlan) {
 	if (globalPlannerParams.debug == 1) {
-		std::cout<<"Global planner : choosing subgoals : nodesToVisit = " << nodesToVisit.size() << std::endl;
+		std::cout << "Global planner : choosing subgoals : nodesToVisit = "
+				<< nodesToVisit.size() << std::endl;
 	}
 
 	// There is only goal ahead -> let's precisely navigate towards it
@@ -863,11 +872,13 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY,
 
 			double x = tmp.first - robotX;
 			double y = tmp.second - robotY;
-			double direction = atan2(y,x);
-			double directionDifference = fabs(direction - originalGoalTheta)*180.0/M_PI;
+			double direction = atan2(y, x);
+			double directionDifference = fabs(direction - originalGoalTheta)
+					* 180.0 / M_PI;
 
 			// This is the node we go to (because it is further away than threshold or the direction is the same):
-			if (sqrt(dist) > globalPlannerParams.subgoalThreshold && foundSubgoal == false) {
+			if (sqrt(dist) > globalPlannerParams.subgoalThreshold
+					&& foundSubgoal == false) {
 
 				setGoalDirection(direction);
 
@@ -890,24 +901,24 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY,
 				setGoalDirection(direction);
 
 				std::list<int>::iterator it2 = nodesToVisit.begin();
-				while(it2!=it)
-				{
+				while (it2 != it) {
 					nodesToVisit.pop_front();
 					it2 = nodesToVisit.begin();
 				}
 
 				if (globalPlannerParams.debug == 1) {
-					std::cout << "Global Planner : angular choice - node : " << tmp.first << " "
-							<< tmp.second << std::endl;
-					std::cout << "Global Planner : angular choice - robot position : " << robotX
-							<< " " << robotY << std::endl;
-					std::cout << "Global Planner : angular choice - distance to subgoal : " << x
-							<< " " << y << " : Dist = " << sqrt(x * x + y * y)
-							<< std::endl;
+					std::cout << "Global Planner : angular choice - node : "
+							<< tmp.first << " " << tmp.second << std::endl;
+					std::cout
+							<< "Global Planner : angular choice - robot position : "
+							<< robotX << " " << robotY << std::endl;
+					std::cout
+							<< "Global Planner : angular choice - distance to subgoal : "
+							<< x << " " << y << " : Dist = "
+							<< sqrt(x * x + y * y) << std::endl;
 				}
 				nodesToVisit.pop_front();
-			}
-			else {
+			} else {
 				if (foundSubgoal)
 					break;
 
@@ -921,17 +932,18 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY,
 		}
 		// We can go directly to target
 		if (foundSubgoal == false) {
-			if (globalPlannerParams.debug == 1)
-			{
-				std::cout << "Global Planner : we are heading directly to target" << std::endl;
-				usleep(1000*4000);
+			if (globalPlannerParams.debug == 1) {
+				std::cout
+						<< "Global Planner : we are heading directly to target"
+						<< std::endl;
+				usleep(1000 * 4000);
 			}
 			goDirectlyToTarget(robotX, robotY, recomputePlan);
 		}
 	}
 	if (globalPlannerParams.debug == 1)
-		std::cout << "Global Planner : We are heading with theta = " << goalTheta
-				<< " (in degrees)" << std::endl;
+		std::cout << "Global Planner : We are heading with theta = "
+				<< goalTheta << " (in degrees)" << std::endl;
 }
 
 // Helping methods
