@@ -224,6 +224,15 @@ void GlobalPlanner::globalPlannerProcessing() {
 				updateRobotPosition(robotX, robotY, theta);
 				cout << "Global Planner started competition" << endl;
 
+				// Program failed, but we reached the goal and we restart the fun
+				std::ifstream i;
+				i.open("targetReached");
+				int state;
+				i>>state;
+				if (state == 1)
+					planningStage = toStart;
+				i.close();
+
 				localPlanner->setNormalSpeed();
 				localPlanner->startLocalPlanner();
 				int loopTimeCounter = 0;
@@ -822,6 +831,11 @@ void GlobalPlanner::goDirectlyToTarget(double robotX, double robotY,
 			}
 			updateGoal();
 			recomputePlan = true;
+
+			std::ofstream z; z.open("targetReached");
+			z<<"1";
+			z.close();
+
 			// startLocalPlanner
 			localPlanner->setNormalSpeed();
 			localPlanner->startLocalPlanner();
