@@ -60,7 +60,7 @@ private:
 
 	Recording* recording;
 private slots:
-	void startHomologation();
+	void startRobot();
 
 };
 

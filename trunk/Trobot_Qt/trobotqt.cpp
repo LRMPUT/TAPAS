@@ -47,7 +47,7 @@ TrobotQt::TrobotQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
 
 	recording = new Recording(&ui, &robot, &debug);
 
-	QObject::connect(ui.homologationButton, SIGNAL(clicked()), this, SLOT(startHomologation()));
+	QObject::connect(ui.startRobotButton, SIGNAL(clicked()), this, SLOT(startRobot()));
 	cout << "TrobotQt::TrobotQt end" << endl;
 
 	robot.openImu("/dev/robots/imu2");
@@ -74,6 +74,6 @@ TrobotQt::~TrobotQt(){
 	cout << "End ~TrobotQt" << endl;
 }
 
-void TrobotQt::startHomologation(){
-	//robot.homologation();
+void TrobotQt::startRobot(){
+	robot.startCompetition();
 }

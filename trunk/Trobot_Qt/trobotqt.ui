@@ -1983,7 +1983,7 @@
        </item>
       </layout>
      </widget>
-     <widget class="QPushButton" name="homologationButton">
+     <widget class="QPushButton" name="startRobotButton">
       <property name="geometry">
        <rect>
         <x>370</x>
@@ -1993,7 +1993,7 @@
        </rect>
       </property>
       <property name="text">
-       <string>Homologation</string>
+       <string>Start robot</string>
       </property>
      </widget>
      <widget class="QLabel" name="label_39">
