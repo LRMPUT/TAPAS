@@ -442,7 +442,7 @@ float LocalPlanner::findOptimSector(const std::vector<float>& histSectors,
 		float sectorToRobotDiff = min(fabs(sectorDirLocalMap - robotDirLocalMap), fabs(fabs(sectorDirLocalMap - robotDirLocalMap) - 360));
 
 		float score = min(fabs(goalDirLocalMap - sectorDirLocalMap), fabs(fabs(goalDirLocalMap - sectorDirLocalMap) - 360))/180;	//angular distance to goal penalty
-		score += (sectorToRobotDiff > 90) ? localPlannerParams.backwardsPenalty : 0.0f;
+		score += (sectorToRobotDiff > 60) ? localPlannerParams.backwardsPenalty : 0.0f;
 		score += histSectors[i];
 
 		if(localPlannerParams.debug >= 2){
@@ -472,8 +472,8 @@ void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 											float bestDirLocalMap)
 {
 	static std::chrono::high_resolution_clock::time_point startTurnTime = std::chrono::high_resolution_clock::now();
-	static bool turningRightStarted = false;
-	static bool turningLeftStarted = false;
+	static bool turningStarted = false;
+	//static bool turningLeftStarted = false;
 	static std::chrono::high_resolution_clock::time_point startInterruptTime = std::chrono::high_resolution_clock::now();
 	static bool turnInterrupted = false;
 	//Mat posRobotMapCenter = robot->getPosImuConstraintsMapCenter();
@@ -489,10 +489,10 @@ void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 		// 100 means that we are in target direction with 10 degree margin
 		if (localPlannerParams.debug >= 2)
 		{
-			cout << "turningRightStarted = " << turningRightStarted << endl;
-			cout << "turningLeftStarted = " << turningLeftStarted << endl;
+			cout << "turningStarted = " << turningStarted << endl;
+//			cout << "turningLeftStarted = " << turningLeftStarted << endl;
 		}
-		if((turningLeftStarted || turningRightStarted) &&
+		if((turningStarted) &&
 			std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startTurnTime).count() > localPlannerParams.turnTimeout)
 		{
 			if (localPlannerParams.debug >= 1)
@@ -501,8 +501,7 @@ void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 			}
 			turnInterrupted = true;
 			startInterruptTime = std::chrono::high_resolution_clock::now();
-			turningRightStarted = false;
-			turningLeftStarted = false;
+			turningStarted = false;
 		}
 
 		if(turnInterrupted &&
@@ -525,8 +524,7 @@ void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 			float curSpeed = determineCurSpeed();
 
 			globalPlanner->setMotorsVel(curSpeed, curSpeed);
-			turningRightStarted = false;
-			turningLeftStarted = false;
+			turningStarted = false;
 			turnInterrupted = false;
 		}
 		else if ((bestDirLocalMap - localYaw > 0) && (bestDirLocalMap - localYaw < localPlannerParams.gentleTurnMargin))	{
@@ -535,11 +533,10 @@ void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 			}
 
 			globalPlanner->setMotorsVel(localPlannerParams.turnSpeed, localPlannerParams.turnSpeed - localPlannerParams.gentleTurnSpeedDiff);
-			if(!turningRightStarted){
+			if(!turningStarted){
 				startTurnTime = std::chrono::high_resolution_clock::now();
 			}
-			turningRightStarted = true;
-			turningLeftStarted = false;
+			turningStarted = true;
 			turnInterrupted = false;
 		}
 		else if (bestDirLocalMap - localYaw > 0)	{
@@ -548,11 +545,10 @@ void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 			}
 
 			globalPlanner->setMotorsVel(localPlannerParams.turnSpeed, -localPlannerParams.turnSpeed);
-			if(!turningRightStarted){
+			if(!turningStarted){
 				startTurnTime = std::chrono::high_resolution_clock::now();
 			}
-			turningRightStarted = true;
-			turningLeftStarted = false;
+			turningStarted = true;
 			turnInterrupted = false;
 		}
 		else if ((bestDirLocalMap - localYaw < 0) && (bestDirLocalMap - localYaw > -localPlannerParams.gentleTurnMargin))	{
@@ -561,11 +557,10 @@ void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 			}
 
 			globalPlanner->setMotorsVel(localPlannerParams.turnSpeed - localPlannerParams.gentleTurnSpeedDiff, localPlannerParams.turnSpeed);
-			if(!turningLeftStarted){
+			if(!turningStarted){
 				startTurnTime = std::chrono::high_resolution_clock::now();
 			}
-			turningRightStarted = false;
-			turningLeftStarted = true;
+			turningStarted = true;
 			turnInterrupted = false;
 		}
 		else{
@@ -574,11 +569,10 @@ void LocalPlanner::determineDriversCommand(cv::Mat posRobotMapCenter,
 			}
 
 			globalPlanner->setMotorsVel(-localPlannerParams.turnSpeed, localPlannerParams.turnSpeed);
-			if(!turningLeftStarted){
+			if(!turningStarted){
 				startTurnTime = std::chrono::high_resolution_clock::now();
 			}
-			turningRightStarted = false;
-			turningLeftStarted = true;
+			turningStarted = true;
 			turnInterrupted = false;
 		}
 	}

@@ -143,10 +143,22 @@ void MovementConstraints::run(){
 			//cout << "Processing points cloud" << endl;
 			//cout << "robot->isEncodersOpen() = " << robot->isEncodersOpen() << ", robot->isImuOpen() = " << robot->isImuOpen() << endl;
 			//updateConstraintsMap(0, 0, 0);
+			if(debugLevel >= 1){
+				cout << "updatePointCloud()" << endl;
+			}
 			updatePointCloud();
+			if(debugLevel >= 1){
+				cout << "end updatePointCloud()" << endl;
+			}
 
 			if(i >= 25){
+//				if(debugLevel >= 1){
+//					cout << "updateConstraintsMap()" << endl;
+//				}
 				updateConstraintsMap();
+//				if(debugLevel >= 1){
+//					cout << "end updateConstraintsMap()" << endl;
+//				}
 				i = 0;
 			}
 			//20 ms sleep
@@ -336,7 +348,13 @@ void MovementConstraints::updateCurPosCloudMapCenter(){
 void MovementConstraints::updatePointCloud(){
 	//cout << "processPointCloud()" << endl;
 
+	if(debugLevel >= 1){
+		cout << "updateCurPosCloudMapCenter()" << endl;
+	}
 	updateCurPosCloudMapCenter();
+	if(debugLevel >= 1){
+		cout << "end updateCurPosCloudMapCenter()" << endl;
+	}
 
 	if(hokuyo.isDataValid()){
 		std::chrono::high_resolution_clock::time_point hokuyoTimestamp;
