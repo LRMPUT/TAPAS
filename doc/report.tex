@@ -1,0 +1,101 @@
+\documentclass[a4paper,12pt]{article}
+
+\usepackage[body={160mm,240mm},top=25mm,left=25mm,marginparwidth=0mm,marginparse
+p=0mm,nohead]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage[cp1250]{inputenc}
+%\usepackage{english}
+%\usepackage[english]{babel}
+\usepackage{times}
+\usepackage{amsmath}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{graphicx}
+%\usepackage[norefs, nocites]{refcheck}
+\usepackage{url}
+\overfullrule=0pt
+%\prefixing
+
+%\floatname{algorithm}{Algorithm}
+
+\pagestyle{empty}
+
+\begin{document}
+
+\title{TAPAS Project Report}
+\author{Adam Bondyra, Micha³ Nowicki, Jan Wietrzykowski}
+\date{\today}
+\maketitle
+
+\section{Introduction}
+
+\section{Mechanics}
+
+\section{Electronics}
+
+\section{Software}
+
+\subsection{PositionEstimation}
+
+\subsection{MovementConstraints}
+
+\subsection{LocalPlanner}
+
+\subsection{GlobalPlanner}
+
+\section{Conclusion and future work}
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[height = 4cm]{figures//sample.jpg}
+  \label{fig:example}
+  \caption{Example image}
+\end{figure}
+
+
+\begin{equation}
+  p(\mathbf{y} | \mathbf{x}) = \frac{1}{Z(\mathbf{x})} \prod_{a = 1}^{A}{\Psi_a (\mathbf{y}_a, \mathbf{x}_a)}.
+\end{equation}
+
+$$ \mathbf{\theta}_E = \begin{bmatrix}
+			  -0,5 \\
+			  -0,5 \\
+			  -0,5 \\
+			\end{bmatrix} $$
+
+\begin{algorithm}
+  \caption{Próbkowanie Gibbsa}
+  \label{alg:gibbs}
+  \begin{algorithmic}[1]
+    \State Przypisz $\mathbf{y}^{j + 1} \leftarrow \mathbf{y}^{j}$.
+    \For{dla ka¿dego $i \in \mathcal{V}$}
+      \State Próbkuj $\mathbf{y}_i^{j + 1}$ z dystrybucji $p(y_i | \mathbf{y}_{\setminus i}, \mathbf{x})$.
+    \EndFor
+    \State Zwróæ $\mathbf{y}^{j + 1}$.
+  \end{algorithmic}
+\end{algorithm}
+
+\begin{table}[h]
+	\centering
+	\caption{Wyniki przed zastosowaniem CRF}
+	\label{tab:wyniki_przed}
+	\begin{tabular}{|c|c|c|c|c|}
+		\hline
+		  & \multicolumn{4}{c|}{przewidywane wartoœci} \\ \hline
+		rodzaj terenu & trawa & chodnik 1 & chodnik 2 & asfalt \\ \hline
+		trawa	& 98,9\% & 1,1\% & 0\% & 0\% \\
+		chodnik 1 & 14\% & 85,2\% & 0,8\% & 0\% \\ \hline
+	\end{tabular}
+\end{table}
+
+\small
+\begin{thebibliography}{99}
+  
+\bibitem{gibbs}
+  B. Walsh, Markov Chain Monte Carlo and Gibbs Sampling, {\em Lecture Notes for EEB 581}, 2004,
+
+\end{thebibliography}
+
+\end{document}
