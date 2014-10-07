@@ -1,4 +1,4 @@
-#include "trobotqt.h"
+#include "TapasQt.h"
 #include <QtGui/QApplication>
 #include <iostream>
 
@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
 		if(argc != 2){
 			throw "Usage: gui settings_file";
 		}
-		TrobotQt w(argv[1]);
+		TapasQt w(argv[1]);
 		w.show();
 		return a.exec();
 	}

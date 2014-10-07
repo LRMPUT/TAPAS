@@ -1,5 +1,5 @@
-#ifndef TROBOTQT_H
-#define TROBOTQT_H
+#ifndef TapasQt_H
+#define TapasQt_H
 
 #include <opencv2/opencv.hpp>
 
@@ -10,7 +10,7 @@
 #include <vector>
 #include <string>
 
-#include "ui_trobotqt.h"
+#include "ui_TapasQt.h"
 #include "../Robot/Robot.h"
 #include "../Debug/Debug.h"
 #include "CameraWindow.h"
@@ -24,19 +24,19 @@
 #include "Calibration.h"
 #include "Constraints.h"
 
-class TrobotQt : public QMainWindow
+class TapasQt : public QMainWindow
 {
 	Q_OBJECT
 		
 	friend class CameraWindow;
 
 public:
-	TrobotQt(const char* settingsFile, QWidget *parent = 0, Qt::WFlags flags = 0);
-	~TrobotQt();
+	TapasQt(const char* settingsFile, QWidget *parent = 0, Qt::WFlags flags = 0);
+	~TapasQt();
 protected:
 
 private:
-	Ui::TrobotQtClass ui;
+	Ui::TapasQtClass ui;
 	QStringList portList;
 	
 	Robot robot;
@@ -64,4 +64,4 @@ private slots:
 
 };
 
-#endif // TROBOTQT_H
+#endif // TapasQt_H

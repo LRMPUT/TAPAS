@@ -5,7 +5,7 @@
 #include <QtCore/QString>
 #include <QtGui/QColor>
 #include <vector>
-#include "ui_trobotqt.h"
+#include "ui_TapasQt.h"
 #include "Chart.h"
 #include "../Trobot/include/Imu.h"
 #include "../Trobot/include/Address.h"
@@ -42,7 +42,7 @@ class ImuChart : public QObject {
 	//trobot::Imu* imu;
 	Robot* robot;
 	Debug* debug;
-	Ui::TrobotQtClass* ui;
+	Ui::TapasQtClass* ui;
 	QTimer timerRefresh, timerCollectData;
 	int origX, origY;
 	float scaleT;
@@ -58,7 +58,7 @@ class ImuChart : public QObject {
 	void setChartScalesAndOrig();
 	int round(float a);
 public:
-	ImuChart(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug);
+	ImuChart(Ui::TapasQtClass* iui, Robot* irobot, Debug* idebug);
 	~ImuChart();
 
 	// Just for dumping

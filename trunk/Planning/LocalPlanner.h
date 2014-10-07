@@ -42,7 +42,7 @@ public:
 		int debug;
 		int avoidObstacles;
 		int histResolution;
-		float threshold;
+		//float threshold;
 		float steeringMargin;
 		float gauss3sig;
 		float maxDistance;

@@ -9,7 +9,7 @@
 
 using namespace std;
 
-QtRobotDrive::QtRobotDrive(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug):
+QtRobotDrive::QtRobotDrive(Ui::TapasQtClass* iui, Robot* irobot, Debug* idebug):
 		ui(iui),
 		robot(irobot),
 		debug(idebug),

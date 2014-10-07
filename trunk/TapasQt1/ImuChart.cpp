@@ -31,7 +31,7 @@ Value values[NUM_VALUES] = {
 	Value(4*trobot::EULER_PSI,			Qt::darkYellow,	"euler yaw",	0.0109863)
 };
 
-ImuChart::ImuChart(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug) :
+ImuChart::ImuChart(Ui::TapasQtClass* iui, Robot* irobot, Debug* idebug) :
 		chart(NULL),
 		robot(irobot),
 		debug(idebug),

@@ -22,28 +22,22 @@ int main(int argc, char* argv[])
 //		std::system("espeak \"I'm TAPAS\"");
 		cout<<"Starting program" << endl;
 		Robot robot("../settings.xml");
-		cout << "Robot created with argv[1] = " << argv[1]<< endl;
+		cout << "Robot created" << endl;
 
-		robot.openImu("/dev/robots/imu2");
+		/*robot.openImu("/dev/robots/imu2");
 		robot.openEncoders("/dev/robots/encoders");
 		robot.openHokuyo("/dev/robots/hokuyo");
 		robot.openGps("/dev/robots/gps");
 		robot.openRobotsDrive("/dev/robots/driverLeft", "/dev/robots/driverRight");
-		robot.openCamera(vector<string>(1, "/dev/video0"));
+		robot.openCamera(vector<string>(1, "/dev/video0"));*/
 
-		char a = 'a';
-		while(a != 's' && atoi(argv[1]) == 0)
+		char a;
+		while((waitKey(200) & 0xff) != 's')
 		{
-			cin>>a;
-			std::cout<<"|"<<a<<"|"<<std::endl;		
 		}
-		robot.startCompetition();
-		cout << "Robot started" << endl;
+		//robot.startCompetition();
+		cout << "Robot stated" << endl;
 
-		while(1)
-		{
-			usleep(1000000);
-		}
 	}
 	catch(char const* error){
 		cout << "Char exception in main: " << error << endl;

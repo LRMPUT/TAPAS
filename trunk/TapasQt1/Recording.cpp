@@ -11,7 +11,7 @@
 using namespace std;
 using namespace cv;
 
-Recording::Recording(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug) :
+Recording::Recording(Ui::TapasQtClass* iui, Robot* irobot, Debug* idebug) :
 		ui(iui), robot(irobot), debug(idebug) {
 	connect(&hokuyoTimer, SIGNAL(timeout()), this, SLOT(getDataHokuyo()));
 	connect(&encodersTimer, SIGNAL(timeout()), this, SLOT(getDataEncoders()));

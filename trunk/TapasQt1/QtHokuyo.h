@@ -17,14 +17,14 @@
 #include "../Robot/Robot.h"
 #include "../Debug/Debug.h"
 //Trobot Qt
-#include "ui_trobotqt.h"
+#include "ui_TapasQt.h"
 
 
 class QtHokuyo : public QObject
 {
 	Q_OBJECT
 
-	Ui::TrobotQtClass* ui;
+	Ui::TapasQtClass* ui;
 	Robot* robot;
 	Debug* debug;
 
@@ -32,7 +32,7 @@ class QtHokuyo : public QObject
 	QTimer refreshTimer;
 
 public:
-	QtHokuyo(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug);
+	QtHokuyo(Ui::TapasQtClass* iui, Robot* irobot, Debug* idebug);
 	virtual ~QtHokuyo();
 
 	cv::Mat getData();

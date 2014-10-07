@@ -14,19 +14,19 @@
 
 #include "../Robot/Robot.h"
 #include "../Debug/Debug.h"
-#include "ui_trobotqt.h"
+#include "ui_TapasQt.h"
 
 class QtGps : public QObject {
 	Q_OBJECT
 
-	Ui::TrobotQtClass* ui;
+	Ui::TapasQtClass* ui;
 	Robot* robot;
 	Debug* debug;
 
 	QTimer refreshTimer;
 
 public:
-	QtGps(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug);
+	QtGps(Ui::TapasQtClass* iui, Robot* irobot, Debug* idebug);
 	virtual ~QtGps();
 
 public slots:

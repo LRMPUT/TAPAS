@@ -16,7 +16,7 @@
 using namespace std;
 using namespace cv;
 
-Constraints::Constraints(Ui::TrobotQtClass* iui, Debug* idebug) :
+Constraints::Constraints(Ui::TapasQtClass* iui, Debug* idebug) :
 	ui(iui),
 	debug(idebug)
 {

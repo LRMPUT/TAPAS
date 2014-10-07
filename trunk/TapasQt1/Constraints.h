@@ -14,14 +14,14 @@
 //TAPAS
 #include "../Debug/Debug.h"
 //Trobot Qt
-#include "ui_trobotqt.h"
+#include "ui_TapasQt.h"
 #include "Viewer.h"
 
 class Constraints : public QObject
 {
 	Q_OBJECT
 
-	Ui::TrobotQtClass* ui;
+	Ui::TapasQtClass* ui;
 	Debug* debug;
 
 	Viewer* viewer;
@@ -33,7 +33,7 @@ class Constraints : public QObject
 	void updateClassificationView();
 	void updateGlobalPlanView();
 public:
-	Constraints(Ui::TrobotQtClass* iui, Debug* idebug);
+	Constraints(Ui::TapasQtClass* iui, Debug* idebug);
 	virtual ~Constraints();
 public slots:
 	void updateViews();

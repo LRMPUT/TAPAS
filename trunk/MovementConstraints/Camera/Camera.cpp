@@ -1350,16 +1350,11 @@ void Camera::run(){
 		}
 	}
 	catch(char const* error){
-		cout << "Char exception in Camera: " << error << endl;
-		exit(1);
-	}
-	catch(std::exception& e){
-		cout << "Std exception in Camera: " << e.what() << endl;
-		exit(1);
+		cout << error << endl;
 	}
 	catch(...){
-		cout << "Unexpected exception in Camera" << endl;
-		exit(1);
+		cout << "Camera unrecognized exception" << endl;
+		exit(-1);
 	}
 }
 

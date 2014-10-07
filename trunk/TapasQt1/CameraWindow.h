@@ -7,7 +7,7 @@
 #include "../Robot/Robot.h"
 #include "../Debug/Debug.h"
 
-class TrobotQt;
+class TapasQt;
 
 class CameraWindow : public QMainWindow
 {

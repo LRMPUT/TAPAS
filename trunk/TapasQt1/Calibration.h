@@ -12,7 +12,7 @@
 //Robots Intellect
 #include "../Debug/Debug.h"
 //Trobot Qt
-#include "ui_trobotqt.h"
+#include "ui_TapasQt.h"
 
 class Calibration : public QObject
 {
@@ -20,10 +20,10 @@ class Calibration : public QObject
 
 	int index;
 
-	Ui::TrobotQtClass* ui;
+	Ui::TapasQtClass* ui;
 	Debug* debug;
 public:
-	Calibration(Ui::TrobotQtClass* iui, Debug* idebug);
+	Calibration(Ui::TapasQtClass* iui, Debug* idebug);
 	virtual ~Calibration();
 public slots:
 	void getData();
