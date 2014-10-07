@@ -13,7 +13,7 @@
 #include <QtCore/QElapsedTimer>
 #include "../Robot/Robot.h"
 #include "../Debug/Debug.h"
-#include "ui_trobotqt.h"
+#include "ui_TapasQt.h"
 #include <fstream>
 #include <sys/time.h>
 #include <stdio.h>
@@ -36,13 +36,13 @@ private:
 
 	std::fstream file;
 
-	Ui::TrobotQtClass* ui;
+	Ui::TapasQtClass* ui;
 
 	// Saving Streams
 	std::ofstream imuStream, gpsStream, encodersStream, hokuyoStream, cameraStream;
 	std::ofstream estimatedPosStream;
 public:
-	Recording(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug);
+	Recording(Ui::TapasQtClass* iui, Robot* irobot, Debug* idebug);
 	~Recording();
 
 private slots:

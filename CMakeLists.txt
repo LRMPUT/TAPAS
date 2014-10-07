@@ -143,68 +143,68 @@ find_package(OpenGL REQUIRED)
 set(QGLViewer_LIBRARIES QGLViewer)
 
 find_package(Qt4 COMPONENTS QtCore QtXml QtGui QtOpenGL REQUIRED)
-set(trobotQt_SOURCES
-	Trobot_Qt/CameraWindow.cpp
-	Trobot_Qt/Chart.cpp
-	Trobot_Qt/gui.cpp
-	Trobot_Qt/ImuChart.cpp
-	Trobot_Qt/QtRobotDrive.cpp
-	Trobot_Qt/Recording.cpp
-	Trobot_Qt/QtGps.cpp
-	Trobot_Qt/QtCamera.cpp
-	Trobot_Qt/QtHokuyo.cpp
-	Trobot_Qt/Calibration.cpp
-	Trobot_Qt/Constraints.cpp
-	Trobot_Qt/Viewer.cpp
-	Trobot_Qt/trobotqt.cpp
-	Trobot_Qt/QtEncoders.cpp)
-set(trobotQt_HEADERS
-	Trobot_Qt/CameraWindow.h
-	Trobot_Qt/Chart.h
-	Trobot_Qt/ImuChart.h
-	Trobot_Qt/QtRobotDrive.h
-	Trobot_Qt/Recording.h
-	Trobot_Qt/QtGps.h
-	Trobot_Qt/QtCamera.h
-	Trobot_Qt/QtHokuyo.h
-	Trobot_Qt/Calibration.h
-	Trobot_Qt/Constraints.h
-	Trobot_Qt/Viewer.h
-	Trobot_Qt/trobotqt.h
-	Trobot_Qt/QtEncoders.h)
-set(trobotQt_FORMS
-	Trobot_Qt/CameraWindow.ui
-	Trobot_Qt/trobotqt.ui)
-qt4_wrap_cpp(trobotQt_HEADERS_MOC ${trobotQt_HEADERS} OPTIONS -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED -DBOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION)
-qt4_wrap_ui(trobotQt_FORMS_HEADERS ${trobotQt_FORMS})
+set(TapasQt_SOURCES
+	TapasQt/CameraWindow.cpp
+	TapasQt/Chart.cpp
+	TapasQt/gui.cpp
+	TapasQt/ImuChart.cpp
+	TapasQt/QtRobotDrive.cpp
+	TapasQt/Recording.cpp
+	TapasQt/QtGps.cpp
+	TapasQt/QtCamera.cpp
+	TapasQt/QtHokuyo.cpp
+	TapasQt/Calibration.cpp
+	TapasQt/Constraints.cpp
+	TapasQt/Viewer.cpp
+	TapasQt/TapasQt.cpp
+	TapasQt/QtEncoders.cpp)
+set(TapasQt_HEADERS
+	TapasQt/CameraWindow.h
+	TapasQt/Chart.h
+	TapasQt/ImuChart.h
+	TapasQt/QtRobotDrive.h
+	TapasQt/Recording.h
+	TapasQt/QtGps.h
+	TapasQt/QtCamera.h
+	TapasQt/QtHokuyo.h
+	TapasQt/Calibration.h
+	TapasQt/Constraints.h
+	TapasQt/Viewer.h
+	TapasQt/TapasQt.h
+	TapasQt/QtEncoders.h)
+set(TapasQt_FORMS
+	TapasQt/CameraWindow.ui
+	TapasQt/TapasQt.ui)
+qt4_wrap_cpp(TapasQt_HEADERS_MOC ${TapasQt_HEADERS} OPTIONS -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED -DBOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION)
+qt4_wrap_ui(TapasQt_FORMS_HEADERS ${TapasQt_FORMS})
 include(${QT_USE_FILE})
 add_definitions(${QT_DEFINITIONS})
 
 IF (CUDA GREATER 0)
-	cuda_add_executable(Trobot_Qt/gui
+	cuda_add_executable(TapasQt/gui
 		${RobotsIntellect_SOURCES}
 		${RobotsIntellect_CUDA_SOURCES}
-		${trobotQt_SOURCES}
-		${trobotQt_HEADERS_MOC}
-		${trobotQt_FORMS_HEADERS})
+		${TapasQt_SOURCES}
+		${TapasQt_HEADERS_MOC}
+		${TapasQt_FORMS_HEADERS})
 ELSEIF (CUDA EQUAL 0)
-	add_executable(Trobot_Qt/gui
+	add_executable(TapasQt/gui
 		${RobotsIntellect_SOURCES}
-		${trobotQt_SOURCES}
-		${trobotQt_HEADERS_MOC}
-		${trobotQt_FORMS_HEADERS})
+		${TapasQt_SOURCES}
+		${TapasQt_HEADERS_MOC}
+		${TapasQt_FORMS_HEADERS})
 ENDIF (CUDA GREATER 0)	
 
 message("Copying generated ui headers")
-foreach(file ${trobotQt_FORMS_HEADERS})
+foreach(file ${TapasQt_FORMS_HEADERS})
 	get_filename_component(filename ${file} NAME)
 	message("Copying: " ${filename})
 	add_custom_command(
-		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/Trobot_Qt/${filename}
-		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${filename} ${CMAKE_CURRENT_SOURCE_DIR}/Trobot_Qt/${filename}
+		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/TapasQt/${filename}
+		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${filename} ${CMAKE_CURRENT_SOURCE_DIR}/TapasQt/${filename}
 		MAIN_DEPENDENCY ${CMAKE_CURRENT_BINARY_DIR}/${filename})
 endforeach()
-target_link_libraries(Trobot_Qt/gui
+target_link_libraries(TapasQt/gui
 	${QT_LIBRARIES}
 	${OpenCV_LIBS}
 	${Boost_LIBRARIES}

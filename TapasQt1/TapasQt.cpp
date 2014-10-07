@@ -1,17 +1,17 @@
 #include <iostream>
 
-#include "trobotqt.h"
+#include "TapasQt.h"
 
 using namespace std;
 
 #define PORTS_UPPER_LIMIT 100
 
-TrobotQt::TrobotQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
+TapasQt::TapasQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
 	: QMainWindow(parent, flags),
 	  robot(settingsFile),
 	  debug(&robot)
 {
-	cout << "TrobotQt::TrobotQt" << endl;
+	cout << "TapasQt::TapasQt" << endl;
 
 	ui.setupUi(this);
 	std::vector<string> ports;
@@ -48,7 +48,7 @@ TrobotQt::TrobotQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
 	recording = new Recording(&ui, &robot, &debug);
 
 	QObject::connect(ui.startRobotButton, SIGNAL(clicked()), this, SLOT(startRobot()));
-	cout << "TrobotQt::TrobotQt end" << endl;
+	cout << "TapasQt::TapasQt end" << endl;
 
 	robot.openImu("/dev/robots/imu2");
 	robot.openEncoders("/dev/robots/encoders");
@@ -57,11 +57,11 @@ TrobotQt::TrobotQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
 	robot.openRobotsDrive("/dev/robots/driverLeft", "/dev/robots/driverRight");
 	robot.openCamera(vector<string>(1, "/dev/video0"));
 
-	cout << "End TrobotQt::TrobotQt" << endl;
+	cout << "End TapasQt::TapasQt" << endl;
 }
 
-TrobotQt::~TrobotQt(){
-	cout << "~TrobotQt" << endl;
+TapasQt::~TapasQt(){
+	cout << "~TapasQt" << endl;
 	delete qtGps;
 	delete drive;
 	delete encoders;
@@ -71,9 +71,9 @@ TrobotQt::~TrobotQt(){
 	delete calib;
 	delete constr;
 	delete recording;
-	cout << "End ~TrobotQt" << endl;
+	cout << "End ~TapasQt" << endl;
 }
 
-void TrobotQt::startRobot(){
+void TapasQt::startRobot(){
 	robot.startCompetition();
 }

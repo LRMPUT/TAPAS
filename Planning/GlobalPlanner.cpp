@@ -935,7 +935,7 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY,
 				setGoalDirection(direction);
 
 				std::list<int>::iterator it2 = nodesToVisit.begin();
-				while (it2 != it) {
+				while (it2 != it && nodesToVisit.size() > 0) {
 					nodesToVisit.pop_front();
 					it2 = nodesToVisit.begin();
 				}
@@ -961,7 +961,8 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY,
 				}
 
 				nodesToVisit.pop_front();
-				it = nodesToVisit.begin();
+				if ( nodesToVisit.size() > 0)
+					it = nodesToVisit.begin();
 			}
 		}
 		// We can go directly to target

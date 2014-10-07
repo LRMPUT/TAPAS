@@ -53,8 +53,8 @@
 	<GlobalPlanner 		runThread="1" 
 						processingFrequency="5" 
 						computeEveryNth="25" 
-						debug="1" 
-						subgoalThreshold="6" 
+						debug="0" 
+						subgoalThreshold="8" 
 						subgoalThreshold2="10"
 						subgoalAngularThreshold="10"
 						preciseToGoalMaxTime="5000"
@@ -64,41 +64,45 @@
 						sound="1"
 						runHomologation="0" 
 						mapFile="robotourMap.osm"
-						goalLatitude="49.722581" goalLongitude="13.364215"
-						startLatitude="49.723369" startLongitude="13.366425"/>
+						goalLatitude="49.719657" goalLongitude="13.371140"
+						startLatitude="49.7241480000" startLongitude="13.3671696667"/>
 
 
 	<!--
 		runThread: 				1 - module ON, 0 - module OFF
 		debug:					1 - debug ON, 0 - debug OFF
-		avoidObstacles:	        0 - run as globalPlanner wants, 1 - take into account the obstacles
-		VFH_HistResolution: 	resolution of directions in VFH in degrees
-		VFH_Threshold:			threshold for the direction to be considered a valid choice
-		VFH_SteeringMargin:		the dead_zone of steering deciding upon going straight, left, right
-		VFH_Gauss3sig:			3 sigma of the Gaussian used to smooth the histograms 
-		VFH_MaxDistance:		max distance of the obstacle (one with 0 in VFH)
-		VFH_NormalSpeed: 		Speed used in normal run
-		VFH_PreciseSpeed:		Speed used when approaching the target
-		VFH_TurnSpee:			Speed used to turn the robot
+		avoidObstacles:	        0 - run as globalPlanner wants and stop in front of obstacles, 1 - take into account the obstacles.
+		VFH_HistResolution: 	Resolution of directions in VFH in degrees.
+		VFH_SteeringMargin:		The dead_zone of steering deciding upon going straight, left, right.
+		VFH_Gauss3sig:			3 sigma of the Gaussian used to smooth the histograms.
+		VFH_MaxDistance:		Max distance of the obstacle (penalty for this obstacle is 0)
+		VFH_NormalSpeed: 		Speed used in normal run in %.
+		VFH_PreciseSpeed:		Speed used when approaching the target in %.
+		VFH_GentleTurnMargin:	Margin of gentle turn in degrees.
+		VFH_GentleTurnSpeedDiff: Difference of wheels speed in %.
+		VFH_TurnSpeed:	Speed used to rotate the robot in %.
+		VFH_TurnTimeout:	Time after which robot attempts to exit deadlock in ms.
+		VFH_InterruptTime:	Time that robot tries to exit deadlock.
+		VFH_InterruptSpeed:	Speed at which robot tries to exit deadlock.
+		VFH_ImuAccVarianceLimit: Limit of accelerometer variance. When it is to high robot slows down.
 	-->
 	
 	<LocalPlanner 		runThread="1" 
-						debug="0"
+						debug="1"
 						avoidObstacles="1" 
 						VFH_HistResolution="10"
-						VFH_Threshold="0.5" 
 						VFH_SteeringMargin="10" 
-						VFH_Gauss3sig="50"
+						VFH_Gauss3sig="40"
 						VFH_MaxDistance="3000"
-						VFH_BackwardsPenalty="1" 
-						VFH_NormalSpeed="60" 
+						VFH_BackwardsPenalty="1.5" 
+						VFH_NormalSpeed="40" 
 						VFH_PreciseSpeed="20"
 						VFH_GentleTurnMargin="20"
 						VFH_GentleTurnSpeedDiff="70"
 						VFH_TurnSpeed="90"
-						VFH_TurnTimeout="5000"
+						VFH_TurnTimeout="8000"
 						VFH_InterruptTime="1000"
-						VFH_InterruptSpeed="60"
+						VFH_InterruptSpeed="40"
 						VFH_ImuAccVarianceLimit="0.1" />
 
 	<!--
@@ -125,35 +129,71 @@
 							encoderVariance="0.01"/>
 
 	<!--
-		Jan Wietrzykowski is lazy and does not use the comments ;d
+		runThread: true - MovementConstraints thred runs, false otherwise
+		debug: Debug level: 0 - no debug, 1, 2 - debug
 	-->
-	<MovementConstraints runThread="true" debug="1">
+	<MovementConstraints runThread="true" debug="0">
 		<odometry diam="160" base="452" encodersCPR="300" />
+		<!--
+			minDist: Minimal distance taken into consideration. Other points are discarted.
+			maxTimePoint: Time that point is considered valid. After that time it is removed from point cloud.
+			maxTimeMap: Time that map is considered valid. After that time new origin of local map is computed.
+		-->
 		<point_cloud minDist="100" maxTimePoint="4000" maxTimeMap="4000" />
+		<!--
+			lowerThreshold: Obstacles below this height have penalty 0.
+			upperThreshold: Obstacles above this height have penalty 1. Other scale linearly.
+		-->
 		<laser_constraints lowerThreshold="50" upperThreshold="80" minPts="5" />
+		<!--
+			Transformation matrix from laser coordinate system to camera coordinate system.
+		-->
 		<camera_position_laser>
 			0.999975467433325   0.006201805494175   0.003256092768350	19.302285337921
   		-0.006965113845532   0.831082312695594   0.556105814313842 -581.986641194198
    		0.000742778986283  -0.556114850667697   0.831105120394660	-482.975425071840
 		 0 0 0 1
 		</camera_position_laser>
+		<!--
+			Transformation matrix from camera coordinate system to imu coordinate system.
+		-->
 		<imu_position_camera>
  			0.018692784122079   0.999638449057612   0.019327467176493 0
   		-0.660864075823663  -0.002152701714531   0.750502524420182 0
   		0.750272785796941  -0.026801810405667   0.660584899805829 0
 			0	0	0	1
 		</imu_position_camera>
+		<!--
+			Transformation matrix from robot coordinate system to imu coordinate system. Hand written - no calibration.
+		-->
 		<imu_position_robot>
 			1	0	0	-220
 			0	1	0	0
 			0	0	1	-810
 			0	0	0	1
 		</imu_position_robot>
+		<!--
+			runThread: true - Camera thred runs, false otherwise
+			number: Number of cameras, currently only 1 suppored.
+			rows: Number of rows of the image.
+			cols: Number of cols of the image.
+			entryWeightThreshold: Minimal entry's number of pixels.
+			debug: Debug level: 0 - no debug, 1, 2 - debug
+		-->
 		<Camera runThread="true" number="1" rows="480" cols="640" entryWeightThreshold="400" debug="0">
+			<!--
+				saveEnable: [true/false] - Whether to save cache after learning classifier or not.
+				loadEnable: [true/false] - Whether to load cache during construction of Camera class.
+			-->
 			<cache saveEnabled="true" loadEnabled="true"/>
 			<HierClassifier debug="0">
-				<cache enabled="true" />
+				<!--
+					Parameters of segmentation algorithm. See "Efficient Graph-Based Image Segmentation" Falzenszwalb, Huttenlocher
+				-->
 				<segmentation k="200" min_size="200" />
+				<!--
+					Lengths of descriptors (i.e. numbers of histogram's bins)
+				-->
 				<descriptor>
 					<hist_HS len_H="4" len_S="4" />
 					<hist_V len="8" />
@@ -164,6 +204,9 @@
 					<covar_laser len="4" />
 					<!--kurt_laser len="2" />-->
 				</descriptor>
+				<!--
+					Settings for classifiers used in AdaBoost algorithm.
+				-->
 				<!--<Classifier type="SVM">
 					<cache enabled="true" />
 					<svm type="C_SVC">
@@ -222,49 +265,81 @@
 						<degree value="2" />
 						<C value="512" />
 					</svm>
+					<!--
+						Index of descriptors used in classifier, desc_beg inclusive, desc_end exclusive.
+					-->
 					<info desc_beg="0" desc_end="7" />
 				</Classifier>
 			</HierClassifier>
-			<learning enabled="true">
+			<!--
+				enabled: [true/flase] - Whether to train classifier during construction of Camera class.
+				
+				Directories with prepared training data.
+			-->
+			<learning enabled="false">
 				"../MovementConstraints/Camera/database/przejazd6"
 				"../MovementConstraints/Camera/database/przejazd7"
 				"../MovementConstraints/Camera/database/przejazd9"
 				"../MovementConstraints/Camera/database/przejazd10"
 				"../MovementConstraints/Camera/database/przejazd11"
 			</learning>
+			<!--
+				All labels used have to be declared here. Id starts from 0 and has to be consecutive numbers.
+			-->
 			<labels>
 				<label text="grass" id="0"/>
 				<label text="pavement" id="1"/>
 			</labels>
 
+			<!--
+				Transformation matrix from robot coordinate system to imu coordinate system. Hand written - no calibration.
+			-->
 			<imu_position_robot>
 				1	0	0	-220
 				0	1	0	0
 				0	0	1	-810
 				0	0	0	1
 			</imu_position_robot>
-
+			
+			<!--
+				Settings for camera sensor.
+			-->
 			<sensor id="left">
+				<!--
+					Transformation matrix from camera coordinate system to imu coordinate system.
+				-->
 				<imu_position_camera>
 					 0.018692784122079   0.999638449057612   0.019327467176493 0
 					-0.660864075823663  -0.002152701714531   0.750502524420182 0
 					 0.750272785796941  -0.026801810405667   0.660584899805829	0
 					0	0	0	1
 				</imu_position_camera>
+				<!--
+					Transformation matrix from laser coordinate system to camera coordinate system.
+				-->
 				<position_laser>
 					0.999975467433325   0.006201805494175   0.003256092768350	19.302285337921
 					-0.006965113845532   0.831082312695594   0.556105814313842 -581.986641194198
 			 		0.000742778986283  -0.556114850667697   0.831105120394660	-482.975425071840
 				 0 0 0 1
 				</position_laser>
+				<!--
+					Intrisincs parameters of camera sensor. See http://docs.opencv.org/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
+				-->
 				<camera_matrix>
 					646.345999973665580	0	312.531846659870780
         			0	645.650527914581740	244.961100510703430
         			0	0	1.0000
 				</camera_matrix>
+				<!--
+					Intrisincs parameters of camera sensor. See http://docs.opencv.org/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
+				-->
 				<dist_coeffs>
 					-0.002321429512793 0.042019134230480 -0.000280334014614 0.001284356067402 0.000000000000000 
 				</dist_coeffs>
+				<!--
+					Mask of pixels to ignore, so robot does not see itself.
+				-->
 				<mask_ignore>
 				 <polygon>
 					 <pt>

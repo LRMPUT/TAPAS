@@ -17,13 +17,13 @@
 #include "CameraWindow.h"
 #include "../Robot/Robot.h"
 #include "../Debug/Debug.h"
-#include "ui_trobotqt.h"
+#include "ui_TapasQt.h"
 
 class QtCamera : public QObject
 {
 	Q_OBJECT
 
-	Ui::TrobotQtClass* ui;
+	Ui::TapasQtClass* ui;
 	Robot* robot;
 	Debug* debug;
 
@@ -32,7 +32,7 @@ class QtCamera : public QObject
 	QTimer refreshTimer;
 
 public:
-	QtCamera(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug);
+	QtCamera(Ui::TapasQtClass* iui, Robot* irobot, Debug* idebug);
 	virtual ~QtCamera();
 
 	std::vector<cv::Mat> getFrame();

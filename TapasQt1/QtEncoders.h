@@ -12,7 +12,7 @@
 #include <string>
 #include "../Robot/Robot.h"
 #include "../Debug/Debug.h"
-#include "ui_trobotqt.h"
+#include "ui_TapasQt.h"
 
 class QtEncoders : public QObject
 {
@@ -22,11 +22,11 @@ class QtEncoders : public QObject
 	Robot* robot;
 	Debug* debug;
 public:
-	QtEncoders(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug);
+	QtEncoders(Ui::TapasQtClass* iui, Robot* irobot, Debug* idebug);
 	~QtEncoders();
 	bool isOpen();
 private:
-	Ui::TrobotQtClass* ui;
+	Ui::TapasQtClass* ui;
 
 public slots:
 

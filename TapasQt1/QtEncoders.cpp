@@ -9,7 +9,7 @@
 
 using namespace std;
 
-QtEncoders::QtEncoders(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug):
+QtEncoders::QtEncoders(Ui::TapasQtClass* iui, Robot* irobot, Debug* idebug):
 	ui(iui),
 	robot(irobot),
 	debug(idebug)

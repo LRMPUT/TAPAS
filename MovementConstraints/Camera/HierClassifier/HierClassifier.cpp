@@ -100,14 +100,12 @@ void HierClassifier::clearData(){
 //---------------MISCELLANEOUS----------------
 
 HierClassifier::HierClassifier(cv::Mat icameraMatrix) :
-	cacheEnabled(false),
 	cameraMatrix(icameraMatrix)
 {
 
 }
 
 HierClassifier::HierClassifier(cv::Mat icameraMatrix, TiXmlElement* settings) :
-	cacheEnabled(false),
 	cameraMatrix(icameraMatrix)
 {
 	loadSettings(settings);
@@ -127,11 +125,13 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 		throw "Bad settings file - wrong debug level";
 	}
 
-	TiXmlElement* pPtr = settings->FirstChildElement("cache");
+	TiXmlElement* pPtr;
+
+	/*pPtr = settings->FirstChildElement("cache");
 	if(!pPtr){
 		throw "Bad settings file - no cache setting for HierClassifier";
 	}
-	pPtr->QueryBoolAttribute("enabled", &cacheEnabled);
+	pPtr->QueryBoolAttribute("enabled", &cacheEnabled);*/
 
 	pPtr = settings->FirstChildElement("segmentation");
 	if(!pPtr){

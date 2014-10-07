@@ -19,7 +19,7 @@
 using namespace std;
 using namespace cv;
 
-Calibration::Calibration(Ui::TrobotQtClass* iui, Debug* idebug) :
+Calibration::Calibration(Ui::TapasQtClass* iui, Debug* idebug) :
 	ui(iui),
 	debug(idebug),
 	index(1)

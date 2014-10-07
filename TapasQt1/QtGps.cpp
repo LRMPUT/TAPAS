@@ -13,7 +13,7 @@
 using namespace std;
 using namespace cv;
 
-QtGps::QtGps(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug) :
+QtGps::QtGps(Ui::TapasQtClass* iui, Robot* irobot, Debug* idebug) :
 				ui(iui),
 				robot(irobot),
 				debug(idebug)

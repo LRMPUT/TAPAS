@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "trobotqt.h"
+#include "TapasQt.h"
 #include "CameraWindow.h"
 
 using namespace std;

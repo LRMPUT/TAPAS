@@ -8,7 +8,7 @@
 #include <string>
 #include "../Robot/Robot.h"
 #include "../Debug/Debug.h"
-#include "ui_trobotqt.h"
+#include "ui_TapasQt.h"
 
 enum Action {
 	Nothing,
@@ -25,13 +25,13 @@ class QtRobotDrive : public QObject
 	Q_OBJECT
 
 public:
-	QtRobotDrive(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug);
+	QtRobotDrive(Ui::TapasQtClass* iui, Robot* irobot, Debug* idebug);
 	~QtRobotDrive();
 	Action getState();
 	bool isOpen();
 private:
 	QTimer refreshTimer;
-	Ui::TrobotQtClass* ui;
+	Ui::TapasQtClass* ui;
 	void setButtonsEnabled(bool state);
 	void calcVelSteering();
 

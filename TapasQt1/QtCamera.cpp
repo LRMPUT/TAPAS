@@ -13,7 +13,7 @@ using namespace cv;
 #define CAMERA_WIDTH 640
 #define CAMERA_HEIGHT 480
 
-QtCamera::QtCamera(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug) :
+QtCamera::QtCamera(Ui::TapasQtClass* iui, Robot* irobot, Debug* idebug) :
 	ui(iui),
 	robot(irobot),
 	debug(idebug)

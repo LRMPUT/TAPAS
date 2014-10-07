@@ -107,7 +107,7 @@ class HierClassifier {
 	int minSizeSegment;
 
 	/** Flaga informująca czy wczytywać i zapisywać cache. */
-	bool cacheEnabled;
+	//bool cacheEnabled;
 
 	int debugLevel;
 

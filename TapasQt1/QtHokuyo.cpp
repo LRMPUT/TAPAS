@@ -20,7 +20,7 @@
 using namespace std;
 using namespace cv;
 
-QtHokuyo::QtHokuyo(Ui::TrobotQtClass* iui, Robot* irobot, Debug* idebug) :
+QtHokuyo::QtHokuyo(Ui::TapasQtClass* iui, Robot* irobot, Debug* idebug) :
 	ui(iui),
 	robot(irobot),
 	debug(idebug)
