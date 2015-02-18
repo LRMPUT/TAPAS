@@ -1,26 +1,31 @@
-/*Copyright (c) 2014, TAPAS Team (cybair [at] put.poznan.pl), Poznan University of Technology
-All rights reserved.
+/*
+	Copyright (c) 2014,	TAPAS Team:
+	-Michal Nowicki (michal.nowicki@put.poznan.pl),
+	-Jan Wietrzykowski (jan.wietrzykowski@cie.put.poznan.pl).
+	Poznan University of Technology
+	All rights reserved.
 
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
+	Redistribution and use in source and binary forms, with or without modification,
+	are permitted provided that the following conditions are met:
 
-1. Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.
+	1. Redistributions of source code must retain the above copyright notice,
+	this list of conditions and the following disclaimer.
 
-2. Redistributions in binary form must reproduce the above copyright notice,
-this list of conditions and the following disclaimer in the documentation
-and/or other materials provided with the distribution.
+	2. Redistributions in binary form must reproduce the above copyright notice,
+	this list of conditions and the following disclaimer in the documentation
+	and/or other materials provided with the distribution.
 
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
-AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
+	THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+	AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+	THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+	ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+	FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+	DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+	LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+	AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+	OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+	OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
 
 //OpenCV
 #include <opencv2/opencv.hpp>
@@ -29,6 +34,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.*/
 #include <cmath>
 #include <sstream>
 #include <algorithm>
+#include <thread>
 //CUDA
 #ifndef NO_CUDA
 	#include <cuda_runtime.h>
@@ -949,19 +955,19 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 	}
 }
 
-void Camera::classifyFromDir(boost::filesystem::path dir){
+void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	cout << "Classifying" << endl;
 	for(int l = 0; l < labels.size(); l++){
 		namedWindow(labels[l]);
 	}
 	namedWindow("segments");
-	namedWindow("original");
-	namedWindow("colored");
+	namedWindow("labeled");
+	namedWindow("classified");
 
 	vector<vector<int> > classResultsPix(labels.size(), vector<int>(labels.size(), 0));
 	vector<vector<int> > classResultsSeg(labels.size(), vector<int>(labels.size(), 0));
 
-	filesystem::directory_iterator endIt;
+	/*filesystem::directory_iterator endIt;
 	for(filesystem::directory_iterator dirIt(dir); dirIt != endIt; dirIt++){
 		if(dirIt->path().filename().string().find(".xml") != string::npos){
 			TiXmlDocument data(dirIt->path().string());
@@ -1120,7 +1126,215 @@ void Camera::classifyFromDir(boost::filesystem::path dir){
 
 			waitKey();
 		}
+	}*/
+
+	std::vector<cv::Mat> images;
+	std::vector<cv::Mat> manualRegionsOnImages;
+	std::vector<std::map<int, int> > mapRegionIdToLabel;
+	std::vector<cv::Mat> terrains;
+	std::vector<cv::Mat> poses;
+
+	for(int d = 0; d < dirs.size(); d++){
+		std::vector<cv::Mat> tmpImages;
+		std::vector<cv::Mat> tmpManualRegionsOnImages;
+		std::vector<std::map<int, int> > tmpMapRegionIdToLabel;
+		std::vector<cv::Mat> tmpTerrains;
+		std::vector<cv::Mat> tmpPoses;
+		processDir(	dirs[d],
+					tmpImages,
+					tmpManualRegionsOnImages,
+					tmpMapRegionIdToLabel,
+					tmpTerrains,
+					tmpPoses);
+		for(int i = 0; i < tmpImages.size(); i++){
+			images.push_back(tmpImages[i]);
+			manualRegionsOnImages.push_back(tmpManualRegionsOnImages[i]);
+			mapRegionIdToLabel.push_back(tmpMapRegionIdToLabel[i]);
+			terrains.push_back(tmpTerrains[i]);
+			poses.push_back(tmpPoses[i]);
+		}
 	}
+
+	cout << "images.size() = " << images.size() << endl << "manualRegionsOnImages.size() = " << manualRegionsOnImages.size() << endl;
+
+//	vector<Entry> dataset;
+	ofstream dataCrfFile("dataCrf.log");
+	dataCrfFile.precision(15);
+	bool headerWritten = false;
+
+	for(int i = 0; i < images.size(); i++){
+		cout << "Segmenting" << endl;
+		//Mat autoRegionsOnImage = hierClassifiers.front()->segmentImage(images[i]);
+#ifdef NO_CUDA
+		vector<Mat> mapSegmentsOnImage = computeMapSegments(poses[i]);
+#else
+		vector<Mat> mapSegmentsOnImage = computeMapSegmentsGpu(poses[i]);
+#endif
+		Mat autoRegionsOnImage = mapSegmentsOnImage.front();
+		cout << "Assigning manual ids" << endl;
+		//rectangle(manualRegionsOnImages[i], Point(0, 0), Point(images[i].cols, 100), Scalar(0, 0, 0), -1);
+		map<int, int> assignedManualId = hierClassifiers.front()->assignManualId(autoRegionsOnImage, manualRegionsOnImages[i]);
+
+
+		cout << "Extracting entries" << endl;
+		bool debug = false;
+		//cout << "Looking for class " << 1 << endl;
+		for(map<int, int>::iterator it = assignedManualId.begin(); it != assignedManualId.end(); it++){
+			//cout << mapRegionIdToLabel[i][it->second] << endl;
+			if(mapRegionIdToLabel[i][it->second] == 1){
+				debug = true;
+				break;
+			}
+		}
+		//cout << "terrains[i].size() = " << terrains[i].size() << endl;
+		vector<Entry> newData = hierClassifiers.front()->extractEntries(images[i],
+																		terrains[i],
+																		autoRegionsOnImage,
+																		maskIgnore.front(),
+																		entryWeightThreshold);
+
+		if(headerWritten == false){
+			dataCrfFile << labels.size() << " " << newData.front().descriptor.cols << endl;
+			headerWritten = true;
+		}
+
+		for(int e = 0; e < newData.size(); e++){
+			if(mapRegionIdToLabel[i].count(assignedManualId[newData[e].imageId]) > 0){
+				newData[e].label = mapRegionIdToLabel[i][assignedManualId[newData[e].imageId]];
+//				dataset.push_back(newData[e]);
+			}
+		}
+
+
+		vector<Scalar> colors;
+		colors.push_back(Scalar(0, 255, 0));	//grass - green
+		colors.push_back(Scalar(0, 0, 255));	//wood - red
+		colors.push_back(Scalar(0, 255, 255));	//yellow - ceramic
+		colors.push_back(Scalar(255, 0, 0));	//blue - asphalt
+
+		Mat coloredOriginalLabeled = images[i].clone();
+
+		for(int e = 0; e < newData.size(); e++){
+			if(mapRegionIdToLabel[i].count(assignedManualId[newData[e].imageId]) > 0){
+				int label = newData[e].label;
+				if(label < 0 || label > 1){
+					throw "Bad label";
+				}
+				coloredOriginalLabeled.setTo(colors[label], autoRegionsOnImage == newData[e].imageId);
+			}
+		}
+		Mat visualization = coloredOriginalLabeled * 0.25 + images[i] * 0.75;
+		//ret.setTo(Scalar(0, 0, 0), maskIgnore.front() != 0);
+
+		imshow("labeled", visualization);
+		imshow("segments", hierClassifiers.front()->colorSegments(autoRegionsOnImage));
+
+
+
+
+
+
+
+		vector<vector<int> > curClassResultsPix(labels.size(), vector<int>(labels.size(), 0));
+		vector<vector<int> > curClassResultsSeg(labels.size(), vector<int>(labels.size(), 0));
+
+		vector<Mat> classificationResult = hierClassifiers.front()->classify(images[i],
+																			terrains[i],
+																			autoRegionsOnImage,
+																			maskIgnore.front(),
+																			entryWeightThreshold);
+		for(int l = 0; l < labels.size(); l++){
+			double minVal, maxVal;
+			minMaxIdx(classificationResult[l], &minVal, &maxVal);
+			cout << labels[l] << ", min = " << minVal << ", max = " << maxVal << endl;
+			imshow(labels[l], classificationResult[l]);
+		}
+
+		Mat coloredOriginalClassified = images[i].clone();
+		Mat bestLabels(images[i].rows, images[i].cols, CV_32SC1, Scalar(-1));
+		Mat bestScore(images[i].rows, images[i].cols, CV_32FC1, Scalar(-1));
+		for(int l = 0; l < labels.size(); l++){
+			Mat cmp;
+			compare(bestScore, classificationResult[l], cmp, CMP_LE);
+			bestLabels.setTo(l, cmp);
+			bestScore = max(bestScore, classificationResult[l]);
+		}
+		for(int l = 0; l < labels.size(); l++){
+			coloredOriginalClassified.setTo(colors[l], bestLabels == l);
+		}
+		imshow("classified", coloredOriginalClassified * 0.25 + images[i] * 0.75);
+
+		dataCrfFile << "i " << i << endl;
+		set<int> counted;
+		for(int r = 0; r < images[i].rows; r++){
+			for(int c = 0; c < images[i].cols; c++){
+				int pred = bestLabels.at<int>(r, c);
+				if(pred >= 0){
+					if(mapRegionIdToLabel[i].count(assignedManualId[autoRegionsOnImage.at<int>(r, c)]) > 0){
+						if(counted.count(autoRegionsOnImage.at<int>(r, c)) == 0){
+							int groundTrue = mapRegionIdToLabel[i][assignedManualId[autoRegionsOnImage.at<int>(r, c)]];
+
+							int newDataIdx = -1;
+							for(int e = 0; e < newData.size(); e++){
+								if(newData[e].imageId == autoRegionsOnImage.at<int>(r, c)){
+									newDataIdx = e;
+									break;
+								}
+							}
+							if(newDataIdx >= 0){
+								dataCrfFile << "e " << newDataIdx << " " << autoRegionsOnImage.at<int>(r, c) << " " <<
+										groundTrue << " " << newData[newDataIdx].weight << " ";
+								for(int l = 0; l < labels.size(); ++l){
+									dataCrfFile << classificationResult[l].at<float>(r, c) << " ";
+								}
+								for(int col = 0; col < newData[newDataIdx].descriptor.cols; ++col){
+									dataCrfFile << newData[newDataIdx].descriptor.at<float>(0, col) << " ";
+								}
+								dataCrfFile << endl;
+							}
+
+							curClassResultsSeg[groundTrue][pred]++;
+							counted.insert(autoRegionsOnImage.at<int>(r, c));
+						}
+					}
+					if(mapRegionIdToLabel[i].count(manualRegionsOnImages[i].at<int>(r, c)) > 0){
+						int groundTrue = mapRegionIdToLabel[i][manualRegionsOnImages[i].at<int>(r, c)];
+						curClassResultsPix[groundTrue][pred]++;
+					}
+				}
+			}
+		}
+
+		for(int t = 0; t < labels.size(); t++){
+			for(int p = 0; p < labels.size(); p++){
+				classResultsPix[t][p] += curClassResultsPix[t][p];
+				classResultsSeg[t][p] += curClassResultsSeg[t][p];
+			}
+		}
+
+		cout << "Current frame pixel results: " << endl;
+		for(int t = 0; t < labels.size(); t++){
+			cout << "true = " << t << ": ";
+			for(int p = 0; p < labels.size(); p++){
+				cout << curClassResultsPix[t][p] << ", ";
+			}
+			cout << endl;
+		}
+
+		cout << "Current frame segment results: " << endl;
+		for(int t = 0; t < labels.size(); t++){
+			cout << "true = " << t << ": ";
+			for(int p = 0; p < labels.size(); p++){
+				cout << curClassResultsSeg[t][p] << ", ";
+			}
+			cout << endl;
+		}
+
+
+		waitKey(100);
+	}
+
+	dataCrfFile.close();
 
 	cout << "General pixel results: " << endl;
 	for(int t = 0; t < labels.size(); t++){

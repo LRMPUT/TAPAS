@@ -1,6 +1,9 @@
 /*
     TapasQt is a GUI for TAPAS library
-    Copyright (C) 2014, TAPAS Team (cybair [at] put.poznan.pl), Poznan University of Technology
+    Copyright (C) 2014, TAPAS Team:
+	-Michal Nowicki (michal.nowicki@put.poznan.pl),
+	-Jan Wietrzykowski (jan.wietrzykowski@cie.put.poznan.pl).
+	Poznan University of Technology
 
     This library is free software; you can redistribute it and/or modify it under
     the terms of the GNU Lesser General Public License as published by the
@@ -15,7 +18,6 @@
     You should have received a copy of the GNU Lesser General Public License along
     with this library; if not, write to the Free Software Foundation, Inc.,
     59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-
 */
 
 #include "TapasQt.h"

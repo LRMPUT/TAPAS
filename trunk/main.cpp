@@ -47,6 +47,7 @@ int main(int argc, char* argv[])
 		cout<<"Starting program" << endl;
 		Robot robot("../settings.xml");
 		cout << "Robot created" << endl;
+		Debug debug(&robot);
 
 		/*robot.openImu("/dev/robots/imu2");
 		robot.openEncoders("/dev/robots/encoders");
@@ -54,13 +55,24 @@ int main(int argc, char* argv[])
 		robot.openGps("/dev/robots/gps");
 		robot.openRobotsDrive("/dev/robots/driverLeft", "/dev/robots/driverRight");
 		robot.openCamera(vector<string>(1, "/dev/video0"));*/
+		std::vector<boost::filesystem::path> dirsTrain;
+		std::vector<boost::filesystem::path> dirsTest;
 
-		char a;
+		dirsTrain.push_back("../MovementConstraints/Camera/database/przejazd6");
+		dirsTrain.push_back("../MovementConstraints/Camera/database/przejazd7");
+
+		dirsTest.push_back("../MovementConstraints/Camera/database/przejazd9");
+		dirsTest.push_back("../MovementConstraints/Camera/database/przejazd10");
+//		dirsTest.push_back("../MovementConstraints/Camera/database/przejazd11");
+
+		debug.testClassification(dirsTrain, dirsTest);
+
+		/*char a;
 		while((waitKey(200) & 0xff) != 's')
 		{
 		}
-		//robot.startCompetition();
-		cout << "Robot stated" << endl;
+		robot.startCompetition();
+		cout << "Robot stated" << endl;*/
 
 	}
 	catch(char const* error){
