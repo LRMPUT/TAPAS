@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
-set(CUDA 1)
+set(CUDA 0)
 set(CMAKE_BUILD_TYPE "Release")
 
-project(RobotsIntellect)
+project(Tapas)
 
 SET(CMAKE_CXX_FLAGS "-std=c++0x -DUSE_USB_CONNECTION")
 
@@ -22,7 +22,7 @@ find_package(Boost COMPONENTS system filesystem thread REQUIRED)
 IF (CUDA GREATER 0)
 	find_package(CUDA REQUIRED)
 	# Pass options to NVCC
-	set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3 -gencode arch=compute_12,code=sm_12)
+	set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3 -gencode arch=compute_20,code=sm_21)
 	SET( CUDA_PROPAGATE_HOST_FLAGS OFF )
 ENDIF (CUDA GREATER 0)
 link_directories(${URG_LIBRARIES_DIR})
@@ -71,7 +71,7 @@ set(MicrostrainSDK_UTIL_SOURCES
 	MicrostrainSDK/Utilities/Source/byteswap_utilities.c)
 
 
-set(RobotsIntellect_SOURCES
+set(Tapas_SOURCES
 	${MicrostrainSDK_SOURCES}
 	${MicrostrainSDK_UTIL_SOURCES}
 	Debug/Debug.cpp
@@ -118,22 +118,22 @@ set(RobotsIntellect_SOURCES
 )
 
 IF( CUDA GREATER 0)
-	set(RobotsIntellect_CUDA_SOURCES
+	set(Tapas_CUDA_SOURCES
 		MovementConstraints/Camera/Camera.cu
 	)
-	cuda_add_executable (RobotsIntellect 
-		${RobotsIntellect_SOURCES}
-		${RobotsIntellect_CUDA_SOURCES}
+	cuda_add_executable (Tapas 
+		${Tapas_SOURCES}
+		${Tapas_CUDA_SOURCES}
 		main.cpp
 	)
 ELSEIF ( CUDA EQUAL 0)
-	add_executable (RobotsIntellect 
-		${RobotsIntellect_SOURCES}
+	add_executable (Tapas 
+		${Tapas_SOURCES}
 		main.cpp
 	)
 ENDIF( CUDA GREATER 0)
 
-target_link_libraries(RobotsIntellect
+target_link_libraries(Tapas
 	${OpenCV_LIBS}
 	${Boost_LIBRARIES}
 	${urg_LIBRARIES}
@@ -182,14 +182,14 @@ add_definitions(${QT_DEFINITIONS})
 
 IF (CUDA GREATER 0)
 	cuda_add_executable(TapasQt/gui
-		${RobotsIntellect_SOURCES}
-		${RobotsIntellect_CUDA_SOURCES}
+		${Tapas_SOURCES}
+		${Tapas_CUDA_SOURCES}
 		${TapasQt_SOURCES}
 		${TapasQt_HEADERS_MOC}
 		${TapasQt_FORMS_HEADERS})
 ELSEIF (CUDA EQUAL 0)
 	add_executable(TapasQt/gui
-		${RobotsIntellect_SOURCES}
+		${Tapas_SOURCES}
 		${TapasQt_SOURCES}
 		${TapasQt_HEADERS_MOC}
 		${TapasQt_FORMS_HEADERS})

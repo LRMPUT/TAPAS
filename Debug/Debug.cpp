@@ -106,15 +106,15 @@ void Debug::testSegmentation(boost::filesystem::path dir){
 	}
 }
 
-void Debug::testTraining(boost::filesystem::path dir){
-	//robot->movementConstraints->camera->learnFromDir(dir);
+void Debug::testTraining(std::vector<boost::filesystem::path> dirs){
+	robot->movementConstraints->camera->learnFromDir(dirs);
 }
 
-void Debug::testClassification(	boost::filesystem::path dirTrain,
-								boost::filesystem::path dirTest)
+void Debug::testClassification(	std::vector<boost::filesystem::path> dirsTrain,
+								std::vector<boost::filesystem::path> dirsTest)
 {
-	//robot->movementConstraints->camera->learnFromDir(dirTrain);
-	robot->movementConstraints->camera->classifyFromDir(dirTest);
+//	robot->movementConstraints->camera->learnFromDir(dirsTrain);
+	robot->movementConstraints->camera->classifyFromDir(dirsTest);
 }
 
 void Debug::testConstraints(boost::filesystem::path dirTrain,
