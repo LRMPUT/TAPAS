@@ -1159,6 +1159,23 @@ void GlobalPlanner::stopThread() {
 	}
 }
 
+#ifdef TROBOT
+//CV_32SC1 2x1: left, right encoder
+cv::Mat GlobalPlanner::getEncoderData(std::chrono::high_resolution_clock::time_point timestamp)
+{
+	Mat ret(2, 1, CV_32SC1);
+	robotDriveTrobot->getEncoder(&ret->at<int>(0),
+								&ret->at<int>(1));
+	timestamp = std::chrono::high_resolution_clock::now();
+	return ret;
+}
+
+bool GlobalPlanner::isEncodersOpen()
+{
+	return isRobotsDriveOpen();
+}
+#endif
+
 //----------------------MODES OF OPERATION
 void GlobalPlanner::switchMode(OperationMode mode) {
 	currentMode = mode;
@@ -1168,6 +1185,12 @@ void GlobalPlanner::switchMode(OperationMode mode) {
 void GlobalPlanner::setMotorsVel(float motLeft, float motRight) {
 
 	std::unique_lock < std::mutex > lck(driverMtx);
+#ifdef TROBOT
+	robotDriveTrobo->runMotor(max(min((int) (motLeft),
+			ROBOT_DRIVE_MAX), -ROBOT_DRIVE_MAX)), 0);
+	robotDriveTrobo->runMotor(max(min((int) (-motRight),
+			ROBOT_DRIVE_MAX), -ROBOT_DRIVE_MAX), 1);
+#else
 	if (robotDrive1 != NULL && robotDrive2 != NULL) {
 		robotDrive1->exitSafeStart();
 		robotDrive2->exitSafeStart();
@@ -1179,6 +1202,7 @@ void GlobalPlanner::setMotorsVel(float motLeft, float motRight) {
 				max(min((int) (-motRight * ROBOT_DRIVE_MAX / 100),
 				ROBOT_DRIVE_MAX), -ROBOT_DRIVE_MAX));
 	}
+#endif
 	lck.unlock();
 }
 
@@ -1194,6 +1218,13 @@ GlobalPlanner::GlobalPlanInfo GlobalPlanner::getGlobalPlan() {
 //----------------------MENAGMENT OF GlobalPlanner DEVICES
 //Robots Drive
 void GlobalPlanner::openRobotsDrive(std::string port1, std::string port2) {
+
+#ifdef TROBOT
+	closeRobotsDrive();
+	std::unique_lock < std::mutex > lck(driverMtx);
+	robotDriveTrobot = new RobotDrive(port1);
+	lck.unlock();
+#else
 	//closeRobotsDrive();
 	//robotDrive = new RobotDrive(port);
 	cout << "Left: " << port1 << ", right: " << port2 << endl;
@@ -1203,6 +1234,7 @@ void GlobalPlanner::openRobotsDrive(std::string port1, std::string port2) {
 	robotDrive1 = new Drivers(115200, port1);
 	robotDrive2 = new Drivers(115200, port2);
 	lck.unlock();
+#endif
 
 	setMotorsVel(0, 0);
 }
@@ -1210,6 +1242,14 @@ void GlobalPlanner::openRobotsDrive(std::string port1, std::string port2) {
 void GlobalPlanner::closeRobotsDrive() {
 	cout << "closeRobotsDrive()" << endl;
 	std::unique_lock < std::mutex > lck(driverMtx);
+
+#ifdef TROBOT
+	if(robotDriveTrobot != NULL){
+		robotDriveTrobot->stop();
+		delete robotDriveTrobot;
+		robotDriveTrobot = NULL;
+	}
+#else
 	if (robotDrive1 != NULL) {
 		robotDrive1->exitSafeStart();
 		robotDrive1->setMotorSpeed(0);
@@ -1222,12 +1262,18 @@ void GlobalPlanner::closeRobotsDrive() {
 		delete robotDrive2;
 		robotDrive2 = NULL;
 	}
+#endif
+
 	lck.unlock();
 	cout << "End closeRobotsDrive()" << endl;
 }
 
 bool GlobalPlanner::isRobotsDriveOpen() {
+#ifdef TROBOT
+
+#else
 	return (robotDrive1 != NULL) && (robotDrive2 != NULL);
+#endif
 }
 
 float GlobalPlanner::getHeadingToGoal() {

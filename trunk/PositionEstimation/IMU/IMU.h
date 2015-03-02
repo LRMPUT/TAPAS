@@ -31,12 +31,16 @@
 #define IMU_H_
 
 #include <opencv2/opencv.hpp>
+#ifdef TROBOT
 #include "../../Trobot/include/Imu.h"
+#endif
 #include "include/IMU_driver.h"
 
 class Debug;
 class Robot;
 
+
+#ifdef TROBOT
 #define NUM_VALUES 12
 
 struct Quantity {
@@ -48,6 +52,7 @@ struct Quantity {
 	int address;
 	float factor;
 };
+#endif
 
 class IMU {
 
@@ -58,7 +63,9 @@ class IMU {
 	friend class Debug;
 
 	IMU_driver* imuNew;
+#ifdef TROBOT
 	trobot::Imu* imu;
+#endif
 	Robot *robot;
 
 	cv::Mat getUM6Data(std::chrono::high_resolution_clock::time_point &timestamp);

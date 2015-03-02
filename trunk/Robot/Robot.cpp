@@ -163,15 +163,23 @@ float Robot::getImuAccVariance() {
 
 //Encoders
 void Robot::openEncoders(std::string port){
+#ifndef TROBOT
 	positionEstimation->openEncoders(port);
+#endif
 }
 
 void Robot::closeEncoders(){
+#ifndef TROBOT
 	positionEstimation->closeEncoders();
+#endif
 }
 
 bool Robot::isEncodersOpen(){
+#ifdef TROBOT
+	return globalPlanner->isEncodersOpen();
+#else
 	return positionEstimation->isEncodersOpen();
+#endif
 }
 
 //----------------------MENAGMENT OF MovementConstraints DEVICES
@@ -203,9 +211,12 @@ bool Robot::isCameraOpen(){
 
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 //CV_32SC1 2x1: left, right encoder
-cv::Mat Robot::getEncoderData(){
-	std::chrono::high_resolution_clock::time_point timestamp;
+cv::Mat Robot::getEncoderData(std::chrono::high_resolution_clock::time_point timestamp){
+#ifdef TROBOT
+	globalPlanner->getEncoderData(timestamp);
+#else
 	return positionEstimation->getEncoderData(timestamp);
+#endif
 }
 
 //CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)

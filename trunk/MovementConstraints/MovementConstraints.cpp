@@ -324,7 +324,8 @@ void MovementConstraints::updateCurPosCloudMapCenter(){
 #ifndef ROBOT_OFFLINE
 	if(robot->isImuOpen() && robot->isEncodersOpen()){
 		std::chrono::high_resolution_clock::time_point imuTimestamp;
-		Mat encodersCur = robot->getEncoderData();
+		std::chrono::high_resolution_clock::time_point encTimestamp;
+		Mat encodersCur = robot->getEncoderData(encTimestamp);
 		Mat imuCur = robot->getImuData(imuTimestamp);
 
 		//cout << "Euler angles: " << imuCur.at<float>(2, 3) << " " << imuCur.at<float>(1, 3) << " " << imuCur.at<float>(0, 3) << endl;

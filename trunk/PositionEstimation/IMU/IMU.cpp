@@ -30,12 +30,15 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include "IMU.h"
+#ifdef TROBOT
 #include "../../Trobot/include/Imu.h"
+using namespace trobot;
+#endif
 
 using namespace cv;
-using namespace trobot;
 using namespace std;
 
+#ifdef TROBOT
 Quantity quantities[NUM_VALUES] = {
 	Quantity(4*trobot::ACCEL_PROC_XY + 2,	0.000183105),
 	Quantity(4*trobot::ACCEL_PROC_XY,		0.000183105),
@@ -50,11 +53,26 @@ Quantity quantities[NUM_VALUES] = {
 	Quantity(4*trobot::EULER_PHI_THETA,	0.0109863),
 	Quantity(4*trobot::EULER_PSI + 2,			0.0109863)
 };
+#endif
 
-IMU::IMU() : imu(NULL), imuNew(NULL), usedIMUType(IMU_MICROSTRAIN_GX4_25) {
+IMU::IMU() :
+#ifdef TROBOT
+	imu(NULL),
+#endif
+	imuNew(NULL),
+	usedIMUType(IMU_MICROSTRAIN_GX4_25)
+{
+
 }
 
-IMU::IMU(Robot* irobot) : imu(NULL), imuNew(NULL), robot(irobot), usedIMUType(IMU_MICROSTRAIN_GX4_25) {
+IMU::IMU(Robot* irobot) :
+#ifdef TROBOT
+		imu(NULL),
+#endif
+		imuNew(NULL),
+		robot(irobot),
+		usedIMUType(IMU_MICROSTRAIN_GX4_25)
+{
 
 }
 
@@ -65,7 +83,9 @@ IMU::~IMU() {
 void IMU::openPort(std::string port){
 	if ( usedIMUType == IMU_UM6)
 	{
+#ifdef TROBOT
 		imu = new Imu(115200, port);
+#endif
 	}
 	else if ( usedIMUType == IMU_MICROSTRAIN_GX4_25)
 	{
@@ -77,19 +97,29 @@ void IMU::openPort(std::string port){
 
 void IMU::closePort(){
 	std::cout<<"IMU::closePort"<<std::endl;
-	if(imu != NULL || (imuNew != NULL)){
-		if ( usedIMUType == IMU_UM6)
+	if ( usedIMUType == IMU_UM6){
+#ifdef TROBOT
+		if(imu != NULL){
 			delete imu;
-		else if ( usedIMUType == IMU_MICROSTRAIN_GX4_25)
+			imu = NULL;
+		}
+#endif
+	}
+	else if ( usedIMUType == IMU_MICROSTRAIN_GX4_25){
+		if(imuNew != NULL){
 			delete imuNew;
-		imu = NULL;
-		imuNew = NULL;
+			imuNew = NULL;
+		}
 	}
 	std::cout<<"End IMU::closePort"<<std::endl;
 }
 
 bool IMU::isPortOpen(){
+#ifdef TROBOT
 	return (imu != NULL) || (imuNew != NULL);
+#else
+	return (imuNew != NULL);
+#endif
 }
 
 
@@ -119,7 +149,9 @@ float IMU::getAccVariance(){
 
 //CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
 cv::Mat IMU::getUM6Data(std::chrono::high_resolution_clock::time_point &timestamp){
+
 	Mat ret(3, 4, CV_32FC1);
+#ifdef TROBOT
 	for(int i = 0; i < NUM_VALUES; i++){
 
 		float tmp = (short)((imu->Register[quantities[i].address / 4]._int >> 8*(quantities[i].address % 4)) & 0xffff);
@@ -135,6 +167,7 @@ cv::Mat IMU::getUM6Data(std::chrono::high_resolution_clock::time_point &timestam
 	}
 	//cout << endl;
 	timestamp = imu->getTimestamp();
+#endif
 	return ret;
 }
 
