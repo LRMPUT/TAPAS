@@ -472,7 +472,11 @@ bool PositionEstimation::isSetZero() {
 //CV_32SC1 2x1: left, right encoder
 cv::Mat PositionEstimation::getEncoderData(
 		std::chrono::high_resolution_clock::time_point &timestamp) {
+#ifdef TROBOT
+	return robot->getEncoderData(timestamp);
+#else
 	return encoders.getEncoders(timestamp);
+#endif
 }
 
 //CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
@@ -560,7 +564,11 @@ void PositionEstimation::closeEncoders() {
 }
 
 bool PositionEstimation::isEncodersOpen() {
+#ifdef TROBOT
+	return robot->isEncodersOpen();
+#else
 	return encoders.isPortOpen();
+#endif
 }
 
 void PositionEstimation::fakeGPSStart(double lat, double lon) {

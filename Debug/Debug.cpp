@@ -139,8 +139,8 @@ void Debug::testConstraints(boost::filesystem::path dirTrain,
 void Debug::testEncoders(){
 	robot->openEncoders("/dev/robots/encoders");
 	while(true){
-
-		cout << robot->getEncoderData() << endl;
+		std::chrono::high_resolution_clock::time_point timestamp;
+		cout << robot->getEncoderData(timestamp) << endl;
 		char a = waitKey(500);
 		if(a == 'q'){
 			break;

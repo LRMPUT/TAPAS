@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 set(CUDA 0)
+set(TROBOT 0)
 set(CMAKE_BUILD_TYPE "Release")
 
 project(Tapas)
@@ -10,6 +11,10 @@ SET(CMAKE_CXX_FLAGS "-std=c++0x -DUSE_USB_CONNECTION")
 IF (CUDA EQUAL 0)
 	add_definitions(-DNO_CUDA)
 ENDIF (CUDA EQUAL 0)
+
+IF (TROBOT GREATER 0)
+	add_definitions(-DTROBOT)
+ENDIF (TROBOT GREATER 0)
 
 set(urg_LIBRARIES_DIR /usr/local/lib)
 set(urg_LIBRARIES urg_cpp)
@@ -108,14 +113,20 @@ set(Tapas_SOURCES
 	PositionEstimation/IMU/IMU.cpp
 	PositionEstimation/PositionEstimation.cpp
 	Robot/Robot.cpp
-	Trobot/source/Controller.cpp
-	Trobot/source/Gps.cpp
-	Trobot/source/Imu.cpp
-	Trobot/source/rangeSensor.cpp
-	Trobot/source/RobotDrive.cpp
-	Trobot/source/RoboteqDevice.cpp
 	Trobot/source/SerialPort.cpp
 )
+
+IF(TROBOT GREATER 0)
+	set(Tapas_SOURCES
+		${Tapas_SOURCES}
+		Trobot/source/Controller.cpp
+		Trobot/source/Gps.cpp
+		Trobot/source/Imu.cpp
+		Trobot/source/rangeSensor.cpp
+		Trobot/source/RobotDrive.cpp
+		Trobot/source/RoboteqDevice.cpp
+	)
+ENDIF(TROBOT GREATER 0)
 
 IF( CUDA GREATER 0)
 	set(Tapas_CUDA_SOURCES

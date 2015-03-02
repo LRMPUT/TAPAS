@@ -47,6 +47,9 @@
 #include "RobotDrivers/robotDrivers.h"
 #include "LocalPlanner.h"
 
+#ifdef TROBOT
+#include "../Trobot/include/RobotDrive.h"
+#endif
 
 class Robot;
 class Debug;
@@ -143,6 +146,10 @@ private:
 	Drivers* robotDrive1;
 	Drivers* robotDrive2;
 	std::mutex driverMtx;
+#ifdef TROBOT
+	trobot::RobotDrive robotDriveTrobot;
+#endif
+
 
 	// Local Planning
 	LocalPlanner* localPlanner;
@@ -226,6 +233,13 @@ public:
 	void stopThread();
 
 	float getHeadingToGoal();
+
+#ifdef TROBOT
+	//CV_32SC1 2x1: left, right encoder
+	cv::Mat getEncoderData(std::chrono::high_resolution_clock::time_point timestamp);
+
+	bool isEncodersOpen();
+#endif
 
 	//----------------------MODES OF OPERATION
 	void switchMode(OperationMode mode);
