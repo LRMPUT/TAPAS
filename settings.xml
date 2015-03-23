@@ -185,7 +185,7 @@
 				saveEnable: [true/false] - Whether to save cache after learning classifier or not.
 				loadEnable: [true/false] - Whether to load cache during construction of Camera class.
 			-->
-			<cache saveEnabled="true" loadEnabled="true"/>
+			<cache saveEnabled="false" loadEnabled="false"/>
 			<HierClassifier debug="0">
 				<!--
 					Parameters of segmentation algorithm. See "Efficient Graph-Based Image Segmentation" Falzenszwalb, Huttenlocher
@@ -257,14 +257,21 @@
 					</svm>
 					<info desc_beg="7" desc_end="8" />
 				</Classifier>-->
-				<Classifier type="SVM">
+				<!--<Classifier type="SVM">
 					<cache enabled="true" />
 					<svm type="C_SVC">
 						<kernelType value="RBF" />
 						<gamma value="0.5" />
 						<degree value="2" />
 						<C value="512" />
-					</svm>
+					</svm>-->
+					<!--
+						Index of descriptors used in classifier, desc_beg inclusive, desc_end exclusive.
+					-->
+					<!--<info desc_beg="0" desc_end="7" />
+				</Classifier>-->
+				<Classifier type="RF">
+					<cache enabled="true" />
 					<!--
 						Index of descriptors used in classifier, desc_beg inclusive, desc_end exclusive.
 					-->
@@ -279,9 +286,6 @@
 			<learning enabled="false">
 				"../MovementConstraints/Camera/database/przejazd6"
 				"../MovementConstraints/Camera/database/przejazd7"
-				"../MovementConstraints/Camera/database/przejazd9"
-				"../MovementConstraints/Camera/database/przejazd10"
-				"../MovementConstraints/Camera/database/przejazd11"
 			</learning>
 			<!--
 				All labels used have to be declared here. Id starts from 0 and has to be consecutive numbers.

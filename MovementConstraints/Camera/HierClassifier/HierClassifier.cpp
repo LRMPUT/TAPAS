@@ -38,6 +38,7 @@
 #include "HierClassifier.h"
 #include "UnionFind.h"
 #include "ClassifierSVM.h"
+#include "ClassifierRF.h"
 #include "../CameraCuda.h"
 
 /*#define HIST_SIZE_H 4
@@ -261,6 +262,17 @@ void HierClassifier::loadSettings(TiXmlElement* settings){
 			iPtr->QueryIntAttribute("desc_end", &dEnd);
 			weakClassInfo.push_back(WeakClassifierInfo(descBeg[dBeg], descBeg[dEnd]));
 		}
+		else if(type == "RF"){
+			weakClassifiersSet.push_back(new ClassifierRF(cPtr));
+			TiXmlElement* iPtr = cPtr->FirstChildElement("info");
+			if(!iPtr){
+				throw "Bad settings file - no info setting for Classifier type = RF";
+			}
+			int dBeg, dEnd;
+			iPtr->QueryIntAttribute("desc_beg", &dBeg);
+			iPtr->QueryIntAttribute("desc_end", &dEnd);
+			weakClassInfo.push_back(WeakClassifierInfo(descBeg[dBeg], descBeg[dEnd]));
+		}
 		numWeakClassifiers++;
 		cPtr = cPtr->NextSiblingElement("Classifier");
 	}
@@ -355,17 +367,17 @@ void HierClassifier::train(const std::vector<Entry>& data,
 			//evaluating
 			double score = 0;
 			for(int e = 0; e < dataClassifiers[c].size(); e++){
-				//cout << "Entry " << e << ", weight " << dataWeights[e] << ": ";
+//				cout << "Entry " << e << ", weight " << dataWeights[e] << ": ";
 				Mat probEst = weakClassifiersSet[c]->classify(dataClassifiers[c][e].descriptor);
 				probEst *= 2;
 				probEst -= 1;
 				for(int l = 0; l < numLabels; l++){
 					int ind = (l == dataClassifiers[c][e].label ? 1 : -1);
-					//cout << ind << " (" << probEst.at<float>(l) << "), ";
+//					cout << ind << " (" << probEst.at<float>(l) << "), ";
 					//dataWeights*entrysWeights
 					score += dataClassifiers[maxIndex][e].weight*dataWeights[e]*probEst.at<float>(l)*ind/numLabels;
 				}
-				//cout << endl;
+//				cout << endl;
 			}
 			cout << "Classifier " << c << ", score " << score << endl;
 			if(score > maxVal){
@@ -394,15 +406,15 @@ void HierClassifier::train(const std::vector<Entry>& data,
 			probEst *= 2;
 			probEst -= 1;
 			double score = 0;
-			//cout << "Entry " << e << " ";
+//			cout << "Entry " << e << " ";
 			for(int l = 0; l < numLabels; l++){
 				int ind = (l == dataClassifiers[maxIndex][e].label ? 1 : -1);
 				//entrysWeights
 				score += probEst.at<float>(l)*ind/numLabels;
-				//cout << (probEst.at<float>(l)+1)/2 << " (" << ind << "), ";
+//				cout << (probEst.at<float>(l)+1)/2 << " (" << ind << "), ";
 			}
 			score *= dataClassifiers[maxIndex].size() * dataClassifiers[maxIndex][e].weight;
-			//cout << endl;
+//			cout << endl;
 			dataWeights[e] *= exp(-alpha*score);
 			//dataWeights*entrysWeights
 			sum += dataWeights[e]*dataClassifiers[maxIndex][e].weight;
@@ -419,6 +431,7 @@ void HierClassifier::train(const std::vector<Entry>& data,
 	for(int c = 0; c < weights.size(); c++){
 		weights[c] /= sumClassifierWeights;
 	}
+//	waitKey();
 	dataClassifiers.clear();
 }
 

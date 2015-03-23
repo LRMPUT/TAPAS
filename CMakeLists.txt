@@ -88,6 +88,7 @@ set(Tapas_SOURCES
 	MovementConstraints/Camera/HierClassifier/UnionFind.cpp
 	MovementConstraints/Camera/HierClassifier/Classifier.cpp
 	MovementConstraints/Camera/HierClassifier/ClassifierSVM.cpp
+	MovementConstraints/Camera/HierClassifier/ClassifierRF.cpp
 	MovementConstraints/Camera/HierClassifier/HierClassifier.cpp
 	MovementConstraints/MovementConstraints.cpp
 	#Planning/PlanningSearching/LocalPlannerSearching.cpp

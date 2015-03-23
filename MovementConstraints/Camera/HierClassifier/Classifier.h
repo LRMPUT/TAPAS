@@ -50,7 +50,8 @@ class Classifier{
 
 public:
 	enum ClassifierType{
-		SVM
+		SVM,
+		RF
 	};
 protected:
 	/** Typ klasyfikatora. */
