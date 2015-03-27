@@ -114,6 +114,8 @@ public:
 	 *
 	 */
 	virtual void crossValidate(const std::vector<Entry>& entries) = 0;
+
+	virtual cv::Mat normalizeFeat(const cv::Mat features) = 0;
 };
 
 

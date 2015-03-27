@@ -233,6 +233,8 @@ public:
 	 *
 	 */
 	void crossValidateSVMs(const std::vector<Entry>& entries);
+
+	cv::Mat normalizeDesc(const cv::Mat desc);
 };
 
 
