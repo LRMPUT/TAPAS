@@ -682,3 +682,15 @@ void ClassifierSVM::crossValidate(const std::vector<Entry>& entries)
 
 	delete[] results;
 }
+
+cv::Mat ClassifierSVM::normalizeFeat(const cv::Mat features)
+{
+	Mat featNorm = features.clone();
+	for(int d = 0; d < descLen; d++){
+		featNorm.at<float>(d) -= scalesSub[d];
+		if(scalesDiv[d] != 0){
+			featNorm.at<float>(d) /= scalesDiv[d];
+		}
+	}
+	return featNorm;
+}

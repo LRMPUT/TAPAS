@@ -1287,8 +1287,9 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 								for(int l = 0; l < labels.size(); ++l){
 									dataCrfFile << classificationResult[l].at<float>(r, c) << " ";
 								}
-								for(int col = 0; col < newData[newDataIdx].descriptor.cols; ++col){
-									dataCrfFile << newData[newDataIdx].descriptor.at<float>(0, col) << " ";
+								Mat descNorm = hierClassifiers.front()->normalizeDesc(newData[newDataIdx].descriptor);
+								for(int col = 0; col < descNorm.cols; ++col){
+									dataCrfFile << descNorm.at<float>(0, col) << " ";
 								}
 								dataCrfFile << endl;
 							}

@@ -1205,3 +1205,13 @@ void HierClassifier::crossValidateSVMs(const std::vector<Entry>& entries)
 	}
 	dataClassifiers.clear();
 }
+
+cv::Mat HierClassifier::normalizeDesc(const cv::Mat desc)
+{
+	if(classifiers.size() > 0){
+		return classifiers.front()->normalizeFeat(desc);
+	}
+	else{
+		return Mat();
+	}
+}
