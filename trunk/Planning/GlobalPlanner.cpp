@@ -46,11 +46,21 @@ using namespace std;
 #define ROBOT_DRIVE_MAX 3200
 
 GlobalPlanner::GlobalPlanner(Robot* irobot, TiXmlElement* settings) :
-		robot(irobot), robotDrive1(NULL), robotDrive2(NULL), goalTheta(0.0), planningStage(
-				toGoal), weShouldWait(false), previousPlanDistance(-1.0), startGlobalPlannerCompetition(
-				false) {
+		robot(irobot),
+		goalTheta(0.0),
+		planningStage(toGoal),
+		weShouldWait(false),
+		previousPlanDistance(-1.0),
+		startGlobalPlannerCompetition(false),
+#ifndef TROBOT
+		robotDrive1(NULL), robotDrive2(NULL)
+#else
+		robotDriveTrobot(NULL)
+#endif
+{
 	cout << "GlobalPlanner()" << endl;
 	readSettings(settings);
+	cout << "Settings read" << endl;
 
 	localPlanner = new LocalPlanner(robot, this, settings);
 
@@ -73,9 +83,13 @@ GlobalPlanner::~GlobalPlanner() {
 // Reading settings
 
 void GlobalPlanner::readSettings(TiXmlElement* settings) {
-	TiXmlElement* pGlobalPlanner;
+	TiXmlElement* pGlobalPlanner = 0;
 	pGlobalPlanner = settings->FirstChildElement("GlobalPlanner");
+	if(!pGlobalPlanner){
+		throw "Bad settings file - no GlobalPlanner settings";
+	}
 
+//	cout << "Reading settings, pGlobalPlanner = " << pGlobalPlanner << endl;
 	if (pGlobalPlanner->QueryIntAttribute("runThread",
 			&globalPlannerParams.runThread) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner Thread";
@@ -128,31 +142,27 @@ void GlobalPlanner::readSettings(TiXmlElement* settings) {
 			&globalPlannerParams.runHomologation) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner runHomologation";
 	}
-
 	if (pGlobalPlanner->QueryStringAttribute("mapFile",
 			&globalPlannerParams.mapFile) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner mapFile";
 	}
-
 	if (pGlobalPlanner->QueryDoubleAttribute("goalLatitude",
 			&globalPlannerParams.goalLatitude) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner goalLatitude";
 	}
-
 	if (pGlobalPlanner->QueryDoubleAttribute("goalLongitude",
 			&globalPlannerParams.goalLongitude) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner goalLongitude";
 	}
-
 	if (pGlobalPlanner->QueryDoubleAttribute("startLatitude",
 			&globalPlannerParams.startLatitude) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner startLatitude";
 	}
-
 	if (pGlobalPlanner->QueryDoubleAttribute("startLongitude",
 			&globalPlannerParams.startLongitude) != TIXML_SUCCESS) {
 		throw "Bad settings file - wrong value for globalPlanner startLongitude";
 	}
+//	cout << "End reading settings" << endl;
 
 	printf("GlobalPlanner -- runThread: %d\n", globalPlannerParams.runThread);
 	printf("GlobalPlanner -- processing frequency: %f\n",
@@ -1163,10 +1173,12 @@ void GlobalPlanner::stopThread() {
 //CV_32SC1 2x1: left, right encoder
 cv::Mat GlobalPlanner::getEncoderData(std::chrono::high_resolution_clock::time_point timestamp)
 {
+//	cout << "GlobalPlanner::getEncoderData" << endl;
 	Mat ret(2, 1, CV_32SC1);
-	robotDriveTrobot->getEncoder(&ret->at<int>(0),
-								&ret->at<int>(1));
+	robotDriveTrobot->getEncoder(&(ret.at<int>(0)),
+								&(ret.at<int>(1)));
 	timestamp = std::chrono::high_resolution_clock::now();
+//	cout << "End GlobalPlanner::getEncoderData" << endl;
 	return ret;
 }
 
@@ -1186,10 +1198,13 @@ void GlobalPlanner::setMotorsVel(float motLeft, float motRight) {
 
 	std::unique_lock < std::mutex > lck(driverMtx);
 #ifdef TROBOT
-	robotDriveTrobo->runMotor(max(min((int) (motLeft),
-			ROBOT_DRIVE_MAX), -ROBOT_DRIVE_MAX)), 0);
-	robotDriveTrobo->runMotor(max(min((int) (-motRight),
-			ROBOT_DRIVE_MAX), -ROBOT_DRIVE_MAX), 1);
+	if(robotDriveTrobot != NULL){
+		cout << "Setting motor's vel: " << motLeft << ", " << motRight << endl;
+		robotDriveTrobot->runMotor(max(min((int) (motLeft),
+				ROBOT_DRIVE_MAX), -ROBOT_DRIVE_MAX), 2);
+		robotDriveTrobot->runMotor(max(min((int) (motRight),
+				ROBOT_DRIVE_MAX), -ROBOT_DRIVE_MAX), 1);
+	}
 #else
 	if (robotDrive1 != NULL && robotDrive2 != NULL) {
 		robotDrive1->exitSafeStart();
@@ -1222,7 +1237,7 @@ void GlobalPlanner::openRobotsDrive(std::string port1, std::string port2) {
 #ifdef TROBOT
 	closeRobotsDrive();
 	std::unique_lock < std::mutex > lck(driverMtx);
-	robotDriveTrobot = new RobotDrive(port1);
+	robotDriveTrobot = new trobot::RobotDrive(port1);
 	lck.unlock();
 #else
 	//closeRobotsDrive();
@@ -1270,7 +1285,7 @@ void GlobalPlanner::closeRobotsDrive() {
 
 bool GlobalPlanner::isRobotsDriveOpen() {
 #ifdef TROBOT
-
+	return (robotDriveTrobot != NULL);
 #else
 	return (robotDrive1 != NULL) && (robotDrive2 != NULL);
 #endif

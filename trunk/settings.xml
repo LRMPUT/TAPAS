@@ -63,9 +63,9 @@
 						changedPlanDelayTime="300000"
 						sound="1"
 						runHomologation="0" 
-						mapFile="robotourMap.osm"
-						goalLatitude="49.719657" goalLongitude="13.371140"
-						startLatitude="49.7241480000" startLongitude="13.3671696667"/>
+						mapFile="ppMap.osm"
+						goalLatitude="52.401886" goalLongitude="16.953509"
+						startLatitude="52.401979" startLongitude="16.953083"/>
 
 
 	<!--
@@ -87,7 +87,7 @@
 		VFH_ImuAccVarianceLimit: Limit of accelerometer variance. When it is to high robot slows down.
 	-->
 	
-	<LocalPlanner 		runThread="1" 
+	<LocalPlanner 		runThread="0" 
 						debug="1"
 						avoidObstacles="1" 
 						VFH_HistResolution="10"
@@ -185,7 +185,7 @@
 				saveEnable: [true/false] - Whether to save cache after learning classifier or not.
 				loadEnable: [true/false] - Whether to load cache during construction of Camera class.
 			-->
-			<cache saveEnabled="false" loadEnabled="false"/>
+			<cache saveEnabled="false" loadEnabled="true"/>
 			<HierClassifier debug="0">
 				<!--
 					Parameters of segmentation algorithm. See "Efficient Graph-Based Image Segmentation" Falzenszwalb, Huttenlocher
@@ -257,26 +257,23 @@
 					</svm>
 					<info desc_beg="7" desc_end="8" />
 				</Classifier>-->
-				<!--<Classifier type="SVM">
+				<Classifier type="SVM">
 					<cache enabled="true" />
 					<svm type="C_SVC">
 						<kernelType value="RBF" />
 						<gamma value="0.5" />
 						<degree value="2" />
 						<C value="512" />
-					</svm>-->
-					<!--
-						Index of descriptors used in classifier, desc_beg inclusive, desc_end exclusive.
-					-->
-					<!--<info desc_beg="0" desc_end="7" />
-				</Classifier>-->
-				<Classifier type="RF">
-					<cache enabled="true" />
+					</svm>
 					<!--
 						Index of descriptors used in classifier, desc_beg inclusive, desc_end exclusive.
 					-->
 					<info desc_beg="0" desc_end="7" />
 				</Classifier>
+				<!--<Classifier type="RF">
+					<cache enabled="true" />
+					<info desc_beg="0" desc_end="7" />
+				</Classifier>-->
 			</HierClassifier>
 			<!--
 				enabled: [true/flase] - Whether to train classifier during construction of Camera class.
