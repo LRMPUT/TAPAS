@@ -58,6 +58,7 @@ cv::Mat QtHokuyo::getData(){
 }
 
 void QtHokuyo::refresh(){
+//	cout << "QtHokuyo::refresh(), robot->isHokuyoOpen() = " << robot->isHokuyoOpen() << endl;
 	if(robot->isHokuyoOpen()){
 		Mat data = getData();
 
@@ -74,7 +75,7 @@ void QtHokuyo::refresh(){
 
 		QVector<QPointF> lines;
 		for(int i = 0; i < data.cols; i++){
-			//cout << "Point " << i << " = (" << data.at<int>(0, i) << ", " << data.at<int>(1, i) << ")" << endl;
+//			cout << "Point " << i << " = (" << data.at<int>(0, i) << ", " << data.at<int>(1, i) << ")" << endl;
 			lines.append(QPointF(origX - data.at<int>(1, i)*scale, origY - data.at<int>(0, i)*scale));
 		}
 		painter.drawPolyline(lines);

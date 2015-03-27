@@ -71,7 +71,7 @@ IMU::IMU(Robot* irobot) :
 #endif
 		imuNew(NULL),
 		robot(irobot),
-		usedIMUType(IMU_MICROSTRAIN_GX4_25)
+		usedIMUType(IMU_UM6)
 {
 
 }
@@ -125,20 +125,23 @@ bool IMU::isPortOpen(){
 
 bool IMU::isDataValid(){
 	if ( usedIMUType == IMU_UM6){
-		throw "Not supported";
-		return false;
+		if(imu == NULL){
+			return false;
+		}
+		return imu->isEulerDataValid();
 	}
 	else if ( usedIMUType == IMU_MICROSTRAIN_GX4_25){
 		if (imuNew==NULL)
 			return false;
 		return imuNew->isDataValid();
 	}
+	return false;
 }
 
 float IMU::getAccVariance(){
 	if ( usedIMUType == IMU_UM6){
-		throw "Not supported";
-		return -1;
+//		throw "IMU::getAccVariance() not supported";
+		return 0.0;
 	}
 	else if ( usedIMUType == IMU_MICROSTRAIN_GX4_25){
 		if (imuNew==NULL)

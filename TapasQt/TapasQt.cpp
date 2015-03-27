@@ -72,11 +72,16 @@ TapasQt::TapasQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
 	QObject::connect(ui.startRobotButton, SIGNAL(clicked()), this, SLOT(startRobot()));
 	cout << "TapasQt::TapasQt end" << endl;
 
-	robot.openImu("/dev/robots/imu2");
-	robot.openEncoders("/dev/robots/encoders");
+	cout << "imu" << endl;
+	robot.openImu("/dev/robots/imu");
+//	robot.openEncoders("/dev/robots/encoders");
+	cout << "hokuyo" << endl;
 	robot.openHokuyo("/dev/robots/hokuyo");
+	cout << "gps" << endl;
 	robot.openGps("/dev/robots/gps");
-	robot.openRobotsDrive("/dev/robots/driverLeft", "/dev/robots/driverRight");
+	cout << "robots drive" << endl;
+	robot.openRobotsDrive("/dev/robots/driver", "/dev/robots/driverRight");
+	cout << "camera" << endl;
 	robot.openCamera(vector<string>(1, "/dev/video0"));
 
 	cout << "End TapasQt::TapasQt" << endl;

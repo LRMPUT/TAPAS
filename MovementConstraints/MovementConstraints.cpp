@@ -144,6 +144,7 @@ cv::Mat MovementConstraints::readMatrixSettings(TiXmlElement* parent, const char
 
 // Main loop of MovementContraints thread.
 void MovementConstraints::run(){
+	cout << "MovementConstraints::run()" << endl;
 	try{
 	#ifndef ROBOT_OFFLINE
 		while(runThread){
@@ -155,6 +156,7 @@ void MovementConstraints::run(){
 			std::chrono::milliseconds duration(100);
 			std::this_thread::sleep_for(duration);
 		}
+		cout << "Waiting for isImuDataValid()" << endl;
 		while(runThread && !robot->isImuDataValid()){
 			//cout << "Waiting for isImuDataValid()" << endl;
 			std::chrono::milliseconds duration(100);
@@ -328,9 +330,9 @@ void MovementConstraints::updateCurPosCloudMapCenter(){
 		Mat encodersCur = robot->getEncoderData(encTimestamp);
 		Mat imuCur = robot->getImuData(imuTimestamp);
 
-		//cout << "Euler angles: " << imuCur.at<float>(2, 3) << " " << imuCur.at<float>(1, 3) << " " << imuCur.at<float>(0, 3) << endl;
-		//cout << "imuCur = " << imuCur << endl;
-		//cout << "encodersCur = " << encodersCur << endl;
+//		cout << "Euler angles: " << imuCur.at<float>(2, 3) << " " << imuCur.at<float>(1, 3) << " " << imuCur.at<float>(0, 3) << endl;
+//		cout << "imuCur = " << imuCur << endl;
+//		cout << "encodersCur = " << encodersCur << endl;
 
 		if(imuPrev.empty()){
 			imuCur.copyTo(imuPrev);

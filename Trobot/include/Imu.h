@@ -1172,6 +1172,8 @@ namespace trobot
 			//Read Euler angles.
 			Euler_Response GetEuler();
 
+			bool isEulerDataValid();
+
 			//Enable broadcasting mode
 			void EnableBroadcasting(bool accel, bool gyro, bool mag, bool euler);
 			//Disable broadcasting mode
@@ -1190,6 +1192,8 @@ namespace trobot
 			~Imu(void);
 
 		private:	
+			bool 				eulerPsiValid, eulerPhiThetaValid;
+
 			bool				broadcasting_;		///< variable that indicates whether IMU is in broadcasting mode or not
 			
 			std::string			device_;	

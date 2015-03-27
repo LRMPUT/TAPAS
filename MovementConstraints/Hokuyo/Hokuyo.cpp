@@ -37,9 +37,15 @@ using namespace cv;
 
 void Hokuyo::run(){
 	try{
-		hokuyo.start_measurement(	qrk::Urg_driver::Distance_intensity,
+		if(hokuyoType == HokuyoType::UTM30LX){
+			hokuyo.start_measurement(qrk::Urg_driver::Distance_intensity,
 									qrk::Urg_driver::Infinity_times,
 									0);
+		}
+		else if(hokuyoType == HokuyoType::URG04LX){
+
+		}
+
 		while(runThread){
 			vector<long int> distance;
 			vector<unsigned short> intensity;
@@ -47,9 +53,18 @@ void Hokuyo::run(){
 			//cout << "is_open: " << hokuyo.is_open() << endl;
 			//cout << "status: " << hokuyo.status() << endl;
 			//1 measurement doesn't work with Distance_intensity
-			hokuyo.get_distance_intensity(distance, intensity);
+			if(hokuyoType == HokuyoType::UTM30LX){
+				hokuyo.get_distance_intensity(distance, intensity);
+			}
+			else if(hokuyoType == HokuyoType::URG04LX){
+				hokuyo.start_measurement(qrk::Urg_driver::Distance,
+										1,
+										0);
+				hokuyo.get_distance(distance);
+				intensity.resize(distance.size());
+			}
 			//hokuyo.get_distance_intensity(distance, intensity);
-			//cout << "distance.size() = " << distance.size() << ", intensity.size() = " << intensity.size() << endl;
+//			cout << "distance.size() = " << distance.size() << ", intensity.size() = " << intensity.size() << endl;
 			//int count = 0;
 			std::unique_lock<std::mutex> lck(mtx);
 
@@ -57,8 +72,8 @@ void Hokuyo::run(){
 			curTimestamp = std::chrono::high_resolution_clock::now();
 			for(int i = 0; i < distance.size(); i++){
 				double angle = hokuyo.index2rad(i);
-				//cout << "Point " << i << " = " << distance[i] << ", " << intensity[i] << endl;
-				//cout << "Point " << i << " = (" << data[i]*cos(angle) << ", " << data[i]*sin(angle) << ")" << endl;
+//				cout << "Point " << i << " = " << distance[i] << ", " << intensity[i] << endl;
+//				cout << "Point " << i << " = (" << distance[i]*cos(angle) << ", " << distance[i]*sin(angle) << ")" << endl;
 				//if(distance[i] == 0){
 				//	count++;
 				//}
@@ -92,7 +107,8 @@ void Hokuyo::run(){
 
 Hokuyo::Hokuyo() :
 		runThread(false),
-		dataValid(false)
+		dataValid(false),
+		hokuyoType(HokuyoType::URG04LX)
 {
 
 }

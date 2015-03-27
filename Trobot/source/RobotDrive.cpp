@@ -28,7 +28,8 @@ namespace trobot {
 		if(!connectionTestOk()){
 			serialPort_->close();
 			delete serialPort_;
-			searchForDevice();
+//			searchForDevice();
+			cout << "Roboteq driver NOT connected!\n";
 		}
 		else{
 			cout << "Roboteq driver connected!\n";
@@ -416,22 +417,28 @@ namespace trobot {
 
 
 	bool RobotDrive::connectionTestOk() {
-		serialPort_->write("?FID_");
-		usleep(750000);
+		static const int limit = 10;
+		int count = 0;
+		while(count < limit){
+			serialPort_->write("?FID_\r");
+			usleep(750000);
 
-		circular_buffer<char> data = serialPort_->getDataRead();
-		if(data.size() >0){
-			for(circular_buffer<char>::iterator it = data.begin(); it != data.end(); it++){
-				cout << *it;
+			circular_buffer<char> data = serialPort_->getDataRead();
+			cout << "data.size() = " << data.size() << endl;
+			if(data.size() >0){
+				for(circular_buffer<char>::iterator it = data.begin(); it != data.end(); it++){
+					cout << *it;
+				}
+				cout << endl;
 			}
-			cout << endl;
+
+			int result = searchBufferR(data, "FID=");
+			if (result >= 0){
+				return true;
+			}
 		}
 
-		int result = searchBufferR(data, "FID=");
-		if (result >= 0)
-			return true;
-		else
-			return false;
+		return false;
 	}
 
 	void RobotDrive::searchForDevice() {

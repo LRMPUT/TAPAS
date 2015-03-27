@@ -32,7 +32,11 @@
 
 using namespace std;
 
-Robot::Robot(boost::filesystem::path settingsFile) {
+Robot::Robot(boost::filesystem::path settingsFile) :
+		positionEstimation(NULL),
+		movementConstraints(NULL),
+		globalPlanner(NULL)
+{
 	cout << "Robot()" << endl;
 	TiXmlDocument settings(settingsFile.c_str());
 	if(!settings.LoadFile()){
@@ -176,7 +180,12 @@ void Robot::closeEncoders(){
 
 bool Robot::isEncodersOpen(){
 #ifdef TROBOT
-	return globalPlanner->isEncodersOpen();
+	if(globalPlanner != NULL){
+		return globalPlanner->isEncodersOpen();
+	}
+	else{
+		return false;
+	}
 #else
 	return positionEstimation->isEncodersOpen();
 #endif
@@ -213,7 +222,7 @@ bool Robot::isCameraOpen(){
 //CV_32SC1 2x1: left, right encoder
 cv::Mat Robot::getEncoderData(std::chrono::high_resolution_clock::time_point timestamp){
 #ifdef TROBOT
-	globalPlanner->getEncoderData(timestamp);
+	return globalPlanner->getEncoderData(timestamp);
 #else
 	return positionEstimation->getEncoderData(timestamp);
 #endif

@@ -10,7 +10,9 @@ using namespace boost;
 
 namespace trobot
 {
-	Imu::Imu(unsigned int baud, const string& device)
+	Imu::Imu(unsigned int baud, const string& device) :
+			eulerPsiValid(false),
+			eulerPhiThetaValid(false)
 	{
 		std::cout<<"Trobot :: IMU"<<std::endl;
 		device_ = device;
@@ -233,10 +235,14 @@ namespace trobot
 			if(rejestr[i] == MAG_PROC_Z)
 				M_Proc_Z_Register.Mag_Proc_Z		=	Register[MAG_PROC_Z]._int;
 
-			if(rejestr[i] == EULER_PHI_THETA)
+			if(rejestr[i] == EULER_PHI_THETA){
 				E_Phi_Theta_Register.Euler_Phi_Theta=	Register[EULER_PHI_THETA]._int;
-			if(rejestr[i] == EULER_PSI)
+				eulerPhiThetaValid = true;
+			}
+			if(rejestr[i] == EULER_PSI){
 				E_Psi_Register.Euler_Psi			=	Register[EULER_PSI]._int;
+				eulerPsiValid = true;
+			}
 			if(rejestr[i] == QUAT_AB)
 				Q_AB_Register.Quat_AB				=	Register[QUAT_AB]._int;
 			if(rejestr[i] == QUAT_CD)
@@ -635,6 +641,12 @@ namespace trobot
 		response.psi = (double)E_Psi_Register.euler_p.Psi * 0.0109863;
 		return response;
 	}
+
+	bool Imu::isEulerDataValid()
+	{
+		return (eulerPsiValid && eulerPhiThetaValid);
+	}
+
 
 	void Imu::Get_Data_From_UM6()
 	{

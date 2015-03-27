@@ -147,7 +147,7 @@ private:
 	Drivers* robotDrive2;
 	std::mutex driverMtx;
 #ifdef TROBOT
-	trobot::RobotDrive robotDriveTrobot;
+	trobot::RobotDrive* robotDriveTrobot;
 #endif
 
 

@@ -46,10 +46,17 @@ class Debug;
 class Hokuyo {
 	friend class Debug;
 
+	enum class HokuyoType{
+		URG04LX,
+		UTM30LX
+	};
+
 	std::thread readingThread;
 	volatile bool runThread;
 
 	qrk::Urg_driver hokuyo;
+
+	HokuyoType hokuyoType;
 
 	cv::Mat curMeas;
 	std::chrono::high_resolution_clock::time_point curTimestamp;
