@@ -35,7 +35,8 @@ using namespace std;
 Robot::Robot(boost::filesystem::path settingsFile) :
 		positionEstimation(NULL),
 		movementConstraints(NULL),
-		globalPlanner(NULL)
+		globalPlanner(NULL),
+		globalPlannerBeingDeleted(false)
 {
 	cout << "Robot()" << endl;
 	TiXmlDocument settings(settingsFile.c_str());
@@ -62,6 +63,13 @@ Robot::Robot(boost::filesystem::path settingsFile) :
 
 Robot::~Robot() {
 	cout << "~Robot()" << endl;
+//	globalPlannerBeingDeleted = true;
+	cout << "globalPlanner->stopThread()" << endl;
+	globalPlanner->stopThread();
+	cout << "movementConstraints->stopThread()" << endl;
+	movementConstraints->stopThread();
+	cout << "positionEstimation->stopThread()" << endl;
+	positionEstimation->stopThread();
 	cout << "delete globalPlanner" << endl;
 	delete globalPlanner;
 	cout << "delete movementConstraints" << endl;
@@ -220,9 +228,16 @@ bool Robot::isCameraOpen(){
 
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 //CV_32SC1 2x1: left, right encoder
-cv::Mat Robot::getEncoderData(std::chrono::high_resolution_clock::time_point timestamp){
+cv::Mat Robot::getEncoderData(std::chrono::high_resolution_clock::time_point& timestamp){
 #ifdef TROBOT
-	return globalPlanner->getEncoderData(timestamp);
+	if(globalPlannerBeingDeleted){
+		cout << "empty Mat" << endl;
+		return Mat(2, 1, CV_32SC1, Scalar(0));
+	}
+	else{
+//		cout << "globalPlanner->getEncoderData" << endl;
+		return globalPlanner->getEncoderData(timestamp);
+	}
 #else
 	return positionEstimation->getEncoderData(timestamp);
 #endif

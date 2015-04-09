@@ -136,9 +136,6 @@ private:
 	// Main loop of MovementContraints thread.
 	void run();
 
-	// Stop MovementConstraints thread.
-	void stopThread();
-
 	void readSettings(TiXmlElement* settings);
 
 	cv::Mat readMatrixSettings(TiXmlElement* parent, const char* node, int rows, int cols);
@@ -155,6 +152,9 @@ private:
 public:
 	MovementConstraints(Robot* irobot, TiXmlElement* settings);
 	virtual ~MovementConstraints();
+
+	// Stop MovementConstraints thread.
+	void stopThread();
 
 	static cv::Mat compOrient(cv::Mat imuData);
 
