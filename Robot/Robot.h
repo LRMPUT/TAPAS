@@ -76,6 +76,7 @@ class Robot {
 
 	// Class responsible for planning
 	GlobalPlanner* globalPlanner;
+	bool globalPlannerBeingDeleted;
 
 	MovementConstraints* movementConstraints;
 
@@ -157,7 +158,7 @@ public:
 
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
 	//CV_32SC1 2x1: left, right encoder
-	cv::Mat getEncoderData(std::chrono::high_resolution_clock::time_point timestamp);
+	cv::Mat getEncoderData(std::chrono::high_resolution_clock::time_point& timestamp);
 
 	//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
 	cv::Mat getImuData(std::chrono::high_resolution_clock::time_point &timestamp);
