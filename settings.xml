@@ -185,7 +185,7 @@
 				saveEnable: [true/false] - Whether to save cache after learning classifier or not.
 				loadEnable: [true/false] - Whether to load cache during construction of Camera class.
 			-->
-			<cache saveEnabled="false" loadEnabled="true"/>
+			<cache saveEnabled="true" loadEnabled="true"/>
 			<HierClassifier debug="0">
 				<!--
 					Parameters of segmentation algorithm. See "Efficient Graph-Based Image Segmentation" Falzenszwalb, Huttenlocher
@@ -257,7 +257,7 @@
 					</svm>
 					<info desc_beg="7" desc_end="8" />
 				</Classifier>-->
-				<Classifier type="SVM">
+				<!-- <Classifier type="SVM">
 					<cache enabled="true" />
 					<svm type="C_SVC">
 						<kernelType value="RBF" />
@@ -268,9 +268,9 @@
 					<!--
 						Index of descriptors used in classifier, desc_beg inclusive, desc_end exclusive.
 					-->
-					<info desc_beg="0" desc_end="7" />
-				</Classifier>
-				<!--<Classifier type="RF">
+				<!--	<info desc_beg="0" desc_end="7" />
+				</Classifier>-->
+				<Classifier type="RF">
 					<cache enabled="true" />
 					<info desc_beg="0" desc_end="7" />
 				</Classifier>-->

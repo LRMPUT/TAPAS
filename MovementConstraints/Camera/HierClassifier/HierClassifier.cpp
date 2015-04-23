@@ -289,6 +289,12 @@ void HierClassifier::saveCache(boost::filesystem::path file){
 	pWeakClassifiers->SetAttribute("num_labels", numLabels);
 	for(int c = 0; c < classifiers.size(); c++){
 		TiXmlElement* pClassifier = new TiXmlElement("classifier");
+		if(classifiers[c]->type() == Classifier::SVM){
+			pClassifier->SetAttribute("type", "SVM");
+		}
+		else if(classifiers[c]->type() == Classifier::RF){
+			pClassifier->SetAttribute("type", "RF");
+		}
 		pWeakClassifiers->LinkEndChild(pClassifier);
 		char buffer[10];
 		sprintf(buffer, ".%02d.cache", c);
@@ -324,13 +330,20 @@ void HierClassifier::loadCache(boost::filesystem::path file){
 		string cacheFile;
 		double weight;
 		WeakClassifierInfo info;
+		string classifierType;
+		pClassifier->QueryStringAttribute("type", &classifierType);
 		pClassifier->QueryStringAttribute("cache_file", &cacheFile);
 		pClassifier->QueryDoubleAttribute("weight", &weight);
 		pClassifier->QueryIntAttribute("desc_beg", &(info.descBeg));
 		pClassifier->QueryIntAttribute("desc_end", &(info.descEnd));
 		weights.push_back(weight);
 		classifiersInfo.push_back(info);
-		classifiers.push_back(new ClassifierSVM());
+		if(classifierType == "SVM"){
+			classifiers.push_back(new ClassifierSVM());
+		}
+		else if(classifierType == "RF"){
+			classifiers.push_back(new ClassifierRF());
+		}
 		classifiers.back()->loadCache(pClassifier, cacheFile);
 
 		pClassifier = pClassifier->NextSiblingElement("classifier");
