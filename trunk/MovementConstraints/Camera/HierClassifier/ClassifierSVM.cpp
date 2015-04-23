@@ -651,7 +651,7 @@ cv::Mat ClassifierSVM::classify(cv::Mat features){
 
 void ClassifierSVM::crossValidate(const std::vector<Entry>& entries)
 {
-	double gridCMin = pow(2, -5), gridCMax = pow(2, 15), gridCStep = 3;
+	double gridCMin = pow(2, 4), gridCMax = pow(2, 12), gridCStep = 2;
 	double gridGMin = pow(2, -15), gridGMax = pow(2, 3), gridGStep = 3;
 	prepareProblem(entries);
 	double* results = new double[entries.size()];

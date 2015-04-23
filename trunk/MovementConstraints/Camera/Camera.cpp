@@ -217,24 +217,51 @@ std::vector<cv::Mat> Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 				pointCam.at<float>(3) = 1;
 				//cout << "curPosCameraMapCenter*pointCam" << endl;
 				Mat pointMapCenter = curPosImuMapCenter*cameraOrigImu[cam]*pointCam;
-				//cout << "pointIm = " << pointIm << endl;
-				//cout << "pointCamNN = " << pointCamNN << endl;
-				//cout << "s = " << s << endl;
-				//cout << "curPosCameraMapCenter = " << curPosCameraMapCenter << endl;
-				//cout << "pointCam = " << pointCam << endl;
-				//cout << "pointMapCenter = " << pointMapCenter << endl;
+
+//				cout << "pointIm = " << pointIm << endl;
+//				cout << "pointCamNN = " << pointCamNN << endl;
+//				cout << "s = " << s << endl;
+//				cout << "curPosCameraMapCenterGlobal = " << curPosCameraMapCenterGlobal << endl;
+//				cout << "pointCam = " << pointCam << endl;
+//				cout << "pointMapCenter = " << pointMapCenter << endl;
 				//cout << "pointMapCenter.size() =" << pointMapCenter.size() << endl;
 				//cout << "mapSegments[cam].size() = " << mapSegments[cam].size() << endl;
+
 				int xSegm = pointMapCenter.at<float>(0)/MAP_RASTER_SIZE + MAP_SIZE/2;
 				int ySegm = pointMapCenter.at<float>(1)/MAP_RASTER_SIZE + MAP_SIZE/2;
 				//cout << r << ":" << c << " = (" << xSegm << ", " << ySegm << ")" << endl;
 				ret[cam].at<int>(r, c) = xSegm*MAP_SIZE + ySegm;
 				//cout << "ret[cam].at<int>(r, c) = " << ret[cam].at<int>(r, c) << endl;
 				//cout << "End mapSegments[c].at<int>(r, c) =" << endl;
-				//waitKey();
+//				waitKey();
 			}
 		}
+//		ofstream headerFile("out.h");
+//		headerFile << "#ifndef CAMERA_PROJECT_H" << endl;
+//		headerFile << "#define CAMERA_PROJECT_H" << endl << endl;
+//		Mat posCameraImu = curPosImuMapCenter*cameraOrigImu[cam];
+//		headerFile << "static const float posCameraImuGT[] = {" << endl;
+//		for(int r = 0; r < posCameraImu.rows; ++r){
+//			for(int c = 0; c < posCameraImu.cols; ++c){
+//				headerFile << posCameraImu.at<float>(r, c) << "," << endl;
+//			}
+//		}
+//		headerFile << "};" << endl << endl;
+//
+//		headerFile << "static const int segIdsGT[] = {" << endl;
+//		for(int r = 0; r < ret[cam].rows; ++r){
+//			for(int c = 0; c < ret[cam].cols; ++c){
+//				headerFile << ret[cam].at<int>(r, c) << "," << endl;
+//			}
+//		}
+//		headerFile << "};" << endl << endl;
+//
+//		headerFile << "#endif //CAMERA_PROJECT_H" << endl << endl;
+//
+//		headerFile.close();
+//		waitKey();
 	}
+
 //	cout << "End computing map segments" << endl;
 	return ret;
 }
@@ -956,6 +983,8 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 }
 
 void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
+	static const bool compareWithExt = true;
+
 	cout << "Classifying" << endl;
 	for(int l = 0; l < labels.size(); l++){
 		namedWindow(labels[l]);
@@ -966,167 +995,6 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 
 	vector<vector<int> > classResultsPix(labels.size(), vector<int>(labels.size(), 0));
 	vector<vector<int> > classResultsSeg(labels.size(), vector<int>(labels.size(), 0));
-
-	/*filesystem::directory_iterator endIt;
-	for(filesystem::directory_iterator dirIt(dir); dirIt != endIt; dirIt++){
-		if(dirIt->path().filename().string().find(".xml") != string::npos){
-			TiXmlDocument data(dirIt->path().string());
-			if(!data.LoadFile()){
-				throw "Bad data file";
-			}
-			TiXmlElement* pAnnotation = data.FirstChildElement("annotation");
-			if(!pAnnotation){
-				throw "Bad data file - no annotation entry";
-			}
-			TiXmlElement* pFile = pAnnotation->FirstChildElement("filename");
-			if(!pFile){
-				throw "Bad data file - no filename entry";
-			}
-			Mat image = imread(dir.string() + string("/") + pFile->GetText());
-			if(image.data == NULL){
-				throw "Bad image file";
-			}
-
-			//loading map
-			int imageNum;
-			sscanf(pFile->GetText(), "camera%d.jpg", &imageNum);
-			Mat terrain;
-			char terrainFilename[200];
-			sprintf(terrainFilename, "%smap%03d.log", (dir.string() + string("/")).c_str(), imageNum);
-			ifstream terrainFile(terrainFilename);
-			if(terrainFile.is_open() == false){
-				throw "No map file";
-			}
-			double tmp;
-			while(!terrainFile.eof()){
-				Mat terrainPoint(1, 5, CV_32FC1);	//x, y, z, distance, intensity
-				for(int i = 0; i < 5; i++){
-					terrainFile >> tmp;
-					terrainPoint.at<float>(0, i) = tmp;
-				}
-				terrain.push_back(terrainPoint);
-			}
-			terrain = terrain.t();
-
-			Mat manualRegionsOnImage(image.rows, image.cols, CV_32SC1, Scalar(0));
-			int manualRegionsCount = 0;
-			map<int, int> mapRegionIdToLabel;
-
-			TiXmlElement* pObject = pAnnotation->FirstChildElement("object");
-			while(pObject){
-
-				TiXmlElement* pPolygon = pObject->FirstChildElement("polygon");
-				if(!pPolygon){
-					throw "Bad data file - no polygon inside object";
-				}
-				vector<Point2i> poly;
-
-				TiXmlElement* pPt = pPolygon->FirstChildElement("pt");
-				while(pPt){
-					int x = atoi(pPt->FirstChildElement("x")->GetText());
-					int y = atoi(pPt->FirstChildElement("y")->GetText());
-					poly.push_back(Point2i(x, y));
-					pPt = pPt->NextSiblingElement("pt");
-				}
-
-				TiXmlElement* pAttributes = pObject->FirstChildElement("attributes");
-				if(!pAttributes){
-					throw "Bad data file - no object attributes";
-				}
-				string labelText = pAttributes->GetText();
-				int label = 0;
-				for(int i = 0; i < labels.size(); i++){
-					if(labelText == labels[i]){
-						label = i;
-						break;
-					}
-				}
-
-				mapRegionIdToLabel[++manualRegionsCount] = label;
-				selectPolygonPixels(poly, manualRegionsCount, manualRegionsOnImage);
-
-				pObject = pObject->NextSiblingElement("object");
-			}
-			Mat autoSegmented = hierClassifiers.front()->segmentImage(image, 200);
-			map<int, int> assignedManualId = hierClassifiers.front()->assignManualId(autoSegmented, manualRegionsOnImage);
-			imshow("original", image);
-			imshow("segments", hierClassifiers.front()->colorSegments(autoSegmented));
-
-			vector<vector<int> > curClassResultsPix(labels.size(), vector<int>(labels.size(), 0));
-			vector<vector<int> > curClassResultsSeg(labels.size(), vector<int>(labels.size(), 0));
-
-			vector<Mat> classificationResult = hierClassifiers.front()->classify(image, terrain, autoSegmented);
-			for(int l = 0; l < labels.size(); l++){
-				double minVal, maxVal;
-				minMaxIdx(classificationResult[l], &minVal, &maxVal);
-				cout << labels[l] << ", min = " << minVal << ", max = " << maxVal << endl;
-				imshow(labels[l], classificationResult[l]);
-			}
-			vector<Scalar> colors;
-			colors.push_back(Scalar(0, 255, 0));	//grass - green
-			colors.push_back(Scalar(0, 0, 255));	//wood - red
-			colors.push_back(Scalar(0, 255, 255));	//yellow - ceramic
-			colors.push_back(Scalar(255, 0, 0));	//blue - asphalt
-			Mat coloredOriginal(image.rows, image.cols, CV_8UC3);
-			Mat bestLabels(image.rows, image.cols, CV_32SC1, Scalar(0));
-			Mat bestScore(image.rows, image.cols, CV_32FC1, Scalar(-1));
-			for(int l = 0; l < labels.size(); l++){
-				Mat cmp;
-				compare(bestScore, classificationResult[l], cmp, CMP_LE);
-				bestLabels.setTo(l, cmp);
-				bestScore = max(bestScore, classificationResult[l]);
-			}
-			for(int l = 0; l < labels.size(); l++){
-				coloredOriginal.setTo(colors[l], bestLabels == l);
-			}
-			imshow("colored", coloredOriginal * 0.25 + image * 0.75);
-
-			set<int> counted;
-			for(int r = 0; r < image.rows; r++){
-				for(int c = 0; c < image.cols; c++){
-					int pred = bestLabels.at<int>(r, c);
-					if(mapRegionIdToLabel.count(assignedManualId[autoSegmented.at<int>(r, c)]) > 0){
-						if(counted.count(autoSegmented.at<int>(r, c)) == 0){
-							int groundTrue = mapRegionIdToLabel[assignedManualId[autoSegmented.at<int>(r, c)]];
-							curClassResultsSeg[groundTrue][pred]++;
-							counted.insert(autoSegmented.at<int>(r, c));
-						}
-					}
-					if(mapRegionIdToLabel.count(manualRegionsOnImage.at<int>(r, c)) > 0){
-						int groundTrue = mapRegionIdToLabel[manualRegionsOnImage.at<int>(r, c)];
-						curClassResultsPix[groundTrue][pred]++;
-					}
-				}
-			}
-
-			for(int t = 0; t < labels.size(); t++){
-				for(int p = 0; p < labels.size(); p++){
-					classResultsPix[t][p] += curClassResultsPix[t][p];
-					classResultsSeg[t][p] += curClassResultsSeg[t][p];
-				}
-			}
-
-			cout << "Current frame pixel results: " << endl;
-			for(int t = 0; t < labels.size(); t++){
-				cout << "true = " << t << ": ";
-				for(int p = 0; p < labels.size(); p++){
-					cout << curClassResultsPix[t][p] << ", ";
-				}
-				cout << endl;
-			}
-
-			cout << "Current frame segment results: " << endl;
-			for(int t = 0; t < labels.size(); t++){
-				cout << "true = " << t << ": ";
-				for(int p = 0; p < labels.size(); p++){
-					cout << curClassResultsSeg[t][p] << ", ";
-				}
-				cout << endl;
-			}
-
-			waitKey();
-		}
-	}*/
 
 	std::vector<cv::Mat> images;
 	std::vector<cv::Mat> manualRegionsOnImages;
@@ -1156,6 +1024,36 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	}
 
 	cout << "images.size() = " << images.size() << endl << "manualRegionsOnImages.size() = " << manualRegionsOnImages.size() << endl;
+
+	vector<vector<int> > compResVal;
+	vector<vector<int> > compResSegId;
+
+	if(compareWithExt){
+		ifstream compResFile("res.log");
+		char tmp;
+		int imNum;
+		compResFile >> tmp;
+		while(tmp == 'i' && !compResFile.eof() && !compResFile.fail()){
+			compResFile >> imNum;
+			cout << "Compare image " << imNum << endl;
+			compResVal.push_back(vector<int>());
+			compResSegId.push_back(vector<int>());
+
+			compResFile >> tmp;
+			while(tmp == 'e' && !compResFile.eof() && !compResFile.fail()){
+				int segId;
+				compResFile >> segId;
+				compResSegId.back().push_back(segId);
+
+				int val;
+				compResFile >> val;
+				compResVal.back().push_back(val);
+
+				compResFile >> tmp;
+			}
+
+		}
+	}
 
 //	vector<Entry> dataset;
 	ofstream dataCrfFile("dataCrf.log");
@@ -1230,19 +1128,16 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 		imshow("segments", hierClassifiers.front()->colorSegments(autoRegionsOnImage));
 
 
-
-
-
-
-
 		vector<vector<int> > curClassResultsPix(labels.size(), vector<int>(labels.size(), 0));
 		vector<vector<int> > curClassResultsSeg(labels.size(), vector<int>(labels.size(), 0));
 
+		cout << "Classifing" << endl;
 		vector<Mat> classificationResult = hierClassifiers.front()->classify(images[i],
 																			terrains[i],
 																			autoRegionsOnImage,
 																			maskIgnore.front(),
 																			entryWeightThreshold);
+		cout << "End classifing" << endl;
 		for(int l = 0; l < labels.size(); l++){
 			double minVal, maxVal;
 			minMaxIdx(classificationResult[l], &minVal, &maxVal);
@@ -1263,6 +1158,22 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 			coloredOriginalClassified.setTo(colors[l], bestLabels == l);
 		}
 		imshow("classified", coloredOriginalClassified * 0.25 + images[i] * 0.75);
+
+		if(compareWithExt){
+			Mat coloredOriginalCompClassified = images[i].clone();
+			Mat labelsComp(images[i].rows, images[i].cols, CV_32SC1, Scalar(-1));
+
+			for(int comp = 0; comp < compResVal[i].size(); ++comp){
+				Mat cmp;
+				compare(compResSegId[i][comp], autoRegionsOnImage, cmp, CMP_EQ);
+				labelsComp.setTo(compResVal[i][comp], cmp);
+			}
+			for(int l = 0; l < labels.size(); l++){
+				coloredOriginalCompClassified.setTo(colors[l], labelsComp == l);
+			}
+
+			imshow("classified comp", coloredOriginalCompClassified * 0.25 + images[i] * 0.75);
+		}
 
 		dataCrfFile << "i " << i << endl;
 		set<int> counted;
@@ -1332,7 +1243,7 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 		}
 
 
-		waitKey(100);
+		waitKey();
 	}
 
 	dataCrfFile.close();
@@ -1628,7 +1539,7 @@ void Camera::readSettings(TiXmlElement* settings){
 		cout << "Warning - no cacheLoadEnabled setting for Camera";
 	}
 
-	crossValidate = false;
+	crossValidate = true;
 
 	pPtr = settings->FirstChildElement("learning");
 	if(!pPtr){
