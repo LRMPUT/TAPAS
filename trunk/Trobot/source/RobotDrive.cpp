@@ -383,25 +383,62 @@ namespace trobot {
 		comm = sstream.str();
 
 		serialPort_->write(comm);
-		usleep(50000);
 		
 		// preapre string of expected reply to look for
 		sResult << uppercase << command <<"=";
 
-		circular_buffer<char> data = serialPort_->getDataRead();
+		circular_buffer<char> data(200);
+		char * dataCh = 0;
 
-		int pos = searchBufferR(data, sResult.str());
-		int i = pos;
+		static const int maxCnt = 10;
+		int cnt = 0;
+		while(cnt < maxCnt){
+			usleep(5000);
 
-		char * dataCh = new char[data.size() - i];
+			circular_buffer<char> newData = serialPort_->getDataRead();
 
-		while(i < data.size()) {
-			dataCh[i - pos] = data[i];
-			i++;
+//			cout << "newData (" << newData.size() << ") = " << endl;
+			for(int ind = 0; ind < newData.size(); ++ind){
+//				cout << newData[ind];
+				data.push_back(newData[ind]);
+			}
+//			cout << endl;
+
+//			cout << "data (" << data.size() << ") = " << endl;
+//			for(int ind = 0; ind < data.size(); ++ind){
+//				cout << data[ind];
+//			}
+//			cout << endl;
+
+			int pos = searchBufferR(data, sResult.str());
+			if(pos >= 0){
+				int i = pos;
+
+				dataCh = new char[data.size() - i + 1];
+
+				while(i < data.size()) {
+					dataCh[i - pos] = data[i];
+					i++;
+				}
+				dataCh[i - pos] = 0;
+				break;
+			}
+			cnt++;
 		}
 
-		sscanf( &dataCh[ command.length() ], "=%d:%d", result1, result2);
+		if(cnt < maxCnt){
+			sscanf( &dataCh[ command.length() ], "=%d:%d", result1, result2);
+		}
+		else{
+			*result1 = 0;
+			*result2 = 0;
+		}
 
+//		cout << "result = (" << *result1 << ", " << *result2 << ")" << endl;
+
+		if(dataCh != 0){
+			delete[] dataCh;
+		}
 	}
 
 
@@ -424,7 +461,7 @@ namespace trobot {
 			usleep(750000);
 
 			circular_buffer<char> data = serialPort_->getDataRead();
-			cout << "data.size() = " << data.size() << endl;
+//			cout << "data.size() = " << data.size() << endl;
 			if(data.size() >0){
 				for(circular_buffer<char>::iterator it = data.begin(); it != data.end(); it++){
 					cout << *it;

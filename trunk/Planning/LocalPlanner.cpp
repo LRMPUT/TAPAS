@@ -195,7 +195,9 @@ void LocalPlanner::setNormalSpeed() {
 void LocalPlanner::run() {
 	try{
 		while (localPlannerParams.runThread) {
+//			cout << "localPlanner thread" << endl;
 			if (startOperate) {
+//				cout << "executeVFH" << endl;
 				executeVFH();
 			}
 			else{

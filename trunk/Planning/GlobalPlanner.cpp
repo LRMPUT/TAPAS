@@ -44,6 +44,7 @@ using namespace std;
 #define RIGHT_CHANNEL 1
 
 #define ROBOT_DRIVE_MAX 3200
+#define ROBOT_DRIVE_MAX_TROBOT 1000
 
 GlobalPlanner::GlobalPlanner(Robot* irobot, TiXmlElement* settings) :
 		robot(irobot),
@@ -216,20 +217,26 @@ void GlobalPlanner::globalPlannerProcessing() {
 				usleep(200);
 			}
 
-			std::chrono::seconds durationStart(60);
-			std::this_thread::sleep_for(durationStart);
+			if (globalPlannerParams.runThread) {
+				cout << "Starting homologation" << endl;
 
-			std::chrono::high_resolution_clock::time_point timestamp;
-			//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
-			cv::Mat imu = robot->getImuData(timestamp);
-			setGoalDirectionInDegrees(imu.at<float>(2, 3));
+				std::chrono::seconds durationStart(60);
+	//			std::this_thread::sleep_for(durationStart);
 
-			localPlanner->setNormalSpeed();
-			localPlanner->startLocalPlanner();
+				std::chrono::high_resolution_clock::time_point timestamp;
+				//CV_32FC1 3x4: acc(x, y, z), gyro(x, y, z), magnet(x, y, z), euler(roll, pitch, yaw)
+				cv::Mat imu = robot->getImuData(timestamp);
+				setGoalDirectionInDegrees(imu.at<float>(2, 3));
+
+				localPlanner->setNormalSpeed();
+				localPlanner->startLocalPlanner();
+			}
 
 			while (globalPlannerParams.runThread) {
 				usleep(200000);
 			}
+			localPlanner->stopLocalPlanner();
+
 		} else {
 			while ((!robot->isGpsOpen() || robot->isSetZero() == false
 					|| robot->gpsGetFixStatus() == 1)
@@ -239,7 +246,7 @@ void GlobalPlanner::globalPlannerProcessing() {
 			while (!robot->isGpsDataValid() && globalPlannerParams.runThread) {
 				usleep(200);
 			}
-			if (globalPlannerParams.debug == 1)
+			if (globalPlannerParams.debug == 1 && globalPlannerParams.runThread)
 				std::cout << "Global Planner : We have fix and zero position"
 						<< std::endl;
 
@@ -267,22 +274,26 @@ void GlobalPlanner::globalPlannerProcessing() {
 				usleep(200);
 			}
 
-			std::chrono::seconds durationStart(1);
-			std::this_thread::sleep_for(durationStart);
+			if (globalPlannerParams.runThread) {
+				std::chrono::seconds durationStart(1);
+				std::this_thread::sleep_for(durationStart);
+			}
+				// Where are we ?
+				double robotX, robotY, theta;
+			if (globalPlannerParams.runThread) {
+				updateRobotPosition(robotX, robotY, theta);
+				cout << "Global Planner started competition" << endl;
+			}
 
-			// Where are we ?
-			double robotX, robotY, theta;
-			updateRobotPosition(robotX, robotY, theta);
-			cout << "Global Planner started competition" << endl;
 
+			if (globalPlannerParams.runThread) {
+				localPlanner->setNormalSpeed();
+				localPlanner->startLocalPlanner();
+			}
+				int loopTimeCounter = 0;
+				bool recomputePlan = false;
+				int startType = 0;
 
-
-
-			localPlanner->setNormalSpeed();
-			localPlanner->startLocalPlanner();
-			int loopTimeCounter = 0;
-			bool recomputePlan = false;
-			int startType = 0;
 			while (globalPlannerParams.runThread) {
 				std::cout << std::endl << "Global Planner : New iteration"
 						<< std::endl << std::endl;
@@ -1167,6 +1178,9 @@ void GlobalPlanner::stopThread() {
 	if (globalPlannerThread.joinable()) {
 		globalPlannerThread.join();
 	}
+
+	cout << "localPlanner->stopThread()" << endl;
+	localPlanner->stopThread();
 }
 
 #ifdef TROBOT
@@ -1175,8 +1189,10 @@ cv::Mat GlobalPlanner::getEncoderData(std::chrono::high_resolution_clock::time_p
 {
 //	cout << "GlobalPlanner::getEncoderData" << endl;
 	Mat ret(2, 1, CV_32SC1);
+	std::unique_lock < std::mutex > lck(driverMtx);
 	robotDriveTrobot->getEncoder(&(ret.at<int>(0)),
 								&(ret.at<int>(1)));
+	lck.unlock();
 	timestamp = std::chrono::high_resolution_clock::now();
 //	cout << "End GlobalPlanner::getEncoderData" << endl;
 	return ret;
@@ -1199,11 +1215,11 @@ void GlobalPlanner::setMotorsVel(float motLeft, float motRight) {
 	std::unique_lock < std::mutex > lck(driverMtx);
 #ifdef TROBOT
 	if(robotDriveTrobot != NULL){
-		cout << "Setting motor's vel: " << motLeft << ", " << motRight << endl;
-		robotDriveTrobot->runMotor(max(min((int) (motLeft),
-				ROBOT_DRIVE_MAX), -ROBOT_DRIVE_MAX), 2);
-		robotDriveTrobot->runMotor(max(min((int) (motRight),
-				ROBOT_DRIVE_MAX), -ROBOT_DRIVE_MAX), 1);
+//		cout << "Setting motor's vel: " << motLeft << ", " << motRight << endl;
+		robotDriveTrobot->runMotor(max(min((int) (motLeft*ROBOT_DRIVE_MAX_TROBOT/100),
+				ROBOT_DRIVE_MAX_TROBOT), -ROBOT_DRIVE_MAX_TROBOT), 2);
+		robotDriveTrobot->runMotor(max(min((int) (motRight*ROBOT_DRIVE_MAX_TROBOT/100),
+				ROBOT_DRIVE_MAX_TROBOT), -ROBOT_DRIVE_MAX_TROBOT), 1);
 	}
 #else
 	if (robotDrive1 != NULL && robotDrive2 != NULL) {

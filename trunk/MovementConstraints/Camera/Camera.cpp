@@ -1797,6 +1797,7 @@ cv::Mat Camera::getClassifiedImage(){
 }
 
 void Camera::open(std::vector<std::string> device){
+	std::unique_lock<std::mutex> lck(mtxDevice);
 	for(int i = 0; i < min((int)device.size(), numCameras); i++){
 		cout << "Opening device: " << device[i] << endl;
 		cameras[i].open(0);
@@ -1804,13 +1805,22 @@ void Camera::open(std::vector<std::string> device){
 			throw "Cannot open camera device";
 		}
 	}
+	lck.unlock();
 }
 
 void Camera::close(){
 	cout << "Closing cameras" << endl;
+
+	std::unique_lock<std::mutex> lck(mtxDevice);
+	cout << "cameras.size() = " << cameras.size() << endl;
 	for(int i = 0; i < cameras.size(); i++){
-		cameras[i].release();
+		cout << "i = " << i << endl;
+		if(cameras[i].isOpened()){
+			cout << "Releasing" << endl;
+			cameras[i].release();
+		}
 	}
+	lck.unlock();
 	cout << "End closing cameras" << endl;
 }
 
