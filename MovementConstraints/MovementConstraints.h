@@ -191,6 +191,8 @@ public:
 
 	cv::Mat getPointCloud(cv::Mat& curPosMapCenter);
 
+	cv::Mat getPosMapCenterGlobal();
+
 	cv::Mat getPosImuMapCenter();
 
 	void getLocalPlanningData(cv::Mat& retConstraintsMap, cv::Mat& posRobotMapCenter, cv::Mat& globalMapCenter);

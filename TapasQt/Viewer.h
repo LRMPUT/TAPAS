@@ -33,6 +33,7 @@ class Viewer : public QGLViewer
 	Q_OBJECT
 
 private:
+	cv::Mat posMapCenterGlobal;
 	cv::Mat posImuMapCenter;
 	cv::Mat pointCloudMapCenter;
 	cv::Mat cameraOrigImu;
@@ -55,7 +56,7 @@ private:
 public:
 	void rysuj();
 	void updatePointCloud(cv::Mat newPointCloud);
-	void updateRobotPos(cv::Mat newRobotPos);
+	void updateRobotPos(cv::Mat newRobotPos, cv::Mat newMapCenterGlobal);
 	void updateConstraintsMap(cv::Mat newConstraintsMap);
 	void updateVecFieldHist(std::vector<float> newVecFieldHist, float newGoalDirection, float newBestDirection);
 	//void updateCameraOrigImu(cv::Mat newCameraOrigImu);

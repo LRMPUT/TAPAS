@@ -28,6 +28,18 @@
 using namespace std;
 using namespace cv;
 
+static const Mat posCameraLaser(Matx44f(
+	0.993368616554069,   0.112106788667435,  -0.025511949751658, 45.752060961356,
+	  -0.076921557061355,   0.812953576727158,   0.577225741063041, -596.031193651004,
+	   0.085450954966652,  -0.571435516940621,   0.816185998577586, -327.210204552425,
+	   0,	0,	0,	1));
+
+static const Mat posImuCamera(Matx44f(
+	0.010961908195432,   0.998309659916334,  -0.057075909860889,	0,
+	-0.64278761,   0.054119665240738,   0.766044443,	0,
+	0.766044443,   0.021186900480340,  0.64278761,	0,
+	0,	0,	0,	1));
+
 void Viewer::drawRobot(){
 	//cout << "drawRobot()" << endl;
 	//cout << "posImuMapCenter.size()" << posImuMapCenter.size() << endl;
@@ -35,8 +47,19 @@ void Viewer::drawRobot(){
 		glPushMatrix();
 		multCurMatrix(posImuMapCenter);
 
+		glPushMatrix();
+		multCurMatrix(posMapCenterGlobal.inv());
+		drawAxis(1000);
+		glPopMatrix();
+
 		glColor3f(1.0f,0.0f,0.0f);
 		sphere(0, 0, 0, 200);
+		drawAxis(1000);
+
+		multCurMatrix(posImuCamera.inv());
+//		drawAxis(1000);
+
+		multCurMatrix(posCameraLaser.inv());
 		drawAxis(1000);
 
 		glPopMatrix();
@@ -237,8 +260,9 @@ void Viewer::updatePointCloud(cv::Mat newPointCloud){
 	pointCloudMapCenter = newPointCloud;
 }
 
-void Viewer::updateRobotPos(cv::Mat newRobotPos){
+void Viewer::updateRobotPos(cv::Mat newRobotPos, cv::Mat newMapCenterGlobal){
 	posImuMapCenter = newRobotPos;
+	posMapCenterGlobal = newMapCenterGlobal;
 	//cout << "posImuMapCenter.size()" << posImuMapCenter.size() << endl;
 }
 

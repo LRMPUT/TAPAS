@@ -92,7 +92,8 @@ void Constraints::updateCameraView(){
 void Constraints::updateMapView(){
 	//cout << "updateMapView()" << endl;
 	Mat curPosImuMapCenter;
-	Mat pointCloudImuMapCenter = debug->getPointCloudImu(curPosImuMapCenter);
+	Mat posMapCenterGlobal;
+	Mat pointCloudImuMapCenter = debug->getPointCloudImu(curPosImuMapCenter, posMapCenterGlobal);
 	Mat constraintsMap = debug->getMovementConstraints();
 	vector<float> vecFieldHist;
 	float goalDirection;
@@ -121,9 +122,9 @@ void Constraints::updateMapView(){
 	if(!vecFieldHist.empty()){
 		viewer->updateVecFieldHist(vecFieldHist, goalDirection, bestDirection);
 	}
-	if(!curPosImuMapCenter.empty()){
+	if(!curPosImuMapCenter.empty() && !posMapCenterGlobal.empty()){
 		//cout << "Updating constraintsMap" << endl;
-		viewer->updateRobotPos(curPosImuMapCenter);
+		viewer->updateRobotPos(curPosImuMapCenter, posMapCenterGlobal);
 		viewer->updateConstraintsMap(constraintsMap);
 		viewer->rysuj();
 	}
