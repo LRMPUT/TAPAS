@@ -124,11 +124,6 @@ class Camera {
 	std::vector<cv::Point3f> computePointReprojection(	const std::vector<cv::Point2f>& imPoint,
 														int cameraInd);
 
-	/*void addToLearnDatabase(cv::Mat samples, int label);
-
-	void clearLearnDatabase();
-
-	void learn();*/
 
 	/** \brief Funkcja rysująca na obrazie wielobok i wypełniająca go wartością regionId.
 	 *
@@ -144,10 +139,6 @@ class Camera {
 							float regionId,
 							cv::Mat& regionsOnImage);
 
-	/*cv::Mat compOrient(cv::Mat imuData);
-
-	cv::Mat compTrans(	cv::Mat orient,
-						cv::Mat encodersDiff);*/
 
 	bool readLineFloat(std::ifstream& stream, cv::Mat& data);
 
@@ -169,14 +160,6 @@ class Camera {
 	 *
 	 */
 	void classifyFromDir(std::vector<boost::filesystem::path> dirs);
-
-	/*cv::Mat classifySlidingWindow(cv::Mat image);
-
-	void GenerateColorHistHSVGpu(
-			const cv::gpu::GpuMat& ImageH,
-			const cv::gpu::GpuMat& ImageS,
-			cv::gpu::GpuMat& result,
-			cv::gpu::GpuMat& buf);*/
 
 	std::chrono::high_resolution_clock::time_point curTimestamp;
 

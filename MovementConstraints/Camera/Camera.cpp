@@ -47,19 +47,6 @@
 using namespace boost;
 using namespace std;
 
-/*#define CAMERA_Z 1
-#define CAMERA_X_ANGLE 45
-#define CAMERA_Y_ANGLE 45
-#define CAMERAS_COUNT 2
-#define ROWS 480
-#define COLS 640*/
-
-/*#define POLY_VERT 4
-#define X_STEP 100
-#define Y_STEP 100
-#define X_RES 50
-#define Y_RES 50
-#define PLANE_Z -100*/
 #define DRIVABLE_LABEL 1
 #define LEFT_CAMERA 0
 #define RIGHT_CAMERA 1
@@ -321,41 +308,6 @@ std::vector<cv::Point3f> Camera::computePointReprojection(	const std::vector<cv:
 
 }
 
-/*void Camera::addToLearnDatabase(cv::Mat samples, int label){
-	Mat data[] = {samples};
-	int channels[] = {0};
-	int histSize[] = {bins};
-	float range[] = {0, 256};
-	const float* ranges[] = {range};
-	Mat hist(1, bins, CV_32FC1);
-	Entry newEntry;
-	newEntry.label = label;
-	newEntry.descriptor = Mat(1, CHANNELS_USED*bins, CV_32FC1);
-
-	for(int i = 0; i < CHANNELS_USED; i++){
-		channels[0] = i;
-		calcHist(data, 1, channels, Mat(), hist, 1, histSize, ranges);
-		hist.copyTo(newEntry.descriptor.colRange(bins*i, bins*(i + 1) - 1));
-	}
-	normalize(hist, hist, 1, 0, NORM_L1, -1);
-	entries.push_back(newEntry);
-}
-
-void Camera::clearLearnDatabase(){
-	entries.clear();
-}
-
-void Camera::learn(){
-	if(entries.size() > 0){
-		Mat allHist(entries.size(), entries[0].descriptor.cols, CV_32FC1);
-		Mat allLabels(entries.size(), 1, CV_8UC1);
-		for(int i = 0; i < entries.size(); i++){
-			entries[i].descriptor.copyTo(allHist.rowRange(i, i));
-			allLabels.at<unsigned char>(i) = entries[i].label;
-		}
-		svm.train(allHist, allLabels, Mat(), Mat(), svmParams);
-	}
-}*/
 
 int Camera::selectPolygonPixels(std::vector<cv::Point2i> polygon, float regionId, cv::Mat& regionsOnImage){
 	int polyCnt[] = {(int)polygon.size()};
@@ -375,59 +327,6 @@ int Camera::selectPolygonPixels(std::vector<cv::Point2f> polygon, float regionId
 	return selectPolygonPixels(tmp, regionId, regionsOnImage);
 }
 
-/*cv::Mat Camera::compOrient(cv::Mat imuData){
-	//cout << "Computing orientation from IMU" << endl;
-	//cout << "imuData = " << imuData << endl;
-
-	Mat ret(Mat::eye(4, 4, CV_32FC1));
-	float yaw = imuData.at<float>(11)*PI/180;
-	float pitch = imuData.at<float>(10)*PI/180;
-	float roll = imuData.at<float>(9)*PI/180;
-	//cout << "Computing Rz, Ry, Rx, yaw = " << yaw << endl;
-	Matx33f Rz(	cos(yaw), -sin(yaw), 0,
-				sin(yaw), cos(yaw), 0,
-				0, 0, 1);
-	//cout << "Rz = " << Rz << endl;
-	Matx33f Ry(	cos(pitch), 0, sin(pitch),
-				0, 1, 0,
-				-sin(pitch), 0, cos(pitch));
-	//cout << "Ry = " << Ry << endl;
-	Matx33f Rx(	1, 0, 0,
-				0, cos(roll), -sin(roll),
-				0, sin(roll), cos(roll));
-	//cout << "Rx = " << Rx << endl;
-	Mat tmp(Rz*Ry*Rx);
-	tmp.copyTo(ret(Rect(0, 0, 3, 3)));
-
-	//cout << "End computing orientation from IMU" << endl;
-	return ret;
-}
-
-
-cv::Mat Camera::compTrans(	cv::Mat orient,
-							cv::Mat encodersDiff)
-{
-	static const float wheelCir = 178*PI;
-	static const float wheelDistance = 432;
-	static const int encodersCPR = 300;
-	float sl = encodersDiff.at<float>(0)*wheelCir/encodersCPR;
-	float sr = encodersDiff.at<float>(1)*wheelCir/encodersCPR;
-	float theta = (sl - sr)/(-wheelDistance);
-	Mat trans(4, 1, CV_32FC1, Scalar(0));
-	//cout << "theta = " << theta << endl;
-	if(theta < 0.1){
-		trans.at<float>(0) = (sl + sr)/2;
-	}
-	else{
-		float r = -wheelDistance*(sl - sr)/(2*(sl - sr));
-		trans.at<float>(0) = r*sin(theta);
-		trans.at<float>(1) = r*(cos(theta) - 1);
-
-	}
-	//cout << trans << endl << orient << endl;
-	trans = orient*trans;
-	return trans;
-}*/
 
 bool Camera::readLineFloat(std::ifstream& stream, Mat& data){
 	data = Mat(0, 1, CV_32FC1);
@@ -1269,144 +1168,6 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	cout << "End classifying" << endl;
 }
 
-/*cv::Mat Camera::classifySlidingWindow(cv::Mat image){
-	//wxDateTime StartTime = wxDateTime::UNow();
-
-	const int rows = image.rows;
-	const int cols = image.cols;
-	const int step = classifyGrid;
-
-	GpuMat imageHSV(rows, cols, CV_8UC3);
-	GpuMat imageH(rows, cols, CV_8UC1);
-	GpuMat imageS(rows, cols, CV_8UC1);
-	GpuMat imageV(rows, cols, CV_8UC1);
-	GpuMat out[] = {imageH, imageS, imageV};
-
-	imageHSV.upload(image);
-	cvtColor(imageHSV, imageHSV, CV_BGR2HSV);
-	split(imageHSV, out);
-
-	//wxDateTime UploadTime = wxDateTime::UNow();
-
-	vector<Mat> votes(labels.size());
-
-	for (int i = 0; i < (int)votes.size(); i++)
-	{
-		// Sepatate Mat for each entry
-		votes[i] = Mat(image.rows, image.cols, CV_8U, Scalar(0));
-	}
-
-	GpuMat*** entries = new GpuMat**[rows/step];
-	for(int row = 0; row < rows/step; row++){
-		entries[row] = new GpuMat*[cols/step];
-	}
-	for(int row = 0; row < rows/step; row++){
-		for(int col = 0; col < cols/step; col++){
-			entries[row][col] = new GpuMat(1, 2*bins, CV_32SC1);
-		}
-	}
-
-	cout << "Calculating histograms" << endl;
-	GpuMat buf(1, bins, CV_32SC1);
-	for (int row = step; row <= rows; row += step)
-	{
-		for (int col = step; col <= cols; col += step)
-		{
-			const int MinC = col - step;
-		    const int MaxC = col;
-		    const int MinR = row - step;
-		    const int MaxR = row;
-
-		    //cout << "MinX: " << MinX << " MinY: " << MinY << " MaxX " << MaxX << " MaxY " << MaxY << "\n";
-		    GpuMat RoiH = GpuMat(imageH, Rect(Point(MinC, MinR), Point(MaxC, MaxR)));
-		    GpuMat RoiS = GpuMat(imageS, Rect(Point(MinC, MinR), Point(MaxC, MaxR)));
-
-		    //cout << "Calculating hist for row = " << row << ", col = " << col << endl;
-			GenerateColorHistHSVGpu(RoiH, RoiS, *entries[(row - 1)/step][(col - 1)/step], buf);
-
-		}
-	}
-
-	//wxDateTime HistTime = wxDateTime::UNow();
-
-	cout << "Classifing" << endl;
-
-    Mat histSum(1, 2*bins, CV_32FC1);
-    GpuMat histSumGpu(1, 2*bins, CV_32FC1);
-    buf = GpuMat(1, 2*bins, CV_32FC1);
-	for (int row = classifyGrid; row <= rows; row += step)
-	{
-		for (int col = classifyGrid; col <= cols; col += step)
-		{
-			const int MinC = col - classifyGrid;
-		    const int MaxC = col;
-		    const int MinR = row - classifyGrid;
-		    const int MaxR = row;
-
-		    int idxR = (row - 1)/step;
-		    int idxC = (col - 1)/step;
-		    int subGrids = classifyGrid/step;
-		    histSumGpu = Scalar(0);
-		    for(int subRow = idxR - subGrids + 1; subRow <= idxR; subRow++){
-			    for(int subCol = idxC - subGrids + 1; subCol <= idxC; subCol++){
-			    	add(histSumGpu, *entries[subRow][subCol], histSumGpu);
-			    }
-		    }
-		    normalize(histSum, histSum, 1, 0, NORM_L1, -1, buf);
-		    histSumGpu.download(histSum);
-		    unsigned int predictedLabel = 0;
-		    predictedLabel = svm.predict(histSum);
-		    //cout << WordPredictedLabel << endl;
-		    //EndTimeClass = wxDateTime::UNow();
-
-		    Mat Mask = Mat(rows, cols, CV_8U, Scalar(0));
-		    rectangle(Mask, Point(MinC, MinR), Point(MaxC, MaxR), Scalar(0x1), CV_FILLED);
-		    votes[predictedLabel] +=  Mask;
-		}
-	}
-
-	for(int row = 0; row < rows/step; row++){
-		for(int col = 0; col < cols/step; col++){
-			delete entries[row][col];
-		}
-	}
-	for(int row = 0; row < rows/step; row++){
-		delete[] entries[row];
-	}
-	delete[] entries;
-
-	//wxDateTime ClassTime = wxDateTime::UNow();
-
-	//cout << "Uploading and converting time: " << (UploadTime - StartTime).Format(wxString::FromAscii("%M:%S:%l")).ToAscii().data() << "\n";
-	//cout << "Calculating histograms time: " << (HistTime - UploadTime).Format(wxString::FromAscii("%M:%S:%l")).ToAscii().data() << "\n";
-	//cout << "Classifing time: " << (ClassTime - HistTime).Format(wxString::FromAscii("%M:%S:%l")).ToAscii().data() << "\n";
-
-}
-
-void Camera::GenerateColorHistHSVGpu(
-		const cv::gpu::GpuMat& ImageH,
-		const cv::gpu::GpuMat& ImageS,
-		cv::gpu::GpuMat& result,
-		cv::gpu::GpuMat& buf)
-{
-	GpuMat HistH(1, bins, CV_32SC1);
-	GpuMat HistS(1, bins, CV_32SC1);
-
-	if(bins != 256){
-		throw "Number of bins must be equal to 256";
-	}
-
-	calcHist(ImageH, HistH, buf);
-	calcHist(ImageS, HistS, buf);
-
-	GpuMat partH = result.colRange(0, bins);
-	GpuMat partS = result.colRange(bins, 2*bins);
-
-	HistH.copyTo(partH);
-	HistS.copyTo(partS);
-
-	result.convertTo(result, CV_32F);
-}*/
 
 //Run as separate thread
 void Camera::run(){
@@ -1439,6 +1200,7 @@ void Camera::run(){
 					if(cameras[c].isOpened()){
 						if(!cameraData[c].empty()){
 							Mat pointCloudCamera;
+							//move coordinates to camera frame of reference
 							if(!pointCloudImu.empty()){
 								Mat pointCloudCamera(pointCloudImu.rows, pointCloudImu.cols, CV_32FC1);
 								pointCloudImu.rowRange(4, 6).copyTo(pointCloudCamera.rowRange(4, 6));
@@ -1455,6 +1217,8 @@ void Camera::run(){
 																				entryWeightThreshold);
 							timeEndClassification = std::chrono::high_resolution_clock::now();
 							//cout << "End classification" << endl;
+
+							//choose best labels
 							Mat bestLabels(numRows, numCols, CV_32SC1, Scalar(-1));
 							Mat bestScore(numRows, numCols, CV_32FC1, Scalar(-1));
 							for(int l = 0; l < labels.size(); l++){
@@ -1472,6 +1236,8 @@ void Camera::run(){
 							if(debugLevel >= 1){
 								cout << "Copying classified image" << endl;
 							}
+
+							//copy for sharing with visualization
 							std::unique_lock<std::mutex> lck(mtxClassIm);
 							classifiedImage[c].copyTo(sharedClassifiedImage);
 							cameraData[c].copyTo(sharedOriginalImage);
