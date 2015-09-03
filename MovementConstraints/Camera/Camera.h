@@ -48,8 +48,8 @@
 class MovementConstraints;
 class Debug;
 
-/** \brief Class managing cameras and classifiers and performing terrain classification.
- * Designed to handle multiple cameras, but this feature needs an additional development and testing.
+/** \brief Klasa zarządzająca klasyfikatorami i kamerami, przystosowana do obsługi
+ * 			wielu kamer jednocześnie.
  */
 class Camera {
 	friend class Debug;
@@ -75,7 +75,7 @@ class Camera {
 
 	std::vector<boost::filesystem::path> learningDirs;
 
-	/** \brief Whether to perform cross validation or not.
+	/** \brief Flaga informująca o tym czy dokonywać cross validation.
 	 *
 	 */
 	bool crossValidate;
