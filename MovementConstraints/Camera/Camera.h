@@ -212,7 +212,8 @@ public:
 
 	//Inserts computed constraints into map
 	void insertConstraints(cv::Mat map,
-						std::chrono::high_resolution_clock::time_point curTimestampMap);
+							std::chrono::high_resolution_clock::time_point curTimestampMap,
+							cv::Mat mapMove);
 
 	//CV_8UC3 2x640x480: left, right image
 	const std::vector<cv::Mat> getData();

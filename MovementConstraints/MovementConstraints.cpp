@@ -217,77 +217,57 @@ void MovementConstraints::stopThread(){
 
 void MovementConstraints::updateConstraintsMap(){
 	//cout << "updateConstraintsMap()" << endl;
-	std::unique_lock<std::mutex> lckPointCloud(mtxPointCloud);
-	double curMapX = curPosCloudMapCenter.at<float>(0, 3);
-	double curMapY = curPosCloudMapCenter.at<float>(1, 3);
-	lckPointCloud.unlock();
 
-//	cout << "Moving" << endl;
 	//przesuwanie mapy
-	bool move = false;
-	if(curMapX > (MAP_SIZE/2 - MAP_MARGIN) * MAP_RASTER_SIZE){
-		move = true;
-	}
-	else if(curMapX < (-MAP_SIZE/2 + MAP_MARGIN) * MAP_RASTER_SIZE){
-		move = true;
-	}
-	if(curMapY > (MAP_SIZE/2 - MAP_MARGIN) * MAP_RASTER_SIZE){
-		move = true;
-	}
-	else if(curMapY < (-MAP_SIZE/2 + MAP_MARGIN) * MAP_RASTER_SIZE){
-		move = true;
-	}
-
 	std::chrono::high_resolution_clock::time_point timestampMapCur = std::chrono::high_resolution_clock::now();
-	if(std::chrono::duration_cast<std::chrono::milliseconds>(timestampMapCur - timestampMap).count() > 5000){
-		move = true;
-	}
-	if(move == true){
-//		cout << "Moving map" << endl;
-		std::chrono::high_resolution_clock::time_point imuTimestamp;
-		Mat imuCur = robot->getImuData(imuTimestamp);
-		//cout << "updating cur pos" << endl;
-		updateCurPosCloudMapCenter();
 
-		std::unique_lock<std::mutex> lckMap(mtxMap);
-		lckPointCloud.lock();
-		//cout << "locked" << endl;
-		//cout << "Calculating new coords" << endl;
-		if(!pointCloudImuMapCenter.empty()){
-			//Move points to new map center
-			Mat newPointCloudCoords = curPosCloudMapCenter.inv()*pointCloudImuMapCenter.rowRange(0, 4);
-			newPointCloudCoords.copyTo(pointCloudImuMapCenter.rowRange(0, 4));
-		}
+//	cout << "Moving map" << endl;
+	std::chrono::high_resolution_clock::time_point imuTimestamp;
+	Mat imuCur = robot->getImuData(imuTimestamp);
+	//cout << "updating cur pos" << endl;
+	updateCurPosCloudMapCenter();
 
-		//cout << "Calculating new posMapCenterGlobal" << endl;
-		posMapCenterGlobal = compOrient(imuCur);
-		curPosCloudMapCenter = Mat::eye(4, 4, CV_32FC1);
-		//cout << "Map moved" << endl;
-		timestampMap = timestampMapCur;
-		lckPointCloud.unlock();
-		lckMap.unlock();
-	}
+	std::unique_lock<std::mutex> lckMap(mtxMap);
+	std::unique_lock<std::mutex> lckPointCloud(mtxPointCloud);
+
+	Mat mapMove = curPosCloudMapCenter.inv();
+
+	//cout << "Calculating new posMapCenterGlobal" << endl;
+	posMapCenterGlobal = compOrient(imuCur);
+	curPosCloudMapCenter = Mat::eye(4, 4, CV_32FC1);
+	//cout << "Map moved" << endl;
+	timestampMap = timestampMapCur;
+	lckPointCloud.unlock();
+	lckMap.unlock();
+
 	std::unique_lock<std::mutex> lckMap(mtxMap);
 	constraintsMap = Scalar(0);
 
 	//polling each constraints module to update map
 //	cout << "Adding constraints" << endl;
-	this->insertHokuyoConstraints(constraintsMap, timestampMap);
+	this->insertHokuyoConstraints(constraintsMap, timestampMap, mapMove);
 //	cout << "Adding camera constraints" << endl;
-	camera->insertConstraints(constraintsMap, timestampMap);
+	camera->insertConstraints(constraintsMap, timestampMap, mapMove);
 	//cout << constraintsMap << endl;
 	lckMap.unlock();
 	//cout << "End updateConstraintsMap()" << endl;
 }
 
 
-void MovementConstraints::insertHokuyoConstraints(cv::Mat map,
-													std::chrono::high_resolution_clock::time_point curTimestampMap)
+void MovementConstraints::insertHokuyoConstraints(	cv::Mat map,
+													std::chrono::high_resolution_clock::time_point curTimestampMap,
+													cv::Mat mapMove)
 {
 //	cout << "insertHokuyoConstraints()" << endl;
 	std::unique_lock<std::mutex> lckPointCloud(mtxPointCloud);
 //	cout << "pointCloudImuMapCenter.size() = " << pointCloudImuMapCenter << endl;
 //	cout << "imuOrigRobot.size() = " << imuOrigRobot.size() << endl;
+	if(!pointCloudImuMapCenter.empty()){
+		//Move points to new map center
+		Mat newPointCloudCoords = mapMove*pointCloudImuMapCenter.rowRange(0, 4);
+		newPointCloudCoords.copyTo(pointCloudImuMapCenter.rowRange(0, 4));
+	}
+
 	Mat pointCloudRobotMapCenter = imuOrigRobot*pointCloudImuMapCenter.rowRange(0, 4);
 	lckPointCloud.unlock();
 

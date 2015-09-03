@@ -1734,8 +1734,9 @@ void Camera::saveCache(boost::filesystem::path cacheFile){
 }
 
 //Inserts computed constraints into map
-void Camera::insertConstraints(cv::Mat map,
-								std::chrono::high_resolution_clock::time_point curTimestampMap)
+void Camera::insertConstraints(	cv::Mat map,
+								std::chrono::high_resolution_clock::time_point curTimestampMap,
+								cv::Mat mapMove)
 {
 	std::unique_lock<std::mutex> lck(mtxConstr);
 	if(!constraints.empty() && curTimestampMap < curTimestamp){

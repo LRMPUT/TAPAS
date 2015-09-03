@@ -143,7 +143,8 @@ private:
 	void updateConstraintsMap();
 
 	void insertHokuyoConstraints(cv::Mat map,
-								std::chrono::high_resolution_clock::time_point curTimestampMap);
+								std::chrono::high_resolution_clock::time_point curTimestampMap,
+								cv::Mat mapMove);
 
 	void updateCurPosCloudMapCenter();
 
