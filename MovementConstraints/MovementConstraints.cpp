@@ -242,32 +242,31 @@ void MovementConstraints::updateConstraintsMap(){
 	if(std::chrono::duration_cast<std::chrono::milliseconds>(timestampMapCur - timestampMap).count() > 5000){
 		move = true;
 	}
-//	if(move == true){
-////		cout << "Moving map" << endl;
-//		std::chrono::high_resolution_clock::time_point imuTimestamp;
-//		Mat imuCur = robot->getImuData(imuTimestamp);
-//		//cout << "updating cur pos" << endl;
-//		updateCurPosCloudMapCenter();
-//
-//		std::unique_lock<std::mutex> lckMap(mtxMap);
-//		lckPointCloud.lock();
-//		//cout << "locked" << endl;
-//		//cout << "Calculating new coords" << endl;
-//		if(!pointCloudImuMapCenter.empty()){
-//			//Move points to new map center
-//			Mat newPointCloudCoords = curPosCloudMapCenter.inv()*pointCloudImuMapCenter.rowRange(0, 4);
-//			newPointCloudCoords.copyTo(pointCloudImuMapCenter.rowRange(0, 4));
-//		}
-//
-//		//cout << "Calculating new posMapCenterGlobal" << endl;
-//		posMapCenterGlobal = compOrient(imuCur);
-//		curPosCloudMapCenter = Mat::eye(4, 4, CV_32FC1);
-//		//cout << "Map moved" << endl;
-//		timestampMap = timestampMapCur;
-//		lckPointCloud.unlock();
-//		lckMap.unlock();
-//	}
+	if(move == true){
+//		cout << "Moving map" << endl;
+		std::chrono::high_resolution_clock::time_point imuTimestamp;
+		Mat imuCur = robot->getImuData(imuTimestamp);
+		//cout << "updating cur pos" << endl;
+		updateCurPosCloudMapCenter();
 
+		std::unique_lock<std::mutex> lckMap(mtxMap);
+		lckPointCloud.lock();
+		//cout << "locked" << endl;
+		//cout << "Calculating new coords" << endl;
+		if(!pointCloudImuMapCenter.empty()){
+			//Move points to new map center
+			Mat newPointCloudCoords = curPosCloudMapCenter.inv()*pointCloudImuMapCenter.rowRange(0, 4);
+			newPointCloudCoords.copyTo(pointCloudImuMapCenter.rowRange(0, 4));
+		}
+
+		//cout << "Calculating new posMapCenterGlobal" << endl;
+		posMapCenterGlobal = compOrient(imuCur);
+		curPosCloudMapCenter = Mat::eye(4, 4, CV_32FC1);
+		//cout << "Map moved" << endl;
+		timestampMap = timestampMapCur;
+		lckPointCloud.unlock();
+		lckMap.unlock();
+	}
 	std::unique_lock<std::mutex> lckMap(mtxMap);
 	constraintsMap = Scalar(0);
 
@@ -542,42 +541,45 @@ void MovementConstraints::processPointCloud(cv::Mat hokuyoData,
 	}
 
 	std::unique_lock<std::mutex> lck(mtxPointCloud);
-
 	//cout << "Moving pointCloudImuMapCenter, pointsSkipped = " << pointsSkipped << endl;
 	Mat tmpAllPoints(hokuyoCurPoints.rows, pointCloudImuMapCenter.cols + hokuyoCurPoints.cols - pointsSkipped, CV_32FC1);
 	if(!pointCloudImuMapCenter.empty()){
 		//cout << "copyTo" << endl;
 		if(pointsSkipped <	pointCloudImuMapCenter.cols){
-			Mat pointCloudCoords = pointCloudImuMapCenter.colRange(pointsSkipped, pointCloudImuMapCenter.cols).rowRange(0, 4);
-			Mat pointCloudVals = pointCloudImuMapCenter.colRange(pointsSkipped, pointCloudImuMapCenter.cols).rowRange(4, 6);
-
-			//move old points by current position
-			pointCloudCoords = curPosCloudMapCenter.inv() * pointCloudCoords;
-
-			//copy old points to tmp
-			pointCloudCoords.copyTo(tmpAllPoints.colRange(0, pointCloudImuMapCenter.cols - pointsSkipped).rowRange(0, 4));
-			pointCloudVals.copyTo(tmpAllPoints.colRange(0, pointCloudImuMapCenter.cols - pointsSkipped).rowRange(4, 6));
-
+			pointCloudImuMapCenter.colRange(pointsSkipped,
+												pointCloudImuMapCenter.cols).
+							copyTo(tmpAllPoints.colRange(0, pointCloudImuMapCenter.cols - pointsSkipped));
 		}
 	}
-
-	//add new points
+//	if(debugLevel >= 1){
+//		cout << "countPoints = " << countPoints << ", hokuyoCurPoints.size = " << hokuyoCurPoints.size() << endl;
+//	}
 	if(countPoints > 0){
+
+		//cout << "Moving to camera orig" << endl;
+		hokuyoCurPoints.rowRange(0, 4) = cameraOrigLaser.inv()*hokuyoCurPoints.rowRange(0, 4);
+		//cout << "Addding hokuyoCurPoints" << endl;
+//		if(debugLevel >= 1){
+//			cout << "Addding hokuyoCurPoints" << endl;
+//		}
 		Mat curPointCloudCameraMapCenter(hokuyoCurPoints.rows, hokuyoCurPoints.cols, CV_32FC1);
-		Mat tmpCurPoints = cameraOrigImu*hokuyoCurPoints.rowRange(0, 4);
+		Mat tmpCurPoints = curPosCloudMapCenter*cameraOrigImu*hokuyoCurPoints.rowRange(0, 4);
 		tmpCurPoints.copyTo(curPointCloudCameraMapCenter.rowRange(0, 4));
 		hokuyoCurPoints.rowRange(4, 6).copyTo(curPointCloudCameraMapCenter.rowRange(4, 6));
+		//cout << hokuyoCurPointsGlobal.channels() << ", " << hokuyoAllPointsGlobal.channels() << endl;
+//		cout << pointCloudImuMapCenter.size() << " " << curPointCloudCameraMapCenter.size() << " " << tmpAllPoints.size() << endl;
+//		if(debugLevel >= 1){
+//			cout << "pointsSkipped = " << pointsSkipped << endl;
+//		}
 		curPointCloudCameraMapCenter.copyTo(tmpAllPoints.colRange(pointCloudImuMapCenter.cols - pointsSkipped,
-															pointCloudImuMapCenter.cols + hokuyoCurPoints.cols - pointsSkipped));
+																	pointCloudImuMapCenter.cols + hokuyoCurPoints.cols - pointsSkipped));
+//		if(debugLevel >= 1){
+//			cout << "curPointCloudCameraMapCenter copied" << endl;
+//		}
 		pointsInfo.push(PointsPacket(hokuyoTimestamp, hokuyoCurPoints.cols));
+
+		pointCloudImuMapCenter = tmpAllPoints;
 	}
-
-	//reset current position
-	curPosCloudMapCenter = Mat::eye(4, 4, CV_32FC1);
-
-	//assign point to point cloud
-	pointCloudImuMapCenter = tmpAllPoints;
-
 	lck.unlock();
 }
 
