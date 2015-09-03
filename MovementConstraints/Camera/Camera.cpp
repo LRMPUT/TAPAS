@@ -560,6 +560,8 @@ void Camera::processDir(boost::filesystem::path dir,
 
 			std::mutex mtxPointCloud;
 
+			std::queue<cv::Mat> cameraPrevPosCloudMapCenter;
+
 			MovementConstraints::processPointCloud(hokuyoData,
 													hokuyoAllPointsGlobal,
 													pointsQueue,
@@ -569,6 +571,7 @@ void Camera::processDir(boost::filesystem::path dir,
 													mtxPointCloud,
 													cameraOrigLaser.front(),
 													cameraOrigImu.front(),
+													cameraPrevPosCloudMapCenter,
 													movementConstraints->getPointCloudSettings());
 
 			//waitKey();

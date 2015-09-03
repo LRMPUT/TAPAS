@@ -390,23 +390,25 @@ void MovementConstraints::updatePointCloud(){
 		cout << "end updateCurPosCloudMapCenter()" << endl;
 	}
 
+	std::chrono::high_resolution_clock::time_point hokuyoTimestamp;
+	Mat hokuyoData;
 	if(hokuyo.isDataValid()){
-		std::chrono::high_resolution_clock::time_point hokuyoTimestamp;
-		Mat hokuyoData = hokuyo.getData(hokuyoTimestamp);
-		processPointCloud(hokuyoData,
-						pointCloudImuMapCenter,
-						pointsQueue,
-						hokuyoTimestamp,
-						std::chrono::high_resolution_clock::now(),
-						curPosCloudMapCenter,
-						mtxPointCloud,
-						cameraOrigLaser,
-						cameraOrigImu,
-						pointCloudSettings);
+		hokuyoData = hokuyo.getData(hokuyoTimestamp);
 	}
 	else{
 		cout << "Hokuyo closed" << endl;
 	}
+	processPointCloud(hokuyoData,
+					pointCloudImuMapCenter,
+					pointsQueue,
+					hokuyoTimestamp,
+					std::chrono::high_resolution_clock::now(),
+					curPosCloudMapCenter,
+					mtxPointCloud,
+					cameraOrigLaser,
+					cameraOrigImu,
+					cameraPrevPosCloudMapCenter,
+					pointCloudSettings);
 
 	//cout << "End processPointCloud()" << endl;
 }
@@ -506,6 +508,7 @@ void MovementConstraints::processPointCloud(cv::Mat hokuyoData,
 											std::mutex& mtxPointCloud,
 											cv::Mat cameraOrigLaser,
 											cv::Mat cameraOrigImu,
+											std::queue<cv::Mat>& cameraPrevPosCloudMapCenter,
 											const PointCloudSettings& pointCloudSettings)
 {
 	Mat hokuyoCurPoints(6, hokuyoData.cols, CV_32FC1);
@@ -561,6 +564,13 @@ void MovementConstraints::processPointCloud(cv::Mat hokuyoData,
 		}
 	}
 
+	unique_lock<mutex> lckCameraPrevPos(mtxCameraPrevPos);
+	//move previous point cloud positions from camera module
+	for(Mat& m : cameraPrevPosCloudMapCenter.size()){
+		m = curPosCloudMapCenter.inv() * m;
+	}
+	lckCameraPrevPos.unlock();
+
 	//add new points
 	if(countPoints > 0){
 		Mat curPointCloudCameraMapCenter(hokuyoCurPoints.rows, hokuyoCurPoints.cols, CV_32FC1);
@@ -613,6 +623,31 @@ cv::Mat MovementConstraints::getPointCloud(cv::Mat& curPosMapCenter){
 	lck.unlock();
 	//cout << "End getPointCloud()" << endl;
 	return ret;
+}
+
+cv::Mat MovementConstraints::getPointCloudAndCameraPosCloud(std::vector<cv::Mat>& cameraPosCloudMapCenter){
+
+	Mat ret;
+	std::unique_lock<std::mutex> lck(mtxPointCloud);
+	pointCloudImuMapCenter.copyTo(ret);
+
+	unique_lock<mutex> lckCameraPrevPos(mtxCameraPrevPos);
+	cameraPrevPosCloudMapCenter.push(curPosCloudMapCenter.clone());
+
+	for(Mat& m : cameraPrevPosCloudMapCenter){
+		cameraPosCloudMapCenter.push_back(m.clone());
+	}
+	lckCameraPrevPos.unlock();
+
+	lck.unlock();
+
+	return ret;
+}
+
+void MovementConstraints::popCameraPrevPos(){
+	unique_lock<mutex> lckCameraPrevPos(mtxCameraPrevPos);
+	cameraPrevPosCloudMapCenter.pop();
+	lckCameraPrevPos.unlock();
 }
 
 cv::Mat MovementConstraints::getPosMapCenterGlobal(){
