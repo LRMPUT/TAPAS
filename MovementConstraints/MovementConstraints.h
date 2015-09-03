@@ -110,6 +110,10 @@ private:
 
 	cv::Mat posMapCenterGlobal;
 
+	std::queue<cv::Mat> cameraPrevPosCloudMapCenter;
+
+	std::mutex mtxCameraPrevPos;
+
 	cv::Mat pointCloudImuMapCenter;
 
 	std::chrono::high_resolution_clock::time_point timestampMap;
@@ -122,8 +126,8 @@ private:
 	//
 	cv::Mat constraintsMap;
 
-	//Map center position in global coordinates
-	double mapCenterX, mapCenterY, mapCenterPhi;
+//	//Map center position in global coordinates
+//	double mapCenterX, mapCenterY, mapCenterPhi;
 
 	std::thread movementConstraintsThread;
 
@@ -177,6 +181,7 @@ public:
 								std::mutex& mtxPointCloud,
 								cv::Mat cameraOrigLaser,
 								cv::Mat cameraOrigImu,
+								std::queue<cv::Mat>& cameraPrevPosCloudMapCenter,
 								const PointCloudSettings& pointCloudSettings);
 
 	const PointCloudSettings& getPointCloudSettings();
@@ -190,6 +195,10 @@ public:
 	const cv::Mat getMovementConstraints();
 
 	cv::Mat getPointCloud(cv::Mat& curPosMapCenter);
+
+	cv::Mat getPointCloudAndCameraPosCloud(std::vector<cv::Mat>& cameraPosCloudMapCenter);
+
+	void popCameraPrevPos();
 
 	cv::Mat getPosMapCenterGlobal();
 
