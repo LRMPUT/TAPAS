@@ -118,6 +118,10 @@ class Camera {
 
 	std::vector<cv::Mat> computeMapSegmentsGpu(cv::Mat curPosImuMapCenter);
 
+	std::vector<cv::Mat> computeMapCoords(cv::Mat curPosImuMapCenter);
+
+		std::vector<cv::Mat> computeMapCoordsGpu(cv::Mat curPosImuMapCenter);
+
 	std::vector<cv::Point2f> computePointProjection(const std::vector<cv::Point3f>& imPoint,
 													int cameraInd);
 
@@ -144,11 +148,6 @@ class Camera {
 							float regionId,
 							cv::Mat& regionsOnImage);
 
-	/*cv::Mat compOrient(cv::Mat imuData);
-
-	cv::Mat compTrans(	cv::Mat orient,
-						cv::Mat encodersDiff);*/
-
 	bool readLineFloat(std::ifstream& stream, cv::Mat& data);
 
 	bool readLineInt(std::ifstream& stream, cv::Mat& data);
@@ -158,7 +157,8 @@ class Camera {
 							std::vector<cv::Mat>& manualRegionsOnImages,
 							std::vector<std::map<int, int> >& mapRegionIdToLabel,
 							std::vector<cv::Mat>& terrains,
-							std::vector<cv::Mat>& poses);
+							std::vector<cv::Mat>& poses,
+							std::vector<std::chrono::high_resolution_clock::time_point> timestamps);
 
 	/** \brief Funkcja ucząca klasyfikator danymi z katalogu.
 	 *
@@ -169,14 +169,6 @@ class Camera {
 	 *
 	 */
 	void classifyFromDir(std::vector<boost::filesystem::path> dirs);
-
-	/*cv::Mat classifySlidingWindow(cv::Mat image);
-
-	void GenerateColorHistHSVGpu(
-			const cv::gpu::GpuMat& ImageH,
-			const cv::gpu::GpuMat& ImageS,
-			cv::gpu::GpuMat& result,
-			cv::gpu::GpuMat& buf);*/
 
 	std::chrono::high_resolution_clock::time_point curTimestamp;
 
@@ -195,6 +187,22 @@ class Camera {
 	cv::Mat sharedOriginalImage;
 
 	std::mutex mtxClassIm;
+
+	struct classResult{
+		std::chrono::high_resolution_clock::time_point timestamp;
+		int numPoints;
+
+		classResult(std::chrono::high_resolution_clock::time_point itimestamp,
+						int inumPoints)
+			:
+				timestamp(itimestamp),
+				numPoints(inumPoints)
+		{}
+	};
+
+	std::queue<classResult> classResultsHist;
+
+	cv::Mat classResultsData;
 
 	//Run as separate thread
 	void run();
