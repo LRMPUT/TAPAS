@@ -598,7 +598,8 @@ void Camera::processDir(boost::filesystem::path dir,
 	Mat imuPosGlobal, curPos;
 
 	std::queue<MovementConstraints::PointsPacket> pointsQueue;
-	std::chrono::high_resolution_clock::time_point mapMoveTimestamp = 0;
+	std::chrono::high_resolution_clock::time_point mapMoveTimestamp(
+			std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::milliseconds(0)));
 
 	int hokuyoCurTime;
 	hokuyoFile >> hokuyoCurTime;
@@ -739,8 +740,9 @@ void Camera::processDir(boost::filesystem::path dir,
 			cout << "curPos = " << endl << curPos << endl;
 			//cout << "globalPos.inv()*curPos = " << globalPos.inv()*curPos << endl;
 
-			std::chrono::duration<int,std::milli> durTmp(hokuyoCurTime);
-			std::chrono::high_resolution_clock::time_point hokuyoTimestamp(durTmp);
+//			std::chrono::duration<int,std::milli> durTmp(hokuyoCurTime);
+			std::chrono::high_resolution_clock::time_point hokuyoTimestamp(
+					std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::milliseconds(hokuyoCurTime)));
 
 			std::mutex mtxPointCloud;
 
@@ -768,7 +770,9 @@ void Camera::processDir(boost::filesystem::path dir,
 
 			cout << "hokuyoAllPointsGlobal.cols = " << hokuyoAllPointsMapCenter.cols << endl;
 
-			std::chrono::high_resolution_clock::time_point curTimestamp(std::chrono::duration<std::chrono::milliseconds>(hokuyoCurTime));
+			std::chrono::high_resolution_clock::time_point curTimestamp(
+					std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::milliseconds(hokuyoCurTime)));
+//			std::chrono::high_resolution_clock::time_point mapMoveTimestamp(std::chrono::milliseconds(0));
 
 			//move map every 500ms
 			if((curTimestamp - mapMoveTimestamp).count() > 500){
@@ -804,7 +808,8 @@ void Camera::processDir(boost::filesystem::path dir,
 			throw "Bad image file";
 		}
 
-		std::chrono::high_resolution_clock::time_point timestampImage(std::chrono::duration<std::chrono::milliseconds>(cameraCurTime));
+		std::chrono::high_resolution_clock::time_point timestampImage(
+				std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::milliseconds(cameraCurTime)));
 		timestamps.push_back(timestampImage);
 
 		Mat hokuyoAllPointsCamera = (curPos*cameraOrigImu.front()).inv()*hokuyoAllPointsMapCenter.rowRange(0, 4);
@@ -1136,6 +1141,7 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 
 	cout << "images.size() = " << images.size() << endl << "manualRegionsOnImages.size() = " << manualRegionsOnImages.size() << endl;
 
+	//read data for comparasion with external system
 	vector<vector<int> > compResVal;
 	vector<vector<int> > compResSegId;
 
@@ -1171,15 +1177,40 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	dataCrfFile.precision(15);
 	bool headerWritten = false;
 
+	Mat pixelCoordsAll;
+	vector<Mat> classResultsAll;
+	Mat manualLabelsAll;
+
 	for(int i = 0; i < images.size(); i++){
 		cout << "Segmenting" << endl;
-		//Mat autoRegionsOnImage = hierClassifiers.front()->segmentImage(images[i]);
 #ifdef NO_CUDA
-		vector<Mat> mapSegmentsOnImage = computeMapSegments(poses[i]);
+		vector<Mat> pixelCoordsVec = computeMapCoords(poses[i]);
 #else
-		vector<Mat> mapSegmentsOnImage = computeMapSegmentsGpu(poses[i]);
+		vector<Mat> pixelCoordsVec = computeMapCoordsGpu(poses[i]);
 #endif
-		Mat autoRegionsOnImage = mapSegmentsOnImage.front();
+		Mat pixelCoords = pixelCoordsVec.front();
+
+		Mat autoRegionsOnImage(images[i].rows, images[i].cols, CV_32SC1);
+
+		for(int r = 0; r < images[i].rows; ++r){
+			for(int c = 0; c < images[i].cols; ++c){
+				int xSegm = pixelCoords.at<float>(r * images[i].cols + c, 0)/MAP_RASTER_SIZE + MAP_SIZE/2;
+				int ySegm = pixelCoords.at<float>(r * images[i].cols + c, 1)/MAP_RASTER_SIZE + MAP_SIZE/2;
+				//cout << r << ":" << c << " = (" << xSegm << ", " << ySegm << ")" << endl;
+				autoRegionsOnImage.at<int>(r, c) = xSegm*MAP_SIZE + ySegm;
+			}
+		}
+
+//		cout << "Segmenting" << endl;
+//		//Mat autoRegionsOnImage = hierClassifiers.front()->segmentImage(images[i]);
+//#ifdef NO_CUDA
+//		vector<Mat> mapSegmentsOnImage = computeMapSegments(poses[i]);
+//#else
+//		vector<Mat> mapSegmentsOnImage = computeMapSegmentsGpu(poses[i]);
+//#endif
+//		Mat autoRegionsOnImage = mapSegmentsOnImage.front();
+
+
 		cout << "Assigning manual ids" << endl;
 		//rectangle(manualRegionsOnImages[i], Point(0, 0), Point(images[i].cols, 100), Scalar(0, 0, 0), -1);
 		map<int, int> assignedManualId = hierClassifiers.front()->assignManualId(autoRegionsOnImage, manualRegionsOnImages[i]);
@@ -1202,10 +1233,6 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 																		maskIgnore.front(),
 																		entryWeightThreshold);
 
-		if(headerWritten == false){
-			dataCrfFile << labels.size() << " " << newData.front().descriptor.cols << endl;
-			headerWritten = true;
-		}
 
 		for(int e = 0; e < newData.size(); e++){
 			if(mapRegionIdToLabel[i].count(assignedManualId[newData[e].imageId]) > 0){
@@ -1238,10 +1265,6 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 		imshow("labeled", visualization);
 		imshow("segments", hierClassifiers.front()->colorSegments(autoRegionsOnImage));
 
-
-		vector<vector<int> > curClassResultsPix(labels.size(), vector<int>(labels.size(), 0));
-		vector<vector<int> > curClassResultsSeg(labels.size(), vector<int>(labels.size(), 0));
-
 		cout << "Classifing" << endl;
 		vector<Mat> classificationResult = hierClassifiers.front()->classify(images[i],
 																			terrains[i],
@@ -1249,6 +1272,8 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 																			maskIgnore.front(),
 																			entryWeightThreshold);
 		cout << "End classifing" << endl;
+
+		//display current classification results
 		for(int l = 0; l < labels.size(); l++){
 			double minVal, maxVal;
 			minMaxIdx(classificationResult[l], &minVal, &maxVal);
@@ -1256,6 +1281,7 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 			imshow(labels[l], classificationResult[l]);
 		}
 
+		//display current classified image
 		Mat coloredOriginalClassified = images[i].clone();
 		Mat bestLabels(images[i].rows, images[i].cols, CV_32SC1, Scalar(-1));
 		Mat bestScore(images[i].rows, images[i].cols, CV_32FC1, Scalar(-1));
@@ -1270,6 +1296,7 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 		}
 		imshow("classified", coloredOriginalClassified * 0.25 + images[i] * 0.75);
 
+		//display external classification results
 		if(compareWithExt){
 			Mat coloredOriginalCompClassified = images[i].clone();
 			Mat labelsComp(images[i].rows, images[i].cols, CV_32SC1, Scalar(-1));
@@ -1286,7 +1313,75 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 			imshow("classified comp", coloredOriginalCompClassified * 0.25 + images[i] * 0.75);
 		}
 
+		//merge with previous classification results
+
+		//TODO remove old pixels
+		int pixelsSkipped = pixelCoordsAll.cols;
+
+		//add new
+
+		//coords
+		insertNewData(pixelCoordsAll, pixelCoords, pixelsSkipped);
+
+		//classification results
+		for(int l = 0; l < labels.size(); ++l){
+			insertNewData(classResultsAll[l], classificationResult[l].reshape(0, 1), pixelsSkipped);
+		}
+
+		//manual labels
+		insertNewData(manualLabelsAll, manualRegionsOnImages[i].reshape(0, 1), pixelsSkipped);
+
+		//TODO run inference
+
+		Mat inferResults(1, manualLabelsAll.cols, CV_32SC1);
+		for(int d = 0; d < manualLabelsAll.cols; ++d){
+			int bestLabelInd = 0;
+			float bestLabelScore = 0;
+			for(int l = 0; l < classResultsAll.size(); ++l){
+				if(classResultsAll[l].at<float>(l, d) > bestLabelScore){
+					bestLabelInd = l;
+					bestLabelScore = classResultsAll[l].at<float>(l, d);
+				}
+			}
+			inferResults.at<int>(d) = bestLabelInd;
+		}
+
+		//assign result for each observed segment - temporary, should be obtained during inference
+		Mat segmentResults = assignSegmentLabels(inferResults, pixelCoordsAll);
+
+		//assign manual label for each observed segment
+		Mat segmentManualLabels = assignSegmentLabels(manualLabelsAll, pixelCoordsAll);
+
+
+		//count current results
+		vector<vector<int> > curClassResultsPix(labels.size(), vector<int>(labels.size(), 0));
+		vector<vector<int> > curClassResultsSeg(labels.size(), vector<int>(labels.size(), 0));
+
+		//pixel-wise
+		for(int d = 0; d < manualLabelsAll.cols; ++d){
+			curClassResultsPix[manualLabelsAll.at<int>(d)][inferResults.at<int>(d)]++;
+		}
+
+		//segment-wise
+		for(int mapY = 0; mapY < MAP_SIZE; ++mapY){
+			for(int mapX = 0; mapX < MAP_SIZE; ++mapX){
+				int res = segmentResults.at<int>(mapY, mapX);
+				int gt = segmentManualLabels.at<int>(mapY, mapX);
+				if(res >= 0 && gt >= 0)				{
+					curClassResultsSeg[gt][res]++;
+				}
+			}
+		}
+
+		//export data for CRF - header
+		if(headerWritten == false){
+			dataCrfFile << labels.size() << " " << newData.front().descriptor.cols << endl;
+			headerWritten = true;
+		}
+
 		dataCrfFile << "i " << i << endl;
+
+		//export data for CRF - data
 		set<int> counted;
 		for(int r = 0; r < images[i].rows; r++){
 			for(int c = 0; c < images[i].cols; c++){
@@ -1303,6 +1398,7 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 									break;
 								}
 							}
+
 							if(newDataIdx >= 0){
 								dataCrfFile << "e " << newDataIdx << " " << autoRegionsOnImage.at<int>(r, c) << " " <<
 										groundTrue << " " << newData[newDataIdx].weight << " ";
@@ -1316,18 +1412,14 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 								dataCrfFile << endl;
 							}
 
-							curClassResultsSeg[groundTrue][pred]++;
 							counted.insert(autoRegionsOnImage.at<int>(r, c));
 						}
-					}
-					if(mapRegionIdToLabel[i].count(manualRegionsOnImages[i].at<int>(r, c)) > 0){
-						int groundTrue = mapRegionIdToLabel[i][manualRegionsOnImages[i].at<int>(r, c)];
-						curClassResultsPix[groundTrue][pred]++;
 					}
 				}
 			}
 		}
 
+		//add current results to overall results
 		for(int t = 0; t < labels.size(); t++){
 			for(int p = 0; p < labels.size(); p++){
 				classResultsPix[t][p] += curClassResultsPix[t][p];
@@ -1380,144 +1472,6 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	cout << "End classifying" << endl;
 }
 
-/*cv::Mat Camera::classifySlidingWindow(cv::Mat image){
-	//wxDateTime StartTime = wxDateTime::UNow();
-
-	const int rows = image.rows;
-	const int cols = image.cols;
-	const int step = classifyGrid;
-
-	GpuMat imageHSV(rows, cols, CV_8UC3);
-	GpuMat imageH(rows, cols, CV_8UC1);
-	GpuMat imageS(rows, cols, CV_8UC1);
-	GpuMat imageV(rows, cols, CV_8UC1);
-	GpuMat out[] = {imageH, imageS, imageV};
-
-	imageHSV.upload(image);
-	cvtColor(imageHSV, imageHSV, CV_BGR2HSV);
-	split(imageHSV, out);
-
-	//wxDateTime UploadTime = wxDateTime::UNow();
-
-	vector<Mat> votes(labels.size());
-
-	for (int i = 0; i < (int)votes.size(); i++)
-	{
-		// Sepatate Mat for each entry
-		votes[i] = Mat(image.rows, image.cols, CV_8U, Scalar(0));
-	}
-
-	GpuMat*** entries = new GpuMat**[rows/step];
-	for(int row = 0; row < rows/step; row++){
-		entries[row] = new GpuMat*[cols/step];
-	}
-	for(int row = 0; row < rows/step; row++){
-		for(int col = 0; col < cols/step; col++){
-			entries[row][col] = new GpuMat(1, 2*bins, CV_32SC1);
-		}
-	}
-
-	cout << "Calculating histograms" << endl;
-	GpuMat buf(1, bins, CV_32SC1);
-	for (int row = step; row <= rows; row += step)
-	{
-		for (int col = step; col <= cols; col += step)
-		{
-			const int MinC = col - step;
-		    const int MaxC = col;
-		    const int MinR = row - step;
-		    const int MaxR = row;
-
-		    //cout << "MinX: " << MinX << " MinY: " << MinY << " MaxX " << MaxX << " MaxY " << MaxY << "\n";
-		    GpuMat RoiH = GpuMat(imageH, Rect(Point(MinC, MinR), Point(MaxC, MaxR)));
-		    GpuMat RoiS = GpuMat(imageS, Rect(Point(MinC, MinR), Point(MaxC, MaxR)));
-
-		    //cout << "Calculating hist for row = " << row << ", col = " << col << endl;
-			GenerateColorHistHSVGpu(RoiH, RoiS, *entries[(row - 1)/step][(col - 1)/step], buf);
-
-		}
-	}
-
-	//wxDateTime HistTime = wxDateTime::UNow();
-
-	cout << "Classifing" << endl;
-
-    Mat histSum(1, 2*bins, CV_32FC1);
-    GpuMat histSumGpu(1, 2*bins, CV_32FC1);
-    buf = GpuMat(1, 2*bins, CV_32FC1);
-	for (int row = classifyGrid; row <= rows; row += step)
-	{
-		for (int col = classifyGrid; col <= cols; col += step)
-		{
-			const int MinC = col - classifyGrid;
-		    const int MaxC = col;
-		    const int MinR = row - classifyGrid;
-		    const int MaxR = row;
-
-		    int idxR = (row - 1)/step;
-		    int idxC = (col - 1)/step;
-		    int subGrids = classifyGrid/step;
-		    histSumGpu = Scalar(0);
-		    for(int subRow = idxR - subGrids + 1; subRow <= idxR; subRow++){
-			    for(int subCol = idxC - subGrids + 1; subCol <= idxC; subCol++){
-			    	add(histSumGpu, *entries[subRow][subCol], histSumGpu);
-			    }
-		    }
-		    normalize(histSum, histSum, 1, 0, NORM_L1, -1, buf);
-		    histSumGpu.download(histSum);
-		    unsigned int predictedLabel = 0;
-		    predictedLabel = svm.predict(histSum);
-		    //cout << WordPredictedLabel << endl;
-		    //EndTimeClass = wxDateTime::UNow();
-
-		    Mat Mask = Mat(rows, cols, CV_8U, Scalar(0));
-		    rectangle(Mask, Point(MinC, MinR), Point(MaxC, MaxR), Scalar(0x1), CV_FILLED);
-		    votes[predictedLabel] +=  Mask;
-		}
-	}
-
-	for(int row = 0; row < rows/step; row++){
-		for(int col = 0; col < cols/step; col++){
-			delete entries[row][col];
-		}
-	}
-	for(int row = 0; row < rows/step; row++){
-		delete[] entries[row];
-	}
-	delete[] entries;
-
-	//wxDateTime ClassTime = wxDateTime::UNow();
-
-	//cout << "Uploading and converting time: " << (UploadTime - StartTime).Format(wxString::FromAscii("%M:%S:%l")).ToAscii().data() << "\n";
-	//cout << "Calculating histograms time: " << (HistTime - UploadTime).Format(wxString::FromAscii("%M:%S:%l")).ToAscii().data() << "\n";
-	//cout << "Classifing time: " << (ClassTime - HistTime).Format(wxString::FromAscii("%M:%S:%l")).ToAscii().data() << "\n";
-
-}
-
-void Camera::GenerateColorHistHSVGpu(
-		const cv::gpu::GpuMat& ImageH,
-		const cv::gpu::GpuMat& ImageS,
-		cv::gpu::GpuMat& result,
-		cv::gpu::GpuMat& buf)
-{
-	GpuMat HistH(1, bins, CV_32SC1);
-	GpuMat HistS(1, bins, CV_32SC1);
-
-	if(bins != 256){
-		throw "Number of bins must be equal to 256";
-	}
-
-	calcHist(ImageH, HistH, buf);
-	calcHist(ImageS, HistS, buf);
-
-	GpuMat partH = result.colRange(0, bins);
-	GpuMat partS = result.colRange(bins, 2*bins);
-
-	HistH.copyTo(partH);
-	HistS.copyTo(partS);
-
-	result.convertTo(result, CV_32F);
-}*/
 
 //Run as separate thread
 void Camera::run(){
@@ -1766,6 +1720,51 @@ void Camera::readSettings(TiXmlElement* settings){
 	svmParams.svm_type = svmType;
 	svmParams.degree = degree;
 	svmParams.gamma = gamma;*/
+}
+
+void Camera::insertNewData(cv::Mat& dataAll, cv::Mat newData, int dataSkipped){
+	if(dataSkipped > dataAll.cols){
+		dataSkipped = dataAll.cols;
+	}
+	Mat tmpDataAll(dataAll.rows, dataAll.cols - dataSkipped + newData.cols, dataAll.type());
+	dataAll.colRange(dataSkipped, dataAll.cols).
+					copyTo(tmpDataAll.colRange(0, dataAll.cols - dataSkipped));
+	newData.copyTo(tmpDataAll.colRange(dataSkipped, tmpDataAll.cols));
+	dataAll = tmpDataAll;
+}
+
+/** \brief Assign label for each map segment relaying on pixel-wise labels
+ *
+ */
+cv::Mat Camera::assignSegmentLabels(cv::Mat pixelLabels, cv::Mat coords){
+	Mat segmentLabels(MAP_SIZE, MAP_SIZE, CV_32SC1, Scalar(-1));
+	vector<Mat> segmentLabelsCount;
+	for(int l = 0; l < labels.size(); ++l){
+		segmentLabelsCount.push_back(Mat(MAP_SIZE, MAP_SIZE, CV_32SC1, Scalar(0)));
+	}
+
+	for(int d = 0; d < coords.cols; ++d){
+		int xSegm = coords.at<float>(d, 0)/MAP_RASTER_SIZE + MAP_SIZE/2;
+		int ySegm = coords.at<float>(d, 1)/MAP_RASTER_SIZE + MAP_SIZE/2;
+
+		int curLabel = pixelLabels.at<int>(d);
+		segmentLabelsCount[curLabel].at<int>(ySegm, xSegm)++;
+	}
+
+	for(int mapY = 0; mapY < MAP_SIZE; ++mapY){
+		for(int mapX = 0; mapX < MAP_SIZE; ++mapX){
+			int bestLabelScore = 0;
+			int bestLabelInd = -1;
+			for(int l = 0; l < segmentLabelsCount.size(); ++l){
+				if(segmentLabelsCount[l].at<int>(mapY, mapX) > bestLabelScore){
+					bestLabelInd = l;
+					bestLabelScore = segmentLabelsCount[l].at<int>(mapY, mapX);
+				}
+			}
+		}
+	}
+
+	return segmentLabels;
 }
 
 cv::Mat Camera::readMatrixSettings(TiXmlElement* parent, const char* node, int rows, int cols){

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 set(CUDA 0)
-set(TROBOT 1)
+set(TROBOT 0)
 set(CMAKE_BUILD_TYPE "Release")
 
 project(Tapas)
@@ -159,7 +159,7 @@ set(TapasQt_SOURCES
 	TapasQt/CameraWindow.cpp
 	TapasQt/Chart.cpp
 	TapasQt/gui.cpp
-	TapasQt/ImuChart.cpp
+#	TapasQt/ImuChart.cpp
 	TapasQt/QtRobotDrive.cpp
 	TapasQt/Recording.cpp
 	TapasQt/QtGps.cpp
@@ -173,7 +173,7 @@ set(TapasQt_SOURCES
 set(TapasQt_HEADERS
 	TapasQt/CameraWindow.h
 	TapasQt/Chart.h
-	TapasQt/ImuChart.h
+#	TapasQt/ImuChart.h
 	TapasQt/QtRobotDrive.h
 	TapasQt/Recording.h
 	TapasQt/QtGps.h

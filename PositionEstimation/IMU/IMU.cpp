@@ -125,10 +125,14 @@ bool IMU::isPortOpen(){
 
 bool IMU::isDataValid(){
 	if ( usedIMUType == IMU_UM6){
+#ifdef TROBOT
 		if(imu == NULL){
 			return false;
 		}
 		return imu->isEulerDataValid();
+#else
+		return false;
+#endif
 	}
 	else if ( usedIMUType == IMU_MICROSTRAIN_GX4_25){
 		if (imuNew==NULL)

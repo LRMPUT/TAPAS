@@ -36,6 +36,7 @@
 #include <chrono>
 #include <thread>
 #include <mutex>
+#include <queue>
 //OpenCV
 #include <opencv2/opencv.hpp>
 //Boost
@@ -210,6 +211,16 @@ class Camera {
 	void readSettings(TiXmlElement* settings);
 
 	cv::Mat readMatrixSettings(TiXmlElement* parent, const char* node, int rows, int cols);
+
+	/** \brief Insert new data and skip dataSkipped data
+	 * @dataAll data stored as cols
+	 */
+	void insertNewData(cv::Mat& dataAll, cv::Mat newData, int dataSkipped);
+
+	/** \brief Assign label for each map segment relaying on pixel-wise labels
+	 *
+	 */
+	cv::Mat assignSegmentLabels(cv::Mat pixelLabels, cv::Mat coords);
 
 	void readCache(boost::filesystem::path cacheFile);
 

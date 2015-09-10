@@ -240,7 +240,7 @@ void MovementConstraints::updateConstraintsMap(){
 	lckPointCloud.unlock();
 	lckMap.unlock();
 
-	std::unique_lock<std::mutex> lckMap(mtxMap);
+	lckMap.lock();
 	constraintsMap = Scalar(0);
 
 	//polling each constraints module to update map

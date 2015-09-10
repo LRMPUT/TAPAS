@@ -53,7 +53,7 @@ TapasQt::TapasQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
 	encoders = new QtEncoders(&ui, &robot, &debug);
 
 	ui.imuPortCombo->addItems(portList);
-	imuChart = new ImuChart(&ui, &robot, &debug);
+//	imuChart = new ImuChart(&ui, &robot, &debug);
 
 	ui.cameraPortCombo->addItems(portList);
 	qtCamera = new QtCamera(&ui, &robot, &debug);
