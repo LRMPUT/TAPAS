@@ -159,7 +159,7 @@ class Camera {
 							std::vector<std::map<int, int> >& mapRegionIdToLabel,
 							std::vector<cv::Mat>& terrains,
 							std::vector<cv::Mat>& poses,
-							std::vector<std::chrono::high_resolution_clock::time_point> timestamps);
+							std::vector<std::chrono::high_resolution_clock::time_point>& timestamps);
 
 	/** \brief Funkcja ucząca klasyfikator danymi z katalogu.
 	 *
