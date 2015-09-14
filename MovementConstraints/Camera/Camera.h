@@ -159,7 +159,8 @@ class Camera {
 							std::vector<std::map<int, int> >& mapRegionIdToLabel,
 							std::vector<cv::Mat>& terrains,
 							std::vector<cv::Mat>& poses,
-							std::vector<std::chrono::high_resolution_clock::time_point>& timestamps);
+							std::vector<std::chrono::high_resolution_clock::time_point>& timestamps,
+							std::vector<cv::Mat>& mapMoves);
 
 	/** \brief Funkcja ucząca klasyfikator danymi z katalogu.
 	 *
@@ -189,19 +190,19 @@ class Camera {
 
 	std::mutex mtxClassIm;
 
-	struct classResult{
+	struct ClassResult{
 		std::chrono::high_resolution_clock::time_point timestamp;
-		int numPoints;
+		int numPixels;
 
-		classResult(std::chrono::high_resolution_clock::time_point itimestamp,
-						int inumPoints)
+		ClassResult(std::chrono::high_resolution_clock::time_point itimestamp,
+						int inumPixels)
 			:
 				timestamp(itimestamp),
-				numPoints(inumPoints)
+				numPixels(inumPixels)
 		{}
 	};
 
-	std::queue<classResult> classResultsHist;
+	std::queue<ClassResult> classResultsHist;
 
 	cv::Mat classResultsData;
 
@@ -221,6 +222,8 @@ class Camera {
 	 *
 	 */
 	cv::Mat assignSegmentLabels(cv::Mat pixelLabels, cv::Mat coords);
+
+	void draw3DVis(cv::Mat coords, cv::Mat colors, cv::Mat pose, cv::Mat segments);
 
 	void readCache(boost::filesystem::path cacheFile);
 

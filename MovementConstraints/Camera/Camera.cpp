@@ -29,7 +29,8 @@
 
 //OpenCV
 #include <opencv2/opencv.hpp>
-#include <opencv2/gpu/gpu.hpp>
+#include <opencv2/viz/viz3d.hpp>
+#include <opencv2/viz/vizcore.hpp>
 //STL
 #include <cmath>
 #include <sstream>
@@ -564,7 +565,8 @@ void Camera::processDir(boost::filesystem::path dir,
 						std::vector<std::map<int, int> >& mapRegionIdToLabel,
 						std::vector<cv::Mat>& terrains,
 						std::vector<cv::Mat>& poses,
-						std::vector<std::chrono::high_resolution_clock::time_point>& timestamps)
+						std::vector<std::chrono::high_resolution_clock::time_point>& timestamps,
+						std::vector<cv::Mat>& mapMoves)
 {
 	cout << "processDir()" << endl;
 	images.clear();
@@ -572,6 +574,8 @@ void Camera::processDir(boost::filesystem::path dir,
 	mapRegionIdToLabel.clear();
 	terrains.clear();
 	poses.clear();
+	timestamps.clear();
+	mapMoves.clear();
 
 	//cout << dir.string() + "/hokuyo.data" << endl;
 	ifstream hokuyoFile(dir.string() + "/hokuyo.data");
@@ -597,6 +601,7 @@ void Camera::processDir(boost::filesystem::path dir,
 	Mat hokuyoAllPointsMapCenter;
 	Mat imuPrev, encodersPrev;
 	Mat imuPosGlobal, curPos;
+	Mat curMapMove = Mat::eye(4, 4, CV_32FC1);
 
 	std::queue<MovementConstraints::PointsPacket> pointsQueue;
 	std::chrono::high_resolution_clock::time_point mapMoveTimestamp(
@@ -786,6 +791,7 @@ void Camera::processDir(boost::filesystem::path dir,
 				imuPosGlobal = MovementConstraints::compOrient(imuCur);
 				curPos = Mat::eye(4, 4, CV_32FC1);
 
+				curMapMove = mapMove * curMapMove;
 				mapMoveTimestamp = curTimestamp;
 			}
 
@@ -812,6 +818,9 @@ void Camera::processDir(boost::filesystem::path dir,
 		std::chrono::high_resolution_clock::time_point timestampImage(
 				std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::milliseconds(cameraCurTime)));
 		timestamps.push_back(timestampImage);
+
+		mapMoves.push_back(curMapMove.clone());
+		curMapMove = Mat::eye(4, 4, CV_32FC1);
 
 		Mat hokuyoAllPointsCamera = (curPos*cameraOrigImu.front()).inv()*hokuyoAllPointsMapCenter.rowRange(0, 4);
 		//cout << "Computing point projection" << endl;
@@ -962,6 +971,7 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 	std::vector<cv::Mat> terrains;
 	std::vector<cv::Mat> poses;
 	std::vector<std::chrono::high_resolution_clock::time_point> timestamps;
+	std::vector<cv::Mat> mapMoves;
 
 	for(int d = 0; d < dirs.size(); d++){
 		std::vector<cv::Mat> tmpImages;
@@ -970,13 +980,16 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 		std::vector<cv::Mat> tmpTerrains;
 		std::vector<cv::Mat> tmpPoses;
 		std::vector<std::chrono::high_resolution_clock::time_point> tmpTimestamps;
+		std::vector<cv::Mat> tmpMapMoves;
+
 		processDir(	dirs[d],
 					tmpImages,
 					tmpManualRegionsOnImages,
 					tmpMapRegionIdToLabel,
 					tmpTerrains,
 					tmpPoses,
-					tmpTimestamps);
+					tmpTimestamps,
+					tmpMapMoves);
 		for(int i = 0; i < tmpImages.size(); i++){
 			images.push_back(tmpImages[i]);
 			manualRegionsOnImages.push_back(tmpManualRegionsOnImages[i]);
@@ -984,6 +997,7 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 			terrains.push_back(tmpTerrains[i]);
 			poses.push_back(tmpPoses[i]);
 			timestamps.push_back(tmpTimestamps[i]);
+			mapMoves.push_back(tmpMapMoves[i]);
 		}
 	}
 
@@ -1125,6 +1139,7 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	std::vector<cv::Mat> terrains;
 	std::vector<cv::Mat> poses;
 	std::vector<std::chrono::high_resolution_clock::time_point> timestamps;
+	std::vector<cv::Mat> mapMoves;
 
 	for(int d = 0; d < dirs.size(); d++){
 		std::vector<cv::Mat> tmpImages;
@@ -1133,13 +1148,16 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 		std::vector<cv::Mat> tmpTerrains;
 		std::vector<cv::Mat> tmpPoses;
 		std::vector<std::chrono::high_resolution_clock::time_point> tmpTimestamps;
+		std::vector<cv::Mat> tmpMapMoves;
+
 		processDir(	dirs[d],
 					tmpImages,
 					tmpManualRegionsOnImages,
 					tmpMapRegionIdToLabel,
 					tmpTerrains,
 					tmpPoses,
-					tmpTimestamps);
+					tmpTimestamps,
+					tmpMapMoves);
 		for(int i = 0; i < tmpImages.size(); i++){
 			images.push_back(tmpImages[i]);
 			manualRegionsOnImages.push_back(tmpManualRegionsOnImages[i]);
@@ -1147,6 +1165,7 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 			terrains.push_back(tmpTerrains[i]);
 			poses.push_back(tmpPoses[i]);
 			timestamps.push_back(tmpTimestamps[i]);
+			mapMoves.push_back(tmpMapMoves[i]);
 		}
 	}
 
@@ -1194,6 +1213,9 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 		classResultsAll.push_back(Mat());
 	}
 	Mat manualLabelsAll;
+	Mat pixelColorsAll;
+
+	std::queue<ClassResult> classResultsHistDir;
 
 	for(int i = 0; i < images.size(); i++){
 		cout << "Segmenting" << endl;
@@ -1329,8 +1351,27 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 
 		//merge with previous classification results
 
-		//TODO remove old pixels
-		int pixelsSkipped = pixelCoordsAll.cols;
+		//remove old pixels
+		static const int pixelsTimeout = 2000;
+		int pixelsSkipped = 0;
+
+		while((timestamps[i] - classResultsHistDir.front().timestamp) > std::chrono::milliseconds(pixelsTimeout)){
+			//if new series of data begins - eg. new dir
+			//TODO check it
+			if(timestamps[i] < classResultsHistDir.front().timestamp){
+				pixelsSkipped = pixelCoordsAll.cols;
+				break;
+			}
+
+			pixelsSkipped += classResultsHistDir.front().numPixels;
+			classResultsHistDir.pop();
+		}
+
+		//move old pixels to new map ommiting those removed
+		if(pixelsSkipped < pixelCoordsAll.cols){
+			Mat tmpPixelCoordsAll = mapMoves[i] * pixelCoordsAll.colRange(pixelsSkipped, pixelCoordsAll.cols);
+			tmpPixelCoordsAll.copyTo(pixelCoordsAll.colRange(pixelsSkipped, pixelCoordsAll.cols));
+		}
 
 		//add new
 		cout << "adding new" << endl;
@@ -1350,14 +1391,15 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 		}
 
 		insertNewData(manualLabelsAll, manualLabelsOnImage.reshape(0, 1), pixelsSkipped);
-		{
-			double minVal, maxVal;
-			minMaxIdx(manualLabelsOnImage, &minVal, &maxVal);
-			cout << "manualRegionsOnImage: min = " << minVal << ", max = " << maxVal << endl;
 
-			minMaxIdx(manualLabelsAll, &minVal, &maxVal);
-			cout << "manualLabelsAll: min = " << minVal << ", max = " << maxVal << endl;
-		}
+		insertNewData(pixelColorsAll, images[i].reshape(0, 1), pixelsSkipped);
+
+//		cout << "pixelCoordsAll.size() = " << pixelCoordsAll.size() << endl;
+//		cout << "pixelColorsAll.size() = " << pixelColorsAll.size() << endl;
+
+		classResultsHistDir.push(ClassResult(timestamps[i], pixelCoords.cols));
+
+		cout << "Num pixels = " << pixelCoordsAll.cols << endl;
 
 		//TODO run inference
 		cout << "running inference" << endl;
@@ -1409,6 +1451,8 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 			}
 		}
 		imshow("manual seg", coloredOriginalManualSeg * 0.25 + images[i] * 0.75);
+
+		draw3DVis(pixelCoordsAll, pixelColorsAll, poses[i], segmentResults);
 
 		//count current results
 		vector<vector<int> > curClassResultsPix(labels.size(), vector<int>(labels.size(), 0));
@@ -1819,24 +1863,24 @@ cv::Mat Camera::assignSegmentLabels(cv::Mat pixelLabels, cv::Mat coords){
 		segmentLabelsCount.push_back(Mat(MAP_SIZE, MAP_SIZE, CV_32SC1, Scalar(0)));
 	}
 
-	cout << "counting" << endl;
-	cout << "coords.size() = " << coords.size() << endl;
+//	cout << "counting" << endl;
+//	cout << "coords.size() = " << coords.size() << endl;
 	for(int d = 0; d < coords.cols; ++d){
 		int xSegm = coords.at<float>(0, d)/MAP_RASTER_SIZE + MAP_SIZE/2;
 		int ySegm = coords.at<float>(1, d)/MAP_RASTER_SIZE + MAP_SIZE/2;
 
 		int curLabel = pixelLabels.at<int>(d);
 //		cout << "curLabel = " << curLabel << endl;
-		if(xSegm < 0 || xSegm >= MAP_SIZE || ySegm < 0 || ySegm >= MAP_SIZE || curLabel >= (int)segmentLabelsCount.size()){
-			cout << "curLabel = " << curLabel << endl;
-			cout << "(" << xSegm << ", " << ySegm << ")" << endl;
-		}
+//		if(xSegm < 0 || xSegm >= MAP_SIZE || ySegm < 0 || ySegm >= MAP_SIZE || curLabel >= (int)segmentLabelsCount.size()){
+//			cout << "curLabel = " << curLabel << endl;
+//			cout << "(" << xSegm << ", " << ySegm << ")" << endl;
+//		}
 		if(curLabel >= 0){
 			segmentLabelsCount[curLabel].at<int>(xSegm, ySegm)++;
 		}
 	}
 
-	cout << "choosing best" << endl;
+//	cout << "choosing best" << endl;
 	for(int mapX = 0; mapX < MAP_SIZE; ++mapX){
 		for(int mapY = 0; mapY < MAP_SIZE; ++mapY){
 			int bestLabelScore = 0;
@@ -1857,6 +1901,53 @@ cv::Mat Camera::assignSegmentLabels(cv::Mat pixelLabels, cv::Mat coords){
 	cout << "End Camera::assignSegmentLabels" << endl;
 
 	return segmentLabels;
+}
+
+void Camera::draw3DVis(cv::Mat coords, cv::Mat colors, cv::Mat pose, cv::Mat segments){
+    ///create a window
+    viz::Viz3d win("camera visualization");
+
+    ///add frame of reference
+    Affine3f affineMapCenterPose(imuOrigRobot.inv());
+    win.showWidget("frame of reference widget", viz::WCoordinateSystem(1000), affineMapCenterPose);
+
+    //add grid
+    viz::WGrid grid(Vec2i(MAP_SIZE, MAP_SIZE), Vec2d(MAP_RASTER_SIZE, MAP_RASTER_SIZE));
+    win.showWidget("grid widget", grid, affineMapCenterPose);
+
+    //robot pose
+    viz::WCoordinateSystem robotFrameOfRef(500);
+    Affine3f affinePose(pose);
+    win.showWidget("robot frame of ref widget", robotFrameOfRef, affinePose);
+
+//    win.setWidgetPose("robot frame of ref widget", affinePose);
+
+    //point cloud
+    Mat coordsT = coords.t();
+    Mat coordsVis = coordsT.reshape(4, 1);
+    cout << "coordsVis.size() = " << coordsVis.size() << endl;
+    cout << "colors.size() = " << colors.size() << endl;
+    viz::WCloud cloud(coordsVis, colors);
+    win.showWidget("cloud widget", cloud);
+
+    //camera pose
+    /// Let's assume camera has the following properties
+	Vec3d camCoords(-4000.0f, 4000.0f, -4000.0f);
+	Vec3d camFocalPoint(0.0f, 0.0f, 0.0f);
+	Vec3d camYDir(-1.0f, 1.0f, 1.0f);
+    Affine3f camPose = cv::viz::makeCameraPose(camCoords, camFocalPoint, camYDir);
+    win.setViewerPose(camPose);
+
+    // Event loop is over when pressed q, Q, e, E
+	// Start event loop once for 1 millisecond
+    win.spinOnce(1, true);
+	while(!win.wasStopped())
+	{
+		// Interact with window
+
+		// Event loop for 1 millisecond
+		win.spinOnce(1, true);
+	}
 }
 
 cv::Mat Camera::readMatrixSettings(TiXmlElement* parent, const char* node, int rows, int cols){

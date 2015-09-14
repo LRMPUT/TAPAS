@@ -24,8 +24,9 @@
  */
 class ClassifierRF : public Classifier {
 
-	CvRTParams params;
-	CvRTrees rf;
+//	CvRTParams params;
+//	cv::ml:: params;
+	cv::Ptr<cv::ml::RTrees> rf;
 
 	cv::Mat trainData;
 	cv::Mat dataLabels;
