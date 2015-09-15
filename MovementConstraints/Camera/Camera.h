@@ -39,6 +39,7 @@
 #include <queue>
 //OpenCV
 #include <opencv2/opencv.hpp>
+#include <opencv2/viz/viz3d.hpp>
 //Boost
 #include <boost/filesystem.hpp>
 //TinyXML
@@ -223,7 +224,11 @@ class Camera {
 	 */
 	cv::Mat assignSegmentLabels(cv::Mat pixelLabels, cv::Mat coords);
 
-	void draw3DVis(cv::Mat coords, cv::Mat colors, cv::Mat pose, cv::Mat segments);
+	void draw3DVis(cv::viz::Viz3d& win,
+					cv::Mat coords,
+					cv::Mat colors,
+					cv::Mat pose,
+					cv::Mat segments);
 
 	void readCache(boost::filesystem::path cacheFile);
 

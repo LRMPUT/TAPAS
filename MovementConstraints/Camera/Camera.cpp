@@ -217,7 +217,7 @@ std::vector<cv::Mat> Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 				pointCam.at<float>(2) = pointCamNN.at<float>(2) * s;
 				pointCam.at<float>(3) = 1;
 				//cout << "curPosCameraMapCenter*pointCam" << endl;
-				Mat pointMapCenter = curPosImuMapCenter*cameraOrigImu[cam]*pointCam;
+				Mat pointMapCenter = curPosCameraMapCenterGlobal*pointCam;
 
 //				cout << "pointIm = " << pointIm << endl;
 //				cout << "pointCamNN = " << pointCamNN << endl;
@@ -269,6 +269,7 @@ std::vector<cv::Mat> Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 
 #ifndef NO_CUDA
 std::vector<cv::Mat> Camera::computeMapSegmentsGpu(cv::Mat curPosImuMapCenter){
+	//TODO Correct curPosCameraMapCenterGlobal
 //	cout << "Computing map segments" << endl;
 	//namedWindow("test");
 	//mapSegments.clear();
@@ -337,7 +338,7 @@ std::vector<cv::Mat> Camera::computeMapCoords(cv::Mat curPosImuMapCenter){
 				pointCam.at<float>(2) = pointCamNN.at<float>(2) * s;
 				pointCam.at<float>(3) = 1;
 				//cout << "curPosCameraMapCenter*pointCam" << endl;
-				Mat pointMapCenter = curPosImuMapCenter*cameraOrigImu[cam]*pointCam;
+				Mat pointMapCenter = curPosCameraMapCenterGlobal*pointCam;
 
 //				cout << "pointIm = " << pointIm << endl;
 //				cout << "pointCamNN = " << pointCamNN << endl;
@@ -1130,6 +1131,9 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	namedWindow("labeled");
 	namedWindow("classified");
 
+	//create a window for visualization
+	viz::Viz3d win("camera visualization");
+
 	vector<vector<int> > classResultsPix(labels.size(), vector<int>(labels.size(), 0));
 	vector<vector<int> > classResultsSeg(labels.size(), vector<int>(labels.size(), 0));
 
@@ -1233,6 +1237,8 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 				int xSegm = pixelCoords.at<float>(0, r * images[i].cols + c)/MAP_RASTER_SIZE + MAP_SIZE/2;
 				int ySegm = pixelCoords.at<float>(1, r * images[i].cols + c)/MAP_RASTER_SIZE + MAP_SIZE/2;
 //				cout << r << ":" << c << " = (" << xSegm << ", " << ySegm << ")" << endl;
+//				cout << "(" << pixelCoords.at<float>(0, r * images[i].cols + c) << ", " << pixelCoords.at<float>(1, r * images[i].cols + c)
+//						<< " : (" << xSegm << ", " << ySegm << ")" << endl;
 				autoRegionsOnImage.at<int>(r, c) = xSegm*MAP_SIZE + ySegm;
 			}
 		}
@@ -1355,14 +1361,18 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 		static const int pixelsTimeout = 2000;
 		int pixelsSkipped = 0;
 
-		while((timestamps[i] - classResultsHistDir.front().timestamp) > std::chrono::milliseconds(pixelsTimeout)){
-			//if new series of data begins - eg. new dir
-			//TODO check it
-			if(timestamps[i] < classResultsHistDir.front().timestamp){
-				pixelsSkipped = pixelCoordsAll.cols;
-				break;
+		//if new series of data begins - eg. new dir
+		bool removeAllFlag = false;
+		if(timestamps[i] < classResultsHistDir.front().timestamp){
+			pixelsSkipped = pixelCoordsAll.cols;
+			while(!classResultsHistDir.empty()){
+				classResultsHistDir.pop();
 			}
-
+			removeAllFlag = true;
+		}
+		while(!removeAllFlag &&
+				(timestamps[i] - classResultsHistDir.front().timestamp) > std::chrono::milliseconds(pixelsTimeout))
+		{
 			pixelsSkipped += classResultsHistDir.front().numPixels;
 			classResultsHistDir.pop();
 		}
@@ -1452,7 +1462,11 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 		}
 		imshow("manual seg", coloredOriginalManualSeg * 0.25 + images[i] * 0.75);
 
-		draw3DVis(pixelCoordsAll, pixelColorsAll, poses[i], segmentResults);
+		draw3DVis(win,
+				pixelCoordsAll,
+				pixelColorsAll,
+				poses[i],
+				segmentResults);
 
 		//count current results
 		vector<vector<int> > curClassResultsPix(labels.size(), vector<int>(labels.size(), 0));
@@ -1903,32 +1917,63 @@ cv::Mat Camera::assignSegmentLabels(cv::Mat pixelLabels, cv::Mat coords){
 	return segmentLabels;
 }
 
-void Camera::draw3DVis(cv::Mat coords, cv::Mat colors, cv::Mat pose, cv::Mat segments){
-    ///create a window
-    viz::Viz3d win("camera visualization");
+void Camera::draw3DVis(cv::viz::Viz3d& win,
+					cv::Mat coords,
+					cv::Mat colors,
+					cv::Mat pose,
+					cv::Mat segments)
+{
+//    ///create a window
+//    viz::Viz3d win("camera visualization");
+	win.removeAllWidgets();
 
     ///add frame of reference
-    Affine3f affineMapCenterPose(imuOrigRobot.inv());
-    win.showWidget("frame of reference widget", viz::WCoordinateSystem(1000), affineMapCenterPose);
+    Affine3f affineImuPose(imuOrigRobot);
+    win.showWidget("frame of reference widget", viz::WCoordinateSystem(1000));
 
     //add grid
     viz::WGrid grid(Vec2i(MAP_SIZE, MAP_SIZE), Vec2d(MAP_RASTER_SIZE, MAP_RASTER_SIZE));
-    win.showWidget("grid widget", grid, affineMapCenterPose);
+    win.showWidget("grid widget", grid);
 
     //robot pose
     viz::WCoordinateSystem robotFrameOfRef(500);
     Affine3f affinePose(pose);
-    win.showWidget("robot frame of ref widget", robotFrameOfRef, affinePose);
+    win.showWidget("robot frame of ref widget", robotFrameOfRef, affineImuPose);
 
 //    win.setWidgetPose("robot frame of ref widget", affinePose);
 
     //point cloud
     Mat coordsT = coords.t();
     Mat coordsVis = coordsT.reshape(4, 1);
-    cout << "coordsVis.size() = " << coordsVis.size() << endl;
-    cout << "colors.size() = " << colors.size() << endl;
+//    cout << "coordsVis.size() = " << coordsVis.size() << endl;
+//    cout << "colors.size() = " << colors.size() << endl;
     viz::WCloud cloud(coordsVis, colors);
+    cloud.setRenderingProperty(viz::OPACITY, 0.5);
     win.showWidget("cloud widget", cloud);
+
+    //results
+    for(int mapX = 0; mapX < MAP_SIZE; ++mapX){
+    	for(int mapY = 0; mapY < MAP_SIZE; ++mapY){
+    		if(segments.at<int>(mapX, mapY) >= 0 &&
+    			segments.at<int>(mapX, mapY) != DRIVABLE_LABEL)
+    		{
+    			Point3d centerPt((mapX - MAP_SIZE/2) * MAP_RASTER_SIZE + MAP_RASTER_SIZE/2,
+								(mapY - MAP_SIZE/2) * MAP_RASTER_SIZE + MAP_RASTER_SIZE/2,
+								0);
+    			viz::WPlane segPlane(centerPt,
+    								Vec3d(0.0, 0.0, 1.0) /*normal*/,
+									Vec3d(0.0, 1.0, 0.0) /*new y axis*/,
+									Size2d(MAP_RASTER_SIZE, MAP_RASTER_SIZE) /*size*/,
+									viz::Color::red());
+    			segPlane.setRenderingProperty(viz::OPACITY, 0.5);
+
+    			int segId = mapX * MAP_SIZE + mapY;
+    			char buf[10];
+    			sprintf(buf, "%d", segId);
+    			win.showWidget(String("plane widget") + String(buf), segPlane);
+    		}
+    	}
+    }
 
     //camera pose
     /// Let's assume camera has the following properties
@@ -1939,14 +1984,15 @@ void Camera::draw3DVis(cv::Mat coords, cv::Mat colors, cv::Mat pose, cv::Mat seg
     win.setViewerPose(camPose);
 
     // Event loop is over when pressed q, Q, e, E
-	// Start event loop once for 1 millisecond
-    win.spinOnce(1, true);
+	// Start event loop once for 10 millisecond
+    win.spinOnce(10, true);
 	while(!win.wasStopped())
 	{
 		// Interact with window
 
-		// Event loop for 1 millisecond
-		win.spinOnce(1, true);
+		// Event loop for 10 millisecond
+		win.spinOnce(10, true);
+		waitKey(5);
 	}
 }
 
