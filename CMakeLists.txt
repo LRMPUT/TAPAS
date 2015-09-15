@@ -24,6 +24,8 @@ find_package(OpenCV REQUIRED)
 
 find_package(Boost COMPONENTS system filesystem thread REQUIRED)
 
+set(LBFGS_LIBRARIES lbfgs)
+
 IF (CUDA GREATER 0)
 	find_package(CUDA REQUIRED)
 	# Pass options to NVCC
@@ -84,6 +86,11 @@ set(Tapas_SOURCES
 	MovementConstraints/Hokuyo/Hokuyo.cpp
 	MovementConstraints/Sharp/Sharp.cpp
 	MovementConstraints/Camera/LibSVM-weights/svm.cpp
+	MovementConstraints/Camera/Pgm/CustFeature.cpp
+	MovementConstraints/Camera/Pgm/Inference.cpp
+	MovementConstraints/Camera/Pgm/ParamEst.cpp
+	MovementConstraints/Camera/Pgm/Pgm.cpp
+	#MovementConstraints/Camera/Pgm/UnionFind.cpp
 	MovementConstraints/Camera/Camera.cpp
 	MovementConstraints/Camera/HierClassifier/UnionFind.cpp
 	MovementConstraints/Camera/HierClassifier/Classifier.cpp
@@ -149,7 +156,8 @@ target_link_libraries(Tapas
 	${OpenCV_LIBS}
 	${Boost_LIBRARIES}
 	${urg_LIBRARIES}
-	${TinyXML_LIBRARIES})
+	${TinyXML_LIBRARIES}
+	${LBFGS_LIBRARIES})
 
 find_package(OpenGL REQUIRED)
 set(QGLViewer_LIBRARIES QGLViewer)
@@ -223,4 +231,5 @@ target_link_libraries(TapasQt/gui
 	${OPENGL_LIBRARIES}
 	${QGLViewer_LIBRARIES}
 	${urg_LIBRARIES}
-	${TinyXML_LIBRARIES})
+	${TinyXML_LIBRARIES}
+	${LBFGS_LIBRARIES})

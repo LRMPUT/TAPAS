@@ -44,8 +44,9 @@
 #include <boost/filesystem.hpp>
 //TinyXML
 #include <tinyxml.h>
-//Robots Intellect
+//TAPAS
 #include "HierClassifier/HierClassifier.h"
+#include "Pgm/Pgm.h"
 
 class MovementConstraints;
 class Debug;
@@ -215,7 +216,7 @@ class Camera {
 	cv::Mat readMatrixSettings(TiXmlElement* parent, const char* node, int rows, int cols);
 
 	/** \brief Insert new data and skip dataSkipped data
-	 * @dataAll data stored as cols
+	 * @param dataAll data stored as cols
 	 */
 	void insertNewData(cv::Mat& dataAll, cv::Mat newData, int dataSkipped);
 
@@ -229,6 +230,18 @@ class Camera {
 					cv::Mat colors,
 					cv::Mat pose,
 					cv::Mat segments);
+
+	void prepareSegmentInfo(std::vector<cv::Mat>& segmentPriors,
+							std::vector<cv::Mat>& segmentFeats,
+							std::vector<int>& segmentPixelCount,
+							cv::Mat pixelCoords,
+							cv::Mat pixelColors,
+							const std::vector<cv::Mat>& classResults,
+							cv::Mat pointCloud);
+
+	Pgm constructPgm(const std::vector<cv::Mat>& segmentPriors,
+					const std::vector<cv::Mat>& segmentFeats,
+					const std::vector<int>& segmentPixelCount);
 
 	void readCache(boost::filesystem::path cacheFile);
 

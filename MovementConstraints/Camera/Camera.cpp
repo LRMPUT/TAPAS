@@ -40,10 +40,11 @@
 #ifndef NO_CUDA
 	#include <cuda_runtime.h>
 #endif
-//Robotour
+//TAPAS
 #include "Camera.h"
 #include "CameraCuda.h"
 #include "../../Robot/Robot.h"
+#include "Pgm/CustFeature.h"
 
 using namespace boost;
 using namespace std;
@@ -1994,6 +1995,227 @@ void Camera::draw3DVis(cv::viz::Viz3d& win,
 		win.spinOnce(10, true);
 		waitKey(5);
 	}
+}
+
+void Camera::prepareSegmentInfo(std::vector<cv::Mat>& segmentPriors,
+								std::vector<cv::Mat>& segmentFeats,
+								std::vector<int>& segmentPixelCount,
+								cv::Mat pixelCoords,
+								cv::Mat pixelColors,
+								const std::vector<cv::Mat>& classResults,
+								cv::Mat pointCloud)
+{
+	segmentPriors.clear();
+	segmentFeats.clear();
+	segmentPixelCount.clear();
+
+    for(int mapX = 0; mapX < MAP_SIZE; ++mapX){
+    	for(int mapY = 0; mapY < MAP_SIZE; ++mapY){
+    		//prior for each label
+    		segmentPriors.push_back(Mat(labels.size(), 1, CV_32FC1, Scalar(0.0)));
+    		//3 features - mean R, G, B
+    		segmentFeats.push_back(Mat(3, 1, CV_32FC1, Scalar(0)));
+    		segmentPixelCount.push_back(0);
+    	}
+    }
+	for(int d = 0; d < pixelCoords.cols; ++d){
+		int xSegm = pixelCoords.at<float>(0, d)/MAP_RASTER_SIZE + MAP_SIZE/2;
+		int ySegm = pixelCoords.at<float>(1, d)/MAP_RASTER_SIZE + MAP_SIZE/2;
+		int segId = xSegm*MAP_SIZE + xSegm;
+
+		++segmentPixelCount[segId];
+		for(int l = 0; l < labels.size(); ++l){
+			segmentPriors[segId].at<float>(l) += classResults[l].at<float>(xSegm, ySegm);
+		}
+		for(int col = 0; col < 3; ++col){
+			segmentFeats[segId].at<float>(col) += pixelColors.at<Vec3b>(d)[col];
+		}
+	}
+	for(int seg = 0; seg < segmentPriors.size(); ++seg){
+		segmentPriors[seg] /= segmentPixelCount[seg];
+		segmentFeats[seg] /= segmentPixelCount[seg];
+	}
+}
+
+void addEdgeToPgm(Cluster* a,
+					Cluster* b,
+					vector<RandVar*> sepset /* id sorted */)
+{
+//	cout << "adding edge from " << a->id() << " to " << b->id() << endl;
+	vector<Cluster*> aNh = a->nh();
+	auto it = upper_bound(aNh.begin(), aNh.end(), b, compIdClust);
+	int pos = it - aNh.begin();
+//	cout << "inseting b at pos " << pos << ", aNh.size() = " << aNh.size() << endl;
+	aNh.insert(it, b);
+	a->setNh(aNh);
+
+	vector<vector<RandVar*> > aSepsets = a->sepsets();
+//	cout << "inseting sepset at pos " << pos << ", aSepsets.size() = " << aSepsets.size() << endl;
+	aSepsets.insert(aSepsets.begin() + pos, sepset);
+	a->setSepsets(aSepsets);
+
+	vector<Cluster*> bNh = b->nh();
+	it = upper_bound(bNh.begin(), bNh.end(), a, compIdClust);
+	pos = it - bNh.begin();
+//	cout << "inseting a at pos " << pos << ", bNh.size() = " << bNh.size() << endl;
+	bNh.insert(it, a);
+//	cout << "end inserting" << endl;
+	b->setNh(bNh);
+
+//	cout << "sep" << endl;
+	vector<vector<RandVar*> > bSepsets = b->sepsets();
+//	cout << "inseting sepset at pos " << pos << ", bSepsets.size() = " << bSepsets.size() << endl;
+	bSepsets.insert(bSepsets.begin() + pos, sepset);
+	b->setSepsets(bSepsets);
+}
+
+Pgm Camera::constructPgm(const std::vector<cv::Mat>& segmentPriors,
+						const std::vector<cv::Mat>& segmentFeats,
+						const std::vector<int>& segmentPixelCount)
+{
+	vector<RandVar*> randVars;
+	vector<Cluster*> clusters;
+	vector<Feature*> features;
+	vector<double> params;
+
+	int numSegFeat = segmentFeats.front().rows;
+	int numLabels = segmentPriors.front().rows;
+
+	//random variables
+	int nextRandVarId = 0;
+	map<int, int> segIdToRandVarId;
+	vector<double> randVarVals;
+	for(int l = 0; l < labels.size(); ++l){
+		randVarVals.push_back(l);
+	}
+	for(int seg = 0; seg < segmentPixelCount.size(); ++seg){
+		if(segmentPixelCount[seg] > 0){
+			randVars.push_back(new RandVar(nextRandVarId, randVarVals));
+			segIdToRandVarId[seg] = nextRandVarId;
+			++nextRandVarId;
+		}
+	}
+
+	//features
+	int nextFeatId = 0;
+	vector<int> nodeFeatObsNums;
+	for(int l = 0; l < numLabels; ++l){
+		nodeFeatObsNums.push_back(l);
+	}
+	features.push_back(new TerClassNodeFeature(nextFeatId, nextFeatId, nodeFeatObsNums));
+	++nextFeatId;
+
+	for(int f = 0; f < numSegFeat; ++f){
+		features.push_back(new TerClassPairFeature(nextFeatId, nextFeatId, vector<int>{f, f + numSegFeat}));
+		++nextFeatId;
+	}
+
+	params = vector<double>(nextFeatId, 0);
+
+	//var clusters
+	int nextClusterId = 0;
+	map<int, int> segIdToVarClusterId;
+	for(int seg = 0; seg < segmentPixelCount.size(); ++seg){
+		if(segmentPixelCount[seg] > 0){
+			int randVarId = segIdToRandVarId[seg];
+			Cluster* curCluster = new Cluster(nextClusterId,
+												vector<Feature*>{},
+												vector<RandVar*>{randVars[randVarId]},
+												vector<int>());
+			segIdToRandVarId[seg] = nextClusterId;
+			clusters.push_back(curCluster);
+			++nextClusterId;
+		}
+	}
+
+	//node factor clusters
+	map<int, int> segIdToNodeFactClusterId;
+	for(int seg = 0; seg < segmentPixelCount.size(); ++seg){
+		if(segmentPixelCount[seg] > 0){
+			int randVarId = segIdToRandVarId[seg];
+			vector<int> obsVecIdxs;
+			for(int l = 0; l < numLabels; ++l){
+				obsVecIdxs.push_back(randVarId * (numLabels + numSegFeat) + l);
+			}
+			Cluster* curCluster = new Cluster(nextClusterId,
+												vector<Feature*>(features.begin(), features.begin() + 1),
+												vector<RandVar*>{randVars[randVarId]},
+												vector<int>{0},
+												obsVecIdxs);
+			segIdToRandVarId[seg] = nextClusterId;
+			clusters.push_back(curCluster);
+
+			//add edge to cluster for variable
+			addEdgeToPgm(curCluster, clusters[segIdToVarClusterId[seg]], vector<RandVar*>{randVars[randVarId]});
+
+			++nextClusterId;
+		}
+	}
+
+	//pair-wise factor clusters
+	vector<set<int> > addedEdges(segmentPixelCount.size());
+	for(int seg = 0; seg < segmentPixelCount.size(); ++seg){
+		if(segmentPixelCount[seg] > 0){
+			int randVarId = segIdToRandVarId[seg];
+
+			//Neighborhood
+			int nhood[][2] = {{1, 0},
+								{0, 1},
+								{-1, 0},
+								{0, -1}};
+			int curX = seg / MAP_SIZE;
+			int curY = seg % MAP_SIZE;
+			for(int nh = 0; nh < (int)(sizeof(nhood)/sizeof(nhood[0])); ++nh){
+				int nX = curX + nhood[nh][0];
+				int nY = curY + nhood[nh][1];
+				if(nX >= 0 && nX < MAP_SIZE && nY >= 0 && nY < MAP_SIZE){
+					int nId = nX*MAP_SIZE + nY;
+					//if neighboring segment exists and edge not added
+					if(segIdToVarClusterId.count(nId) > 0 &&
+						addedEdges[seg].count(nId) == 0)
+					{
+						int nRandVarId = segIdToRandVarId[nId];
+						vector<int> obsVecIdxs;
+						for(int f = 0; f < numSegFeat; ++f){
+							obsVecIdxs.push_back(randVarId * (numLabels + numSegFeat) + numLabels + f);
+						}
+						for(int f = 0; f < numSegFeat; ++f){
+							obsVecIdxs.push_back(nRandVarId * (numLabels + numSegFeat) + numLabels + f);
+						}
+
+						vector<RandVar*> clustRandVars;
+						if(randVarId < nRandVarId){
+							clustRandVars.push_back(randVars[randVarId]);
+							clustRandVars.push_back(randVars[nRandVarId]);
+						}
+						else{
+							clustRandVars.push_back(randVars[nRandVarId]);
+							clustRandVars.push_back(randVars[randVarId]);
+						}
+
+						Cluster* curCluster = new Cluster(nextClusterId,
+															vector<Feature*>(features.begin() + 1, features.end()),
+															clustRandVars,
+															vector<int>{0, 1},
+															obsVecIdxs);
+						clusters.push_back(curCluster);
+
+						//add edge to cluster for variable
+						addEdgeToPgm(curCluster, clusters[segIdToVarClusterId[seg]], vector<RandVar*>{randVars[randVarId]});
+						addEdgeToPgm(curCluster, clusters[segIdToVarClusterId[nId]], vector<RandVar*>{randVars[nRandVarId]});
+
+						++nextClusterId;
+					}
+				}
+			}
+		}
+	}
+
+
+	Pgm pgm(randVars, clusters, features);
+	pgm.params() = params;
+
+	return pgm;
 }
 
 cv::Mat Camera::readMatrixSettings(TiXmlElement* parent, const char* node, int rows, int cols){
