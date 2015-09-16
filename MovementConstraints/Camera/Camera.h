@@ -123,7 +123,7 @@ class Camera {
 
 	std::vector<cv::Mat> computeMapCoords(cv::Mat curPosImuMapCenter);
 
-		std::vector<cv::Mat> computeMapCoordsGpu(cv::Mat curPosImuMapCenter);
+	std::vector<cv::Mat> computeMapCoordsGpu(cv::Mat curPosImuMapCenter);
 
 	std::vector<cv::Point2f> computePointProjection(const std::vector<cv::Point3f>& imPoint,
 													int cameraInd);
@@ -239,9 +239,16 @@ class Camera {
 							const std::vector<cv::Mat>& classResults,
 							cv::Mat pointCloud);
 
-	Pgm constructPgm(const std::vector<cv::Mat>& segmentPriors,
+	void constructPgm(Pgm& pgm,
+					std::map<int, int>& segIdToVarClusterId,
+					std::vector<double>& obsVec,
+					const std::vector<cv::Mat>& segmentPriors,
 					const std::vector<cv::Mat>& segmentFeats,
 					const std::vector<int>& segmentPixelCount);
+
+	cv::Mat inferTerrainLabels(const Pgm& pgm,
+								const std::vector<double>& obsVec,
+								const std::map<int, int>& mapSegIdToVarClusterId);
 
 	void readCache(boost::filesystem::path cacheFile);
 

@@ -45,6 +45,7 @@
 #include "CameraCuda.h"
 #include "../../Robot/Robot.h"
 #include "Pgm/CustFeature.h"
+#include "Pgm/Inference.h"
 
 using namespace boost;
 using namespace std;
@@ -1412,25 +1413,63 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 
 		cout << "Num pixels = " << pixelCoordsAll.cols << endl;
 
-		//TODO run inference
+		//run inference
 		cout << "running inference" << endl;
+//		Mat inferResults(1, manualLabelsAll.cols, CV_32SC1);
+//		for(int d = 0; d < manualLabelsAll.cols; ++d){
+//			int bestLabelInd = -1;
+//			float bestLabelScore = 0;
+//			for(int l = 0; l < classResultsAll.size(); ++l){
+//				if(classResultsAll[l].at<float>(0, d) > bestLabelScore){
+//					bestLabelInd = l;
+//					bestLabelScore = classResultsAll[l].at<float>(0, d);
+//				}
+//			}
+//			inferResults.at<int>(d) = bestLabelInd;
+//		}
+//
+//		//assign result for each observed segment - temporary, should be obtained during inference
+//		cout << "assigning results" << endl;
+//		Mat segmentResults = assignSegmentLabels(inferResults, pixelCoordsAll);
+////		cout << "segmentResults = " << segmentResults << endl;
+
+		std::vector<cv::Mat> segmentPriors;
+		std::vector<cv::Mat> segmentFeats;
+		std::vector<int> segmentPixelCount;
+		Pgm pgm;
+		std::map<int, int> segIdToVarClusterId;
+		std::vector<double> obsVec;
+
+		cout << "prepare segment info" << endl;
+		prepareSegmentInfo(segmentPriors,
+							segmentFeats,
+							segmentPixelCount,
+							pixelCoordsAll,
+							pixelColorsAll,
+							classResultsAll,
+							terrains[i]);
+
+		cout << "construct pgm" << endl;
+		constructPgm(pgm,
+					segIdToVarClusterId,
+					obsVec,
+					segmentPriors,
+					segmentFeats,
+					segmentPixelCount);
+
+		cout << "infer terrain labels" << endl;
+		Mat segmentResults = inferTerrainLabels(pgm,
+												obsVec,
+												segIdToVarClusterId);
+
+		cout << "infer results" << endl;
 		Mat inferResults(1, manualLabelsAll.cols, CV_32SC1);
 		for(int d = 0; d < manualLabelsAll.cols; ++d){
-			int bestLabelInd = -1;
-			float bestLabelScore = 0;
-			for(int l = 0; l < classResultsAll.size(); ++l){
-				if(classResultsAll[l].at<float>(0, d) > bestLabelScore){
-					bestLabelInd = l;
-					bestLabelScore = classResultsAll[l].at<float>(0, d);
-				}
-			}
-			inferResults.at<int>(d) = bestLabelInd;
-		}
+			int xSegm = pixelCoordsAll.at<float>(0, d)/MAP_RASTER_SIZE + MAP_SIZE/2;
+			int ySegm = pixelCoordsAll.at<float>(1, d)/MAP_RASTER_SIZE + MAP_SIZE/2;
 
-		//assign result for each observed segment - temporary, should be obtained during inference
-		cout << "assigning results" << endl;
-		Mat segmentResults = assignSegmentLabels(inferResults, pixelCoordsAll);
-//		cout << "segmentResults = " << segmentResults << endl;
+			inferResults.at<int>(d) = segmentResults.at<int>(xSegm, ySegm);
+		}
 
 		//assign manual label for each observed segment
 		cout << "assigning labels" << endl;
@@ -2014,26 +2053,50 @@ void Camera::prepareSegmentInfo(std::vector<cv::Mat>& segmentPriors,
     		//prior for each label
     		segmentPriors.push_back(Mat(labels.size(), 1, CV_32FC1, Scalar(0.0)));
     		//3 features - mean R, G, B
-    		segmentFeats.push_back(Mat(3, 1, CV_32FC1, Scalar(0)));
+    		segmentFeats.push_back(Mat(3, 1, CV_32FC1, Scalar(0.0)));
     		segmentPixelCount.push_back(0);
     	}
     }
+//    cout << "segmentPriors.size() = " << segmentPriors.size() << endl;
+//    cout << "pixels" << endl;
 	for(int d = 0; d < pixelCoords.cols; ++d){
-		int xSegm = pixelCoords.at<float>(0, d)/MAP_RASTER_SIZE + MAP_SIZE/2;
-		int ySegm = pixelCoords.at<float>(1, d)/MAP_RASTER_SIZE + MAP_SIZE/2;
-		int segId = xSegm*MAP_SIZE + xSegm;
-
-		++segmentPixelCount[segId];
+		bool skipPixel = false;
 		for(int l = 0; l < labels.size(); ++l){
-			segmentPriors[segId].at<float>(l) += classResults[l].at<float>(xSegm, ySegm);
+			if(classResults[l].at<float>(d) < 0.0){
+				skipPixel = true;
+				break;
+			}
 		}
-		for(int col = 0; col < 3; ++col){
-			segmentFeats[segId].at<float>(col) += pixelColors.at<Vec3b>(d)[col];
+
+		if(!skipPixel){
+			int xSegm = pixelCoords.at<float>(0, d)/MAP_RASTER_SIZE + MAP_SIZE/2;
+			int ySegm = pixelCoords.at<float>(1, d)/MAP_RASTER_SIZE + MAP_SIZE/2;
+
+			if(xSegm >= 0 && xSegm < MAP_SIZE && ySegm >= 0 && ySegm < MAP_SIZE){
+				int segId = xSegm*MAP_SIZE + ySegm;
+
+	//			cout << "segId = " << segId << endl;
+				++segmentPixelCount[segId];
+	//			cout << "segmentPixelCount[segId] = " << segmentPixelCount[segId] << endl;
+				for(int l = 0; l < labels.size(); ++l){
+					segmentPriors[segId].at<float>(l) += classResults[l].at<float>(d);
+				}
+				for(int col = 0; col < 3; ++col){
+					segmentFeats[segId].at<float>(col) += pixelColors.at<Vec3b>(d)[col];
+				}
+			}
 		}
 	}
 	for(int seg = 0; seg < segmentPriors.size(); ++seg){
-		segmentPriors[seg] /= segmentPixelCount[seg];
-		segmentFeats[seg] /= segmentPixelCount[seg];
+		if(segmentPixelCount[seg] > 0){
+			cout << "seg = " << seg << endl;
+			segmentPriors[seg] /= segmentPixelCount[seg];
+			//ensure that no prior has value 0.0 or 1.0 - unacceptable during inference
+			static const float priorBias = 0.05;
+			segmentPriors[seg] = segmentPriors[seg] * (1.0 - priorBias) + (1.0 / labels.size()) * priorBias;
+
+			segmentFeats[seg] /= segmentPixelCount[seg];
+		}
 	}
 }
 
@@ -2069,7 +2132,10 @@ void addEdgeToPgm(Cluster* a,
 	b->setSepsets(bSepsets);
 }
 
-Pgm Camera::constructPgm(const std::vector<cv::Mat>& segmentPriors,
+void Camera::constructPgm(Pgm& pgm,
+						std::map<int, int>& segIdToVarClusterId,
+						std::vector<double>& obsVec,
+						const std::vector<cv::Mat>& segmentPriors,
 						const std::vector<cv::Mat>& segmentFeats,
 						const std::vector<int>& segmentPixelCount)
 {
@@ -2080,6 +2146,18 @@ Pgm Camera::constructPgm(const std::vector<cv::Mat>& segmentPriors,
 
 	int numSegFeat = segmentFeats.front().rows;
 	int numLabels = segmentPriors.front().rows;
+
+	//observation vector
+	for(int seg = 0; seg < segmentPixelCount.size(); ++seg){
+		if(segmentPixelCount[seg] > 0){
+			for(int l = 0; l < numLabels; ++l){
+				obsVec.push_back(segmentPriors[seg].at<float>(l));
+			}
+			for(int f = 0; f < numSegFeat; ++f){
+				obsVec.push_back(segmentFeats[seg].at<float>(f));
+			}
+		}
+	}
 
 	//random variables
 	int nextRandVarId = 0;
@@ -2110,19 +2188,18 @@ Pgm Camera::constructPgm(const std::vector<cv::Mat>& segmentPriors,
 		++nextFeatId;
 	}
 
-	params = vector<double>(nextFeatId, 0);
+	params = vector<double>(nextFeatId, 1.0);
 
 	//var clusters
 	int nextClusterId = 0;
-	map<int, int> segIdToVarClusterId;
 	for(int seg = 0; seg < segmentPixelCount.size(); ++seg){
 		if(segmentPixelCount[seg] > 0){
 			int randVarId = segIdToRandVarId[seg];
 			Cluster* curCluster = new Cluster(nextClusterId,
 												vector<Feature*>{},
 												vector<RandVar*>{randVars[randVarId]},
-												vector<int>());
-			segIdToRandVarId[seg] = nextClusterId;
+												vector<int>{0});
+			segIdToVarClusterId[seg] = nextClusterId;
 			clusters.push_back(curCluster);
 			++nextClusterId;
 		}
@@ -2142,7 +2219,7 @@ Pgm Camera::constructPgm(const std::vector<cv::Mat>& segmentPriors,
 												vector<RandVar*>{randVars[randVarId]},
 												vector<int>{0},
 												obsVecIdxs);
-			segIdToRandVarId[seg] = nextClusterId;
+			segIdToNodeFactClusterId[seg] = nextClusterId;
 			clusters.push_back(curCluster);
 
 			//add edge to cluster for variable
@@ -2156,6 +2233,7 @@ Pgm Camera::constructPgm(const std::vector<cv::Mat>& segmentPriors,
 	vector<set<int> > addedEdges(segmentPixelCount.size());
 	for(int seg = 0; seg < segmentPixelCount.size(); ++seg){
 		if(segmentPixelCount[seg] > 0){
+//			cout << "seg = " << seg << endl;
 			int randVarId = segIdToRandVarId[seg];
 
 			//Neighborhood
@@ -2170,10 +2248,14 @@ Pgm Camera::constructPgm(const std::vector<cv::Mat>& segmentPriors,
 				int nY = curY + nhood[nh][1];
 				if(nX >= 0 && nX < MAP_SIZE && nY >= 0 && nY < MAP_SIZE){
 					int nId = nX*MAP_SIZE + nY;
+//					cout << "nId = " << nId << endl;
+//					cout << "segIdToVarClusterId.count(nId) = " << segIdToVarClusterId.count(nId) << endl;
+//					cout << "addedEdges[seg].count(nId) = " << addedEdges[seg].count(nId) << endl;
 					//if neighboring segment exists and edge not added
 					if(segIdToVarClusterId.count(nId) > 0 &&
 						addedEdges[seg].count(nId) == 0)
 					{
+//						cout << "Adding edge between " << seg << " and " << nId << endl;
 						int nRandVarId = segIdToRandVarId[nId];
 						vector<int> obsVecIdxs;
 						for(int f = 0; f < numSegFeat; ++f){
@@ -2204,6 +2286,9 @@ Pgm Camera::constructPgm(const std::vector<cv::Mat>& segmentPriors,
 						addEdgeToPgm(curCluster, clusters[segIdToVarClusterId[seg]], vector<RandVar*>{randVars[randVarId]});
 						addEdgeToPgm(curCluster, clusters[segIdToVarClusterId[nId]], vector<RandVar*>{randVars[nRandVarId]});
 
+						addedEdges[seg].insert(nId);
+						addedEdges[nId].insert(seg);
+
 						++nextClusterId;
 					}
 				}
@@ -2212,10 +2297,64 @@ Pgm Camera::constructPgm(const std::vector<cv::Mat>& segmentPriors,
 	}
 
 
-	Pgm pgm(randVars, clusters, features);
+	pgm = Pgm(randVars, clusters, features);
 	pgm.params() = params;
 
-	return pgm;
+	cout << "nextRandVarId = " << nextRandVarId << endl;
+	cout << "nextFeatId = " << nextFeatId << endl;
+	cout << "nextClusterId = " << nextClusterId << endl;
+	cout << "obsVec = " << obsVec << endl;
+}
+
+cv::Mat Camera::inferTerrainLabels(const Pgm& pgm,
+									const std::vector<double>& obsVec,
+									const std::map<int, int>& mapSegIdToVarClusterId)
+{
+	vector<vector<double> > marg;
+	vector<vector<vector<double> > > msgs;
+	vector<vector<double> > retVals;
+	vector<double> params{1.0, -1.0, -1.0, -1.0};
+
+	bool calibrated = Inference::compMAPParam(pgm,
+											marg,
+											msgs,
+											params,
+											obsVec);
+	cout << "calibrated = " << calibrated << endl;
+
+    for(int mapX = 0; mapX < MAP_SIZE; ++mapX){
+    	for(int mapY = 0; mapY < MAP_SIZE; ++mapY){
+    		int segId = mapX * MAP_SIZE + mapY;
+    		//if segment labeling is inferred
+    		if(mapSegIdToVarClusterId.count(segId) > 0){
+    			int varClusterId = mapSegIdToVarClusterId.at(segId);
+//    			cout << "marg for seg " << segId << " = " << marg[varClusterId] << endl;
+    		}
+    	}
+    }
+
+	retVals = Inference::decodeMAP(pgm,
+									marg,
+									msgs,
+									params,
+									obsVec);
+
+	Mat ret(MAP_SIZE, MAP_SIZE, CV_32SC1, Scalar(-1));
+    for(int mapX = 0; mapX < MAP_SIZE; ++mapX){
+    	for(int mapY = 0; mapY < MAP_SIZE; ++mapY){
+    		int segId = mapX * MAP_SIZE + mapY;
+    		//if segment labeling is inferred
+    		if(mapSegIdToVarClusterId.count(segId) > 0){
+    			int varClusterId = mapSegIdToVarClusterId.at(segId);
+    			const vector<double>& varVals = retVals[varClusterId];
+    			//only 1 variable representing current terrain segment
+    			int curLab = Pgm::roundToInt(varVals.front());
+    			ret.at<int>(mapX, mapY) = curLab;
+    		}
+    	}
+    }
+
+	return ret;
 }
 
 cv::Mat Camera::readMatrixSettings(TiXmlElement* parent, const char* node, int rows, int cols){
