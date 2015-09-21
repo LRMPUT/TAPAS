@@ -100,17 +100,14 @@ double TerClassNodeFeature::comp(const std::vector<double>& vals,
 								const std::vector<double>& obsVec)
 {
 	int label = (int)(vals[0] + 0.5);
-	return log(obsVec[label])/3;
+	return log(obsVec[obsNums()[label]])/3;
 }
 
 double TerClassNodeFeature::compParam(const std::vector<double>& vals,
 						const std::vector<double>& params,
 						const std::vector<double>& obsVec)
 {
-	int label = (int)(vals[0] + 0.5);
-//	cout << "obsVec[0] = " << obsVec[0] << endl;
-//	cout << "obsVec[1] = " << obsVec[1] << endl;
-	return params[paramNum()]*log(obsVec[label])/3;
+	return params[paramNum()]*comp(vals, obsVec);
 }
 
 //-------------TERRAIN CLASSIFICATION PAIRWISE-------------
@@ -124,7 +121,7 @@ TerClassPairFeature::TerClassPairFeature(int iid, int iparamNum, const std::vect
 double TerClassPairFeature::comp(const std::vector<double>& vals,
 								const std::vector<double>& obsVec)
 {
-	static const double beta = 0.05;
+	static const double beta = 2;
 	int ind = (fabs(vals[0] - vals[1]) < 1e-4 ? 0 : 1);
 	double diff = obsVec[obsNums()[0]] - obsVec[obsNums()[1]];
 	return ind * exp(-beta * diff * diff);
@@ -134,10 +131,7 @@ double TerClassPairFeature::compParam(const std::vector<double>& vals,
 						const std::vector<double>& params,
 						const std::vector<double>& obsVec)
 {
-	static const double beta = 0.05;
-	int ind = (fabs(vals[0] - vals[1]) < 1e-4 ? 0 : 1);
-	double diff = obsVec[obsNums()[0]] - obsVec[obsNums()[1]];
-	return params[paramNum()] * ind * exp(-beta * diff * diff);
+	return params[paramNum()] * comp(vals, obsVec);
 }
 
 

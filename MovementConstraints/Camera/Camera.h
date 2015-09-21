@@ -229,7 +229,20 @@ class Camera {
 					cv::Mat coords,
 					cv::Mat colors,
 					cv::Mat pose,
-					cv::Mat segments);
+					cv::Mat segments,
+					cv::Mat segmentsManual = cv::Mat());
+
+	void updatePixelData(cv::Mat& pixelCoordsAll,
+						std::vector<cv::Mat>& classResultsAll,
+						cv::Mat& manualLabelsAll,
+						cv::Mat& pixelColorsAll,
+						std::queue<ClassResult>& classResultsHistDir,
+						const cv::Mat mapMove,
+						std::chrono::high_resolution_clock::time_point timestamp,
+						const cv::Mat pixelCoords,
+						const std::vector<cv::Mat>& classResults,
+						const cv::Mat image,
+						const cv::Mat manualLabelsOnImage = cv::Mat());
 
 	void prepareSegmentInfo(std::vector<cv::Mat>& segmentPriors,
 							std::vector<cv::Mat>& segmentFeats,
@@ -241,6 +254,7 @@ class Camera {
 
 	void constructPgm(Pgm& pgm,
 					std::map<int, int>& segIdToVarClusterId,
+					std::map<int, int>& segIdToRandVarId,
 					std::vector<double>& obsVec,
 					const std::vector<cv::Mat>& segmentPriors,
 					const std::vector<cv::Mat>& segmentFeats,

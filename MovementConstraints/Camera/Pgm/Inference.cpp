@@ -186,7 +186,7 @@ void Inference::treeReparametrize(const Pgm& pgm,
 			msgsSent[c] = *(msgsNotReceived[c].begin());
 		}
 	}
-	cout << "graph.size() = " << graph.size() << endl;
+//	cout << "graph.size() = " << graph.size() << endl;
 
 	using namespace std::chrono;
 
@@ -281,7 +281,6 @@ bool Inference::runBP(const Pgm& pgm,
 
 //	std::vector<double> locObsVec = obsVec;
 
-	//TODO Change for set
 	vector<set<int> > edgesAdded(numClusters, set<int>());
 
 	/*for(int p = 0; p < params.size(); ++p){
@@ -289,7 +288,7 @@ bool Inference::runBP(const Pgm& pgm,
 	}
 	cout << endl;*/
 
-	cout << "Adding edges, numClusters = " << numClusters << endl;
+//	cout << "Adding edges, numClusters = " << numClusters << endl;
 	vector<InfEdge> edges;
 	for(int c = 0; c < numClusters; ++c){
 //		cout << "Cluster " << c << " nh().size() = " << pgm.constClusters()[c]->nh().size() << endl;
@@ -308,7 +307,7 @@ bool Inference::runBP(const Pgm& pgm,
 		}
 	}
 
-	cout << "Creating msgs" << endl;
+//	cout << "Creating msgs" << endl;
 	if(msgs.empty()){
 		//Initialize messages
 //		cout << "initializing messages" << endl;
@@ -353,12 +352,12 @@ bool Inference::runBP(const Pgm& pgm,
 	}
 
 	static const int maxIter = 20;
-	static const double maxEps = 1e-4;
+	static const double maxEps = 1e-5;
 	int iter = 0;
 
 	bool testPass = false;
 	while(iter < maxIter){
-		cout << "Iteration " << iter << endl;
+//		cout << "Iteration " << iter << endl;
 
 //		using namespace chrono;
 //
@@ -413,7 +412,7 @@ bool Inference::runBP(const Pgm& pgm,
 				++calibrated;
 			}
 		}
-		cout << "Calibrated " << double(calibrated)/numClusters << endl;
+//		cout << "Calibrated " << double(calibrated)/numClusters << endl;
 		if(testPass == true){
 //			cout << "Graph calibrated" << endl;
 			break;

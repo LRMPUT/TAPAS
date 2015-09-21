@@ -23,7 +23,7 @@
 #ifndef CALIBRATION_H_
 #define CALIBRATION_H_
 
-#include <QObject>
+#include <QtCore/QObject>
 //Robots Intellect
 #include "../Debug/Debug.h"
 //Trobot Qt

@@ -46,6 +46,7 @@
 #include "../../Robot/Robot.h"
 #include "Pgm/CustFeature.h"
 #include "Pgm/Inference.h"
+#include "Pgm/ParamEst.h"
 
 using namespace boost;
 using namespace std;
@@ -1008,15 +1009,39 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 
 	vector<Entry> dataset;
 
+
+	Mat pixelCoordsAll;
+	vector<Mat> classResultsAll;
+	for(int l = 0; l < labels.size(); ++l){
+		classResultsAll.push_back(Mat());
+	}
+	Mat manualLabelsAll;
+	Mat pixelColorsAll;
+
+	std::queue<ClassResult> classResultsHistDir;
+
 	for(int i = 0; i < images.size(); i++){
 		cout << "Segmenting" << endl;
-		//Mat autoRegionsOnImage = hierClassifiers.front()->segmentImage(images[i]);
 #ifdef NO_CUDA
-		vector<Mat> mapSegmentsOnImage = computeMapSegments(poses[i]);
+		vector<Mat> pixelCoordsVec = computeMapCoords(poses[i]);
 #else
-		vector<Mat> mapSegmentsOnImage = computeMapSegmentsGpu(poses[i]);
+		vector<Mat> pixelCoordsVec = computeMapCoordsGpu(poses[i]);
 #endif
-		Mat autoRegionsOnImage = mapSegmentsOnImage.front();
+		Mat pixelCoords = pixelCoordsVec.front();
+
+		Mat autoRegionsOnImage(images[i].rows, images[i].cols, CV_32SC1);
+
+		for(int r = 0; r < images[i].rows; ++r){
+			for(int c = 0; c < images[i].cols; ++c){
+				int xSegm = pixelCoords.at<float>(0, r * images[i].cols + c)/MAP_RASTER_SIZE + MAP_SIZE/2;
+				int ySegm = pixelCoords.at<float>(1, r * images[i].cols + c)/MAP_RASTER_SIZE + MAP_SIZE/2;
+//				cout << r << ":" << c << " = (" << xSegm << ", " << ySegm << ")" << endl;
+//				cout << "(" << pixelCoords.at<float>(0, r * images[i].cols + c) << ", " << pixelCoords.at<float>(1, r * images[i].cols + c)
+//						<< " : (" << xSegm << ", " << ySegm << ")" << endl;
+				autoRegionsOnImage.at<int>(r, c) = xSegm*MAP_SIZE + ySegm;
+			}
+		}
+
 		cout << "Assigning manual ids" << endl;
 		//rectangle(manualRegionsOnImages[i], Point(0, 0), Point(images[i].cols, 100), Scalar(0, 0, 0), -1);
 		map<int, int> assignedManualId = hierClassifiers.front()->assignManualId(autoRegionsOnImage, manualRegionsOnImages[i]);
@@ -1124,6 +1149,7 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 
 void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	static const bool compareWithExt = false;
+	static const bool estimatePgmParams = true;
 
 	cout << "Classifying" << endl;
 	for(int l = 0; l < labels.size(); l++){
@@ -1183,6 +1209,9 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 
 	if(compareWithExt){
 		ifstream compResFile("res.log");
+		if(!compResFile.is_open()){
+			throw "Error could not open file for compare with external system";
+		}
 		char tmp;
 		int imNum;
 		compResFile >> tmp;
@@ -1209,7 +1238,7 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	}
 
 //	vector<Entry> dataset;
-	ofstream dataCrfFile("dataCrf.log");
+	ofstream dataCrfFile("log/dataCrf.log");
 	dataCrfFile.precision(15);
 	bool headerWritten = false;
 
@@ -1222,6 +1251,10 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	Mat pixelColorsAll;
 
 	std::queue<ClassResult> classResultsHistDir;
+
+	vector<Pgm> pgmsParamEst;
+	vector<vector<double> > varValsParamEst;
+	vector<vector<double> > obsVecsParamEst;
 
 	for(int i = 0; i < images.size(); i++){
 		cout << "Segmenting" << endl;
@@ -1244,16 +1277,6 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 				autoRegionsOnImage.at<int>(r, c) = xSegm*MAP_SIZE + ySegm;
 			}
 		}
-
-//		cout << "Segmenting" << endl;
-//		//Mat autoRegionsOnImage = hierClassifiers.front()->segmentImage(images[i]);
-//#ifdef NO_CUDA
-//		vector<Mat> mapSegmentsOnImage = computeMapSegments(poses[i]);
-//#else
-//		vector<Mat> mapSegmentsOnImage = computeMapSegmentsGpu(poses[i]);
-//#endif
-//		Mat autoRegionsOnImage = mapSegmentsOnImage.front();
-
 
 		cout << "Assigning manual ids" << endl;
 		//rectangle(manualRegionsOnImages[i], Point(0, 0), Point(images[i].cols, 100), Scalar(0, 0, 0), -1);
@@ -1357,87 +1380,37 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 			imshow("classified comp", coloredOriginalCompClassified * 0.25 + images[i] * 0.75);
 		}
 
-		//merge with previous classification results
+		//merge with previous pixel data
 
-		//remove old pixels
-		static const int pixelsTimeout = 2000;
-		int pixelsSkipped = 0;
-
-		//if new series of data begins - eg. new dir
-		bool removeAllFlag = false;
-		if(timestamps[i] < classResultsHistDir.front().timestamp){
-			pixelsSkipped = pixelCoordsAll.cols;
-			while(!classResultsHistDir.empty()){
-				classResultsHistDir.pop();
-			}
-			removeAllFlag = true;
-		}
-		while(!removeAllFlag &&
-				(timestamps[i] - classResultsHistDir.front().timestamp) > std::chrono::milliseconds(pixelsTimeout))
-		{
-			pixelsSkipped += classResultsHistDir.front().numPixels;
-			classResultsHistDir.pop();
-		}
-
-		//move old pixels to new map ommiting those removed
-		if(pixelsSkipped < pixelCoordsAll.cols){
-			Mat tmpPixelCoordsAll = mapMoves[i] * pixelCoordsAll.colRange(pixelsSkipped, pixelCoordsAll.cols);
-			tmpPixelCoordsAll.copyTo(pixelCoordsAll.colRange(pixelsSkipped, pixelCoordsAll.cols));
-		}
-
-		//add new
-		cout << "adding new" << endl;
-		//coords
-		insertNewData(pixelCoordsAll, pixelCoords, pixelsSkipped);
-
-		//classification results
-		for(int l = 0; l < labels.size(); ++l){
-			insertNewData(classResultsAll[l], classificationResult[l].reshape(0, 1), pixelsSkipped);
-		}
-
-		//manual labels
 		//generating labeled image
 		Mat manualLabelsOnImage(manualRegionsOnImages[i].rows, manualRegionsOnImages[i].cols, CV_32SC1, Scalar(-1));
 		for(map<int, int>::iterator it = mapRegionIdToLabel[i].begin(); it != mapRegionIdToLabel[i].end(); ++it){
 			manualLabelsOnImage.setTo(it->second, manualRegionsOnImages[i] == it->first);
 		}
 
-		insertNewData(manualLabelsAll, manualLabelsOnImage.reshape(0, 1), pixelsSkipped);
-
-		insertNewData(pixelColorsAll, images[i].reshape(0, 1), pixelsSkipped);
-
-//		cout << "pixelCoordsAll.size() = " << pixelCoordsAll.size() << endl;
-//		cout << "pixelColorsAll.size() = " << pixelColorsAll.size() << endl;
-
-		classResultsHistDir.push(ClassResult(timestamps[i], pixelCoords.cols));
+		updatePixelData(pixelCoordsAll,
+						classResultsAll,
+						manualLabelsAll,
+						pixelColorsAll,
+						classResultsHistDir,
+						mapMoves[i],
+						timestamps[i],
+						pixelCoords,
+						classificationResult,
+						images[i],
+						manualLabelsOnImage);
 
 		cout << "Num pixels = " << pixelCoordsAll.cols << endl;
 
 		//run inference
 		cout << "running inference" << endl;
-//		Mat inferResults(1, manualLabelsAll.cols, CV_32SC1);
-//		for(int d = 0; d < manualLabelsAll.cols; ++d){
-//			int bestLabelInd = -1;
-//			float bestLabelScore = 0;
-//			for(int l = 0; l < classResultsAll.size(); ++l){
-//				if(classResultsAll[l].at<float>(0, d) > bestLabelScore){
-//					bestLabelInd = l;
-//					bestLabelScore = classResultsAll[l].at<float>(0, d);
-//				}
-//			}
-//			inferResults.at<int>(d) = bestLabelInd;
-//		}
-//
-//		//assign result for each observed segment - temporary, should be obtained during inference
-//		cout << "assigning results" << endl;
-//		Mat segmentResults = assignSegmentLabels(inferResults, pixelCoordsAll);
-////		cout << "segmentResults = " << segmentResults << endl;
 
 		std::vector<cv::Mat> segmentPriors;
 		std::vector<cv::Mat> segmentFeats;
 		std::vector<int> segmentPixelCount;
 		Pgm pgm;
 		std::map<int, int> segIdToVarClusterId;
+		std::map<int, int> segIdToRandVarId;
 		std::vector<double> obsVec;
 
 		cout << "prepare segment info" << endl;
@@ -1452,6 +1425,7 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 		cout << "construct pgm" << endl;
 		constructPgm(pgm,
 					segIdToVarClusterId,
+					segIdToRandVarId,
 					obsVec,
 					segmentPriors,
 					segmentFeats,
@@ -1475,6 +1449,25 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 		cout << "assigning labels" << endl;
 		Mat segmentManualLabels = assignSegmentLabels(manualLabelsAll, pixelCoordsAll);
 //		cout << "segmentManualLabels = " << segmentManualLabels << endl;
+
+		if(estimatePgmParams){
+			pgmsParamEst.push_back(pgm);
+			//Add varVals
+			std::vector<double> varVals(segIdToRandVarId.size(), 0.0);
+			for(int mapX = 0; mapX < MAP_SIZE; ++mapX){
+				for(int mapY = 0; mapY < MAP_SIZE; ++mapY){
+					int segId = mapX * MAP_SIZE + mapY;
+					if(segIdToRandVarId.count(segId) > 0){
+						int rvId = segIdToRandVarId.at(segId);
+						varVals[rvId] = segmentManualLabels.at<int>(mapX, mapY);
+					}
+				}
+			}
+			varValsParamEst.push_back(varVals);
+			cout << "varVals = " << varVals << endl;
+			obsVecsParamEst.push_back(obsVec);
+			cout << "obsVec = " << obsVec << endl;
+		}
 
 		//display results after inference
 		Mat coloredOriginalResSeg = images[i].clone();
@@ -1501,12 +1494,6 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 			}
 		}
 		imshow("manual seg", coloredOriginalManualSeg * 0.25 + images[i] * 0.75);
-
-		draw3DVis(win,
-				pixelCoordsAll,
-				pixelColorsAll,
-				poses[i],
-				segmentResults);
 
 		//count current results
 		vector<vector<int> > curClassResultsPix(labels.size(), vector<int>(labels.size(), 0));
@@ -1604,8 +1591,13 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 			cout << endl;
 		}
 
-
-		waitKey(1000);
+		draw3DVis(win,
+				pixelCoordsAll,
+				pixelColorsAll,
+				poses[i],
+				segmentResults,
+				segmentManualLabels);
+//		waitKey(1000);
 	}
 
 	dataCrfFile.close();
@@ -1626,6 +1618,13 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 			cout << classResultsSeg[t][p] << ", ";
 		}
 		cout << endl;
+	}
+
+	if(estimatePgmParams){
+		ParamEst paramEst;
+		paramEst.estimateParams(pgmsParamEst,
+								varValsParamEst,
+								obsVecsParamEst);
 	}
 
 	cout << "End classifying" << endl;
@@ -1929,8 +1928,10 @@ cv::Mat Camera::assignSegmentLabels(cv::Mat pixelLabels, cv::Mat coords){
 //			cout << "curLabel = " << curLabel << endl;
 //			cout << "(" << xSegm << ", " << ySegm << ")" << endl;
 //		}
-		if(curLabel >= 0){
-			segmentLabelsCount[curLabel].at<int>(xSegm, ySegm)++;
+		if(xSegm >= 0 || xSegm < MAP_SIZE || ySegm >= 0 || ySegm < MAP_SIZE){
+			if(curLabel >= 0){
+				segmentLabelsCount[curLabel].at<int>(xSegm, ySegm)++;
+			}
 		}
 	}
 
@@ -1961,7 +1962,8 @@ void Camera::draw3DVis(cv::viz::Viz3d& win,
 					cv::Mat coords,
 					cv::Mat colors,
 					cv::Mat pose,
-					cv::Mat segments)
+					cv::Mat segments,
+					cv::Mat segmentsManual)
 {
 //    ///create a window
 //    viz::Viz3d win("camera visualization");
@@ -2015,6 +2017,32 @@ void Camera::draw3DVis(cv::viz::Viz3d& win,
     	}
     }
 
+    //manual labels
+    if(!segmentsManual.empty()){
+		for(int mapX = 0; mapX < MAP_SIZE; ++mapX){
+			for(int mapY = 0; mapY < MAP_SIZE; ++mapY){
+				if(segmentsManual.at<int>(mapX, mapY) < 0 &&
+					segments.at<int>(mapX, mapY) >= 0)
+				{
+					Point3d centerPt((mapX - MAP_SIZE/2) * MAP_RASTER_SIZE + MAP_RASTER_SIZE/2,
+									(mapY - MAP_SIZE/2) * MAP_RASTER_SIZE + MAP_RASTER_SIZE/2,
+									0);
+					viz::WPlane segPlane(centerPt,
+										Vec3d(0.0, 0.0, 1.0) /*normal*/,
+										Vec3d(0.0, 1.0, 0.0) /*new y axis*/,
+										Size2d(MAP_RASTER_SIZE, MAP_RASTER_SIZE) /*size*/,
+										viz::Color::blue());
+					segPlane.setRenderingProperty(viz::OPACITY, 0.5);
+
+					int segId = mapX * MAP_SIZE + mapY;
+					char buf[10];
+					sprintf(buf, "%d", segId);
+					win.showWidget(String("manual plane widget") + String(buf), segPlane);
+				}
+			}
+		}
+    }
+
     //camera pose
     /// Let's assume camera has the following properties
 	Vec3d camCoords(-4000.0f, 4000.0f, -4000.0f);
@@ -2024,16 +2052,81 @@ void Camera::draw3DVis(cv::viz::Viz3d& win,
     win.setViewerPose(camPose);
 
     // Event loop is over when pressed q, Q, e, E
-	// Start event loop once for 10 millisecond
+	// Start event loop once for 10 + 5 millisecond
+    int count = 0;
     win.spinOnce(10, true);
-	while(!win.wasStopped())
+	while(!win.wasStopped() && count < 10)
 	{
 		// Interact with window
 
 		// Event loop for 10 millisecond
 		win.spinOnce(10, true);
 		waitKey(5);
+		count++;
 	}
+}
+
+void Camera::updatePixelData(cv::Mat& pixelCoordsAll,
+							std::vector<cv::Mat>& classResultsAll,
+							cv::Mat& manualLabelsAll,
+							cv::Mat& pixelColorsAll,
+							std::queue<ClassResult>& classResultsHistDir,
+							const cv::Mat mapMove,
+							std::chrono::high_resolution_clock::time_point timestamp,
+							const cv::Mat pixelCoords,
+							const std::vector<cv::Mat>& classResults,
+							const cv::Mat image,
+							const cv::Mat manualLabelsOnImage)
+{
+	//merge with previous classification results
+
+	//remove old pixels
+	static const int pixelsTimeout = 2000;
+	int pixelsSkipped = 0;
+
+	//if new series of data begins - eg. new dir
+	bool removeAllFlag = false;
+	if(timestamp < classResultsHistDir.front().timestamp){
+		pixelsSkipped = pixelCoordsAll.cols;
+		while(!classResultsHistDir.empty()){
+			classResultsHistDir.pop();
+		}
+		removeAllFlag = true;
+	}
+	while(!removeAllFlag &&
+			(timestamp - classResultsHistDir.front().timestamp) > std::chrono::milliseconds(pixelsTimeout))
+	{
+		pixelsSkipped += classResultsHistDir.front().numPixels;
+		classResultsHistDir.pop();
+	}
+
+	//move old pixels to new map ommiting those removed
+	if(pixelsSkipped < pixelCoordsAll.cols){
+		Mat tmpPixelCoordsAll = mapMove * pixelCoordsAll.colRange(pixelsSkipped, pixelCoordsAll.cols);
+		tmpPixelCoordsAll.copyTo(pixelCoordsAll.colRange(pixelsSkipped, pixelCoordsAll.cols));
+	}
+
+	//add new
+	cout << "adding new" << endl;
+	//coords
+	insertNewData(pixelCoordsAll, pixelCoords, pixelsSkipped);
+
+	//classification results
+	for(int l = 0; l < labels.size(); ++l){
+		insertNewData(classResultsAll[l], classResults[l].reshape(0, 1), pixelsSkipped);
+	}
+
+	//manual labels
+	if(!manualLabelsOnImage.empty()){
+		insertNewData(manualLabelsAll, manualLabelsOnImage.reshape(0, 1), pixelsSkipped);
+	}
+
+	insertNewData(pixelColorsAll, image.reshape(0, 1), pixelsSkipped);
+
+//		cout << "pixelCoordsAll.size() = " << pixelCoordsAll.size() << endl;
+//		cout << "pixelColorsAll.size() = " << pixelColorsAll.size() << endl;
+
+	classResultsHistDir.push(ClassResult(timestamp, pixelCoords.cols));
 }
 
 void Camera::prepareSegmentInfo(std::vector<cv::Mat>& segmentPriors,
@@ -2088,14 +2181,17 @@ void Camera::prepareSegmentInfo(std::vector<cv::Mat>& segmentPriors,
 		}
 	}
 	for(int seg = 0; seg < segmentPriors.size(); ++seg){
-		if(segmentPixelCount[seg] > 0){
-			cout << "seg = " << seg << endl;
+		if(segmentPixelCount[seg] > entryWeightThreshold){
+//			cout << "seg = " << seg << endl;
 			segmentPriors[seg] /= segmentPixelCount[seg];
 			//ensure that no prior has value 0.0 or 1.0 - unacceptable during inference
 			static const float priorBias = 0.05;
 			segmentPriors[seg] = segmentPriors[seg] * (1.0 - priorBias) + (1.0 / labels.size()) * priorBias;
 
-			segmentFeats[seg] /= segmentPixelCount[seg];
+			segmentFeats[seg] /= segmentPixelCount[seg]*255;
+		}
+		else{
+			segmentPixelCount[seg] = 0;
 		}
 	}
 }
@@ -2134,6 +2230,7 @@ void addEdgeToPgm(Cluster* a,
 
 void Camera::constructPgm(Pgm& pgm,
 						std::map<int, int>& segIdToVarClusterId,
+						std::map<int, int>& segIdToRandVarId,
 						std::vector<double>& obsVec,
 						const std::vector<cv::Mat>& segmentPriors,
 						const std::vector<cv::Mat>& segmentFeats,
@@ -2161,7 +2258,6 @@ void Camera::constructPgm(Pgm& pgm,
 
 	//random variables
 	int nextRandVarId = 0;
-	map<int, int> segIdToRandVarId;
 	vector<double> randVarVals;
 	for(int l = 0; l < labels.size(); ++l){
 		randVarVals.push_back(l);
@@ -2303,7 +2399,7 @@ void Camera::constructPgm(Pgm& pgm,
 	cout << "nextRandVarId = " << nextRandVarId << endl;
 	cout << "nextFeatId = " << nextFeatId << endl;
 	cout << "nextClusterId = " << nextClusterId << endl;
-	cout << "obsVec = " << obsVec << endl;
+//	cout << "obsVec = " << obsVec << endl;
 }
 
 cv::Mat Camera::inferTerrainLabels(const Pgm& pgm,
@@ -2313,7 +2409,7 @@ cv::Mat Camera::inferTerrainLabels(const Pgm& pgm,
 	vector<vector<double> > marg;
 	vector<vector<vector<double> > > msgs;
 	vector<vector<double> > retVals;
-	vector<double> params{1.0, -1.0, -1.0, -1.0};
+	vector<double> params{0.650205, -0.466558, -0.44562, -0.454758};
 
 	bool calibrated = Inference::compMAPParam(pgm,
 											marg,

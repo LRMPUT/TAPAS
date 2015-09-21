@@ -87,6 +87,9 @@ void EvaluateThread::run()
 		for(int v = 0; v < (int)curCluster->randVars().size(); ++v){
 			clustVarVals[v] = curVarVals[curCluster->randVars()[v]->id()];
 		}
+//		cout << "cluster " << c << endl;
+//		cout << "clustVarVals = " << clustVarVals << endl;
+//		cout << "curObsVec = " << curObsVec << endl;
 		vector<double> curEd;
 		curEd = curCluster->compSumEmpiricalExpectation(clustVarVals, curObsVec);
 
@@ -300,6 +303,9 @@ void ParamEst::evaluate(const std::vector<double>& paramValsMapped,
 														separateMarg);
 					}
 					else{
+//						cout << "varVals = " << (*varVals)[nextDataInst] << endl;
+//						cout << "obsVec = " << (*obsVec)[nextDataInst] << endl;
+
 						curEval[t] = new EvaluateThread((*pgm)[pgmIdx],
 														(*obsVec)[nextDataInst],
 														(*varVals)[nextDataInst],
@@ -409,14 +415,14 @@ void ParamEst::evaluate(const std::vector<double>& paramValsMapped,
 		}
 	}
 
-	ofstream edFile("Ed.log");
+	ofstream edFile("log/Ed.log");
 //	cout << "Ed = {";
 	for(int p = 0; p < (int)paramVals.size(); ++p){
 		edFile << Ed[p] << endl;
 	}
 //	cout << "}" << endl;
 
-	ofstream efiFile("Efi.log");
+	ofstream efiFile("log/Efi.log");
 //	cout << "Efi = {";
 	for(int p = 0; p < (int)paramVals.size(); ++p){
 		efiFile << Efi[p] << endl;

@@ -334,8 +334,10 @@ std::vector<double> Cluster::compSumEmpiricalExpectation(const std::vector<doubl
 	for(int rv = 0; rv < int(randVarsOrderData.size()); ++rv){
 		varValsOrdered[randVarsOrderData[rv]] = varVals[rv];
 	}
+//	cout << "varValsOrdered = " << varValsOrdered << endl;
+//	cout << "curObsVec = " << curObsVec << endl;
 	for(int f = 0; f < numFeats; ++f){
-		double curVal = featuresData[f]->comp(varValsOrdered, obsVec);
+		double curVal = featuresData[f]->comp(varValsOrdered, curObsVec);
 		Ed[f] = curVal;
 	}
 
