@@ -250,7 +250,8 @@ class Camera {
 							cv::Mat pixelCoords,
 							cv::Mat pixelColors,
 							const std::vector<cv::Mat>& classResults,
-							cv::Mat pointCloud);
+							cv::Mat pointCloud,
+							cv::Mat segmentMask = cv::Mat());
 
 	void constructPgm(Pgm& pgm,
 					std::map<int, int>& segIdToVarClusterId,

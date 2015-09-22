@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
 		dirsTest.push_back("../MovementConstraints/Camera/database/przejazd10");
 //		dirsTest.push_back("../MovementConstraints/Camera/database/przejazd11");
 
-		debug.testClassification(dirsTrain, dirsTrain);
+		debug.testClassification(dirsTrain, dirsTest);
 
 		/*char a;
 		while((waitKey(200) & 0xff) != 's')

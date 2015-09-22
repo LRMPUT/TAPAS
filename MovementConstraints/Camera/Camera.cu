@@ -69,6 +69,7 @@ inline void __checkCudaErrors(cudaError err, const char *file, const int line )
 #include "cuPrintf.cu"
 
 void cudaAllocateAndCopyToDevice(void** d_dst, const void* src, int size){
+	std::cout << "*d_dst = " << *d_dst << ", src = " << src << ", size = " << size << std::endl;
 	checkCudaErrors(cudaMalloc(d_dst, size));
 	//std::cout << "*d_dst = " << *d_dst << ", src = " << src << ", size = " << size << std::endl;
 	checkCudaErrors(cudaMemcpy(*d_dst, src, size, cudaMemcpyHostToDevice));
@@ -134,6 +135,64 @@ extern "C" void reprojectCameraPoints(float* invCameraMatrix,
 	cudaCopyFromDeviceAndFree(segments,
 								d_segments,
 								numRows*numCols*sizeof(int));
+
+}
+
+extern "C" void reprojectCameraPointsCoords(float* invCameraMatrix,
+										float* distCoeffs,
+										float* curPosCameraMapCenterGlobal,
+										float* curPosCameraMapCenterImu,
+										int numRows,
+										int numCols,
+										float* coords,
+										int mapSize,
+										int rasterSize)
+{
+	float* d_invCameraMatrix;
+	float* d_distCoeffs;
+	float* d_curPosCameraMapCenterGlobal;
+	float* d_curPosCameraMapCenterImu;
+	float* d_coords;
+
+	cudaAllocateAndCopyToDevice((void**)&d_invCameraMatrix,
+								invCameraMatrix,
+								3*3*sizeof(float));
+	//cudaAllocateAndCopyToDevice((void**)&d_distCoeffs,
+	//							distCoeffs,
+	//							5*sizeof(float));
+	cudaAllocateAndCopyToDevice((void**)&d_curPosCameraMapCenterGlobal,
+								curPosCameraMapCenterGlobal,
+								4*4*sizeof(float));
+	cudaAllocateAndCopyToDevice((void**)&d_curPosCameraMapCenterImu,
+								curPosCameraMapCenterImu,
+								4*4*sizeof(float));
+	cudaAllocateAndCopyToDevice((void**)&d_coords,
+								coords,
+								4*numRows*numCols*sizeof(float));
+
+	dim3 blockSize(32, 16, 1);
+	dim3 gridSize((numCols + blockSize.x - 1) / blockSize.x,
+					(numRows + blockSize.y - 1) / blockSize.y);
+	compPointReprojectionCoords<<<gridSize, blockSize>>>(d_invCameraMatrix,
+														d_distCoeffs,
+														d_curPosCameraMapCenterGlobal,
+														d_curPosCameraMapCenterImu,
+														numRows,
+														numCols,
+														d_coords,
+														mapSize,
+														rasterSize);
+
+	cudaDeviceSynchronize();
+	checkCudaErrors(cudaGetLastError());
+
+	checkCudaErrors(cudaFree(d_invCameraMatrix));
+	checkCudaErrors(cudaFree(d_distCoeffs));
+	checkCudaErrors(cudaFree(d_curPosCameraMapCenterGlobal));
+	checkCudaErrors(cudaFree(d_curPosCameraMapCenterImu));
+	cudaCopyFromDeviceAndFree(coords,
+								d_coords,
+								4*numRows*numCols*sizeof(int));
 
 }
 

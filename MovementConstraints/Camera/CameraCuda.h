@@ -47,6 +47,16 @@ extern "C" void reprojectCameraPoints(float* invCameraMatrix,
 										int mapSize,
 										int rasterSize);
 
+extern "C" void reprojectCameraPointsCoords(float* invCameraMatrix,
+											float* distCoeffs,
+											float* curPosCameraMapCenterGlobal,
+											float* curPosCameraMapCenterImu,
+											int numRows,
+											int numCols,
+											float* coords,
+											int mapSize,
+											int rasterSize);
+
 extern "C" void extractEntries(const unsigned char* const imageH,
 								const unsigned char* const imageS,
 								const unsigned char* const imageV,

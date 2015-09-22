@@ -272,7 +272,6 @@ std::vector<cv::Mat> Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 
 #ifndef NO_CUDA
 std::vector<cv::Mat> Camera::computeMapSegmentsGpu(cv::Mat curPosImuMapCenter){
-	//TODO Correct curPosCameraMapCenterGlobal
 //	cout << "Computing map segments" << endl;
 	//namedWindow("test");
 	//mapSegments.clear();
@@ -387,6 +386,42 @@ std::vector<cv::Mat> Camera::computeMapCoords(cv::Mat curPosImuMapCenter){
 //	cout << "End computing map segments" << endl;
 	return ret;
 }
+
+#ifndef NO_CUDA
+std::vector<cv::Mat> Camera::computeMapCoordsGpu(cv::Mat curPosImuMapCenter){
+//	cout << "Computing map segments" << endl;
+	//namedWindow("test");
+	//mapSegments.clear();
+	vector<Mat> ret;
+
+	for(int cam = 0; cam < numCameras; cam++){
+		ret.push_back(Mat(numRows * numCols, 4, CV_32SC1, Scalar(-1)));
+
+		//cout << "curPosImuMapCenter*cameraOrigImu[cam]" << endl;
+		Mat curPosCameraMapCenterGlobal = imuOrigRobot*curPosImuMapCenter*cameraOrigImu[cam];
+		Mat curPosCameraMapCenterImu = curPosImuMapCenter*cameraOrigImu[cam];
+		Mat invCameraMatrix = cameraMatrix[cam].inv();
+
+		if(ret[cam].isContinuous() &&
+				curPosCameraMapCenterGlobal.isContinuous() &&
+				curPosCameraMapCenterImu.isContinuous() &&
+				invCameraMatrix.isContinuous())
+		{
+			reprojectCameraPointsCoords((float*)invCameraMatrix.data,
+										(float*)NULL,
+										(float*)curPosCameraMapCenterGlobal.data,
+										(float*)curPosCameraMapCenterImu.data,
+										numRows,
+										numCols,
+										(float*)ret[cam].data,
+										MAP_SIZE,
+										MAP_RASTER_SIZE);
+			ret[cam] = ret[cam].t();
+		}
+	}
+	return ret;
+}
+#endif //NO_CUDA
 
 std::vector<cv::Point2f> Camera::computePointProjection(const std::vector<cv::Point3f>& spPoints,
 														int cameraInd)
@@ -1149,7 +1184,7 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 
 void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	static const bool compareWithExt = false;
-	static const bool estimatePgmParams = true;
+	static const bool estimatePgmParams = false;
 
 	cout << "Classifying" << endl;
 	for(int l = 0; l < labels.size(); l++){
@@ -1402,6 +1437,11 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 
 		cout << "Num pixels = " << pixelCoordsAll.cols << endl;
 
+		//assign manual label for each observed segment
+		cout << "assigning labels" << endl;
+		Mat segmentManualLabels = assignSegmentLabels(manualLabelsAll, pixelCoordsAll);
+//		cout << "segmentManualLabels = " << segmentManualLabels << endl;
+
 		//run inference
 		cout << "running inference" << endl;
 
@@ -1412,6 +1452,8 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 		std::map<int, int> segIdToVarClusterId;
 		std::map<int, int> segIdToRandVarId;
 		std::vector<double> obsVec;
+//		Mat segmentMask(segmentManualLabels.size(), CV_32SC1, Scalar(0));
+//		segmentMask.setTo(Scalar(1), segmentManualLabels >= 0);
 
 		cout << "prepare segment info" << endl;
 		prepareSegmentInfo(segmentPriors,
@@ -1420,7 +1462,8 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 							pixelCoordsAll,
 							pixelColorsAll,
 							classResultsAll,
-							terrains[i]);
+							terrains[i],
+							segmentManualLabels >= 0);
 
 		cout << "construct pgm" << endl;
 		constructPgm(pgm,
@@ -1445,11 +1488,6 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 			inferResults.at<int>(d) = segmentResults.at<int>(xSegm, ySegm);
 		}
 
-		//assign manual label for each observed segment
-		cout << "assigning labels" << endl;
-		Mat segmentManualLabels = assignSegmentLabels(manualLabelsAll, pixelCoordsAll);
-//		cout << "segmentManualLabels = " << segmentManualLabels << endl;
-
 		if(estimatePgmParams){
 			pgmsParamEst.push_back(pgm);
 			//Add varVals
@@ -1460,13 +1498,16 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 					if(segIdToRandVarId.count(segId) > 0){
 						int rvId = segIdToRandVarId.at(segId);
 						varVals[rvId] = segmentManualLabels.at<int>(mapX, mapY);
+						if(varVals[rvId] < 0){
+							throw "Error varVals[rvId] < 0";
+						}
 					}
 				}
 			}
 			varValsParamEst.push_back(varVals);
-			cout << "varVals = " << varVals << endl;
+//			cout << "varVals = " << varVals << endl;
 			obsVecsParamEst.push_back(obsVec);
-			cout << "obsVec = " << obsVec << endl;
+//			cout << "obsVec = " << obsVec << endl;
 		}
 
 		//display results after inference
@@ -2135,7 +2176,8 @@ void Camera::prepareSegmentInfo(std::vector<cv::Mat>& segmentPriors,
 								cv::Mat pixelCoords,
 								cv::Mat pixelColors,
 								const std::vector<cv::Mat>& classResults,
-								cv::Mat pointCloud)
+								cv::Mat pointCloud,
+								cv::Mat segmentMask)
 {
 	segmentPriors.clear();
 	segmentFeats.clear();
@@ -2181,14 +2223,24 @@ void Camera::prepareSegmentInfo(std::vector<cv::Mat>& segmentPriors,
 		}
 	}
 	for(int seg = 0; seg < segmentPriors.size(); ++seg){
-		if(segmentPixelCount[seg] > entryWeightThreshold){
+		bool segExclude = false;
+		if(!segmentMask.empty()){
+			int curX = seg / MAP_SIZE;
+			int curY = seg % MAP_SIZE;
+			if(segmentMask.at<unsigned char>(curX, curY) == 0){
+				segExclude = true;
+			}
+		}
+		if(segmentPixelCount[seg] > entryWeightThreshold &&
+			!segExclude)
+		{
 //			cout << "seg = " << seg << endl;
 			segmentPriors[seg] /= segmentPixelCount[seg];
 			//ensure that no prior has value 0.0 or 1.0 - unacceptable during inference
 			static const float priorBias = 0.05;
 			segmentPriors[seg] = segmentPriors[seg] * (1.0 - priorBias) + (1.0 / labels.size()) * priorBias;
 
-			segmentFeats[seg] /= segmentPixelCount[seg]*255;
+			segmentFeats[seg] /= segmentPixelCount[seg];
 		}
 		else{
 			segmentPixelCount[seg] = 0;
@@ -2409,7 +2461,7 @@ cv::Mat Camera::inferTerrainLabels(const Pgm& pgm,
 	vector<vector<double> > marg;
 	vector<vector<vector<double> > > msgs;
 	vector<vector<double> > retVals;
-	vector<double> params{0.650205, -0.466558, -0.44562, -0.454758};
+	vector<double> params{1.65718, -0.919813, -0.843494, -0.793375};
 
 	bool calibrated = Inference::compMAPParam(pgm,
 											marg,

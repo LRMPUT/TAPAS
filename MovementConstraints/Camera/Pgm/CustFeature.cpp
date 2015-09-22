@@ -100,7 +100,7 @@ double TerClassNodeFeature::comp(const std::vector<double>& vals,
 								const std::vector<double>& obsVec)
 {
 	int label = (int)(vals[0] + 0.5);
-	return log(obsVec[obsNums()[label]])/3;
+	return log(obsVec[obsNums()[label]])/4;
 }
 
 double TerClassNodeFeature::compParam(const std::vector<double>& vals,
@@ -121,7 +121,7 @@ TerClassPairFeature::TerClassPairFeature(int iid, int iparamNum, const std::vect
 double TerClassPairFeature::comp(const std::vector<double>& vals,
 								const std::vector<double>& obsVec)
 {
-	static const double beta = 2;
+	static const double beta = 0.05;
 	int ind = (fabs(vals[0] - vals[1]) < 1e-4 ? 0 : 1);
 	double diff = obsVec[obsNums()[0]] - obsVec[obsNums()[1]];
 	return ind * exp(-beta * diff * diff);
