@@ -181,10 +181,10 @@ __global__ void compPointReprojectionCoords(float* d_invCameraMatrix,
 		float pointMapCenter[4];
 		multMat(d_curPosCameraMapCenterGlobal, pointCam, pointMapCenter, 4, 4, 4, 1);
 
-		d_coords[idxY * numCols + idxX + 0] = pointMapCenter[0];
-		d_coords[idxY * numCols + idxX + 1] = pointMapCenter[1];
-		d_coords[idxY * numCols + idxX + 2] = pointMapCenter[2];
-		d_coords[idxY * numCols + idxX + 3] = pointMapCenter[3];
+		d_coords[(idxY * numCols + idxX) * 4 + 0] = pointMapCenter[0];
+		d_coords[(idxY * numCols + idxX) * 4 + 1] = pointMapCenter[1];
+		d_coords[(idxY * numCols + idxX) * 4 + 2] = pointMapCenter[2];
+		d_coords[(idxY * numCols + idxX) * 4 + 3] = pointMapCenter[3];
 	}
 }
 

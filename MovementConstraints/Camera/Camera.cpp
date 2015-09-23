@@ -51,30 +51,29 @@
 using namespace boost;
 using namespace std;
 
-/*#define CAMERA_Z 1
-#define CAMERA_X_ANGLE 45
-#define CAMERA_Y_ANGLE 45
-#define CAMERAS_COUNT 2
-#define ROWS 480
-#define COLS 640*/
-
-/*#define POLY_VERT 4
-#define X_STEP 100
-#define Y_STEP 100
-#define X_RES 50
-#define Y_RES 50
-#define PLANE_Z -100*/
 #define DRIVABLE_LABEL 1
 #define LEFT_CAMERA 0
 #define RIGHT_CAMERA 1
 
-#define CHANNELS_USED 2
-#define SAMPLE_PACK 1500
+//#define CHANNELS_USED 2
+//#define SAMPLE_PACK 1500
 
 using namespace cv;
 //using namespace gpu;
 using namespace std;
 
+
+// This will output the proper CUDA error strings in the event that a CUDA host call returns an error
+#define checkCudaErrors(err)  __checkCudaErrors (err, __FILE__, __LINE__)
+
+inline void __checkCudaErrors(cudaError err, const char *file, const int line )
+{
+    if(cudaSuccess != err)
+    {
+        fprintf(stderr, "%s(%i) : CUDA Runtime API error %d: %s.\n",file, line, (int)err, cudaGetErrorString( err ) );
+        exit(-1);
+    }
+}
 
 Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings) :
 		movementConstraints(imovementConstraints),
@@ -91,10 +90,10 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 
 #ifndef NO_CUDA
 	int devCount;
-	cudaGetDeviceCount(&devCount);
+	checkCudaErrors(cudaGetDeviceCount(&devCount));
 	cout << "Available CUDA devices: " <<  devCount << endl;
 	cudaDeviceProp prop;
-	cudaGetDeviceProperties(&prop, 0);
+	checkCudaErrors(cudaGetDeviceProperties(&prop, 0));
 	cout << "Computing capability: " << prop.major << "." << prop.minor << endl;
 	cout << "Max threads per block: " << prop.maxThreadsPerBlock << endl;
 	cout << "Max grid dim: " << prop.maxGridSize[0] << "x" << prop.maxGridSize[1] << "x" << prop.maxGridSize[2] << endl;
@@ -395,7 +394,7 @@ std::vector<cv::Mat> Camera::computeMapCoordsGpu(cv::Mat curPosImuMapCenter){
 	vector<Mat> ret;
 
 	for(int cam = 0; cam < numCameras; cam++){
-		ret.push_back(Mat(numRows * numCols, 4, CV_32SC1, Scalar(-1)));
+		ret.push_back(Mat(numRows * numCols, 4, CV_32FC1, Scalar(-1)));
 
 		//cout << "curPosImuMapCenter*cameraOrigImu[cam]" << endl;
 		Mat curPosCameraMapCenterGlobal = imuOrigRobot*curPosImuMapCenter*cameraOrigImu[cam];
@@ -1962,6 +1961,7 @@ cv::Mat Camera::assignSegmentLabels(cv::Mat pixelLabels, cv::Mat coords){
 	for(int d = 0; d < coords.cols; ++d){
 		int xSegm = coords.at<float>(0, d)/MAP_RASTER_SIZE + MAP_SIZE/2;
 		int ySegm = coords.at<float>(1, d)/MAP_RASTER_SIZE + MAP_SIZE/2;
+//		cout << "(" << coords.at<float>(0, d) << ", " << coords.at<float>(1, d) << ")" << endl;
 
 		int curLabel = pixelLabels.at<int>(d);
 //		cout << "curLabel = " << curLabel << endl;
