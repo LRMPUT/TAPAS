@@ -104,7 +104,7 @@ class Camera {
 
 	std::vector<cv::Mat> maskIgnore;
 
-	std::vector<cv::Mat> mapSegments;
+//	std::vector<cv::Mat> mapSegments;
 
 	//boost::filesystem::path settingsFile;
 
@@ -112,10 +112,53 @@ class Camera {
 
 	std::vector<std::string> labels;
 
+	std::chrono::high_resolution_clock::time_point curTimestamp;
+
+	bool runThread;
+
+	std::thread cameraThread;
+
+	std::mutex mtxDevice;
+
+	std::mutex mtxConstr;
+
+	std::vector<cv::Mat> classifiedImage;
+
+	cv::Mat sharedClassifiedImage;
+
+	cv::Mat sharedOriginalImage;
+
+	std::mutex mtxClassIm;
+
+	struct ClassResult{
+		std::chrono::high_resolution_clock::time_point timestamp;
+		int numPixels;
+
+		ClassResult(std::chrono::high_resolution_clock::time_point itimestamp,
+						int inumPixels)
+			:
+				timestamp(itimestamp),
+				numPixels(inumPixels)
+		{}
+	};
+
+	std::mutex mtxClassResults;
+
+	std::queue<ClassResult> classResultsHist;
+
+	cv::Mat pixelCoordsMapOrigRobotMapCenter;
+
+	std::vector<cv::Mat> classResultsMap;
+
+	cv::Mat pixelColorsMap;
+
+	cv::Mat pointCloudMapOrigRobotMapCenter;
+
 	//array containing polygon vertices for all image regions
 	//std::vector<std::vector<std::vector<cv::Point*> > > groundPolygons;
 
-	void computeConstraints(std::chrono::high_resolution_clock::time_point nextCurTimestamp);
+	void computeConstraints(std::vector<cv::Mat> mapSegments,
+							std::chrono::high_resolution_clock::time_point nextCurTimestamp);
 
 	std::vector<cv::Mat> computeMapSegments(cv::Mat curPosImuMapCenter);
 
@@ -130,12 +173,6 @@ class Camera {
 
 	std::vector<cv::Point3f> computePointReprojection(	const std::vector<cv::Point2f>& imPoint,
 														int cameraInd);
-
-	/*void addToLearnDatabase(cv::Mat samples, int label);
-
-	void clearLearnDatabase();
-
-	void learn();*/
 
 	/** \brief Funkcja rysująca na obrazie wielobok i wypełniająca go wartością regionId.
 	 *
@@ -173,40 +210,6 @@ class Camera {
 	 *
 	 */
 	void classifyFromDir(std::vector<boost::filesystem::path> dirs);
-
-	std::chrono::high_resolution_clock::time_point curTimestamp;
-
-	bool runThread;
-
-	std::thread cameraThread;
-
-	std::mutex mtxDevice;
-
-	std::mutex mtxConstr;
-
-	std::vector<cv::Mat> classifiedImage;
-
-	cv::Mat sharedClassifiedImage;
-
-	cv::Mat sharedOriginalImage;
-
-	std::mutex mtxClassIm;
-
-	struct ClassResult{
-		std::chrono::high_resolution_clock::time_point timestamp;
-		int numPixels;
-
-		ClassResult(std::chrono::high_resolution_clock::time_point itimestamp,
-						int inumPixels)
-			:
-				timestamp(itimestamp),
-				numPixels(inumPixels)
-		{}
-	};
-
-	std::queue<ClassResult> classResultsHist;
-
-	cv::Mat classResultsData;
 
 	//Run as separate thread
 	void run();
