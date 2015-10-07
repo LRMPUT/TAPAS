@@ -180,7 +180,7 @@
 			entryWeightThreshold: Minimal entry's number of pixels.
 			debug: Debug level: 0 - no debug, 1, 2 - debug
 		-->
-		<Camera runThread="false" number="1" rows="480" cols="640" entryWeightThreshold="400" debug="0">
+		<Camera runThread="true" number="1" rows="480" cols="640" entryWeightThreshold="400" debug="1">
 			<!--
 				saveEnable: [true/false] - Whether to save cache after learning classifier or not.
 				loadEnable: [true/false] - Whether to load cache during construction of Camera class.

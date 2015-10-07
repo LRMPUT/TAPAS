@@ -75,9 +75,9 @@ GlobalPlanner::GlobalPlanner(Robot* irobot, TiXmlElement* settings) :
 
 GlobalPlanner::~GlobalPlanner() {
 	cout << "~GlobalPlanner()" << endl;
+	stopThread();
 	delete localPlanner;
 	closeRobotsDrive();
-	stopThread();
 	cout << "End ~GlobalPlanner()" << endl;
 }
 

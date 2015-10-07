@@ -68,7 +68,7 @@ private:
 
 	QtEncoders* encoders;
 
-	ImuChart* imuChart;
+//	ImuChart* imuChart;
 
 	QtGps* qtGps;
 

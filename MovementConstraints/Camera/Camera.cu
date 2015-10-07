@@ -69,7 +69,7 @@ inline void __checkCudaErrors(cudaError err, const char *file, const int line )
 #include "cuPrintf.cu"
 
 void cudaAllocateAndCopyToDevice(void** d_dst, const void* src, int size){
-	std::cout << "*d_dst = " << *d_dst << ", src = " << src << ", size = " << size << std::endl;
+//	std::cout << "*d_dst = " << *d_dst << ", src = " << src << ", size = " << size << std::endl;
 	checkCudaErrors(cudaMalloc(d_dst, size));
 	//std::cout << "*d_dst = " << *d_dst << ", src = " << src << ", size = " << size << std::endl;
 	checkCudaErrors(cudaMemcpy(*d_dst, src, size, cudaMemcpyHostToDevice));

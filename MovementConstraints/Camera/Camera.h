@@ -144,7 +144,7 @@ class Camera {
 
 	std::mutex mtxClassResults;
 
-	std::queue<ClassResult> classResultsHist;
+	std::queue<ClassResult> classResultsHistMap;
 
 	cv::Mat pixelCoordsMapOrigRobotMapCenter;
 

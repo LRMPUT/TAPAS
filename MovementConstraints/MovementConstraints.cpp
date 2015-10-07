@@ -224,7 +224,7 @@ void MovementConstraints::updateConstraintsMap(){
 //	cout << "Moving map" << endl;
 	std::chrono::high_resolution_clock::time_point imuTimestamp;
 	Mat imuCur = robot->getImuData(imuTimestamp);
-	//cout << "updating cur pos" << endl;
+//	cout << "updating cur pos" << endl;
 	updateCurPosOrigMapCenter();
 
 	std::unique_lock<std::mutex> lckMap(mtxMap);
@@ -232,7 +232,7 @@ void MovementConstraints::updateConstraintsMap(){
 
 	Mat mapMove = curPosOrigMapCenter.inv();
 
-	//cout << "Calculating new curMapCenterOrigGlobal" << endl;
+//	cout << "Calculating new curMapCenterOrigGlobal" << endl;
 	curMapCenterOrigGlobal = compOrient(imuCur);
 	curPosOrigMapCenter = Mat::eye(4, 4, CV_32FC1);
 	//cout << "Map moved" << endl;
@@ -260,7 +260,7 @@ void MovementConstraints::insertHokuyoConstraints(	cv::Mat map,
 {
 //	cout << "insertHokuyoConstraints()" << endl;
 	std::unique_lock<std::mutex> lckPointCloud(mtxPointCloud);
-//	cout << "pointCloudOrigMapCenter.size() = " << pointCloudOrigMapCenter << endl;
+//	cout << "pointCloudOrigMapCenter.size() = " << pointCloudOrigMapCenter.size() << endl;
 //	cout << "imuOrigRobot.size() = " << imuOrigRobot.size() << endl;
 	if(!pointCloudOrigMapCenter.empty()){
 		//Move points to new map center
@@ -268,10 +268,14 @@ void MovementConstraints::insertHokuyoConstraints(	cv::Mat map,
 		newPointCloudCoords.copyTo(pointCloudOrigMapCenter.rowRange(0, 4));
 	}
 
-	Mat pointCloudOrigRobotMapCenter = imuOrigRobot*pointCloudOrigMapCenter.rowRange(0, 4);
+	Mat pointCloudOrigRobotMapCenter;
+	if(!pointCloudOrigMapCenter.empty()){
+		pointCloudOrigRobotMapCenter = imuOrigRobot*pointCloudOrigMapCenter.rowRange(0, 4);
+	}
+
 	lckPointCloud.unlock();
 
-//	cout << "pointCloudRobotMapCenter.size() = " << pointCloudRobotMapCenter.size() << endl;
+//	cout << "pointCloudOrigRobotMapCenter.size() = " << pointCloudOrigRobotMapCenter.size() << endl;
 	vector<vector<vector<Point3f> > > bins(MAP_SIZE, vector<vector<Point3f> >(MAP_SIZE, vector<Point3f>()));
 	for(int p = 0; p < pointCloudOrigRobotMapCenter.cols; p++){
 		int x = pointCloudOrigRobotMapCenter.at<float>(0, p)/MAP_RASTER_SIZE + MAP_SIZE/2;
@@ -283,7 +287,7 @@ void MovementConstraints::insertHokuyoConstraints(	cv::Mat map,
 											pointCloudOrigRobotMapCenter.at<float>(2, p)));
 		}
 	}
-	//cout << "inserting into map" << endl;
+//	cout << "inserting into map" << endl;
 	for(int y = 0; y < MAP_SIZE; y++){
 		for(int x = 0; x < MAP_SIZE; x++){
 			//Point3f minPoint;
@@ -384,7 +388,9 @@ void MovementConstraints::updatePointCloud(){
 						pointCloudSettings);
 	}
 	else{
-		cout << "Hokuyo closed" << endl;
+		if(debugLevel >= 1){
+			cout << "Hokuyo closed" << endl;
+		}
 	}
 
 	//cout << "End processPointCloud()" << endl;

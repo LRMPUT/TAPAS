@@ -1685,7 +1685,7 @@ void Camera::run(){
 			std::chrono::high_resolution_clock::time_point timeBegin;
 			std::chrono::high_resolution_clock::time_point timeEndMapCoords;
 			std::chrono::high_resolution_clock::time_point timeEndClassification;
-			std::chrono::high_resolution_clock::time_point timeEndConstraints;
+			std::chrono::high_resolution_clock::time_point timeEndUpdate;
 			Mat curPosOrigMapCenter;
 			std::chrono::high_resolution_clock::time_point nextCurTimestamp = std::chrono::high_resolution_clock::now();
 			Mat pointCloudOrigMapCenter = movementConstraints->getPointCloud(curPosOrigMapCenter);
@@ -1693,7 +1693,7 @@ void Camera::run(){
 				timeBegin = std::chrono::high_resolution_clock::now();
 				vector<Mat> cameraData = this->getData();
 				if(debugLevel >= 1){
-					cout << "Computing map segments" << endl;
+					cout << "Computing map coords" << endl;
 				}
 	#ifdef NO_CUDA
 				vector<Mat> pixelCoordsVec = computeMapCoords(curPosOrigMapCenter);
@@ -1701,15 +1701,18 @@ void Camera::run(){
 				vector<Mat> pixelCoordsVec = computeMapCoordsGpu(curPosOrigMapCenter);
 	#endif
 				timeEndMapCoords = std::chrono::high_resolution_clock::now();
-				for(int c = 0; c < numCameras; c++){
-					if(cameras[c].isOpened()){
-						if(!cameraData[c].empty()){
+				for(int cam = 0; cam < numCameras; cam++){
+					if(cameras[cam].isOpened()){
+						if(!cameraData[cam].empty()){
+							if(debugLevel >= 1){
+								cout << "camera " << cam << endl;
+							}
 							Mat pointCloudOrigCamera;
 							Mat curPointCloudOrigRobotMapCenter;
 							if(!pointCloudOrigMapCenter.empty()){
 								pointCloudOrigCamera = Mat(pointCloudOrigMapCenter.rows, pointCloudOrigMapCenter.cols, CV_32FC1);
 								pointCloudOrigMapCenter.rowRange(4, 6).copyTo(pointCloudOrigCamera.rowRange(4, 6));
-								Mat tmpPointCoords = (curPosOrigMapCenter * cameraOrigImu[c]).inv() * pointCloudOrigMapCenter.rowRange(0, 4);
+								Mat tmpPointCoords = (curPosOrigMapCenter * cameraOrigImu[cam]).inv() * pointCloudOrigMapCenter.rowRange(0, 4);
 								tmpPointCoords.copyTo(pointCloudOrigCamera.rowRange(0, 4));
 
 								curPointCloudOrigRobotMapCenter = Mat(pointCloudOrigMapCenter.rows, pointCloudOrigMapCenter.cols, CV_32FC1);
@@ -1718,17 +1721,21 @@ void Camera::run(){
 								tmpPointCoords.copyTo(curPointCloudOrigRobotMapCenter.rowRange(0, 4));
 							}
 
-							Mat pixelCoords = pixelCoordsVec[c];
-							Mat mapSegments(cameraData[c].rows, cameraData[c].cols, CV_32SC1);
+//							cout << "pixelCoordsVec.size() = " << pixelCoordsVec.size() << endl;
+							Mat pixelCoords = pixelCoordsVec[cam];
+//							cout << "pixelCoords.size() = " << pixelCoords.size() << endl;
+//							cout << "cameraData[c].size() = " << cameraData[cam].size() << endl;
+							Mat mapSegments(cameraData[cam].rows, cameraData[cam].cols, CV_32SC1);
 
-							for(int r = 0; r < cameraData[c].rows; ++r){
-								for(int c = 0; c < cameraData[c].cols; ++c){
-									int xSegm = pixelCoords.at<float>(0, r * cameraData[c].cols + c)/MAP_RASTER_SIZE + MAP_SIZE/2;
-									int ySegm = pixelCoords.at<float>(1, r * cameraData[c].cols + c)/MAP_RASTER_SIZE + MAP_SIZE/2;
-					//				cout << r << ":" << c << " = (" << xSegm << ", " << ySegm << ")" << endl;
+//							cout << "computing map segments" << endl;
+							for(int row = 0; row < cameraData[cam].rows; ++row){
+								for(int col = 0; col < cameraData[cam].cols; ++col){
+									int xSegm = pixelCoords.at<float>(0, row * cameraData[cam].cols + col)/MAP_RASTER_SIZE + MAP_SIZE/2;
+									int ySegm = pixelCoords.at<float>(1, row * cameraData[cam].cols + col)/MAP_RASTER_SIZE + MAP_SIZE/2;
+//									cout << row << ":" << col << " = (" << xSegm << ", " << ySegm << ")" << endl;
 					//				cout << "(" << pixelCoords.at<float>(0, r * images[i].cols + c) << ", " << pixelCoords.at<float>(1, r * images[i].cols + c)
 					//						<< " : (" << xSegm << ", " << ySegm << ")" << endl;
-									mapSegments.at<int>(r, c) = xSegm*MAP_SIZE + ySegm;
+									mapSegments.at<int>(row, col) = xSegm*MAP_SIZE + ySegm;
 								}
 							}
 
@@ -1736,13 +1743,17 @@ void Camera::run(){
 								cout << "Classification" << endl;
 							}
 
-							vector<Mat> classRes = hierClassifiers[c]->classify(cameraData[c],
+							vector<Mat> classRes = hierClassifiers[cam]->classify(cameraData[cam],
 																				pointCloudOrigCamera,
 																				mapSegments,
-																				maskIgnore[c],
+																				maskIgnore[cam],
 																				entryWeightThreshold);
 							timeEndClassification = std::chrono::high_resolution_clock::now();
-							//cout << "End classification" << endl;
+
+							if(debugLevel >= 1){
+								cout << "End classification" << endl;
+							}
+
 							Mat bestLabels(numRows, numCols, CV_32SC1, Scalar(-1));
 							Mat bestScore(numRows, numCols, CV_32FC1, Scalar(-1));
 							for(int l = 0; l < labels.size(); l++){
@@ -1755,30 +1766,43 @@ void Camera::run(){
 								//cout << "max" << endl;
 								bestScore = max(bestScore, classRes[l]);
 							}
-							classifiedImage[c] = bestLabels;
+							classifiedImage[cam] = bestLabels;
 							//classifiedImage[c] = Mat(numRows, numCols, CV_32SC1, Scalar(0));
 							if(debugLevel >= 1){
 								cout << "Copying classified image" << endl;
 							}
 							std::unique_lock<std::mutex> lck(mtxClassIm);
-							classifiedImage[c].copyTo(sharedClassifiedImage);
-							cameraData[c].copyTo(sharedOriginalImage);
+							classifiedImage[cam].copyTo(sharedClassifiedImage);
+							cameraData[cam].copyTo(sharedOriginalImage);
 							lck.unlock();
 
-							std::unique_lock<std::mutex> lckClassRes;
+
+							if(debugLevel >= 1){
+								cout << "Merging with previous pixel data" << endl;
+							}
+							std::unique_lock<std::mutex> lckClassRes(mtxClassResults);
 
 							//merge with previous pixel data
+
+							//initialize if empty
+							if(classResultsMap.empty()){
+								//ensure that every Mat in vector points to a separate data container
+								for(int l = 0; l < labels.size(); ++l){
+									classResultsMap.push_back(Mat());
+								}
+							}
+
 							Mat manualLabelsMap;
 							updatePixelData(pixelCoordsMapOrigRobotMapCenter,
 											classResultsMap,
 											manualLabelsMap,
 											pixelColorsMap,
-											classResultsHist,
+											classResultsHistMap,
 											Mat::eye(4, 4, CV_32FC1),
 											nextCurTimestamp,
 											pixelCoords,
 											classRes,
-											cameraData[c]);
+											cameraData[cam]);
 
 							pointCloudMapOrigRobotMapCenter = curPointCloudOrigRobotMapCenter.clone();
 
@@ -1789,12 +1813,12 @@ void Camera::run(){
 					}
 				}
 //				computeConstraints(nextCurTimestamp);
-				timeEndConstraints = std::chrono::high_resolution_clock::now();
+				timeEndUpdate = std::chrono::high_resolution_clock::now();
 			}
 			if(debugLevel >= 1){
 				cout << "Map segments time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndMapCoords - timeBegin).count() << " ms" << endl;
 				cout << "Classification time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndClassification - timeEndMapCoords).count() << " ms" << endl;
-				cout << "Constraints time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndConstraints - timeEndClassification).count() << " ms" << endl;
+				cout << "Update time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndUpdate - timeEndClassification).count() << " ms" << endl;
 			}
 
 			std::chrono::milliseconds duration(100);
@@ -1967,10 +1991,11 @@ void Camera::readSettings(TiXmlElement* settings){
 }
 
 void Camera::insertNewData(cv::Mat& dataAll, cv::Mat newData, int dataSkipped){
-	cout << "Camera::insertNewData" << endl;
+//	cout << "Camera::insertNewData" << endl;
 
 //	cout << "dataAll.size() = " << dataAll.size() << endl;
 //	cout << "newData.size() = " << newData.size() << endl;
+//	cout << "dataSkipped = " << dataSkipped << endl;
 
 	if(dataSkipped > dataAll.cols){
 		dataSkipped = dataAll.cols;
@@ -1988,7 +2013,7 @@ void Camera::insertNewData(cv::Mat& dataAll, cv::Mat newData, int dataSkipped){
 	}
 	dataAll = tmpDataAll;
 
-	cout << "End Camera::insertNewData" << endl;
+//	cout << "End Camera::insertNewData" << endl;
 }
 
 /** \brief Assign label for each map segment relaying on pixel-wise labels
@@ -2157,7 +2182,7 @@ void Camera::updatePixelData(cv::Mat& pixelCoordsAll,
 							std::vector<cv::Mat>& classResultsAll,
 							cv::Mat& manualLabelsAll,
 							cv::Mat& pixelColorsAll,
-							std::queue<ClassResult>& classResultsHistDir,
+							std::queue<ClassResult>& classResultsHist,
 							const cv::Mat mapMove,
 							std::chrono::high_resolution_clock::time_point timestamp,
 							const cv::Mat pixelCoords,
@@ -2173,18 +2198,25 @@ void Camera::updatePixelData(cv::Mat& pixelCoordsAll,
 
 	//if new series of data begins - eg. new dir
 	bool removeAllFlag = false;
-	if(timestamp < classResultsHistDir.front().timestamp){
-		pixelsSkipped = pixelCoordsAll.cols;
-		while(!classResultsHistDir.empty()){
-			classResultsHistDir.pop();
+
+//	cout << "removing old" << endl;
+	if(!classResultsHist.empty()){
+		if(timestamp < classResultsHist.front().timestamp){
+			pixelsSkipped = pixelCoordsAll.cols;
+			while(!classResultsHist.empty()){
+				classResultsHist.pop();
+			}
+			removeAllFlag = true;
 		}
-		removeAllFlag = true;
-	}
-	while(!removeAllFlag &&
-			(timestamp - classResultsHistDir.front().timestamp) > std::chrono::milliseconds(pixelsTimeout))
-	{
-		pixelsSkipped += classResultsHistDir.front().numPixels;
-		classResultsHistDir.pop();
+		while(!removeAllFlag &&
+				(timestamp - classResultsHist.front().timestamp) > std::chrono::milliseconds(pixelsTimeout))
+		{
+			pixelsSkipped += classResultsHist.front().numPixels;
+			classResultsHist.pop();
+			if(classResultsHist.empty()){
+				break;
+			}
+		}
 	}
 
 	//move old pixels to new map ommiting those removed
@@ -2194,7 +2226,7 @@ void Camera::updatePixelData(cv::Mat& pixelCoordsAll,
 	}
 
 	//add new
-	cout << "adding new" << endl;
+//	cout << "adding new" << endl;
 	//coords
 	insertNewData(pixelCoordsAll, pixelCoords, pixelsSkipped);
 
@@ -2213,7 +2245,7 @@ void Camera::updatePixelData(cv::Mat& pixelCoordsAll,
 //		cout << "pixelCoordsAll.size() = " << pixelCoordsAll.size() << endl;
 //		cout << "pixelColorsAll.size() = " << pixelColorsAll.size() << endl;
 
-	classResultsHistDir.push(ClassResult(timestamp, pixelCoords.cols));
+	classResultsHist.push(ClassResult(timestamp, pixelCoords.cols));
 }
 
 void Camera::prepareSegmentInfo(std::vector<cv::Mat>& segmentPriors,
@@ -2494,9 +2526,9 @@ void Camera::constructPgm(Pgm& pgm,
 	pgm = Pgm(randVars, clusters, features);
 	pgm.params() = params;
 
-	cout << "nextRandVarId = " << nextRandVarId << endl;
-	cout << "nextFeatId = " << nextFeatId << endl;
-	cout << "nextClusterId = " << nextClusterId << endl;
+//	cout << "nextRandVarId = " << nextRandVarId << endl;
+//	cout << "nextFeatId = " << nextFeatId << endl;
+//	cout << "nextClusterId = " << nextClusterId << endl;
 //	cout << "obsVec = " << obsVec << endl;
 }
 
@@ -2514,7 +2546,7 @@ cv::Mat Camera::inferTerrainLabels(const Pgm& pgm,
 											msgs,
 											params,
 											obsVec);
-	cout << "calibrated = " << calibrated << endl;
+//	cout << "calibrated = " << calibrated << endl;
 
     for(int mapX = 0; mapX < MAP_SIZE; ++mapX){
     	for(int mapY = 0; mapY < MAP_SIZE; ++mapY){
@@ -2644,68 +2676,91 @@ void Camera::insertConstraints(	cv::Mat map,
 //	}
 //	lck.unlock();
 
-	std::unique_lock<std::mutex> lckClassRes;
 
-	//move map
-	pixelCoordsMapOrigRobotMapCenter.rowRange(0, 3) = mapMove * pixelCoordsMapOrigRobotMapCenter.rowRange(0, 3);
+	if(!pixelCoordsMapOrigRobotMapCenter.empty()){
+		std::chrono::high_resolution_clock::time_point timeBegin;
+		std::chrono::high_resolution_clock::time_point timeEnd;
 
-	//run inference
-	cout << "running inference" << endl;
+		timeBegin = std::chrono::high_resolution_clock::now();
 
-	std::vector<cv::Mat> segmentPriors;
-	std::vector<cv::Mat> segmentFeats;
-	std::vector<int> segmentPixelCount;
-	Pgm pgm;
-	std::map<int, int> segIdToVarClusterId;
-	std::map<int, int> segIdToRandVarId;
-	std::vector<double> obsVec;
-//		Mat segmentMask(segmentManualLabels.size(), CV_32SC1, Scalar(0));
-//		segmentMask.setTo(Scalar(1), segmentManualLabels >= 0);
+		std::unique_lock<std::mutex> lckClassRes(mtxClassResults);
 
-	cout << "prepare segment info" << endl;
-	prepareSegmentInfo(segmentPriors,
-						segmentFeats,
-						segmentPixelCount,
-						pixelCoordsMapOrigRobotMapCenter,
-						pixelColorsMap,
-						classResultsMap,
-						pointCloudMapOrigRobotMapCenter);
+//		cout << "moving map" << endl;
+		//move map
+//		cout << "pixelCoordsMapOrigRobotMapCenter.size() = " << pixelCoordsMapOrigRobotMapCenter.size() << endl;
+//		cout << "mapMove.size() = " << mapMove.size() << endl;
+		pixelCoordsMapOrigRobotMapCenter = mapMove * pixelCoordsMapOrigRobotMapCenter;
 
-	cout << "construct pgm" << endl;
-	constructPgm(pgm,
-				segIdToVarClusterId,
-				segIdToRandVarId,
-				obsVec,
-				segmentPriors,
-				segmentFeats,
-				segmentPixelCount);
 
-	cout << "infer terrain labels" << endl;
-	Mat segmentResults = inferTerrainLabels(pgm,
-											obsVec,
-											segIdToVarClusterId);
+		//run inference
+//		cout << "running inference" << endl;
 
-//	cout << "infer results" << endl;
-//	Mat inferResults(1, pixelCoordsMap.cols, CV_32SC1);
-//	for(int d = 0; d < pixelCoordsMap.cols; ++d){
-//		int xSegm = pixelCoordsMap.at<float>(0, d)/MAP_RASTER_SIZE + MAP_SIZE/2;
-//		int ySegm = pixelCoordsMap.at<float>(1, d)/MAP_RASTER_SIZE + MAP_SIZE/2;
-//
-//		inferResults.at<int>(d) = segmentResults.at<int>(xSegm, ySegm);
-//	}
+		std::vector<cv::Mat> segmentPriors;
+		std::vector<cv::Mat> segmentFeats;
+		std::vector<int> segmentPixelCount;
+		Pgm pgm;
+		std::map<int, int> segIdToVarClusterId;
+		std::map<int, int> segIdToRandVarId;
+		std::vector<double> obsVec;
+	//		Mat segmentMask(segmentManualLabels.size(), CV_32SC1, Scalar(0));
+	//		segmentMask.setTo(Scalar(1), segmentManualLabels >= 0);
 
-	//copy results to map
-	for(int x = 0; x < MAP_SIZE; ++x){
-		for(int y = 0; y < MAP_SIZE; ++y){
-			float curConstr = 0.0;
-			if(segmentResults.at<int>(x, y) != DRIVABLE_LABEL){
-				curConstr = 1.0;
-			}
-			map.at<float>(x, y) = max(map.at<float>(x, y), curConstr);
+//		cout << "prepare segment info" << endl;
+		prepareSegmentInfo(segmentPriors,
+							segmentFeats,
+							segmentPixelCount,
+							pixelCoordsMapOrigRobotMapCenter,
+							pixelColorsMap,
+							classResultsMap,
+							pointCloudMapOrigRobotMapCenter);
+
+//		cout << "construct pgm" << endl;
+		constructPgm(pgm,
+					segIdToVarClusterId,
+					segIdToRandVarId,
+					obsVec,
+					segmentPriors,
+					segmentFeats,
+					segmentPixelCount);
+
+//		cout << "infer terrain labels" << endl;
+		Mat segmentResults = inferTerrainLabels(pgm,
+												obsVec,
+												segIdToVarClusterId);
+
+		pgm.deleteContents();
+		for(int f = 0; f < pgm.feats().size(); ++f){
+			delete pgm.feats()[f];
 		}
-	}
 
-	lckClassRes.unlock();
+	//	cout << "infer results" << endl;
+	//	Mat inferResults(1, pixelCoordsMap.cols, CV_32SC1);
+	//	for(int d = 0; d < pixelCoordsMap.cols; ++d){
+	//		int xSegm = pixelCoordsMap.at<float>(0, d)/MAP_RASTER_SIZE + MAP_SIZE/2;
+	//		int ySegm = pixelCoordsMap.at<float>(1, d)/MAP_RASTER_SIZE + MAP_SIZE/2;
+	//
+	//		inferResults.at<int>(d) = segmentResults.at<int>(xSegm, ySegm);
+	//	}
+
+		//copy results to map
+		for(int x = 0; x < MAP_SIZE; ++x){
+			for(int y = 0; y < MAP_SIZE; ++y){
+				float curConstr = 0.0;
+				if(segmentResults.at<int>(x, y) >= 0 &&
+					segmentResults.at<int>(x, y) != DRIVABLE_LABEL)
+				{
+					curConstr = 1.0;
+				}
+				map.at<float>(x, y) = max(map.at<float>(x, y), curConstr);
+			}
+		}
+
+		lckClassRes.unlock();
+
+		timeEnd = std::chrono::high_resolution_clock::now();
+		cout << "Constraints time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEnd - timeBegin).count() << " ms" << endl;
+
+	}
 }
 
 //CV_8UC3 2x640x480: left, right image
