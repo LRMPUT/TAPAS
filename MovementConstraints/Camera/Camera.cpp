@@ -122,71 +122,71 @@ Camera::~Camera(){
 	}
 }
 
-void Camera::computeConstraints(std::vector<cv::Mat> mapSegments,
-								std::chrono::high_resolution_clock::time_point nextCurTimestamp)
-{
-//	cout << "Computing constraints" << endl;
-
-	Mat votes(MAP_SIZE, MAP_SIZE, CV_32SC1, Scalar(0));
-	Mat countVotes(MAP_SIZE, MAP_SIZE, CV_32SC1, Scalar(0));
-	for(int cam = 0; cam < mapSegments.size(); cam++){
-		if(!mapSegments[cam].empty() && !classifiedImage[cam].empty()){
-			for(int r = 0; r < numRows; r++){
-				for(int c = 0; c < numCols; c++){
-					//cout << mapSegments[cam].at<int>(r, c) << endl;
-					int x = mapSegments[cam].at<int>(r, c) / MAP_SIZE;
-					int y = mapSegments[cam].at<int>(r, c) % MAP_SIZE;
-					if(x >= 0 && x < MAP_SIZE && y >= 0 && y < MAP_SIZE){
-						//cout << "(" << x << ", " << y << "), label " << classifiedImage[cam].at<int>(r, c) << endl;
-						if(classifiedImage[cam].at<int>(r, c) >= 0){
-							countVotes.at<int>(x, y)++;
-							if(classifiedImage[cam].at<int>(r, c) != DRIVABLE_LABEL){
-								votes.at<int>(x, y)++;
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	int nhood[][2] = {{-1, -1},
-						{-1, 0},
-						{-1, 1},
-						{0, 1},
-						{1, 1},
-						{1, 0},
-						{1, -1},
-						{0, -1}};
-	std::unique_lock<std::mutex> lck(mtxConstr);
-	constraints = Mat(MAP_SIZE, MAP_SIZE, CV_32FC1, Scalar(0));
-	for(int y = 0; y < MAP_SIZE; y++){
-		for(int x = 0; x < MAP_SIZE; x++){
-			if(countVotes.at<int>(x, y) > 0){
-				constraints.at<float>(x, y) = (float)votes.at<int>(x, y)/countVotes.at<int>(x, y);
-				//cout << x << ":" << y << " = " << (float)votes.at<int>(x, y)/countVotes.at<int>(x, y) << endl;
-			}
-			else{
-				constraints.at<float>(x, y) = 0;
-			}
-		}
-	}
-	for(int y = 0; y < MAP_SIZE; y++){
-		for(int x = 0; x < MAP_SIZE; x++){
-		float maxNhVal = 0;
-		for(int n = 0; n < sizeof(nhood)/sizeof(nhood[0]); n++){
-			int nx = x + nhood[n][0];
-			int ny = y + nhood[n][1];
-			if(nx >= 0 && nx < MAP_SIZE && ny >= 0 && ny < MAP_SIZE){
-				maxNhVal = max(maxNhVal, constraints.at<float>(nx, ny));
-			}
-		}
-		constraints.at<float>(x, y) = min(constraints.at<float>(x, y), maxNhVal);
-		//cout << x << ":" << y << " = " << (float)votes.at<int>(x, y)/countVotes.at<int>(x, y) << endl;
-		}
-	}
-	curTimestamp = nextCurTimestamp;
-	lck.unlock();
-}
+//void Camera::computeConstraints(std::vector<cv::Mat> mapSegments,
+//								std::chrono::high_resolution_clock::time_point nextCurTimestamp)
+//{
+////	cout << "Computing constraints" << endl;
+//
+//	Mat votes(MAP_SIZE, MAP_SIZE, CV_32SC1, Scalar(0));
+//	Mat countVotes(MAP_SIZE, MAP_SIZE, CV_32SC1, Scalar(0));
+//	for(int cam = 0; cam < mapSegments.size(); cam++){
+//		if(!mapSegments[cam].empty() && !classifiedImage[cam].empty()){
+//			for(int r = 0; r < numRows; r++){
+//				for(int c = 0; c < numCols; c++){
+//					//cout << mapSegments[cam].at<int>(r, c) << endl;
+//					int x = mapSegments[cam].at<int>(r, c) / MAP_SIZE;
+//					int y = mapSegments[cam].at<int>(r, c) % MAP_SIZE;
+//					if(x >= 0 && x < MAP_SIZE && y >= 0 && y < MAP_SIZE){
+//						//cout << "(" << x << ", " << y << "), label " << classifiedImage[cam].at<int>(r, c) << endl;
+//						if(classifiedImage[cam].at<int>(r, c) >= 0){
+//							countVotes.at<int>(x, y)++;
+//							if(classifiedImage[cam].at<int>(r, c) != DRIVABLE_LABEL){
+//								votes.at<int>(x, y)++;
+//							}
+//						}
+//					}
+//				}
+//			}
+//		}
+//	}
+//	int nhood[][2] = {{-1, -1},
+//						{-1, 0},
+//						{-1, 1},
+//						{0, 1},
+//						{1, 1},
+//						{1, 0},
+//						{1, -1},
+//						{0, -1}};
+//	std::unique_lock<std::mutex> lck(mtxConstr);
+//	constraints = Mat(MAP_SIZE, MAP_SIZE, CV_32FC1, Scalar(0));
+//	for(int y = 0; y < MAP_SIZE; y++){
+//		for(int x = 0; x < MAP_SIZE; x++){
+//			if(countVotes.at<int>(x, y) > 0){
+//				constraints.at<float>(x, y) = (float)votes.at<int>(x, y)/countVotes.at<int>(x, y);
+//				//cout << x << ":" << y << " = " << (float)votes.at<int>(x, y)/countVotes.at<int>(x, y) << endl;
+//			}
+//			else{
+//				constraints.at<float>(x, y) = 0;
+//			}
+//		}
+//	}
+//	for(int y = 0; y < MAP_SIZE; y++){
+//		for(int x = 0; x < MAP_SIZE; x++){
+//		float maxNhVal = 0;
+//		for(int n = 0; n < sizeof(nhood)/sizeof(nhood[0]); n++){
+//			int nx = x + nhood[n][0];
+//			int ny = y + nhood[n][1];
+//			if(nx >= 0 && nx < MAP_SIZE && ny >= 0 && ny < MAP_SIZE){
+//				maxNhVal = max(maxNhVal, constraints.at<float>(nx, ny));
+//			}
+//		}
+//		constraints.at<float>(x, y) = min(constraints.at<float>(x, y), maxNhVal);
+//		//cout << x << ":" << y << " = " << (float)votes.at<int>(x, y)/countVotes.at<int>(x, y) << endl;
+//		}
+//	}
+//	curTimestamp = nextCurTimestamp;
+//	lck.unlock();
+//}
 
 std::vector<cv::Mat> Camera::computeMapSegments(cv::Mat curPosImuMapCenter){
 //	cout << "Computing map segments" << endl;
@@ -1687,8 +1687,16 @@ void Camera::run(){
 			std::chrono::high_resolution_clock::time_point timeEndClassification;
 			std::chrono::high_resolution_clock::time_point timeEndUpdate;
 			Mat curPosOrigMapCenter;
-			std::chrono::high_resolution_clock::time_point nextCurTimestamp = std::chrono::high_resolution_clock::now();
+
+			std::unique_lock<std::mutex> lckClassRes(mtxClassResults);
+
+			std::chrono::high_resolution_clock::time_point curTimestamp = std::chrono::high_resolution_clock::now();
 			Mat pointCloudOrigMapCenter = movementConstraints->getPointCloud(curPosOrigMapCenter);
+
+			mapMoveSinceGetPointCloud = Mat::eye(4, 4, CV_32FC1);
+
+			lckClassRes.unlock();
+
 			if(!curPosOrigMapCenter.empty()){
 				timeBegin = std::chrono::high_resolution_clock::now();
 				vector<Mat> cameraData = this->getData();
@@ -1780,7 +1788,16 @@ void Camera::run(){
 							if(debugLevel >= 1){
 								cout << "Merging with previous pixel data" << endl;
 							}
-							std::unique_lock<std::mutex> lckClassRes(mtxClassResults);
+
+							lckClassRes.lock();
+
+							//Ensure correct pixelCoords values if map moved since getPointCloud!!!
+							if(timestampMap > curTimestamp){
+								if(debugLevel >= 2){
+									cout << endl << "Map moved since getPointCloud!!!" << endl << endl;
+								}
+								pixelCoords = mapMoveSinceGetPointCloud * pixelCoords;
+							}
 
 							//merge with previous pixel data
 
@@ -1799,7 +1816,7 @@ void Camera::run(){
 											pixelColorsMap,
 											classResultsHistMap,
 											Mat::eye(4, 4, CV_32FC1),
-											nextCurTimestamp,
+											curTimestamp,
 											pixelCoords,
 											classRes,
 											cameraData[cam]);
@@ -2108,17 +2125,25 @@ void Camera::draw3DVis(cv::viz::Viz3d& win,
     //results
     for(int mapX = 0; mapX < MAP_SIZE; ++mapX){
     	for(int mapY = 0; mapY < MAP_SIZE; ++mapY){
-    		if(segments.at<int>(mapX, mapY) >= 0 &&
-    			segments.at<int>(mapX, mapY) != DRIVABLE_LABEL)
+    		if(segments.at<int>(mapX, mapY) >= 0)
     		{
     			Point3d centerPt((mapX - MAP_SIZE/2) * MAP_RASTER_SIZE + MAP_RASTER_SIZE/2,
 								(mapY - MAP_SIZE/2) * MAP_RASTER_SIZE + MAP_RASTER_SIZE/2,
 								0);
+
+    			viz::Color color;
+    			if(segments.at<int>(mapX, mapY) == DRIVABLE_LABEL){
+    				color = viz::Color::red();
+    			}
+    			else{
+    				color = viz::Color::green();
+    			}
+
     			viz::WPlane segPlane(centerPt,
     								Vec3d(0.0, 0.0, 1.0) /*normal*/,
 									Vec3d(0.0, 1.0, 0.0) /*new y axis*/,
 									Size2d(MAP_RASTER_SIZE, MAP_RASTER_SIZE) /*size*/,
-									viz::Color::red());
+									color);
     			segPlane.setRenderingProperty(viz::OPACITY, 0.5);
 
     			int segId = mapX * MAP_SIZE + mapY;
@@ -2679,11 +2704,16 @@ void Camera::insertConstraints(	cv::Mat map,
 
 	if(!pixelCoordsMapOrigRobotMapCenter.empty()){
 		std::chrono::high_resolution_clock::time_point timeBegin;
-		std::chrono::high_resolution_clock::time_point timeEnd;
+		std::chrono::high_resolution_clock::time_point timeEndMoving;
+		std::chrono::high_resolution_clock::time_point timeEndPreparing;
+		std::chrono::high_resolution_clock::time_point timeEndConstructing;
+		std::chrono::high_resolution_clock::time_point timeEndInfering;
 
 		timeBegin = std::chrono::high_resolution_clock::now();
 
 		std::unique_lock<std::mutex> lckClassRes(mtxClassResults);
+
+		timestampMap = curTimestampMap;
 
 //		cout << "moving map" << endl;
 		//move map
@@ -2691,7 +2721,9 @@ void Camera::insertConstraints(	cv::Mat map,
 //		cout << "mapMove.size() = " << mapMove.size() << endl;
 		pixelCoordsMapOrigRobotMapCenter = mapMove * pixelCoordsMapOrigRobotMapCenter;
 
+		mapMoveSinceGetPointCloud = mapMove * mapMoveSinceGetPointCloud;
 
+		timeEndMoving = std::chrono::high_resolution_clock::now();
 		//run inference
 //		cout << "running inference" << endl;
 
@@ -2714,6 +2746,8 @@ void Camera::insertConstraints(	cv::Mat map,
 							classResultsMap,
 							pointCloudMapOrigRobotMapCenter);
 
+
+		timeEndPreparing = std::chrono::high_resolution_clock::now();
 //		cout << "construct pgm" << endl;
 		constructPgm(pgm,
 					segIdToVarClusterId,
@@ -2723,6 +2757,7 @@ void Camera::insertConstraints(	cv::Mat map,
 					segmentFeats,
 					segmentPixelCount);
 
+		timeEndConstructing = std::chrono::high_resolution_clock::now();
 //		cout << "infer terrain labels" << endl;
 		Mat segmentResults = inferTerrainLabels(pgm,
 												obsVec,
@@ -2757,8 +2792,11 @@ void Camera::insertConstraints(	cv::Mat map,
 
 		lckClassRes.unlock();
 
-		timeEnd = std::chrono::high_resolution_clock::now();
-		cout << "Constraints time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEnd - timeBegin).count() << " ms" << endl;
+		timeEndInfering = std::chrono::high_resolution_clock::now();
+		cout << "Moving time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndMoving - timeBegin).count() << " ms" << endl;
+		cout << "Preparing time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndPreparing - timeEndMoving).count() << " ms" << endl;
+		cout << "Constructing time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndConstructing - timeEndPreparing).count() << " ms" << endl;
+		cout << "Infering time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndInfering - timeEndPreparing).count() << " ms" << endl;
 
 	}
 }
@@ -2809,6 +2847,17 @@ cv::Mat Camera::getClassifiedImage(){
 	return ret;
 }
 
+void Camera::getPixelPointCloud(cv::Mat& pixelCoords,
+								cv::Mat& pixelColors)
+{
+	std::unique_lock<std::mutex> lck(mtxClassResults);
+
+	pixelCoords = pixelCoordsMapOrigRobotMapCenter.clone();
+	pixelColors = pixelColorsMap.clone();
+
+	lck.unlock();
+}
+
 void Camera::open(std::vector<std::string> device){
 	std::unique_lock<std::mutex> lck(mtxDevice);
 	for(int i = 0; i < min((int)device.size(), numCameras); i++){
@@ -2825,11 +2874,11 @@ void Camera::close(){
 	cout << "Closing cameras" << endl;
 
 	std::unique_lock<std::mutex> lck(mtxDevice);
-	cout << "cameras.size() = " << cameras.size() << endl;
+//	cout << "cameras.size() = " << cameras.size() << endl;
 	for(int i = 0; i < cameras.size(); i++){
-		cout << "i = " << i << endl;
+//		cout << "i = " << i << endl;
 		if(cameras[i].isOpened()){
-			cout << "Releasing" << endl;
+//			cout << "Releasing" << endl;
 			cameras[i].release();
 		}
 	}

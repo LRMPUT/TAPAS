@@ -220,6 +220,12 @@ void Debug::getVecFieldHist(std::vector<float>& retVecFieldHist,
 	robot->globalPlanner->localPlanner->getVecFieldHist(retVecFieldHist, retGoalDirection, retBestDirection);
 }
 
+void Debug::getPixelPointCloud(cv::Mat& retPixelCoords,
+							cv::Mat& retPixelColors)
+{
+	robot->movementConstraints->camera->getPixelPointCloud(retPixelCoords, retPixelColors);
+}
+
 float Debug::getImuAccVariance(){
 	return robot->getImuAccVariance();
 }

@@ -112,7 +112,7 @@ class Camera {
 
 	std::vector<std::string> labels;
 
-	std::chrono::high_resolution_clock::time_point curTimestamp;
+//	std::chrono::high_resolution_clock::time_point curTimestamp;
 
 	bool runThread;
 
@@ -141,6 +141,10 @@ class Camera {
 				numPixels(inumPixels)
 		{}
 	};
+
+	std::chrono::high_resolution_clock::time_point timestampMap;
+
+	cv::Mat mapMoveSinceGetPointCloud;
 
 	std::mutex mtxClassResults;
 
@@ -284,6 +288,9 @@ public:
 	const std::vector<cv::Mat> getData();
 
 	cv::Mat getClassifiedImage();
+
+	void getPixelPointCloud(cv::Mat& pixelCoords,
+							cv::Mat& pixelColors);
 
 	void open(std::vector<std::string> device);
 

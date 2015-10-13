@@ -42,11 +42,14 @@ private:
 	std::vector<float> vecFieldHist;
 	float goalDirection;
 	float bestDirection;
+	cv::Mat pixelCoords;
+	cv::Mat pixelColors;
 
 	void drawRobot();
 	void drawPointCloud();
 	void drawConstraintsMap();
 	void drawVecFieldHist();
+	void drawPixelPointCloud();
 
 	void multCurMatrix(cv::Mat trans);
 
@@ -54,11 +57,12 @@ private:
 	void cylinder(float x1, float y1, float z1, float x2,float y2, float z2, float radius,int subdivisions);
 
 public:
-	void rysuj();
+	void manualDraw();
 	void updatePointCloud(cv::Mat newPointCloud);
 	void updateRobotPos(cv::Mat newRobotPos, cv::Mat newMapCenterGlobal);
 	void updateConstraintsMap(cv::Mat newConstraintsMap);
 	void updateVecFieldHist(std::vector<float> newVecFieldHist, float newGoalDirection, float newBestDirection);
+	void updatePixelPointCloud(cv::Mat newPixelCoords, cv::Mat newPixelColors);
 	//void updateCameraOrigImu(cv::Mat newCameraOrigImu);
 	//void updateImuOrigGlobal(cv::Mat newImuOrigGlobal);
 	Viewer(cv::Mat iImuOrigGlobal, cv::Mat icameraOrigImu);

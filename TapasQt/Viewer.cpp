@@ -163,6 +163,32 @@ void Viewer::drawVecFieldHist(){
 	}
 }
 
+void Viewer::drawPixelPointCloud(){
+	if(!pixelCoords.empty() && !pixelColors.empty()){
+		glPushMatrix();
+		multCurMatrix(imuOrigRobot.inv());
+
+		glDisable(GL_LIGHTING);
+		glBegin(GL_POINTS);
+		for(int p = 0; p < pixelCoords.cols; p++){
+			glColor4f((float)pixelColors.at<Vec3b>(p)[0] / 255,
+						(float)pixelColors.at<Vec3b>(p)[1] / 255,
+						(float)pixelColors.at<Vec3b>(p)[2] / 255,
+						0.2);
+
+			glVertex4f(pixelCoords.at<float>(0, p),
+						pixelCoords.at<float>(1, p),
+						pixelCoords.at<float>(2, p),
+						pixelCoords.at<float>(3, p));
+		}
+		glEnd();
+		glEnable(GL_LIGHTING);
+
+
+		glPopMatrix();
+	}
+}
+
 void Viewer::multCurMatrix(cv::Mat trans){
 	glMultTransposeMatrixf((float*)trans.data);
 }
@@ -237,6 +263,7 @@ void Viewer::draw()
 	drawPointCloud();
 	drawConstraintsMap();
 	drawVecFieldHist();
+	drawPixelPointCloud();
 }
 
 void Viewer::init()
@@ -277,6 +304,11 @@ void Viewer::updateVecFieldHist(std::vector<float> newVecFieldHist, float newGoa
 	bestDirection = newBestDirection;
 }
 
+void Viewer::updatePixelPointCloud(cv::Mat newPixelCoords, cv::Mat newPixelColors){
+	pixelCoords = newPixelCoords;
+	pixelColors = newPixelColors;
+}
+
 /*void Viewer::updateCameraOrigImu(cv::Mat newCameraOrigImu){
 	cameraOrigImu = newCameraOrigImu;
 }
@@ -297,7 +329,7 @@ Viewer::~Viewer()
 	//cout << "end of ~Viewer()" << endl;
 }
 
-void Viewer::rysuj()
+void Viewer::manualDraw()
 {
 	repaint();
 }
