@@ -71,7 +71,7 @@ IMU::IMU(Robot* irobot) :
 #endif
 		imuNew(NULL),
 		robot(irobot),
-		usedIMUType(IMU_UM6)
+		usedIMUType(IMU_MICROSTRAIN_GX4_25)
 {
 
 }

@@ -2723,6 +2723,16 @@ void Camera::insertConstraints(	cv::Mat map,
 
 		mapMoveSinceGetPointCloud = mapMove * mapMoveSinceGetPointCloud;
 
+		Mat pixelCoordsCopyOrigRobotMapCenter = pixelCoordsMapOrigRobotMapCenter.clone();
+		Mat pixelColorsCopy = pixelColorsMap.clone();
+		vector<Mat> classResultsCopy;
+		for(int l = 0; l < classResultsMap.size(); ++l){
+			classResultsCopy.push_back(classResultsMap[l].clone());
+		}
+		Mat pointCloudCopyOrigRobotMapCenter = pointCloudMapOrigRobotMapCenter.clone();
+
+		lckClassRes.unlock();
+
 		timeEndMoving = std::chrono::high_resolution_clock::now();
 		//run inference
 //		cout << "running inference" << endl;
@@ -2741,10 +2751,10 @@ void Camera::insertConstraints(	cv::Mat map,
 		prepareSegmentInfo(segmentPriors,
 							segmentFeats,
 							segmentPixelCount,
-							pixelCoordsMapOrigRobotMapCenter,
-							pixelColorsMap,
-							classResultsMap,
-							pointCloudMapOrigRobotMapCenter);
+							pixelCoordsCopyOrigRobotMapCenter,
+							pixelColorsCopy,
+							classResultsCopy,
+							pointCloudCopyOrigRobotMapCenter);
 
 
 		timeEndPreparing = std::chrono::high_resolution_clock::now();
@@ -2789,8 +2799,6 @@ void Camera::insertConstraints(	cv::Mat map,
 				map.at<float>(x, y) = max(map.at<float>(x, y), curConstr);
 			}
 		}
-
-		lckClassRes.unlock();
 
 		timeEndInfering = std::chrono::high_resolution_clock::now();
 		cout << "Moving time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndMoving - timeBegin).count() << " ms" << endl;
