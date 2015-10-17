@@ -171,9 +171,9 @@ void Viewer::drawPixelPointCloud(){
 		glDisable(GL_LIGHTING);
 		glBegin(GL_POINTS);
 		for(int p = 0; p < pixelCoords.cols; p++){
-			glColor4f((float)pixelColors.at<Vec3b>(p)[0] / 255,
+			glColor4f((float)pixelColors.at<Vec3b>(p)[2] / 255,
 						(float)pixelColors.at<Vec3b>(p)[1] / 255,
-						(float)pixelColors.at<Vec3b>(p)[2] / 255,
+						(float)pixelColors.at<Vec3b>(p)[0] / 255,
 						0.2);
 
 			glVertex4f(pixelCoords.at<float>(0, p),

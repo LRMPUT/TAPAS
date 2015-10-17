@@ -122,8 +122,9 @@ private:
 	//
 	cv::Mat constraintsMap;
 
-//	//Map center position in global coordinates
-//	double mapCenterX, mapCenterY, mapCenterPhi;
+	std::thread constraintsMapThread;
+
+	bool constraintsMapThreadRunning;
 
 	std::thread movementConstraintsThread;
 

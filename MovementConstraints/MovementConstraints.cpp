@@ -36,7 +36,11 @@
 using namespace cv;
 using namespace std;
 
-MovementConstraints::MovementConstraints(Robot* irobot, TiXmlElement* settings) : robot(irobot), runThread(false) {
+MovementConstraints::MovementConstraints(Robot* irobot, TiXmlElement* settings) :
+		robot(irobot),
+		runThread(false),
+		constraintsMapThreadRunning(false)
+{
 	if(!settings){
 		throw "Bad settings file - entry MovementConstraints not found";
 	}
@@ -181,7 +185,19 @@ void MovementConstraints::run(){
 				if(debugLevel >= 1){
 					cout << "updateConstraintsMap()" << endl;
 				}
-				updateConstraintsMap();
+				if(!constraintsMapThreadRunning){
+					if(debugLevel >= 1){
+						cout << "joining updateConstraintsMap thread" << endl;
+					}
+					if(constraintsMapThread.joinable()){
+						constraintsMapThread.join();
+					}
+					if(debugLevel >= 1){
+						cout << "spawning new thread for updateConstraintsMap" << endl;
+					}
+					constraintsMapThreadRunning = true;
+					constraintsMapThread = std::thread(&MovementConstraints::updateConstraintsMap, this);
+				}
 				if(debugLevel >= 1){
 					cout << "end updateConstraintsMap()" << endl;
 				}
@@ -191,6 +207,10 @@ void MovementConstraints::run(){
 			std::chrono::milliseconds duration(20);
 			std::this_thread::sleep_for(duration);
 			i++;
+		}
+
+		if(constraintsMapThread.joinable()){
+			constraintsMapThread.join();
 		}
 	}
 	catch(char const* error){
@@ -216,14 +236,18 @@ void MovementConstraints::stopThread(){
 }
 
 void MovementConstraints::updateConstraintsMap(){
-	//cout << "updateConstraintsMap()" << endl;
+//	cout << "updateConstraintsMap()" << endl;
 
 	//przesuwanie mapy
 	std::chrono::high_resolution_clock::time_point timestampMapCur = std::chrono::high_resolution_clock::now();
 
 //	cout << "Moving map" << endl;
 	std::chrono::high_resolution_clock::time_point imuTimestamp;
-	Mat imuCur = robot->getImuData(imuTimestamp);
+//	cout << "getting imu data" << endl;
+	Mat imuCur(3, 4, CV_32FC1, Scalar(0));
+	if(robot->isImuDataValid()){
+		imuCur = robot->getImuData(imuTimestamp);
+	}
 //	cout << "updating cur pos" << endl;
 	updateCurPosOrigMapCenter();
 
@@ -235,7 +259,7 @@ void MovementConstraints::updateConstraintsMap(){
 //	cout << "Calculating new curMapCenterOrigGlobal" << endl;
 	curMapCenterOrigGlobal = compOrient(imuCur);
 	curPosOrigMapCenter = Mat::eye(4, 4, CV_32FC1);
-	//cout << "Map moved" << endl;
+//	cout << "Map moved" << endl;
 	timestampMap = timestampMapCur;
 	lckPointCloud.unlock();
 	lckMap.unlock();
@@ -248,9 +272,11 @@ void MovementConstraints::updateConstraintsMap(){
 	this->insertHokuyoConstraints(constraintsMap, timestampMap, mapMove);
 //	cout << "Adding camera constraints" << endl;
 	camera->insertConstraints(constraintsMap, timestampMap, mapMove);
-	//cout << constraintsMap << endl;
+//	cout << constraintsMap << endl;
 	lckMap.unlock();
-	//cout << "End updateConstraintsMap()" << endl;
+//	cout << "End updateConstraintsMap()" << endl;
+
+	constraintsMapThreadRunning = false;
 }
 
 
@@ -357,7 +383,9 @@ void MovementConstraints::updateCurPosOrigMapCenter(){
 	}
 #else
 	std::unique_lock<std::mutex> lck(mtxPointCloud);
+	cout << "updating curPosOrigMapCenter" << endl;
 	curPosOrigMapCenter = Mat::eye(4, 4, CV_32FC1);
+	cout << "end updating curPosOrigMapCenter" << endl;
 	lck.unlock();
 #endif
 }

@@ -132,7 +132,7 @@
 		runThread: true - MovementConstraints thred runs, false otherwise
 		debug: Debug level: 0 - no debug, 1, 2 - debug
 	-->
-	<MovementConstraints runThread="true" debug="0">
+	<MovementConstraints runThread="true" debug="1">
 		<odometry diam="160" base="452" encodersCPR="300" />
 		<!--
 			minDist: Minimal distance taken into consideration. Other points are discarted.

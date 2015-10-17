@@ -91,6 +91,7 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 
 #ifndef NO_CUDA
 	int devCount;
+	cout << "Making device query" << endl;
 	checkCudaErrors(cudaGetDeviceCount(&devCount));
 	cout << "Available CUDA devices: " <<  devCount << endl;
 	cudaDeviceProp prop;
