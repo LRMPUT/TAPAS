@@ -58,7 +58,7 @@ class Debug;
 #define MAP_SIZE	(10000/MAP_RASTER_SIZE)	//[u] 10m
 #define MAP_MARGIN (2500/MAP_RASTER_SIZE)	//[u] 2,5m margin
 
-#define ROBOT_OFFLINE
+//#define ROBOT_OFFLINE
 
 #define PI 3.14159265359
 

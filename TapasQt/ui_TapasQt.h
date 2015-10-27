@@ -1,7 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'TapasQt.ui'
 **
-** Created: Fri Oct 16 11:44:17 2015
+** Created: Tue Oct 27 13:21:51 2015
 **      by: Qt User Interface Compiler version 4.8.1
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
@@ -163,6 +163,8 @@ public:
     QLineEdit *saRateImuLineEdit;
     QCheckBox *includeEstimatedPosCheckBox;
     QLineEdit *saRateEstimatedPosLineEdit;
+    QCheckBox *includeGoalDirLocalMapCheckBox;
+    QLineEdit *saRateGoalDirLocalMapLineEdit;
     QGroupBox *groupBox_2;
     QWidget *verticalLayoutWidget_2;
     QVBoxLayout *verticalLayout_2;
@@ -827,10 +829,10 @@ public:
         recordTab->setObjectName(QString::fromUtf8("recordTab"));
         saRateGroupBox = new QGroupBox(recordTab);
         saRateGroupBox->setObjectName(QString::fromUtf8("saRateGroupBox"));
-        saRateGroupBox->setGeometry(QRect(30, 30, 201, 391));
+        saRateGroupBox->setGeometry(QRect(30, 30, 201, 461));
         verticalLayoutWidget = new QWidget(saRateGroupBox);
         verticalLayoutWidget->setObjectName(QString::fromUtf8("verticalLayoutWidget"));
-        verticalLayoutWidget->setGeometry(QRect(10, 30, 181, 362));
+        verticalLayoutWidget->setGeometry(QRect(10, 30, 181, 431));
         verticalLayout = new QVBoxLayout(verticalLayoutWidget);
         verticalLayout->setSpacing(6);
         verticalLayout->setContentsMargins(11, 11, 11, 11);
@@ -901,6 +903,16 @@ public:
         saRateEstimatedPosLineEdit->setObjectName(QString::fromUtf8("saRateEstimatedPosLineEdit"));
 
         verticalLayout->addWidget(saRateEstimatedPosLineEdit);
+
+        includeGoalDirLocalMapCheckBox = new QCheckBox(verticalLayoutWidget);
+        includeGoalDirLocalMapCheckBox->setObjectName(QString::fromUtf8("includeGoalDirLocalMapCheckBox"));
+
+        verticalLayout->addWidget(includeGoalDirLocalMapCheckBox);
+
+        saRateGoalDirLocalMapLineEdit = new QLineEdit(verticalLayoutWidget);
+        saRateGoalDirLocalMapLineEdit->setObjectName(QString::fromUtf8("saRateGoalDirLocalMapLineEdit"));
+
+        verticalLayout->addWidget(saRateGoalDirLocalMapLineEdit);
 
         groupBox_2 = new QGroupBox(recordTab);
         groupBox_2->setObjectName(QString::fromUtf8("groupBox_2"));
@@ -1380,7 +1392,7 @@ public:
 
         retranslateUi(TapasQtClass);
 
-        mainTab->setCurrentIndex(9);
+        mainTab->setCurrentIndex(6);
 
 
         QMetaObject::connectSlotsByName(TapasQtClass);
@@ -1479,6 +1491,8 @@ public:
         saRateImuLineEdit->setText(QApplication::translate("TapasQtClass", "100", 0, QApplication::UnicodeUTF8));
         includeEstimatedPosCheckBox->setText(QApplication::translate("TapasQtClass", "Estimated Pos", 0, QApplication::UnicodeUTF8));
         saRateEstimatedPosLineEdit->setText(QApplication::translate("TapasQtClass", "20", 0, QApplication::UnicodeUTF8));
+        includeGoalDirLocalMapCheckBox->setText(QApplication::translate("TapasQtClass", "Goal dir local map", 0, QApplication::UnicodeUTF8));
+        saRateGoalDirLocalMapLineEdit->setText(QApplication::translate("TapasQtClass", "10", 0, QApplication::UnicodeUTF8));
         groupBox_2->setTitle(QApplication::translate("TapasQtClass", "Control", 0, QApplication::UnicodeUTF8));
         label_17->setText(QApplication::translate("TapasQtClass", "File path", 0, QApplication::UnicodeUTF8));
         recPathLineEdit->setText(QApplication::translate("TapasQtClass", "data", 0, QApplication::UnicodeUTF8));
