@@ -201,9 +201,11 @@ class Camera {
 							std::vector<cv::Mat>& manualRegionsOnImages,
 							std::vector<std::map<int, int> >& mapRegionIdToLabel,
 							std::vector<cv::Mat>& terrains,
-							std::vector<cv::Mat>& poses,
+							std::vector<cv::Mat>& posesOrigMapCenter,
+							std::vector<cv::Mat>& mapCentersOrigGlobal,
 							std::vector<std::chrono::high_resolution_clock::time_point>& timestamps,
-							std::vector<cv::Mat>& mapMoves);
+							std::vector<cv::Mat>& mapMoves,
+							std::vector<float>& goalDirsGlobal);
 
 	/** \brief Funkcja ucząca klasyfikator danymi z katalogu.
 	 *
@@ -237,7 +239,9 @@ class Camera {
 					cv::Mat colors,
 					cv::Mat pose,
 					cv::Mat segments,
-					cv::Mat segmentsManual = cv::Mat());
+					cv::Mat segmentsManual = cv::Mat(),
+					float goalDir = 0.0,
+					float bestDir = 0.0);
 
 	void updatePixelData(cv::Mat& pixelCoordsAll,
 						std::vector<cv::Mat>& classResultsAll,

@@ -29,7 +29,7 @@ set(LBFGS_LIBRARIES lbfgs)
 IF (CUDA GREATER 0)
 	find_package(CUDA REQUIRED)
 	# Pass options to NVCC
-	set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3 -gencode arch=compute_12,code=sm_12)
+	set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3 -gencode arch=compute_20,code=sm_21)
 	SET( CUDA_PROPAGATE_HOST_FLAGS OFF )
 ENDIF (CUDA GREATER 0)
 link_directories(${URG_LIBRARIES_DIR})

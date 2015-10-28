@@ -47,6 +47,7 @@
 #include "Pgm/CustFeature.h"
 #include "Pgm/Inference.h"
 #include "Pgm/ParamEst.h"
+#include "../../Planning/LocalPlanner.h"
 
 using namespace boost;
 using namespace std;
@@ -606,18 +607,22 @@ void Camera::processDir(boost::filesystem::path dir,
 						std::vector<cv::Mat>& manualRegionsOnImages,
 						std::vector<std::map<int, int> >& mapRegionIdToLabel,
 						std::vector<cv::Mat>& terrains,
-						std::vector<cv::Mat>& poses,
+						std::vector<cv::Mat>& posesOrigMapCenter,
+						std::vector<cv::Mat>& mapCentersOrigGlobal,
 						std::vector<std::chrono::high_resolution_clock::time_point>& timestamps,
-						std::vector<cv::Mat>& mapMoves)
+						std::vector<cv::Mat>& mapMoves,
+						std::vector<float>& goalDirsGlobal)
 {
 	cout << "processDir()" << endl;
 	images.clear();
 	manualRegionsOnImages.clear();
 	mapRegionIdToLabel.clear();
 	terrains.clear();
-	poses.clear();
+	posesOrigMapCenter.clear();
+	mapCentersOrigGlobal.clear();
 	timestamps.clear();
 	mapMoves.clear();
+	goalDirsGlobal.clear();
 
 	//cout << dir.string() + "/hokuyo.data" << endl;
 	ifstream hokuyoFile(dir.string() + "/hokuyo.data");
@@ -640,10 +645,18 @@ void Camera::processDir(boost::filesystem::path dir,
 		cout << "Error - no camera file" << endl;
 		throw "Error - no camera file";
 	}
+	ifstream goalDirFile(dir.string() + "/goalDirGlobal.data");
+	bool includeGoalDirs = true;
+	if(!goalDirFile.is_open()){
+		cout << "Warning - no goal dir file" << endl;
+		includeGoalDirs = false;
+	}
+
 	Mat hokuyoAllPointsOrigMapCenter;
 	Mat imuPrev, encodersPrev;
 	Mat imuOrigGlobal, curPosOrigMapCenter;
 	Mat curMapMove = Mat::eye(4, 4, CV_32FC1);
+	float curGoalDirGlobal = 0.0;
 
 	std::queue<MovementConstraints::PointsPacket> pointsQueue;
 	std::chrono::high_resolution_clock::time_point mapMoveTimestamp(
@@ -655,6 +668,10 @@ void Camera::processDir(boost::filesystem::path dir,
 	imuFile >> imuCurTime;
 	int encodersCurTime;
 	encodersFile >> encodersCurTime;
+	int goalDirCurTime;
+	if(includeGoalDirs){
+		goalDirFile >> goalDirCurTime;
+	}
 	namedWindow("test");
 
 	/*static const int begInt = 1868;
@@ -843,11 +860,22 @@ void Camera::processDir(boost::filesystem::path dir,
 
 			//curRot.copyTo(prevRot);
 		}
+
+		if(includeGoalDirs){
+			while(goalDirCurTime <= cameraCurTime && !goalDirFile.eof()){
+				goalDirFile >> curGoalDirGlobal;
+				goalDirFile >> goalDirCurTime;
+			}
+		}
+		goalDirsGlobal.push_back(curGoalDirGlobal);
+
 		Mat terrain = hokuyoAllPointsOrigMapCenter.clone();
 		terrain.rowRange(0, 4) = (curPosOrigMapCenter*cameraOrigImu.front()).inv()*hokuyoAllPointsOrigMapCenter.rowRange(0, 4);
 		terrains.push_back(terrain);
 
-		poses.push_back(curPosOrigMapCenter.clone());
+		posesOrigMapCenter.push_back(curPosOrigMapCenter.clone());
+
+		mapCentersOrigGlobal.push_back(imuOrigGlobal);
 
 		//cout << "Displaying test image from file: " << dir.string() + string("/") + cameraImageFile.string() << endl;
 		Mat image = imread(dir.string() + string("/") + cameraImageFile.filename().string());
@@ -1011,36 +1039,44 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 	std::vector<cv::Mat> manualRegionsOnImages;
 	std::vector<std::map<int, int> > mapRegionIdToLabel;
 	std::vector<cv::Mat> terrains;
-	std::vector<cv::Mat> poses;
+	std::vector<cv::Mat> posesOrigMapCenter;
+	std::vector<cv::Mat> mapCentersOrigGlobal;
 	std::vector<std::chrono::high_resolution_clock::time_point> timestamps;
 	std::vector<cv::Mat> mapMoves;
+	std::vector<float> goalDirsGlobal;
 
 	for(int d = 0; d < dirs.size(); d++){
 		std::vector<cv::Mat> tmpImages;
 		std::vector<cv::Mat> tmpManualRegionsOnImages;
 		std::vector<std::map<int, int> > tmpMapRegionIdToLabel;
 		std::vector<cv::Mat> tmpTerrains;
-		std::vector<cv::Mat> tmpPoses;
+		std::vector<cv::Mat> tmpPosesOrigMapCenter;
+		std::vector<cv::Mat> tmpMapCentersOrigGlobal;
 		std::vector<std::chrono::high_resolution_clock::time_point> tmpTimestamps;
 		std::vector<cv::Mat> tmpMapMoves;
+		std::vector<float> tmpGoalDirsGlobal;
 
 		processDir(	dirs[d],
 					tmpImages,
 					tmpManualRegionsOnImages,
 					tmpMapRegionIdToLabel,
 					tmpTerrains,
-					tmpPoses,
+					tmpPosesOrigMapCenter,
+					tmpMapCentersOrigGlobal,
 					tmpTimestamps,
-					tmpMapMoves);
-		for(int i = 0; i < tmpImages.size(); i++){
-			images.push_back(tmpImages[i]);
-			manualRegionsOnImages.push_back(tmpManualRegionsOnImages[i]);
-			mapRegionIdToLabel.push_back(tmpMapRegionIdToLabel[i]);
-			terrains.push_back(tmpTerrains[i]);
-			poses.push_back(tmpPoses[i]);
-			timestamps.push_back(tmpTimestamps[i]);
-			mapMoves.push_back(tmpMapMoves[i]);
-		}
+					tmpMapMoves,
+					tmpGoalDirsGlobal);
+
+
+		images.insert(images.end(), tmpImages.begin(), tmpImages.end());
+		manualRegionsOnImages.insert(manualRegionsOnImages.end(), tmpManualRegionsOnImages.begin(), tmpManualRegionsOnImages.end());
+		mapRegionIdToLabel.insert(mapRegionIdToLabel.end(), tmpMapRegionIdToLabel.begin(), tmpMapRegionIdToLabel.end());
+		terrains.insert(terrains.end(), tmpTerrains.begin(), tmpTerrains.end());
+		posesOrigMapCenter.insert(posesOrigMapCenter.end(), tmpPosesOrigMapCenter.begin(), tmpPosesOrigMapCenter.end());
+		mapCentersOrigGlobal.insert(mapCentersOrigGlobal.end(), tmpMapCentersOrigGlobal.begin(), tmpMapCentersOrigGlobal.end());
+		timestamps.insert(timestamps.end(), tmpTimestamps.begin(), tmpTimestamps.end());
+		mapMoves.insert(mapMoves.end(), tmpMapMoves.begin(), tmpMapMoves.end());
+		goalDirsGlobal.insert(goalDirsGlobal.end(), tmpGoalDirsGlobal.begin(), tmpGoalDirsGlobal.end());
 	}
 
 	cout << "images.size() = " << images.size() << endl << "manualRegionsOnImages.size() = " << manualRegionsOnImages.size() << endl;
@@ -1063,7 +1099,7 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 #ifdef NO_CUDA
 		vector<Mat> pixelCoordsVec = computeMapCoords(poses[i]);
 #else
-		vector<Mat> pixelCoordsVec = computeMapCoordsGpu(poses[i]);
+		vector<Mat> pixelCoordsVec = computeMapCoordsGpu(posesOrigMapCenter[i]);
 #endif
 		Mat pixelCoords = pixelCoordsVec.front();
 
@@ -1188,6 +1224,7 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	static const bool compareWithExt = false;
 	static const bool estimatePgmParams = false;
+	static const bool computeControlError = true;
 
 	cout << "Classifying" << endl;
 	for(int l = 0; l < labels.size(); l++){
@@ -1207,36 +1244,44 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	std::vector<cv::Mat> manualRegionsOnImages;
 	std::vector<std::map<int, int> > mapRegionIdToLabel;
 	std::vector<cv::Mat> terrains;
-	std::vector<cv::Mat> poses;
+	std::vector<cv::Mat> posesOrigMapCenter;
+	std::vector<cv::Mat> mapCentersOrigGlobal;
 	std::vector<std::chrono::high_resolution_clock::time_point> timestamps;
 	std::vector<cv::Mat> mapMoves;
+	std::vector<float> goalDirsGlobal;
 
 	for(int d = 0; d < dirs.size(); d++){
 		std::vector<cv::Mat> tmpImages;
 		std::vector<cv::Mat> tmpManualRegionsOnImages;
 		std::vector<std::map<int, int> > tmpMapRegionIdToLabel;
 		std::vector<cv::Mat> tmpTerrains;
-		std::vector<cv::Mat> tmpPoses;
+		std::vector<cv::Mat> tmpPosesOrigMapCenter;
+		std::vector<cv::Mat> tmpMapCentersOrigGlobal;
 		std::vector<std::chrono::high_resolution_clock::time_point> tmpTimestamps;
 		std::vector<cv::Mat> tmpMapMoves;
+		std::vector<float> tmpGoalDirsGlobal;
 
 		processDir(	dirs[d],
 					tmpImages,
 					tmpManualRegionsOnImages,
 					tmpMapRegionIdToLabel,
 					tmpTerrains,
-					tmpPoses,
+					tmpPosesOrigMapCenter,
+					tmpMapCentersOrigGlobal,
 					tmpTimestamps,
-					tmpMapMoves);
-		for(int i = 0; i < tmpImages.size(); i++){
-			images.push_back(tmpImages[i]);
-			manualRegionsOnImages.push_back(tmpManualRegionsOnImages[i]);
-			mapRegionIdToLabel.push_back(tmpMapRegionIdToLabel[i]);
-			terrains.push_back(tmpTerrains[i]);
-			poses.push_back(tmpPoses[i]);
-			timestamps.push_back(tmpTimestamps[i]);
-			mapMoves.push_back(tmpMapMoves[i]);
-		}
+					tmpMapMoves,
+					tmpGoalDirsGlobal);
+
+
+		images.insert(images.end(), tmpImages.begin(), tmpImages.end());
+		manualRegionsOnImages.insert(manualRegionsOnImages.end(), tmpManualRegionsOnImages.begin(), tmpManualRegionsOnImages.end());
+		mapRegionIdToLabel.insert(mapRegionIdToLabel.end(), tmpMapRegionIdToLabel.begin(), tmpMapRegionIdToLabel.end());
+		terrains.insert(terrains.end(), tmpTerrains.begin(), tmpTerrains.end());
+		posesOrigMapCenter.insert(posesOrigMapCenter.end(), tmpPosesOrigMapCenter.begin(), tmpPosesOrigMapCenter.end());
+		mapCentersOrigGlobal.insert(mapCentersOrigGlobal.end(), tmpMapCentersOrigGlobal.begin(), tmpMapCentersOrigGlobal.end());
+		timestamps.insert(timestamps.end(), tmpTimestamps.begin(), tmpTimestamps.end());
+		mapMoves.insert(mapMoves.end(), tmpMapMoves.begin(), tmpMapMoves.end());
+		goalDirsGlobal.insert(goalDirsGlobal.end(), tmpGoalDirsGlobal.begin(), tmpGoalDirsGlobal.end());
 	}
 
 	cout << "images.size() = " << images.size() << endl << "manualRegionsOnImages.size() = " << manualRegionsOnImages.size() << endl;
@@ -1299,7 +1344,7 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 #ifdef NO_CUDA
 		vector<Mat> pixelCoordsVec = computeMapCoords(poses[i]);
 #else
-		vector<Mat> pixelCoordsVec = computeMapCoordsGpu(poses[i]);
+		vector<Mat> pixelCoordsVec = computeMapCoordsGpu(posesOrigMapCenter[i]);
 #endif
 		Mat pixelCoords = pixelCoordsVec.front();
 
@@ -1491,6 +1536,73 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 			inferResults.at<int>(d) = segmentResults.at<int>(xSegm, ySegm);
 		}
 
+		float bestDirLocalMap = 0;
+		float goalDirLocalMap = 0;
+		if(computeControlError){
+			if(debugLevel >= 1){
+				cout << "computing control error" << endl;
+			}
+
+			LocalPlanner::Parameters localPlannerParams;
+			localPlannerParams.debug = 0;
+			localPlannerParams.avoidObstacles = 1;
+			localPlannerParams.histResolution = 10;
+			localPlannerParams.gauss3sig = 40;
+			localPlannerParams.maxDistance = 3000;
+			localPlannerParams.backwardsPenalty = 1.5;
+
+			Mat segmentResultsFloat(segmentResults.size(), CV_32FC1, Scalar(0.0));
+			for (int x = 0; x < MAP_SIZE; x++) {
+				for (int y = 0; y < MAP_SIZE; y++) {
+					if(segmentResults.at<int>(x, y) >= 0 &&
+						segmentResults.at<int>(x, y) != DRIVABLE_LABEL)
+					{
+						segmentResultsFloat.at<float>(x, y) = 1.0;
+					}
+				}
+			}
+
+			int numSectors = (float)360 / localPlannerParams.histResolution + 0.5;
+			vector<float> histSectors(numSectors, 0.0);
+			LocalPlanner::updateHistogram(histSectors,
+										posesOrigMapCenter[i],
+										segmentResultsFloat,
+										localPlannerParams);
+
+			if(debugLevel >= 1){
+				cout << "histSectors = " << histSectors << endl;
+				cout << "smoothing" << endl;
+			}
+
+			LocalPlanner::smoothHistogram(histSectors, localPlannerParams);
+
+			if(debugLevel >= 1){
+				cout << "histSectors = " << histSectors << endl;
+
+				cout << "determining goal in local map" << endl;
+
+//				cout << "mapCentersOrigGlobal.size() = " << mapCentersOrigGlobal.size() <<
+//						", goalDirsGlobal.size() = " << goalDirsGlobal.size() << endl;
+			}
+
+			goalDirLocalMap = LocalPlanner::determineGoalInLocalMap(mapCentersOrigGlobal[i], goalDirsGlobal[i]);
+
+			if(debugLevel >= 1){
+				cout << "finding optim sector" << endl;
+			}
+
+			/// optimal direction in the local map - nearest to the goal
+			bestDirLocalMap = LocalPlanner::findOptimSector(histSectors,
+															posesOrigMapCenter[i],
+															goalDirLocalMap,
+															localPlannerParams);
+
+			cout << "goalDir global = " <<  goalDirsGlobal[i] << endl;
+			cout << "goalDir = " << goalDirLocalMap << endl;
+			cout << "bestDir = " << bestDirLocalMap << endl;
+
+		}
+
 		if(estimatePgmParams){
 			pgmsParamEst.push_back(pgm);
 			//Add varVals
@@ -1638,9 +1750,11 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 		draw3DVis(win,
 				pixelCoordsAll,
 				pixelColorsAll,
-				poses[i],
+				posesOrigMapCenter[i],
 				segmentResults,
-				segmentManualLabels);
+				segmentManualLabels,
+				goalDirLocalMap,
+				bestDirLocalMap);
 //		waitKey(1000);
 	}
 
@@ -2091,16 +2205,18 @@ cv::Mat Camera::assignSegmentLabels(cv::Mat pixelLabels, cv::Mat coords){
 void Camera::draw3DVis(cv::viz::Viz3d& win,
 					cv::Mat coords,
 					cv::Mat colors,
-					cv::Mat pose,
+					cv::Mat pos,
 					cv::Mat segments,
-					cv::Mat segmentsManual)
+					cv::Mat segmentsManual,
+					float goalDir,
+					float bestDir)
 {
 //    ///create a window
 //    viz::Viz3d win("camera visualization");
 	win.removeAllWidgets();
 
     ///add frame of reference
-    Affine3f affineImuPose(imuOrigRobot);
+    Affine3f affineImuPos(imuOrigRobot);
     win.showWidget("frame of reference widget", viz::WCoordinateSystem(1000));
 
     //add grid
@@ -2109,8 +2225,8 @@ void Camera::draw3DVis(cv::viz::Viz3d& win,
 
     //robot pose
     viz::WCoordinateSystem robotFrameOfRef(500);
-    Affine3f affinePose(pose);
-    win.showWidget("robot frame of ref widget", robotFrameOfRef, affineImuPose);
+    Affine3f affinePos(pos);
+    win.showWidget("robot frame of ref widget", robotFrameOfRef, affinePos);
 
 //    win.setWidgetPose("robot frame of ref widget", affinePose);
 
@@ -2181,6 +2297,25 @@ void Camera::draw3DVis(cv::viz::Viz3d& win,
 		}
     }
 
+
+	static const float arrowLen = 1000;
+	Mat posNoOrient = pos.clone();
+	Mat eye33 = Mat::eye(3, 3, CV_32FC1);
+	eye33.copyTo(Mat(posNoOrient, Rect(0, 0, 3, 3)));
+	Affine3f affinePosNoOrient(posNoOrient);
+
+    viz::WArrow bestDirArrow = viz::WArrow(Point3d(0, 0, -100),
+										Point3d(arrowLen*cos(bestDir*PI/180), arrowLen*sin(bestDir*PI/180), -100),
+										0.03,
+										viz::Color::yellow());
+    win.showWidget(String("best dir arrow"), bestDirArrow, affinePosNoOrient);
+
+    viz::WArrow goalDirArrow = viz::WArrow(Point3d(0, 0, -100),
+										Point3d(arrowLen*cos(goalDir*PI/180), arrowLen*sin(goalDir*PI/180), -100),
+										0.03,
+										viz::Color::magenta());
+    win.showWidget(String("goal dir arrow"), goalDirArrow, affinePosNoOrient);
+
     //camera pose
     /// Let's assume camera has the following properties
 	Vec3d camCoords(-4000.0f, 4000.0f, -4000.0f);
@@ -2193,11 +2328,11 @@ void Camera::draw3DVis(cv::viz::Viz3d& win,
 	// Start event loop once for 10 + 5 millisecond
     int count = 0;
     win.spinOnce(10, true);
-	while(!win.wasStopped() && count < 10)
+	while(!win.wasStopped() && count < 100)
 	{
 		// Interact with window
 
-		// Event loop for 10 millisecond
+		// Event loop for 10 + 5 millisecond
 		win.spinOnce(10, true);
 		waitKey(5);
 		count++;

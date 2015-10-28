@@ -47,14 +47,8 @@ class Robot;
 class Debug;
 class GlobalPlanner;
 
-using namespace std;
-using namespace cv;
-
-//#define HIST_ALPHA 10
-//#define HIST_SECTORS (360/HIST_ALPHA)
-//#define HIST_THRESHOLD 0
-//#define STEERING_MARGIN 4 // in degrees
-
+//using namespace std;
+//using namespace cv;
 
 
 class LocalPlanner {
@@ -110,28 +104,10 @@ private:
 
 	void run();
 
-	void updateHistogram(std::vector<float>& histSectors,
-						cv::Mat posRobotMapCenter,
-						cv::Mat constraints);
-
-	void smoothHistogram(std::vector<float>& histSectors);
-
-//	void findFreeSectors(std::vector<float>& histSectors,
-//						std::vector<int>& freeSectors);
-
-	float determineGoalInLocalMap(cv::Mat posLocalToGlobalMap,
-								float goalDirGlobalMap);
-
-	float findOptimSector(const std::vector<float>& histSectors,
-							cv::Mat posRobotMapCenter,
-							float goalDirLocalMap);
-
 	void determineDriversCommand(cv::Mat posRobotMapCenter,
 								float bestDirLocalMap);
 
 	float determineCurSpeed();
-
-	float rotMatToEulerYaw(Mat rotMat);
 
 	float setGoalDirection(cv::Mat posLocalToGlobalMap);
 
@@ -158,15 +134,26 @@ public:
 	void setNormalSpeed();
 
 	void getVecFieldHist(std::vector<float>& retVecFieldHist, float& retGoalDirection, float& retBestDirection);
-	//	void setMotorsVel(float motLeft, float motRight);
 
-	//----------------------MENAGMENT OF GlobalPlanner DEVICES
-	//Robots Drive
-//	void openRobotsDrive(std::string port1, std::string port2);
+	//---------------------STATIC FUNCTIONS---------------------
 
-//	void closeRobotsDrive();
+	static void updateHistogram(std::vector<float>& histSectors,
+							cv::Mat posRobotMapCenter,
+							cv::Mat constraints,
+							Parameters localPlannerParams);
 
-//	bool isRobotsDriveOpen();*/
+	static void smoothHistogram(std::vector<float>& histSectors,
+								Parameters localPlannerParams);
+
+	static float determineGoalInLocalMap(cv::Mat posLocalToGlobalMap,
+										float goalDirGlobalMap);
+
+	static float findOptimSector(const std::vector<float>& histSectors,
+								cv::Mat posRobotMapCenter,
+								float goalDirLocalMap,
+								Parameters localPlannerParams);
+
+	static float rotMatToEulerYaw(cv::Mat rotMat);
 };
 
 #include "GlobalPlanner.h"
