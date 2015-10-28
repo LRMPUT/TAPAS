@@ -64,7 +64,7 @@
 						sound="1"
 						runHomologation="0" 
 						mapFile="ppMap.osm"
-						goalLatitude="52.401886" goalLongitude="16.953509"
+						goalLatitude="52.402261" goalLongitude="16.952285"
 						startLatitude="52.401979" startLongitude="16.953083"/>
 
 
@@ -87,8 +87,9 @@
 		VFH_ImuAccVarianceLimit: Limit of accelerometer variance. When it is to high robot slows down.
 	-->
 	
-	<LocalPlanner 		runThread="0" 
-						debug="0"
+
+	<LocalPlanner 		runThread="1" 
+						debug="1"
 						avoidObstacles="1" 
 						VFH_HistResolution="10"
 						VFH_SteeringMargin="10" 
@@ -132,7 +133,7 @@
 		runThread: true - MovementConstraints thred runs, false otherwise
 		debug: Debug level: 0 - no debug, 1, 2 - debug
 	-->
-	<MovementConstraints runThread="true" debug="1">
+	<MovementConstraints runThread="true" debug="0">
 		<odometry diam="160" base="452" encodersCPR="300" />
 		<!--
 			minDist: Minimal distance taken into consideration. Other points are discarted.
@@ -180,12 +181,18 @@
 			entryWeightThreshold: Minimal entry's number of pixels.
 			debug: Debug level: 0 - no debug, 1, 2 - debug
 		-->
+
 		<Camera runThread="false" number="1" rows="480" cols="640" entryWeightThreshold="400" debug="1">
 			<!--
 				saveEnable: [true/false] - Whether to save cache after learning classifier or not.
 				loadEnable: [true/false] - Whether to load cache during construction of Camera class.
 			-->
 			<cache saveEnabled="true" loadEnabled="true"/>
+			<inference enabled="true">
+				<params>
+					1.65718	-0.919813	-0.843494	-0.793375
+				</params>
+			</inference>
 			<HierClassifier debug="0">
 				<!--
 					Parameters of segmentation algorithm. See "Efficient Graph-Based Image Segmentation" Falzenszwalb, Huttenlocher

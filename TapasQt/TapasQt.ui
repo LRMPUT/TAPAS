@@ -27,7 +27,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>9</number>
+     <number>6</number>
     </property>
     <widget class="QWidget" name="cameraTab">
      <attribute name="title">
@@ -1166,7 +1166,7 @@
         <x>30</x>
         <y>30</y>
         <width>201</width>
-        <height>391</height>
+        <height>461</height>
        </rect>
       </property>
       <property name="title">
@@ -1178,7 +1178,7 @@
          <x>10</x>
          <y>30</y>
          <width>181</width>
-         <height>362</height>
+         <height>431</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout">
@@ -1281,6 +1281,20 @@
          <widget class="QLineEdit" name="saRateEstimatedPosLineEdit">
           <property name="text">
            <string>20</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="includeGoalDirLocalMapCheckBox">
+          <property name="text">
+           <string>Goal dir local map</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="saRateGoalDirLocalMapLineEdit">
+          <property name="text">
+           <string>10</string>
           </property>
          </widget>
         </item>

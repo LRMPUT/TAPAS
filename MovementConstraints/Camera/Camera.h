@@ -76,6 +76,12 @@ class Camera {
 
 	int entryWeightThreshold;
 
+	int pixelsTimeout;
+
+	bool inferenceEnabled;
+
+	std::vector<double> inferenceParams;
+
 	std::vector<boost::filesystem::path> learningDirs;
 
 	/** \brief Flaga informująca o tym czy dokonywać cross validation.
@@ -223,6 +229,8 @@ class Camera {
 	void readSettings(TiXmlElement* settings);
 
 	cv::Mat readMatrixSettings(TiXmlElement* parent, const char* node, int rows, int cols);
+
+	std::vector<double> readVectorSettings(TiXmlElement* parent, const char* node);
 
 	/** \brief Insert new data and skip dataSkipped data
 	 * @param dataAll data stored as cols

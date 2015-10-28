@@ -113,6 +113,9 @@ void Viewer::drawConstraintsMap(){
 }
 
 void Viewer::drawVecFieldHist(){
+//	cout << "Viewer::drawVecFieldHist" << endl;
+//	cout << "posImuMapCenter.empty() = " << posImuMapCenter.empty() << endl;
+//	cout << "vecFieldHist.empty() = " << vecFieldHist.empty() << endl;
 	if(!posImuMapCenter.empty() && !vecFieldHist.empty()){
 		glPushMatrix();
 		Mat posNoOrient = posImuMapCenter.clone();

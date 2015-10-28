@@ -1985,6 +1985,9 @@ void Camera::readSettings(TiXmlElement* settings){
 	if(settings->QueryIntAttribute("entryWeightThreshold", &entryWeightThreshold) != TIXML_SUCCESS){
 		throw "Bad settings file - wrong entryWeightThreshold";
 	}
+	if(settings->QueryIntAttribute("pixelsTimeout", &pixelsTimeout) != TIXML_SUCCESS){
+		throw "Bad settings file - wrong pixelsTimeout";
+	}
 	if(settings->QueryIntAttribute("debug", &debugLevel) != TIXML_SUCCESS){
 		throw "Bad settings file - wrong debug level";
 	}
@@ -2003,6 +2006,19 @@ void Camera::readSettings(TiXmlElement* settings){
 	if(pPtr->QueryBoolAttribute("loadEnabled", &cacheLoadEnabled) != TIXML_SUCCESS){
 		cout << "Warning - no cacheLoadEnabled setting for Camera";
 	}
+
+	TiXmlElement* pInfer = settings->FirstChildElement("inference");
+	if(!pInfer){
+		throw "Bad settings file - no inference setting for Camera";
+	}
+
+	inferenceEnabled = false;
+	if(pInfer->QueryBoolAttribute("enabled", &inferenceEnabled) != TIXML_SUCCESS){
+		cout << "Warning - no inference enabled setting for Camera";
+	}
+
+	inferenceParams = readVectorSettings(pInfer, "params");
+//	cout << "inference params = " << inferenceParams << endl;
 
 	crossValidate = true;
 
@@ -2354,7 +2370,6 @@ void Camera::updatePixelData(cv::Mat& pixelCoordsAll,
 	//merge with previous classification results
 
 	//remove old pixels
-	static const int pixelsTimeout = 2000;
 	int pixelsSkipped = 0;
 
 	//if new series of data begins - eg. new dir
@@ -2700,12 +2715,12 @@ cv::Mat Camera::inferTerrainLabels(const Pgm& pgm,
 	vector<vector<double> > marg;
 	vector<vector<vector<double> > > msgs;
 	vector<vector<double> > retVals;
-	vector<double> params{1.65718, -0.919813, -0.843494, -0.793375};
+//	vector<double> params{1.65718, -0.919813, -0.843494, -0.793375};
 
 	bool calibrated = Inference::compMAPParam(pgm,
 											marg,
 											msgs,
-											params,
+											inferenceParams,
 											obsVec);
 //	cout << "calibrated = " << calibrated << endl;
 
@@ -2723,7 +2738,7 @@ cv::Mat Camera::inferTerrainLabels(const Pgm& pgm,
 	retVals = Inference::decodeMAP(pgm,
 									marg,
 									msgs,
-									params,
+									inferenceParams,
 									obsVec);
 
 	Mat ret(MAP_SIZE, MAP_SIZE, CV_32SC1, Scalar(-1));
@@ -2758,6 +2773,25 @@ cv::Mat Camera::readMatrixSettings(TiXmlElement* parent, const char* node, int r
 			tmpStr >> tmpVal;
 			ret.at<float>(row, col) = tmpVal;
 		}
+	}
+	return ret;
+}
+
+std::vector<double> Camera::readVectorSettings(TiXmlElement* parent, const char* node){
+	TiXmlElement* ptr = parent->FirstChildElement(node);
+	if(!ptr){
+		throw (string("Bad settings file - no ") + string(node)).c_str();
+	}
+	//cout << "node: " << node << ", value: " << ptr->GetText() << endl;
+	stringstream tmpStr(ptr->GetText());
+	vector<double> ret;
+	while(!tmpStr.fail()){
+		float tmpVal;
+		tmpStr >> tmpVal;
+		if(tmpStr.fail()){
+			break;
+		}
+		ret.push_back(tmpVal);
 	}
 	return ret;
 }
