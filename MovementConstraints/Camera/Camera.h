@@ -57,66 +57,94 @@ class Debug;
 class Camera {
 	friend class Debug;
 
+public:
+	Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings);
+	virtual ~Camera();
+
+	//Inserts computed constraints into map
+	void insertConstraints(cv::Mat map,
+							std::chrono::high_resolution_clock::time_point curTimestampMap,
+							cv::Mat mapMove);
+
+	//CV_8UC3 2x640x480: left, right image
+	const std::vector<cv::Mat> getData();
+
+	cv::Mat getClassifiedImage();
+
+	void getPixelPointCloud(cv::Mat& pixelCoords,
+							cv::Mat& pixelColors);
+
+	void open(std::vector<std::string> device);
+
+	void close();
+
+	bool isOpen();
+
+	struct Parameters{
+		int numCameras, numRows, numCols;
+
+		bool cacheSaveEnabled;
+
+		bool cacheLoadEnabled;
+
+		bool learnEnabled;
+
+		int debugLevel;
+
+		int entryWeightThreshold;
+
+		int pixelsTimeout;
+
+		bool inferenceEnabled;
+
+		std::vector<double> inferenceParams;
+
+		std::vector<boost::filesystem::path> learningDirs;
+
+		/** \brief Flaga informująca o tym czy dokonywać cross validation.
+		 *
+		 */
+		bool crossValidate;
+
+		boost::filesystem::path learningDir;
+
+		std::vector<std::string> labels;
+
+		//CV_32FC1 4x4: camera origin position and orientation w.r.t. IMU coordinate system
+		std::vector<cv::Mat> cameraOrigImu;
+
+		cv::Mat imuOrigRobot;
+
+		//CV_32FC1 4x4: camera origin position and orientation w.r.t. laser coordinate system
+		std::vector<cv::Mat> cameraOrigLaser;
+
+		/** CV_32FC1 3x3: camera matrix */
+		std::vector<cv::Mat> cameraMatrix;
+
+		/** CV_32FC1 1x5: distortion coefficients. */
+		std::vector<cv::Mat> distCoeffs;
+
+		std::vector<cv::Mat> maskIgnore;
+	};
+
+private:
 	//Parent MovementConstraints class
 	MovementConstraints* movementConstraints;
 
 	std::vector<HierClassifier*> hierClassifiers;
 
-	int numCameras, numRows, numCols;
+	Parameters cameraParameters;
 
 	std::vector<cv::VideoCapture> cameras;
 
-	bool cacheSaveEnabled;
-
-	bool cacheLoadEnabled;
-
-	bool learnEnabled;
-
-	int debugLevel;
-
-	int entryWeightThreshold;
-
-	int pixelsTimeout;
-
-	bool inferenceEnabled;
-
-	std::vector<double> inferenceParams;
-
-	std::vector<boost::filesystem::path> learningDirs;
-
-	/** \brief Flaga informująca o tym czy dokonywać cross validation.
-	 *
-	 */
-	bool crossValidate;
-
-	boost::filesystem::path learningDir;
-
 	//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied
-	cv::Mat constraints;
-
-	//CV_32FC1 4x4: camera origin position and orientation w.r.t. IMU coordinate system
-	std::vector<cv::Mat> cameraOrigImu;
-
-	cv::Mat imuOrigRobot;
-
-	//CV_32FC1 4x4: camera origin position and orientation w.r.t. laser coordinate system
-	std::vector<cv::Mat> cameraOrigLaser;
-
-	/** CV_32FC1 3x3: camera matrix */
-	std::vector<cv::Mat> cameraMatrix;
-
-	/** CV_32FC1 1x5: distortion coefficients. */
-	std::vector<cv::Mat> distCoeffs;
-
-	std::vector<cv::Mat> maskIgnore;
+//	cv::Mat constraints;
 
 //	std::vector<cv::Mat> mapSegments;
 
 	//boost::filesystem::path settingsFile;
 
 	std::vector<Entry> entries;
-
-	std::vector<std::string> labels;
 
 //	std::chrono::high_resolution_clock::time_point curTimestamp;
 
@@ -284,31 +312,17 @@ class Camera {
 								const std::vector<double>& obsVec,
 								const std::map<int, int>& mapSegIdToVarClusterId);
 
+	void computeBestDirLocalMap(cv::Mat segmentResults,
+								cv::Mat posOrigMapCenter,
+								cv::Mat mapCenterOrigGlobal,
+								float goalDirGlobal,
+								float& bestDirLocalMap,
+								float& goalDirLocalMap);
+
 	void readCache(boost::filesystem::path cacheFile);
 
 	void saveCache(boost::filesystem::path cacheFile);
-public:
-	Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings);
-	virtual ~Camera();
 
-	//Inserts computed constraints into map
-	void insertConstraints(cv::Mat map,
-							std::chrono::high_resolution_clock::time_point curTimestampMap,
-							cv::Mat mapMove);
-
-	//CV_8UC3 2x640x480: left, right image
-	const std::vector<cv::Mat> getData();
-
-	cv::Mat getClassifiedImage();
-
-	void getPixelPointCloud(cv::Mat& pixelCoords,
-							cv::Mat& pixelColors);
-
-	void open(std::vector<std::string> device);
-
-	void close();
-
-	bool isOpen();
 };
 
 #include "../MovementConstraints.h"

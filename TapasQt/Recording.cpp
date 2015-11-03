@@ -34,7 +34,7 @@ Recording::Recording(Ui::TapasQtClass* iui, Robot* irobot, Debug* idebug) :
 	connect(&cameraTimer, SIGNAL(timeout()), this, SLOT(getDataCamera()));
 	connect(&imuTimer, SIGNAL(timeout()), this, SLOT(getDataImu()));
 	connect(&estimatedPosTimer, SIGNAL(timeout()), this, SLOT(getDataEstimatedPos()));
-	connect(&goalDirLocalMapTimer, SIGNAL(timeout()), this, SLOT(getGoalDirLocalMap()));
+	connect(&goalDirGlobalTimer, SIGNAL(timeout()), this, SLOT(getGoalDirGlobal()));
 
 	connect(ui->startRecButton, SIGNAL(clicked()), this, SLOT(startRec()));
 	connect(ui->stopRecButon, SIGNAL(clicked()), this, SLOT(stopRec()));
@@ -110,17 +110,14 @@ void Recording::getDataEstimatedPos() {
 	Mat estimatedPos = debug->getEstimatedPosition();
 	estimatedPosStream << time.elapsed() << " " << estimatedPos.at<double>(0)
 			<< " " << estimatedPos.at<double>(1) << " "
-			<< estimatedPos.at<double>(2)<<" " << estimatedPos.at<double>(3);
+			<< estimatedPos.at<double>(2)<<" " << estimatedPos.at<double>(3) << endl;;
 }
 
 
-void Recording::getGoalDirLocalMap(){
-	cout << "Recording::getGoalDirLocalMap" << endl;
-	vector<float> vecHist;
-	float goalDir;
-	float bestDir;
-	debug->getVecFieldHist(vecHist, goalDir, bestDir);
-	goalDirLocalMapStream << time.elapsed() << " " << bestDir << endl;
+void Recording::getGoalDirGlobal(){
+//	cout << "Recording::getGoalDirGlobal" << endl;
+	float goalDirGlobal = debug->getHeadingToGoal();
+	goalDirGlobalStream << time.elapsed() << " " << goalDirGlobal << endl;
 }
 
 void Recording::startRec() {
@@ -206,12 +203,12 @@ void Recording::startRec() {
 				max((int) (1000 / ui->saRateEstimatedPosLineEdit->text().toFloat()), 1));
 		estimatedPosTimer.start();
 	}
-	if (ui->includeGoalDirLocalMapCheckBox->isChecked() == true) {
-		goalDirLocalMapStream.open("rec/goalDirLocalMap.data");
-		goalDirLocalMapStream.precision(15);
-		goalDirLocalMapTimer.setInterval(
-				max((int) (1000 / ui->saRateGoalDirLocalMapLineEdit->text().toFloat()), 1));
-		goalDirLocalMapTimer.start();
+	if (ui->includeGoalDirGlobalCheckBox->isChecked() == true) {
+		goalDirGlobalStream.open("rec/goalDirGlobal.data");
+		goalDirGlobalStream.precision(15);
+		goalDirGlobalTimer.setInterval(
+				max((int) (1000 / ui->saRateGoalDirGlobalLineEdit->text().toFloat()), 1));
+		goalDirGlobalTimer.start();
 	}
 	ui->recStatusLabel->setText("Started");
 	cout << "end Recording::startRec()" << endl;
@@ -238,8 +235,8 @@ void Recording::pauseResumeRec() {
 		if (ui->includeEstimatedPosCheckBox->isChecked() == true) {
 			estimatedPosTimer.stop();
 		}
-		if (ui->includeGoalDirLocalMapCheckBox->isChecked() == true) {
-			goalDirLocalMapTimer.stop();
+		if (ui->includeGoalDirGlobalCheckBox->isChecked() == true) {
+			goalDirGlobalTimer.stop();
 		}
 		ui->recStatusLabel->setText("Paused");
 	} else {
@@ -262,8 +259,8 @@ void Recording::pauseResumeRec() {
 		if (ui->includeEstimatedPosCheckBox->isChecked() == true) {
 			estimatedPosTimer.start();
 		}
-		if (ui->includeGoalDirLocalMapCheckBox->isChecked() == true) {
-			goalDirLocalMapTimer.start();
+		if (ui->includeGoalDirGlobalCheckBox->isChecked() == true) {
+			goalDirGlobalTimer.start();
 		}
 		ui->recStatusLabel->setText("Resumed");
 	}
@@ -294,9 +291,9 @@ void Recording::stopRec() {
 		estimatedPosTimer.stop();
 		estimatedPosStream.close();
 	}
-	if (ui->includeGoalDirLocalMapCheckBox->isChecked() == true) {
-		goalDirLocalMapTimer.stop();
-		goalDirLocalMapStream.close();
+	if (ui->includeGoalDirGlobalCheckBox->isChecked() == true) {
+		goalDirGlobalTimer.stop();
+		goalDirGlobalStream.close();
 	}
 	ui->saRateGroupBox->setEnabled(true);
 	ui->recStatusLabel->setText("Stopped");

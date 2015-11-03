@@ -44,7 +44,7 @@ private:
 	QTimer imuTimer;
 	QTimer cameraTimer;
 	QTimer estimatedPosTimer;
-	QTimer goalDirLocalMapTimer;
+	QTimer goalDirGlobalTimer;
 	QElapsedTimer time;
 
 	Robot* robot;
@@ -56,7 +56,7 @@ private:
 
 	// Saving Streams
 	std::ofstream imuStream, gpsStream, encodersStream, hokuyoStream, cameraStream;
-	std::ofstream estimatedPosStream, goalDirLocalMapStream;
+	std::ofstream estimatedPosStream, goalDirGlobalStream;
 public:
 	Recording(Ui::TapasQtClass* iui, Robot* irobot, Debug* idebug);
 	~Recording();
@@ -68,7 +68,7 @@ private slots:
 	void getDataImu();
 	void getDataCamera();
 	void getDataEstimatedPos();
-	void getGoalDirLocalMap();
+	void getGoalDirGlobal();
 
 public slots:
 	void startRec();

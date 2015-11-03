@@ -1191,7 +1191,7 @@
            <bool>true</bool>
           </property>
           <property name="checked">
-           <bool>false</bool>
+           <bool>true</bool>
           </property>
          </widget>
         </item>
@@ -1242,7 +1242,7 @@
            <string>Cameras</string>
           </property>
           <property name="checked">
-           <bool>false</bool>
+           <bool>true</bool>
           </property>
          </widget>
         </item>
@@ -1285,14 +1285,17 @@
          </widget>
         </item>
         <item>
-         <widget class="QCheckBox" name="includeGoalDirLocalMapCheckBox">
+         <widget class="QCheckBox" name="includeGoalDirGlobalCheckBox">
           <property name="text">
-           <string>Goal dir local map</string>
+           <string>Goal dir global</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
           </property>
          </widget>
         </item>
         <item>
-         <widget class="QLineEdit" name="saRateGoalDirLocalMapLineEdit">
+         <widget class="QLineEdit" name="saRateGoalDirGlobalLineEdit">
           <property name="text">
            <string>10</string>
           </property>

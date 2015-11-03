@@ -191,8 +191,8 @@ std::vector<cv::Point2f> Debug::getPointCloudCamera(cv::Mat& image){
 		projectPoints(	allPointsCamera.rowRange(0, 3).t(),
 						Matx<float, 3, 1>(0, 0, 0),
 						Matx<float, 3, 1>(0, 0, 0),
-						robot->movementConstraints->camera->cameraMatrix.front(),
-						robot->movementConstraints->camera->distCoeffs.front(),
+						robot->movementConstraints->camera->cameraParameters.cameraMatrix.front(),
+						robot->movementConstraints->camera->cameraParameters.distCoeffs.front(),
 						pointsImage);
 	}
 	return pointsImage;
@@ -218,6 +218,10 @@ void Debug::getVecFieldHist(std::vector<float>& retVecFieldHist,
 		float& retBestDirection)
 {
 	robot->globalPlanner->localPlanner->getVecFieldHist(retVecFieldHist, retGoalDirection, retBestDirection);
+}
+
+float Debug::getHeadingToGoal(){
+	return robot->globalPlanner->getHeadingToGoal();
 }
 
 void Debug::getPixelPointCloud(cv::Mat& retPixelCoords,

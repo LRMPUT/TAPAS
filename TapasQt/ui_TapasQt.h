@@ -1,8 +1,7 @@
 /********************************************************************************
 ** Form generated from reading UI file 'TapasQt.ui'
 **
-** Created: Tue Oct 27 13:21:51 2015
-**      by: Qt User Interface Compiler version 4.8.1
+** Created by: Qt User Interface Compiler version 4.8.6
 **
 ** WARNING! All changes made in this file will be lost when recompiling UI file!
 ********************************************************************************/
@@ -163,8 +162,8 @@ public:
     QLineEdit *saRateImuLineEdit;
     QCheckBox *includeEstimatedPosCheckBox;
     QLineEdit *saRateEstimatedPosLineEdit;
-    QCheckBox *includeGoalDirLocalMapCheckBox;
-    QLineEdit *saRateGoalDirLocalMapLineEdit;
+    QCheckBox *includeGoalDirGlobalCheckBox;
+    QLineEdit *saRateGoalDirGlobalLineEdit;
     QGroupBox *groupBox_2;
     QWidget *verticalLayoutWidget_2;
     QVBoxLayout *verticalLayout_2;
@@ -841,7 +840,7 @@ public:
         includeHokuyoCheckBox = new QCheckBox(verticalLayoutWidget);
         includeHokuyoCheckBox->setObjectName(QString::fromUtf8("includeHokuyoCheckBox"));
         includeHokuyoCheckBox->setCheckable(true);
-        includeHokuyoCheckBox->setChecked(false);
+        includeHokuyoCheckBox->setChecked(true);
 
         verticalLayout->addWidget(includeHokuyoCheckBox);
 
@@ -874,7 +873,7 @@ public:
 
         includeCamerasCheckBox = new QCheckBox(verticalLayoutWidget);
         includeCamerasCheckBox->setObjectName(QString::fromUtf8("includeCamerasCheckBox"));
-        includeCamerasCheckBox->setChecked(false);
+        includeCamerasCheckBox->setChecked(true);
 
         verticalLayout->addWidget(includeCamerasCheckBox);
 
@@ -904,15 +903,16 @@ public:
 
         verticalLayout->addWidget(saRateEstimatedPosLineEdit);
 
-        includeGoalDirLocalMapCheckBox = new QCheckBox(verticalLayoutWidget);
-        includeGoalDirLocalMapCheckBox->setObjectName(QString::fromUtf8("includeGoalDirLocalMapCheckBox"));
+        includeGoalDirGlobalCheckBox = new QCheckBox(verticalLayoutWidget);
+        includeGoalDirGlobalCheckBox->setObjectName(QString::fromUtf8("includeGoalDirGlobalCheckBox"));
+        includeGoalDirGlobalCheckBox->setChecked(true);
 
-        verticalLayout->addWidget(includeGoalDirLocalMapCheckBox);
+        verticalLayout->addWidget(includeGoalDirGlobalCheckBox);
 
-        saRateGoalDirLocalMapLineEdit = new QLineEdit(verticalLayoutWidget);
-        saRateGoalDirLocalMapLineEdit->setObjectName(QString::fromUtf8("saRateGoalDirLocalMapLineEdit"));
+        saRateGoalDirGlobalLineEdit = new QLineEdit(verticalLayoutWidget);
+        saRateGoalDirGlobalLineEdit->setObjectName(QString::fromUtf8("saRateGoalDirGlobalLineEdit"));
 
-        verticalLayout->addWidget(saRateGoalDirLocalMapLineEdit);
+        verticalLayout->addWidget(saRateGoalDirGlobalLineEdit);
 
         groupBox_2 = new QGroupBox(recordTab);
         groupBox_2->setObjectName(QString::fromUtf8("groupBox_2"));
@@ -1491,8 +1491,8 @@ public:
         saRateImuLineEdit->setText(QApplication::translate("TapasQtClass", "100", 0, QApplication::UnicodeUTF8));
         includeEstimatedPosCheckBox->setText(QApplication::translate("TapasQtClass", "Estimated Pos", 0, QApplication::UnicodeUTF8));
         saRateEstimatedPosLineEdit->setText(QApplication::translate("TapasQtClass", "20", 0, QApplication::UnicodeUTF8));
-        includeGoalDirLocalMapCheckBox->setText(QApplication::translate("TapasQtClass", "Goal dir local map", 0, QApplication::UnicodeUTF8));
-        saRateGoalDirLocalMapLineEdit->setText(QApplication::translate("TapasQtClass", "10", 0, QApplication::UnicodeUTF8));
+        includeGoalDirGlobalCheckBox->setText(QApplication::translate("TapasQtClass", "Goal dir global", 0, QApplication::UnicodeUTF8));
+        saRateGoalDirGlobalLineEdit->setText(QApplication::translate("TapasQtClass", "10", 0, QApplication::UnicodeUTF8));
         groupBox_2->setTitle(QApplication::translate("TapasQtClass", "Control", 0, QApplication::UnicodeUTF8));
         label_17->setText(QApplication::translate("TapasQtClass", "File path", 0, QApplication::UnicodeUTF8));
         recPathLineEdit->setText(QApplication::translate("TapasQtClass", "data", 0, QApplication::UnicodeUTF8));
