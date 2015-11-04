@@ -940,8 +940,13 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY,
 		// We check the global plan
 		bool foundSubgoal = false;
 
+		std::unique_lock < std::mutex > lckGoalTheta(mtxGoalTheta);
 		double originalGoalTheta = goalTheta;
-		for (std::list<int>::iterator it = nodesToVisit.begin();;) {
+		lckGoalTheta.unlock();
+
+		while(!foundSubgoal && nodesToVisit.size() > 0) {
+			std::list<int>::iterator it = nodesToVisit.begin();
+
 			std::pair<double, double> tmp = nodePosition[*it];
 			double dist = pow(tmp.first - robotX, 2)
 					+ pow(tmp.second - robotY, 2);
@@ -953,8 +958,8 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY,
 					* 180.0 / M_PI;
 
 			// This is the node we go to (because it is further away than threshold or the direction is the same):
-			if (sqrt(dist) > globalPlannerParams.subgoalThreshold
-					&& foundSubgoal == false) {
+			if (sqrt(dist) > globalPlannerParams.subgoalThreshold)
+			{
 
 				setGoalDirection(direction);
 
@@ -969,18 +974,19 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY,
 				}
 
 				foundSubgoal = true;
-			} else if (sqrt(dist) > globalPlannerParams.subgoalThreshold
+			}
+			else if (sqrt(dist) > globalPlannerParams.subgoalThreshold
 					&& sqrt(dist) < globalPlannerParams.subgoalThreshold2
-					&& directionDifference
-							< globalPlannerParams.subgoalAngularThreshold) {
+					&& directionDifference < globalPlannerParams.subgoalAngularThreshold)
+			{
 
 				setGoalDirection(direction);
 
-				std::list<int>::iterator it2 = nodesToVisit.begin();
-				while (it2 != it && nodesToVisit.size() > 0) {
-					nodesToVisit.pop_front();
-					it2 = nodesToVisit.begin();
-				}
+//				std::list<int>::iterator it2 = nodesToVisit.begin();
+//				while (it2 != it && nodesToVisit.size() > 0) {
+//					nodesToVisit.pop_front();
+//					it2 = nodesToVisit.begin();
+//				}
 
 				if (globalPlannerParams.debug == 1) {
 					std::cout << "Global Planner : angular choice - node : "
@@ -993,18 +999,25 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY,
 							<< x << " " << y << " : Dist = "
 							<< sqrt(x * x + y * y) << std::endl;
 				}
-				nodesToVisit.pop_front();
+
+				foundSubgoal = true;
+//				nodesToVisit.pop_front();
 			} else {
-				if (foundSubgoal)
-					break;
+//				if (foundSubgoal){
+//					break;
+//				}
 
 				if (globalPlannerParams.debug == 1) {
 					std::cout << "Global Planner : removing node" << std::endl;
 				}
 
 				nodesToVisit.pop_front();
-				if ( nodesToVisit.size() > 0)
-					it = nodesToVisit.begin();
+//				if ( nodesToVisit.size() > 0){
+//					it = nodesToVisit.begin();
+//				}
+//				else{
+//					break;
+//				}
 			}
 		}
 		// We can go directly to target
