@@ -240,15 +240,17 @@ void GlobalPlanner::globalPlannerProcessing() {
 		} else {
 			while ((!robot->isGpsOpen() || robot->isSetZero() == false
 					|| robot->gpsGetFixStatus() == 1)
-					&& globalPlannerParams.runThread) {
+					&& globalPlannerParams.runThread)
+			{
 				usleep(200);
 			}
 			while (!robot->isGpsDataValid() && globalPlannerParams.runThread) {
 				usleep(200);
 			}
-			if (globalPlannerParams.debug == 1 && globalPlannerParams.runThread)
+			if (globalPlannerParams.debug == 1 && globalPlannerParams.runThread){
 				std::cout << "Global Planner : We have fix and zero position"
 						<< std::endl;
+			}
 
 			if (globalPlannerParams.runThread) {
 				// Read the map of the tournament
@@ -260,8 +262,9 @@ void GlobalPlanner::globalPlannerProcessing() {
 				i.open("targetReached");
 				int state;
 				i>>state;
-				if (state == 1)
+				if (state == 1){
 					planningStage = toStart;
+				}
 				i.close();
 
 				// Set the goal in the map
@@ -270,7 +273,8 @@ void GlobalPlanner::globalPlannerProcessing() {
 			}
 
 			while (!startGlobalPlannerCompetition
-					&& globalPlannerParams.runThread) {
+					&& globalPlannerParams.runThread)
+			{
 				usleep(200);
 			}
 
@@ -278,8 +282,8 @@ void GlobalPlanner::globalPlannerProcessing() {
 				std::chrono::seconds durationStart(1);
 				std::this_thread::sleep_for(durationStart);
 			}
-				// Where are we ?
-				double robotX, robotY, theta;
+			// Where are we ?
+			double robotX, robotY, theta;
 			if (globalPlannerParams.runThread) {
 				updateRobotPosition(robotX, robotY, theta);
 				cout << "Global Planner started competition" << endl;
@@ -290,9 +294,9 @@ void GlobalPlanner::globalPlannerProcessing() {
 				localPlanner->setNormalSpeed();
 				localPlanner->startLocalPlanner();
 			}
-				int loopTimeCounter = 0;
-				bool recomputePlan = false;
-				int startType = 0;
+			int loopTimeCounter = 0;
+			bool recomputePlan = false;
+			int startType = 0;
 
 			while (globalPlannerParams.runThread) {
 				std::cout << std::endl << "Global Planner : New iteration"
@@ -308,11 +312,9 @@ void GlobalPlanner::globalPlannerProcessing() {
 				// We compute new global plan
 				if (globalPlannerParams.computeEveryNth == 1
 						|| recomputePlan
-						|| loopTimeCounter
-								% globalPlannerParams.computeEveryNth
-								== 0) {
-					loopTimeCounter = loopTimeCounter
-							% globalPlannerParams.computeEveryNth;
+						|| loopTimeCounter % globalPlannerParams.computeEveryNth == 0)
+				{
+					loopTimeCounter = loopTimeCounter % globalPlannerParams.computeEveryNth;
 					// Compute the route to follow
 					computeGlobalPlan(robotX, robotY, startType);
 					// We recomputed the plan
@@ -326,10 +328,7 @@ void GlobalPlanner::globalPlannerProcessing() {
 				// Let's update out subgoal as current destination
 				//			updateHeadingGoal();
 
-				std::chrono::milliseconds duration(
-						int(
-								1000.0
-										/ globalPlannerParams.processingFrequency));
+				std::chrono::milliseconds duration(int(1000.0 / globalPlannerParams.processingFrequency));
 				std::this_thread::sleep_for(duration);
 				loopTimeCounter++;
 			}
