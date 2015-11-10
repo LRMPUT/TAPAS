@@ -191,8 +191,8 @@ std::vector<cv::Point2f> Debug::getPointCloudCamera(cv::Mat& image){
 		projectPoints(	allPointsCamera.rowRange(0, 3).t(),
 						Matx<float, 3, 1>(0, 0, 0),
 						Matx<float, 3, 1>(0, 0, 0),
-						robot->movementConstraints->camera->cameraParameters.cameraMatrix.front(),
-						robot->movementConstraints->camera->cameraParameters.distCoeffs.front(),
+						robot->movementConstraints->camera->cameraParams.cameraMatrix.front(),
+						robot->movementConstraints->camera->cameraParams.distCoeffs.front(),
 						pointsImage);
 	}
 	return pointsImage;

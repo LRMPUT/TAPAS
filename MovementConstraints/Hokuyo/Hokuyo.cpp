@@ -108,7 +108,7 @@ void Hokuyo::run(){
 Hokuyo::Hokuyo() :
 		runThread(false),
 		dataValid(false),
-		hokuyoType(HokuyoType::URG04LX)
+		hokuyoType(HokuyoType::UTM30LX)
 {
 
 }

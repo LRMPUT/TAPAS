@@ -133,7 +133,7 @@ private:
 
 	std::vector<HierClassifier*> hierClassifiers;
 
-	Parameters cameraParameters;
+	Parameters cameraParams;
 
 	std::vector<cv::VideoCapture> cameras;
 
@@ -273,11 +273,14 @@ private:
 	void draw3DVis(cv::viz::Viz3d& win,
 					cv::Mat coords,
 					cv::Mat colors,
-					cv::Mat pose,
+					cv::Mat pos,
 					cv::Mat segments,
+					cv::Mat laserPointCloudOrigRobotMapCenter,
 					cv::Mat segmentsManual = cv::Mat(),
 					float goalDir = 0.0,
-					float bestDir = 0.0);
+					float bestDir = 0.0,
+					float bestDirRef = 0.0,
+					bool stopFlag = false);
 
 	void updatePixelData(cv::Mat& pixelCoordsAll,
 						std::vector<cv::Mat>& classResultsAll,
@@ -297,7 +300,7 @@ private:
 							cv::Mat pixelCoords,
 							cv::Mat pixelColors,
 							const std::vector<cv::Mat>& classResults,
-							cv::Mat pointCloud,
+							cv::Mat pointCloudOrigRobotMapCenter,
 							cv::Mat segmentMask = cv::Mat());
 
 	void constructPgm(Pgm& pgm,
