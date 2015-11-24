@@ -41,6 +41,7 @@ Robot::Robot(boost::filesystem::path settingsFile) :
 	cout << "Robot()" << endl;
 	TiXmlDocument settings(settingsFile.c_str());
 	if(!settings.LoadFile()){
+//		cout << "Settings file: " << settingsFile << endl;
 		throw settings.ErrorDesc();
 	}
 	TiXmlElement* pRobot;

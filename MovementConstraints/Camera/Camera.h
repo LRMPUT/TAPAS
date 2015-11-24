@@ -66,7 +66,7 @@ public:
 							std::chrono::high_resolution_clock::time_point curTimestampMap,
 							cv::Mat mapMove);
 
-	//CV_8UC3 2x640x480: left, right image
+	//CV_8UC3 1x640x480: left, right image
 	const std::vector<cv::Mat> getData();
 
 	cv::Mat getClassifiedImage();
@@ -269,6 +269,8 @@ private:
 	 *
 	 */
 	cv::Mat assignSegmentLabels(cv::Mat pixelLabels, cv::Mat coords);
+
+	void init3DVis(cv::viz::Viz3d& win);
 
 	void draw3DVis(cv::viz::Viz3d& win,
 					cv::Mat coords,

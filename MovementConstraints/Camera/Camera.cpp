@@ -1236,6 +1236,7 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 
 	//create a window for visualization
 	viz::Viz3d win("camera visualization");
+	init3DVis(win);
 
 	vector<vector<int> > classResultsPix(cameraParams.labels.size(), vector<int>(cameraParams.labels.size(), 0));
 	vector<vector<int> > classResultsSeg(cameraParams.labels.size(), vector<int>(cameraParams.labels.size(), 0));
@@ -2053,7 +2054,7 @@ void Camera::readSettings(TiXmlElement* settings){
 //	cout << "inference params = " << inferenceParams << endl;
 
 	//TODO Add to xml settings file
-	cameraParams.crossValidate = true;
+	cameraParams.crossValidate = false;
 
 	pPtr = settings->FirstChildElement("learning");
 	if(!pPtr){
@@ -2251,6 +2252,18 @@ cv::Mat Camera::assignSegmentLabels(cv::Mat pixelLabels, cv::Mat coords){
 	return segmentLabels;
 }
 
+void Camera::init3DVis(cv::viz::Viz3d& win){
+	//window size
+	win.setWindowSize(cv::Size(640, 480));
+    //camera pose
+    /// Let's assume camera has the following properties
+	Vec3d camCoords(-4000.0f, 4000.0f, -4000.0f);
+	Vec3d camFocalPoint(0.0f, 0.0f, 0.0f);
+	Vec3d camYDir(-1.0f, 1.0f, 1.0f);
+    Affine3f camPose = cv::viz::makeCameraPose(camCoords, camFocalPoint, camYDir);
+    win.setViewerPose(camPose);
+}
+
 void Camera::draw3DVis(cv::viz::Viz3d& win,
 					cv::Mat coords,
 					cv::Mat colors,
@@ -2263,6 +2276,9 @@ void Camera::draw3DVis(cv::viz::Viz3d& win,
 					float bestDirRef,
 					bool stopFlag)
 {
+	static const bool saveScreenshots = true;
+	static int frameIdx = 0;
+
 //    ///create a window
 //    viz::Viz3d win("camera visualization");
 	win.removeAllWidgets();
@@ -2282,22 +2298,23 @@ void Camera::draw3DVis(cv::viz::Viz3d& win,
 
 //    win.setWidgetPose("robot frame of ref widget", affinePose);
 
-    //point cloud
+    //pixel point cloud
     Mat coordsT = coords.t();
     Mat coordsVis = coordsT.reshape(4, 1);
 //    cout << "coordsVis.size() = " << coordsVis.size() << endl;
 //    cout << "colors.size() = " << colors.size() << endl;
     viz::WCloud pixelCloud(coordsVis, colors);
-    pixelCloud.setRenderingProperty(viz::OPACITY, 0.5);
+    pixelCloud.setRenderingProperty(viz::OPACITY, 0.75);
     win.showWidget("pixel cloud widget", pixelCloud);
 
-    Mat coordsLaserT = laserPointCloudOrigRobotMapCenter.rowRange(0, 4).t();
-	Mat coordsLaserVis = coordsLaserT.reshape(4, 1);
-//    cout << "coordsVis.size() = " << coordsVis.size() << endl;
-//    cout << "colors.size() = " << colors.size() << endl;
-	viz::WCloud laserPointCloud(coordsLaserVis, viz::Color::yellow());
-	laserPointCloud.setRenderingProperty(viz::OPACITY, 0.5);
-	win.showWidget("laser point cloud widget", laserPointCloud);
+    //laser point cloud
+//    Mat coordsLaserT = laserPointCloudOrigRobotMapCenter.rowRange(0, 4).t();
+//	Mat coordsLaserVis = coordsLaserT.reshape(4, 1);
+////    cout << "coordsVis.size() = " << coordsVis.size() << endl;
+////    cout << "colors.size() = " << colors.size() << endl;
+//	viz::WCloud laserPointCloud(coordsLaserVis, viz::Color::yellow());
+//	laserPointCloud.setRenderingProperty(viz::OPACITY, 0.5);
+//	win.showWidget("laser point cloud widget", laserPointCloud);
 
     //results
     for(int mapX = 0; mapX < MAP_SIZE; ++mapX){
@@ -2321,7 +2338,7 @@ void Camera::draw3DVis(cv::viz::Viz3d& win,
 									Vec3d(0.0, 1.0, 0.0) /*new y axis*/,
 									Size2d(MAP_RASTER_SIZE, MAP_RASTER_SIZE) /*size*/,
 									color);
-    			segPlane.setRenderingProperty(viz::OPACITY, 0.5);
+    			segPlane.setRenderingProperty(viz::OPACITY, 0.20);
 
     			int segId = mapX * MAP_SIZE + mapY;
     			char buf[10];
@@ -2382,14 +2399,6 @@ void Camera::draw3DVis(cv::viz::Viz3d& win,
 										viz::Color::magenta());
     win.showWidget(String("goal dir arrow"), goalDirArrow, affinePosNoOrient);
 
-    //camera pose
-    /// Let's assume camera has the following properties
-	Vec3d camCoords(-4000.0f, 4000.0f, -4000.0f);
-	Vec3d camFocalPoint(0.0f, 0.0f, 0.0f);
-	Vec3d camYDir(-1.0f, 1.0f, 1.0f);
-    Affine3f camPose = cv::viz::makeCameraPose(camCoords, camFocalPoint, camYDir);
-    win.setViewerPose(camPose);
-
     // Event loop is over when pressed q, Q, e, E
 	// Start event loop once for 5 + 5 millisecond
     int count = 0;
@@ -2398,7 +2407,7 @@ void Camera::draw3DVis(cv::viz::Viz3d& win,
 	{
 		// Interact with window
 
-		// Event loop for 10 + 5 millisecond
+		// Event loop for 5 + 5 millisecond
 		win.spinOnce(5, true);
 		waitKey(5);
 
@@ -2406,6 +2415,14 @@ void Camera::draw3DVis(cv::viz::Viz3d& win,
 			count++;
 		}
 	}
+    if(saveScreenshots){
+    	cout << "Saving screenshot" << endl;
+    	char buf[20];
+    	sprintf(buf, "viz/viz%04d.png", frameIdx++);
+    	cout << "Filename: " << buf << endl;
+    	win.saveScreenshot(buf);
+    	cout << "End saving screenshot" << endl;
+    }
 }
 
 void Camera::updatePixelData(cv::Mat& pixelCoordsAll,
@@ -2496,7 +2513,7 @@ void Camera::prepareSegmentInfo(std::vector<cv::Mat>& segmentPriors,
     	for(int mapY = 0; mapY < MAP_SIZE; ++mapY){
     		//prior for each label
     		segmentPriors.push_back(Mat(cameraParams.labels.size(), 1, CV_32FC1, Scalar(0.0)));
-    		//5 features - mean R (camera), G (camera), B (camera), intensity (laser), dist (laser)
+    		//5 features - mean R (camera), G (camera), B (camera), dist (laser), intensity (laser)
     		segmentFeats.push_back(Mat(5, 1, CV_32FC1, Scalar(0.0)));
     		segmentPixelCount.push_back(0);
 
@@ -2583,7 +2600,7 @@ void Camera::prepareSegmentInfo(std::vector<cv::Mat>& segmentPriors,
 				segmentFeats[seg].at<float>(4) = 0.0;
 			}
 
-			cout << "segmentFeats[" << seg << "] = " << segmentFeats[seg] << endl;
+//			cout << "segmentFeats[" << seg << "] = " << segmentFeats[seg] << endl;
 		}
 		else{
 			segmentPixelCount[seg] = 0;
