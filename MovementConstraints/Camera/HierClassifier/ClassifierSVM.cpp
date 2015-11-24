@@ -652,7 +652,7 @@ cv::Mat ClassifierSVM::classify(cv::Mat features){
 void ClassifierSVM::crossValidate(const std::vector<Entry>& entries)
 {
 	double gridCMin = pow(2, 4), gridCMax = pow(2, 12), gridCStep = 2;
-	double gridGMin = pow(2, -15), gridGMax = pow(2, 3), gridGStep = 3;
+	double gridGMin = pow(2, -5), gridGMax = pow(2, 3), gridGStep = 2;
 	prepareProblem(entries);
 	double* results = new double[entries.size()];
 	double bestC, bestG, bestScore = -1;
@@ -664,7 +664,7 @@ void ClassifierSVM::crossValidate(const std::vector<Entry>& entries)
 			svm_cross_validation(&svmProblem, &svmParams, 5, results);
 			double score = 0;
 			for(int e = 0; e < entries.size(); e++){
-				//cout << results[e] << ", " << entries[e].label << ", weight = " << svmProblem.W[e] <<  endl;
+//				cout << results[e] << ", " << entries[e].label << ", weight = " << entries[e].weight <<  endl;
 				score += (abs(results[e] - entries[e].label) > 0.01 ? 0 : 1)*entries[e].weight;
 			}
 			cout << "Score = " << score << endl;
@@ -673,6 +673,7 @@ void ClassifierSVM::crossValidate(const std::vector<Entry>& entries)
 				bestC = paramC;
 				bestG = paramG;
 			}
+			cout << "Actual best parameters: C = " << bestC << ", gamma = " << bestG << ", bestScore = " << bestScore << endl;
 		}
 	}
 

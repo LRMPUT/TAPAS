@@ -27,21 +27,18 @@
 		 // -> latitude="52.402261" longitude="16.952285" // Blisko mostku, po prawej wychodząc z CM 
 		 // -> latitude="52.403418" longitude="16.950173" // CW
 		 // 
-
 		 // MALTA
 		 // -> latitude="52.406590" longitude="16.955018" 
 		 // -> latitude="52.407100" longitude="16.956102"
 		 // -> latitude="52.406838" longitude="16.956617"
 		 // -> latitude="52.406019" longitude="16.956263"
 		 // -> latitude="52.405588" longitude="16.955419"
-
 		 // MALTA - on the road
 		 // -> latitude="52.407537" longitude="16.956452" // Przy moscie
 		 // -> latitude="52.406512" longitude="16.955068" // Dalej od wody, na wysokosci kolka
 		 // -> latitude="52.406731" longitude="16.956404" // Kolo kolka
 		 // -> latitude="52.407065" longitude="16.955223" // Dalej od wodu, dalej niz kolko
 		 // -> latitude="52.406938" longitude="16.956827" // Przy wodzie, dalej niz kolko
-
 		 // Robotour - Pilzen, Czechy
 		 // -> startLatitude="49.725131" startLongitude="13.367541" // Glowny start
 		 // -> startLatitude="49.722581" startLongitude="13.364215" // Na koncu prostej
@@ -64,7 +61,7 @@
 						sound="1"
 						runHomologation="0" 
 						mapFile="ppMap.osm"
-						goalLatitude="52.401886" goalLongitude="16.953509"
+						goalLatitude="52.402261" goalLongitude="16.952285"
 						startLatitude="52.401979" startLongitude="16.953083"/>
 
 
@@ -87,7 +84,8 @@
 		VFH_ImuAccVarianceLimit: Limit of accelerometer variance. When it is to high robot slows down.
 	-->
 	
-	<LocalPlanner 		runThread="0" 
+
+	<LocalPlanner 		runThread="1" 
 						debug="1"
 						avoidObstacles="1" 
 						VFH_HistResolution="10"
@@ -180,12 +178,19 @@
 			entryWeightThreshold: Minimal entry's number of pixels.
 			debug: Debug level: 0 - no debug, 1, 2 - debug
 		-->
-		<Camera runThread="false" number="1" rows="480" cols="640" entryWeightThreshold="400" debug="0">
+
+		<Camera runThread="false" number="1" rows="480" cols="640" entryWeightThreshold="400" pixelsTimeout="2000" debug="1">
 			<!--
 				saveEnable: [true/false] - Whether to save cache after learning classifier or not.
 				loadEnable: [true/false] - Whether to load cache during construction of Camera class.
 			-->
 			<cache saveEnabled="true" loadEnabled="true"/>
+			<inference enabled="true">
+				<!--1.562563	-0.876518	-0.811642	-0.769054	-0.374949	-0.361825-->
+				<params>
+					1.65718 -0.919813 -0.843494 -0.793375 0.0 0.0
+				</params>
+			</inference>
 			<HierClassifier debug="0">
 				<!--
 					Parameters of segmentation algorithm. See "Efficient Graph-Based Image Segmentation" Falzenszwalb, Huttenlocher
@@ -264,16 +269,16 @@
 						<gamma value="0.5" />
 						<degree value="2" />
 						<C value="512" />
-					</svm>
+					</svm> -->
 					<!--
 						Index of descriptors used in classifier, desc_beg inclusive, desc_end exclusive.
 					-->
-				<!--	<info desc_beg="0" desc_end="7" />
-				</Classifier>-->
+					<!-- <info desc_beg="0" desc_end="7" />
+				</Classifier> -->
 				<Classifier type="RF">
 					<cache enabled="true" />
 					<info desc_beg="0" desc_end="7" />
-				</Classifier>-->
+				</Classifier>
 			</HierClassifier>
 			<!--
 				enabled: [true/flase] - Whether to train classifier during construction of Camera class.
@@ -389,4 +394,3 @@
 		</Camera>
 	</MovementConstraints>
 </Robot>
-

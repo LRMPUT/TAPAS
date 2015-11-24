@@ -29,8 +29,10 @@
 #include <vector>
 #include "ui_TapasQt.h"
 #include "Chart.h"
+#ifdef TROBOT
 #include "../Trobot/include/Imu.h"
 #include "../Trobot/include/Address.h"
+#endif
 #include "../Robot/Robot.h"
 #include "../Debug/Debug.h"
 

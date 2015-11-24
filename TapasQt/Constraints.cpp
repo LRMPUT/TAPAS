@@ -100,6 +100,9 @@ void Constraints::updateMapView(){
 	float bestDirection;
 	debug->getVecFieldHist(vecFieldHist, goalDirection, bestDirection);
 	//cout << "vecFieldHist.size() = " << vecFieldHist.size() << endl;
+	Mat pixelCoords;
+	Mat pixelColors;
+	debug->getPixelPointCloud(pixelCoords, pixelColors);
 	float imuAccVariance = debug->getImuAccVariance();
 
 	stringstream tmp;
@@ -126,7 +129,8 @@ void Constraints::updateMapView(){
 		//cout << "Updating constraintsMap" << endl;
 		viewer->updateRobotPos(curPosImuMapCenter, posMapCenterGlobal);
 		viewer->updateConstraintsMap(constraintsMap);
-		viewer->rysuj();
+		viewer->updatePixelPointCloud(pixelCoords, pixelColors);
+		viewer->manualDraw();
 	}
 }
 

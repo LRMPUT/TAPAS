@@ -37,6 +37,7 @@
 #include <vector>
 #include <chrono>
 #include <queue>          // std::priority_queue
+#include <set>
 //OpenCV
 #include <opencv2/opencv.hpp>
 //Trobot

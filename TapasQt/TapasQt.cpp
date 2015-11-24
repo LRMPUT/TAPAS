@@ -53,7 +53,7 @@ TapasQt::TapasQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
 	encoders = new QtEncoders(&ui, &robot, &debug);
 
 	ui.imuPortCombo->addItems(portList);
-	imuChart = new ImuChart(&ui, &robot, &debug);
+//	imuChart = new ImuChart(&ui, &robot, &debug);
 
 	ui.cameraPortCombo->addItems(portList);
 	qtCamera = new QtCamera(&ui, &robot, &debug);
@@ -72,15 +72,15 @@ TapasQt::TapasQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
 	QObject::connect(ui.startRobotButton, SIGNAL(clicked()), this, SLOT(startRobot()));
 	cout << "TapasQt::TapasQt end" << endl;
 
-	cout << "imu" << endl;
-	robot.openImu("/dev/robots/imu");
-//	robot.openEncoders("/dev/robots/encoders");
-	cout << "hokuyo" << endl;
+	cout << "Opening imu" << endl;
+	robot.openImu("/dev/robots/imu2");
+	robot.openEncoders("/dev/robots/encoders");
+	cout << "Opening hokuyo" << endl;
 	robot.openHokuyo("/dev/robots/hokuyo");
-	cout << "gps" << endl;
+	cout << "Opening gps" << endl;
 	robot.openGps("/dev/robots/gps");
-	cout << "robots drive" << endl;
-	robot.openRobotsDrive("/dev/robots/driver", "/dev/robots/driverRight");
+	cout << "Opening robots drive" << endl;
+	robot.openRobotsDrive("/dev/robots/driverLeft", "/dev/robots/driverRight");
 	cout << "camera" << endl;
 	robot.openCamera(vector<string>(1, "/dev/video0"));
 
@@ -92,7 +92,7 @@ TapasQt::~TapasQt(){
 	delete qtGps;
 	delete drive;
 	delete encoders;
-	delete imuChart;
+//	delete imuChart;
 	delete qtCamera;
 	delete qtHokuyo;
 	delete calib;

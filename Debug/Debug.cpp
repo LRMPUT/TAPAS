@@ -191,18 +191,18 @@ std::vector<cv::Point2f> Debug::getPointCloudCamera(cv::Mat& image){
 		projectPoints(	allPointsCamera.rowRange(0, 3).t(),
 						Matx<float, 3, 1>(0, 0, 0),
 						Matx<float, 3, 1>(0, 0, 0),
-						robot->movementConstraints->camera->cameraMatrix.front(),
-						robot->movementConstraints->camera->distCoeffs.front(),
+						robot->movementConstraints->camera->cameraParams.cameraMatrix.front(),
+						robot->movementConstraints->camera->cameraParams.distCoeffs.front(),
 						pointsImage);
 	}
 	return pointsImage;
 }
 
 
-cv::Mat Debug::getPointCloudImu(cv::Mat& curPosImuMapCenter, cv::Mat& posMapCenterGlobal){
-	Mat pointCloudImuMapCenter = robot->movementConstraints->getPointCloud(curPosImuMapCenter);
-	posMapCenterGlobal = robot->movementConstraints->getPosMapCenterGlobal();
-	return pointCloudImuMapCenter;
+cv::Mat Debug::getPointCloudImu(cv::Mat& curImuOrigMapCenter, cv::Mat& curMapCenterOrigGlobal){
+	Mat pointCloudOrigMapCenter = robot->movementConstraints->getPointCloud(curImuOrigMapCenter);
+	curMapCenterOrigGlobal = robot->movementConstraints->getCurMapCenterOrigGlobal();
+	return pointCloudOrigMapCenter;
 }
 
 cv::Mat Debug::getClassifiedImage(){
@@ -218,6 +218,16 @@ void Debug::getVecFieldHist(std::vector<float>& retVecFieldHist,
 		float& retBestDirection)
 {
 	robot->globalPlanner->localPlanner->getVecFieldHist(retVecFieldHist, retGoalDirection, retBestDirection);
+}
+
+float Debug::getHeadingToGoal(){
+	return robot->globalPlanner->getHeadingToGoal();
+}
+
+void Debug::getPixelPointCloud(cv::Mat& retPixelCoords,
+							cv::Mat& retPixelColors)
+{
+	robot->movementConstraints->camera->getPixelPointCloud(retPixelCoords, retPixelColors);
 }
 
 float Debug::getImuAccVariance(){

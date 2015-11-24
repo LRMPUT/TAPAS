@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
-set(CUDA 0)
-set(TROBOT 1)
+set(CUDA 1)
+set(TROBOT 0)
 set(CMAKE_BUILD_TYPE "Release")
 
 project(Tapas)
@@ -23,6 +23,8 @@ set(TinyXML_LIBRARIES tinyxml)
 find_package(OpenCV REQUIRED)
 
 find_package(Boost COMPONENTS system filesystem thread REQUIRED)
+
+set(LBFGS_LIBRARIES lbfgs)
 
 IF (CUDA GREATER 0)
 	find_package(CUDA REQUIRED)
@@ -84,6 +86,11 @@ set(Tapas_SOURCES
 	MovementConstraints/Hokuyo/Hokuyo.cpp
 	MovementConstraints/Sharp/Sharp.cpp
 	MovementConstraints/Camera/LibSVM-weights/svm.cpp
+	MovementConstraints/Camera/Pgm/CustFeature.cpp
+	MovementConstraints/Camera/Pgm/Inference.cpp
+	MovementConstraints/Camera/Pgm/ParamEst.cpp
+	MovementConstraints/Camera/Pgm/Pgm.cpp
+	#MovementConstraints/Camera/Pgm/UnionFind.cpp
 	MovementConstraints/Camera/Camera.cpp
 	MovementConstraints/Camera/HierClassifier/UnionFind.cpp
 	MovementConstraints/Camera/HierClassifier/Classifier.cpp
@@ -149,7 +156,8 @@ target_link_libraries(Tapas
 	${OpenCV_LIBS}
 	${Boost_LIBRARIES}
 	${urg_LIBRARIES}
-	${TinyXML_LIBRARIES})
+	${TinyXML_LIBRARIES}
+	${LBFGS_LIBRARIES})
 
 find_package(OpenGL REQUIRED)
 set(QGLViewer_LIBRARIES QGLViewer)
@@ -159,7 +167,7 @@ set(TapasQt_SOURCES
 	TapasQt/CameraWindow.cpp
 	TapasQt/Chart.cpp
 	TapasQt/gui.cpp
-	TapasQt/ImuChart.cpp
+#	TapasQt/ImuChart.cpp
 	TapasQt/QtRobotDrive.cpp
 	TapasQt/Recording.cpp
 	TapasQt/QtGps.cpp
@@ -173,7 +181,7 @@ set(TapasQt_SOURCES
 set(TapasQt_HEADERS
 	TapasQt/CameraWindow.h
 	TapasQt/Chart.h
-	TapasQt/ImuChart.h
+#	TapasQt/ImuChart.h
 	TapasQt/QtRobotDrive.h
 	TapasQt/Recording.h
 	TapasQt/QtGps.h
@@ -223,4 +231,5 @@ target_link_libraries(TapasQt/gui
 	${OPENGL_LIBRARIES}
 	${QGLViewer_LIBRARIES}
 	${urg_LIBRARIES}
-	${TinyXML_LIBRARIES})
+	${TinyXML_LIBRARIES}
+	${LBFGS_LIBRARIES})

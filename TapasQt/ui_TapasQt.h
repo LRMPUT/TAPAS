@@ -162,6 +162,8 @@ public:
     QLineEdit *saRateImuLineEdit;
     QCheckBox *includeEstimatedPosCheckBox;
     QLineEdit *saRateEstimatedPosLineEdit;
+    QCheckBox *includeGoalDirGlobalCheckBox;
+    QLineEdit *saRateGoalDirGlobalLineEdit;
     QGroupBox *groupBox_2;
     QWidget *verticalLayoutWidget_2;
     QVBoxLayout *verticalLayout_2;
@@ -826,10 +828,10 @@ public:
         recordTab->setObjectName(QString::fromUtf8("recordTab"));
         saRateGroupBox = new QGroupBox(recordTab);
         saRateGroupBox->setObjectName(QString::fromUtf8("saRateGroupBox"));
-        saRateGroupBox->setGeometry(QRect(30, 30, 201, 391));
+        saRateGroupBox->setGeometry(QRect(30, 30, 201, 461));
         verticalLayoutWidget = new QWidget(saRateGroupBox);
         verticalLayoutWidget->setObjectName(QString::fromUtf8("verticalLayoutWidget"));
-        verticalLayoutWidget->setGeometry(QRect(10, 30, 181, 362));
+        verticalLayoutWidget->setGeometry(QRect(10, 30, 181, 431));
         verticalLayout = new QVBoxLayout(verticalLayoutWidget);
         verticalLayout->setSpacing(6);
         verticalLayout->setContentsMargins(11, 11, 11, 11);
@@ -838,7 +840,7 @@ public:
         includeHokuyoCheckBox = new QCheckBox(verticalLayoutWidget);
         includeHokuyoCheckBox->setObjectName(QString::fromUtf8("includeHokuyoCheckBox"));
         includeHokuyoCheckBox->setCheckable(true);
-        includeHokuyoCheckBox->setChecked(false);
+        includeHokuyoCheckBox->setChecked(true);
 
         verticalLayout->addWidget(includeHokuyoCheckBox);
 
@@ -871,7 +873,7 @@ public:
 
         includeCamerasCheckBox = new QCheckBox(verticalLayoutWidget);
         includeCamerasCheckBox->setObjectName(QString::fromUtf8("includeCamerasCheckBox"));
-        includeCamerasCheckBox->setChecked(false);
+        includeCamerasCheckBox->setChecked(true);
 
         verticalLayout->addWidget(includeCamerasCheckBox);
 
@@ -900,6 +902,17 @@ public:
         saRateEstimatedPosLineEdit->setObjectName(QString::fromUtf8("saRateEstimatedPosLineEdit"));
 
         verticalLayout->addWidget(saRateEstimatedPosLineEdit);
+
+        includeGoalDirGlobalCheckBox = new QCheckBox(verticalLayoutWidget);
+        includeGoalDirGlobalCheckBox->setObjectName(QString::fromUtf8("includeGoalDirGlobalCheckBox"));
+        includeGoalDirGlobalCheckBox->setChecked(true);
+
+        verticalLayout->addWidget(includeGoalDirGlobalCheckBox);
+
+        saRateGoalDirGlobalLineEdit = new QLineEdit(verticalLayoutWidget);
+        saRateGoalDirGlobalLineEdit->setObjectName(QString::fromUtf8("saRateGoalDirGlobalLineEdit"));
+
+        verticalLayout->addWidget(saRateGoalDirGlobalLineEdit);
 
         groupBox_2 = new QGroupBox(recordTab);
         groupBox_2->setObjectName(QString::fromUtf8("groupBox_2"));
@@ -1379,7 +1392,7 @@ public:
 
         retranslateUi(TapasQtClass);
 
-        mainTab->setCurrentIndex(9);
+        mainTab->setCurrentIndex(6);
 
 
         QMetaObject::connectSlotsByName(TapasQtClass);
@@ -1478,6 +1491,8 @@ public:
         saRateImuLineEdit->setText(QApplication::translate("TapasQtClass", "100", 0, QApplication::UnicodeUTF8));
         includeEstimatedPosCheckBox->setText(QApplication::translate("TapasQtClass", "Estimated Pos", 0, QApplication::UnicodeUTF8));
         saRateEstimatedPosLineEdit->setText(QApplication::translate("TapasQtClass", "20", 0, QApplication::UnicodeUTF8));
+        includeGoalDirGlobalCheckBox->setText(QApplication::translate("TapasQtClass", "Goal dir global", 0, QApplication::UnicodeUTF8));
+        saRateGoalDirGlobalLineEdit->setText(QApplication::translate("TapasQtClass", "10", 0, QApplication::UnicodeUTF8));
         groupBox_2->setTitle(QApplication::translate("TapasQtClass", "Control", 0, QApplication::UnicodeUTF8));
         label_17->setText(QApplication::translate("TapasQtClass", "File path", 0, QApplication::UnicodeUTF8));
         recPathLineEdit->setText(QApplication::translate("TapasQtClass", "data", 0, QApplication::UnicodeUTF8));

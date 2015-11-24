@@ -75,9 +75,9 @@ GlobalPlanner::GlobalPlanner(Robot* irobot, TiXmlElement* settings) :
 
 GlobalPlanner::~GlobalPlanner() {
 	cout << "~GlobalPlanner()" << endl;
+	stopThread();
 	delete localPlanner;
 	closeRobotsDrive();
-	stopThread();
 	cout << "End ~GlobalPlanner()" << endl;
 }
 
@@ -240,15 +240,17 @@ void GlobalPlanner::globalPlannerProcessing() {
 		} else {
 			while ((!robot->isGpsOpen() || robot->isSetZero() == false
 					|| robot->gpsGetFixStatus() == 1)
-					&& globalPlannerParams.runThread) {
+					&& globalPlannerParams.runThread)
+			{
 				usleep(200);
 			}
 			while (!robot->isGpsDataValid() && globalPlannerParams.runThread) {
 				usleep(200);
 			}
-			if (globalPlannerParams.debug == 1 && globalPlannerParams.runThread)
+			if (globalPlannerParams.debug == 1 && globalPlannerParams.runThread){
 				std::cout << "Global Planner : We have fix and zero position"
 						<< std::endl;
+			}
 
 			if (globalPlannerParams.runThread) {
 				// Read the map of the tournament
@@ -260,8 +262,9 @@ void GlobalPlanner::globalPlannerProcessing() {
 				i.open("targetReached");
 				int state;
 				i>>state;
-				if (state == 1)
+				if (state == 1){
 					planningStage = toStart;
+				}
 				i.close();
 
 				// Set the goal in the map
@@ -270,7 +273,8 @@ void GlobalPlanner::globalPlannerProcessing() {
 			}
 
 			while (!startGlobalPlannerCompetition
-					&& globalPlannerParams.runThread) {
+					&& globalPlannerParams.runThread)
+			{
 				usleep(200);
 			}
 
@@ -278,8 +282,8 @@ void GlobalPlanner::globalPlannerProcessing() {
 				std::chrono::seconds durationStart(1);
 				std::this_thread::sleep_for(durationStart);
 			}
-				// Where are we ?
-				double robotX, robotY, theta;
+			// Where are we ?
+			double robotX, robotY, theta;
 			if (globalPlannerParams.runThread) {
 				updateRobotPosition(robotX, robotY, theta);
 				cout << "Global Planner started competition" << endl;
@@ -290,9 +294,9 @@ void GlobalPlanner::globalPlannerProcessing() {
 				localPlanner->setNormalSpeed();
 				localPlanner->startLocalPlanner();
 			}
-				int loopTimeCounter = 0;
-				bool recomputePlan = false;
-				int startType = 0;
+			int loopTimeCounter = 0;
+			bool recomputePlan = false;
+			int startType = 0;
 
 			while (globalPlannerParams.runThread) {
 				std::cout << std::endl << "Global Planner : New iteration"
@@ -308,11 +312,9 @@ void GlobalPlanner::globalPlannerProcessing() {
 				// We compute new global plan
 				if (globalPlannerParams.computeEveryNth == 1
 						|| recomputePlan
-						|| loopTimeCounter
-								% globalPlannerParams.computeEveryNth
-								== 0) {
-					loopTimeCounter = loopTimeCounter
-							% globalPlannerParams.computeEveryNth;
+						|| loopTimeCounter % globalPlannerParams.computeEveryNth == 0)
+				{
+					loopTimeCounter = loopTimeCounter % globalPlannerParams.computeEveryNth;
 					// Compute the route to follow
 					computeGlobalPlan(robotX, robotY, startType);
 					// We recomputed the plan
@@ -326,10 +328,7 @@ void GlobalPlanner::globalPlannerProcessing() {
 				// Let's update out subgoal as current destination
 				//			updateHeadingGoal();
 
-				std::chrono::milliseconds duration(
-						int(
-								1000.0
-										/ globalPlannerParams.processingFrequency));
+				std::chrono::milliseconds duration(int(1000.0 / globalPlannerParams.processingFrequency));
 				std::this_thread::sleep_for(duration);
 				loopTimeCounter++;
 			}
@@ -941,8 +940,13 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY,
 		// We check the global plan
 		bool foundSubgoal = false;
 
+		std::unique_lock < std::mutex > lckGoalTheta(mtxGoalTheta);
 		double originalGoalTheta = goalTheta;
-		for (std::list<int>::iterator it = nodesToVisit.begin();;) {
+		lckGoalTheta.unlock();
+
+		while(!foundSubgoal && nodesToVisit.size() > 0) {
+			std::list<int>::iterator it = nodesToVisit.begin();
+
 			std::pair<double, double> tmp = nodePosition[*it];
 			double dist = pow(tmp.first - robotX, 2)
 					+ pow(tmp.second - robotY, 2);
@@ -954,8 +958,8 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY,
 					* 180.0 / M_PI;
 
 			// This is the node we go to (because it is further away than threshold or the direction is the same):
-			if (sqrt(dist) > globalPlannerParams.subgoalThreshold
-					&& foundSubgoal == false) {
+			if (sqrt(dist) > globalPlannerParams.subgoalThreshold)
+			{
 
 				setGoalDirection(direction);
 
@@ -970,18 +974,19 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY,
 				}
 
 				foundSubgoal = true;
-			} else if (sqrt(dist) > globalPlannerParams.subgoalThreshold
+			}
+			else if (sqrt(dist) > globalPlannerParams.subgoalThreshold
 					&& sqrt(dist) < globalPlannerParams.subgoalThreshold2
-					&& directionDifference
-							< globalPlannerParams.subgoalAngularThreshold) {
+					&& directionDifference < globalPlannerParams.subgoalAngularThreshold)
+			{
 
 				setGoalDirection(direction);
 
-				std::list<int>::iterator it2 = nodesToVisit.begin();
-				while (it2 != it && nodesToVisit.size() > 0) {
-					nodesToVisit.pop_front();
-					it2 = nodesToVisit.begin();
-				}
+//				std::list<int>::iterator it2 = nodesToVisit.begin();
+//				while (it2 != it && nodesToVisit.size() > 0) {
+//					nodesToVisit.pop_front();
+//					it2 = nodesToVisit.begin();
+//				}
 
 				if (globalPlannerParams.debug == 1) {
 					std::cout << "Global Planner : angular choice - node : "
@@ -994,18 +999,25 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY,
 							<< x << " " << y << " : Dist = "
 							<< sqrt(x * x + y * y) << std::endl;
 				}
-				nodesToVisit.pop_front();
+
+				foundSubgoal = true;
+//				nodesToVisit.pop_front();
 			} else {
-				if (foundSubgoal)
-					break;
+//				if (foundSubgoal){
+//					break;
+//				}
 
 				if (globalPlannerParams.debug == 1) {
 					std::cout << "Global Planner : removing node" << std::endl;
 				}
 
 				nodesToVisit.pop_front();
-				if ( nodesToVisit.size() > 0)
-					it = nodesToVisit.begin();
+//				if ( nodesToVisit.size() > 0){
+//					it = nodesToVisit.begin();
+//				}
+//				else{
+//					break;
+//				}
 			}
 		}
 		// We can go directly to target

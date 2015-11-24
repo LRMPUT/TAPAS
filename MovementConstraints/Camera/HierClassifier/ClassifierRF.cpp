@@ -24,17 +24,29 @@ void ClassifierRF::startup()
 	scalesDiv = 0;
 	scalesSub = 0;
 
-	params = CvRTParams(2,
-						10,
-						0,
-						false,
-						15,
-						0,
-						true,
-						0,
-						25,
-						0.01f,
-						CV_TERMCRIT_ITER);
+	rf = cv::ml::RTrees::create();
+	rf->setMaxDepth(2);
+	rf->setMinSampleCount(10);
+	rf->setRegressionAccuracy(0.0);
+	rf->setUseSurrogates(false);
+	rf->setMaxCategories(15);
+	rf->setPriors(Mat());
+	rf->setCalculateVarImportance(true);
+	rf->setActiveVarCount(0);
+	rf->setTermCriteria(cv::TermCriteria(cv::TermCriteria::MAX_ITER + cv::TermCriteria::EPS, 25, 0.01));
+
+
+//	params = CvRTParams(2,
+//						10,
+//						0,
+//						false,
+//						15,
+//						0,
+//						true,
+//						0,
+//						25,
+//						0.01f,
+//						CV_TERMCRIT_ITER);
 }
 
 /** \brief Funkcja czyszcząca dane klasyfikatora.
@@ -184,7 +196,7 @@ ClassifierRF::ClassifierRF(const ClassifierRF& old) :
 	numLabels = old.numLabels;
 	descLen = old.descLen;
 	cacheEnabled = old.cacheEnabled;
-	params = old.params;
+//	params = old.params;
 
 	scalesSub = new double[descLen];
 	memcpy(scalesSub, old.scalesSub, descLen * sizeof(double));
@@ -231,7 +243,7 @@ void ClassifierRF::loadSettings(TiXmlElement* settings)
  */
 void ClassifierRF::saveCache(TiXmlElement* settings, boost::filesystem::path file)
 {
-	rf.save(file.c_str());
+	rf->save(file.c_str());
 
 	TiXmlElement* pScales = new TiXmlElement("scales");
 	settings->LinkEndChild(pScales);
@@ -256,7 +268,7 @@ void ClassifierRF::loadCache(TiXmlElement* settings, boost::filesystem::path fil
 {
 	clearData();
 
-	rf.load(file.c_str());
+	rf = cv::Algorithm::load<cv::ml::RTrees>(file.c_str());
 
 	TiXmlElement* pScales = settings->FirstChildElement("scales");
 	if(!pScales){
@@ -295,17 +307,24 @@ void ClassifierRF::train(	const std::vector<Entry>& entries,
 {
 	prepareProblem(entries, productWeights);
 
-	Mat varType(descLen + 1, 1, CV_8UC1, Scalar(CV_VAR_NUMERICAL));
-	varType.at<unsigned char>(descLen) = CV_VAR_CATEGORICAL;
+//	Mat varType(descLen + 1, 1, CV_8UC1, Scalar(CV_VAR_NUMERICAL));
+//	varType.at<unsigned char>(descLen) = CV_VAR_CATEGORICAL;
 
-	rf.train(trainData,
-			CV_ROW_SAMPLE,
-			dataLabels,
-			Mat(),
-			Mat(),
-			Mat()/*varType*/,
-			Mat(),
-			params);
+
+	cv::Ptr<cv::ml::TrainData> trainDataStruct = cv::ml::TrainData::create(trainData,
+																			cv::ml::SampleTypes::ROW_SAMPLE,
+																			dataLabels);
+//	rf = cv::ml::RTrees::create();
+	rf->train(trainDataStruct);
+
+//	rf.train(trainData,
+//			CV_ROW_SAMPLE,
+//			dataLabels,
+//			Mat(),
+//			Mat(),
+//			Mat()/*varType*/,
+//			Mat(),
+//			params);
 }
 
 /** \brief Funkcja klasyfikująca.
@@ -323,12 +342,16 @@ cv::Mat ClassifierRF::classify(cv::Mat features)
 		}
 	}
 
-	float res = rf.predict_prob(featNorm);
-
+	Mat res;
+//	cout << "Predicting" << endl;
+	rf->predict(featNorm, res, cv::ml::RTrees::Flags::PREDICT_SUM);
 //	cout << "res = " << res << endl;
 
-	ret.at<float>(0) = 1 -res;
-	ret.at<float>(1) = res;
+	int numTrees = rf->getRoots().size();
+	ret.at<float>(0) = 1.0 - (float)res.at<float>(0) / numTrees;
+	ret.at<float>(1) = (float)res.at<float>(0) / numTrees;
+
+//	cout << "ret = " << ret << endl;
 
 	return ret;
 }

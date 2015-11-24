@@ -75,6 +75,11 @@ public:
 						float& retGoalDirection,
 						float& retBestDirection);
 
+	float getHeadingToGoal();
+
+	void getPixelPointCloud(cv::Mat& retPixelCoords,
+							cv::Mat& retPixelColors);
+
 	float getImuAccVariance();
 
 	//----------------------ACCESS TO SETTINGS

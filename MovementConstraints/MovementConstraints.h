@@ -83,8 +83,8 @@ private:
 	// Class to get data from Hokuyo
 	Hokuyo hokuyo;
 
-	// Class to get data from Sharp
-	Sharp sharp;
+//	// Class to get data from Sharp
+//	Sharp sharp;
 
 	//Parent class Robot
 	Robot* robot;
@@ -106,11 +106,11 @@ private:
 
 	std::mutex mtxMap;
 
-	cv::Mat curPosCloudMapCenter;
+	cv::Mat curPosOrigMapCenter;
 
-	cv::Mat posMapCenterGlobal;
+	cv::Mat curMapCenterOrigGlobal;
 
-	cv::Mat pointCloudImuMapCenter;
+	cv::Mat pointCloudOrigMapCenter;
 
 	std::chrono::high_resolution_clock::time_point timestampMap;
 
@@ -122,8 +122,9 @@ private:
 	//
 	cv::Mat constraintsMap;
 
-	//Map center position in global coordinates
-	double mapCenterX, mapCenterY, mapCenterPhi;
+	std::thread constraintsMapThread;
+
+	bool constraintsMapThreadRunning;
 
 	std::thread movementConstraintsThread;
 
@@ -143,9 +144,10 @@ private:
 	void updateConstraintsMap();
 
 	void insertHokuyoConstraints(cv::Mat map,
-								std::chrono::high_resolution_clock::time_point curTimestampMap);
+								std::chrono::high_resolution_clock::time_point curTimestampMap,
+								cv::Mat mapMove);
 
-	void updateCurPosCloudMapCenter();
+	void updateCurPosOrigMapCenter();
 
 	void updatePointCloud();
 
@@ -164,16 +166,16 @@ public:
 
 	static cv::Mat compNewPos(cv::Mat lprevImu, cv::Mat lcurImu,
 								cv::Mat lprevEnc, cv::Mat lcurEnc,
-								cv::Mat lposMapCenter,
-								cv::Mat lmapCenterGlobal,
+								cv::Mat lposOrigMapCenter,
+								cv::Mat lmapCenterOrigGlobal,
 								const PointCloudSettings& pointCloudSettings);
 
 	static void processPointCloud(cv::Mat hokuyoData,
-								cv::Mat& pointCloudImuMapCenter,
+								cv::Mat& pointCloudOrigMapCenter,
 								std::queue<PointsPacket>& pointsInfo,
 								std::chrono::high_resolution_clock::time_point hokuyoTimestamp,
 								std::chrono::high_resolution_clock::time_point curTimestamp,
-								cv::Mat curPosCloudMapCenter,
+								cv::Mat curPosOrigMapCenter,
 								std::mutex& mtxPointCloud,
 								cv::Mat cameraOrigLaser,
 								cv::Mat cameraOrigImu,
@@ -191,7 +193,7 @@ public:
 
 	cv::Mat getPointCloud(cv::Mat& curPosMapCenter);
 
-	cv::Mat getPosMapCenterGlobal();
+	cv::Mat getCurMapCenterOrigGlobal();
 
 	cv::Mat getPosImuMapCenter();
 

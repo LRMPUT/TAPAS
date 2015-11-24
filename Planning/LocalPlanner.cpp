@@ -230,16 +230,20 @@ void LocalPlanner::executeVFH() {
 	Mat posRobotMapCenter;
 	Mat posLocalToGlobalMap;
 
-	robot->getLocalPlanData(constraints, posRobotMapCenter,
-			posLocalToGlobalMap);
+	robot->getLocalPlanData(constraints,
+							posRobotMapCenter,
+							posLocalToGlobalMap);
 	if(!constraints.empty() && !posRobotMapCenter.empty() && !posLocalToGlobalMap.empty()){
 		vector<float> histSectors(numHistSectors, 0);
 		//vector<int> freeSectors;
 
 		//cout << "updateHistogram()" << endl;
-		updateHistogram(histSectors, posRobotMapCenter, constraints);
+		updateHistogram(histSectors,
+						posRobotMapCenter,
+						constraints,
+						localPlannerParams);
 		//cout << "smoothHistogram" << endl;
-		smoothHistogram(histSectors);
+		smoothHistogram(histSectors, localPlannerParams);
 		//cout << "findFreeSectors()" << endl;
 		//findFreeSectors(histSectors, freeSectors);
 
@@ -252,7 +256,8 @@ void LocalPlanner::executeVFH() {
 		/// optimal direction in the local map - nearest to the goal
 		bestDirLocalMap = findOptimSector(histSectors,
 										posRobotMapCenter,
-										goalDirLocalMap);
+										goalDirLocalMap,
+										localPlannerParams);
 
 		determineDriversCommand(posRobotMapCenter,
 								bestDirLocalMap);
@@ -327,7 +332,9 @@ float LocalPlanner::rotMatToEulerYaw(Mat rotMat) {
 
 void LocalPlanner::updateHistogram(std::vector<float>& histSectors,
 									cv::Mat posRobotMapCenter,
-									cv::Mat constraints) {
+									cv::Mat constraints,
+									Parameters localPlannerParams)
+{
 
 	float angPosition;
 	float density;
@@ -360,7 +367,7 @@ void LocalPlanner::updateHistogram(std::vector<float>& histSectors,
 			float d = sqrt(pow((float) (cellX - curRobX), 2)+ pow((float) (cellY - curRobY), 2));
 			density = c * max(hist_A - hist_B * d, 0.0f);
 
-			//cout << "map (" << x << ", " << y << "), histB = " << hist_B << ", c = " << c << ", d2 = " << d2 << ", density = " << density << endl;
+//			cout << "map (" << x << ", " << y << "), histB = " << hist_B << ", c = " << c << ", d = " << d << ", density = " << density << endl;
 			/// update proper sector of histogram
 			if (angPosition > 179.999)
 				angPosition = -180.0;
@@ -375,7 +382,9 @@ void LocalPlanner::updateHistogram(std::vector<float>& histSectors,
 //	}
 }
 
-void LocalPlanner::smoothHistogram(std::vector<float>& histSectors) {
+void LocalPlanner::smoothHistogram(std::vector<float>& histSectors,
+									Parameters localPlannerParams)
+{
 
 	int kernelSize = 2*localPlannerParams.gauss3sig/localPlannerParams.histResolution;
 	kernelSize += (kernelSize + 1) % 2;	//kernelSize must be odd
@@ -395,31 +404,6 @@ void LocalPlanner::smoothHistogram(std::vector<float>& histSectors) {
 	histSectors = newHistSectors;
 }
 
-/*void LocalPlanner::findFreeSectors(std::vector<float>& histSectors,
-									std::vector<int>& freeSectors) {
-
-	freeSectors.clear();
-
-	bool needToHigherThreshold = true;
-
-	for (int thresholdIndex = 0; thresholdIndex < 5; thresholdIndex++) {
-		for (int sec = 0; sec < numHistSectors; sec++) {
-
-			if (fabs(histSectors.at(sec)) <= localPlannerParams.threshold + thresholdIndex) {
-				freeSectors.push_back(sec);
-				needToHigherThreshold = false;
-			}
-		}
-		if (!needToHigherThreshold) {
-			break;
-		}
-	}
-//	cout << "Wolne sektory:" << endl;
-//	for (int i = 0; i < freeSectors.size(); i++) {
-//		cout << "Free to go: " << freeSectors.at(i) * localPlannerParams.histResolution << " "
-//				<< (freeSectors.at(i) + 1) * localPlannerParams.histResolution << endl;
-//	}
-}*/
 
 /// return Goal Direction converted from Global Map to
 /// local MAP
@@ -447,7 +431,9 @@ float LocalPlanner::determineGoalInLocalMap(cv::Mat posLocalToGlobalMap,
 
 float LocalPlanner::findOptimSector(const std::vector<float>& histSectors,
 									cv::Mat posRobotMapCenter,
-									float goalDirLocalMap) {
+									float goalDirLocalMap,
+									Parameters localPlannerParams)
+{
 
 
 //	cout << "calculateLocalDirection START" << endl;

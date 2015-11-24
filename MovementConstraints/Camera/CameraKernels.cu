@@ -138,12 +138,53 @@ __global__ void compPointReprojection(float* d_invCameraMatrix,
 							pointCamNN[2]*s,
 							1};
 		float pointMapCenter[4];
-		multMat(d_curPosCameraMapCenterImu, pointCam, pointMapCenter, 4, 4, 4, 1);
+		multMat(d_curPosCameraMapCenterGlobal, pointCam, pointMapCenter, 4, 4, 4, 1);
 
 		int xSegm = pointMapCenter[0]/rasterSize + mapSize/2;
 		int ySegm = pointMapCenter[1]/rasterSize + mapSize/2;
 		//cout << r << ":" << c << " = (" << xSegm << ", " << ySegm << ")" << endl;
 		d_segments[idxY * numCols + idxX] = xSegm*mapSize + ySegm;
+	}
+}
+
+__global__ void compPointReprojectionCoords(float* d_invCameraMatrix,
+											float* d_distCoeffs,
+											float* d_curPosCameraMapCenterGlobal,
+											float* d_curPosCameraMapCenterImu,
+											int numRows,
+											int numCols,
+											float* d_coords,
+											int mapSize,
+											int rasterSize)
+{
+	//TODO Add distortion coefficients
+	int idxX = (blockIdx.x * blockDim.x) + threadIdx.x;
+	int idxY = (blockIdx.y * blockDim.y) + threadIdx.y;
+
+	if(idxX < numCols && idxY < numRows){
+		float pointIm[3] = {idxX,
+							idxY,
+							1};
+		float pointCamNN[3];
+		multMat(d_invCameraMatrix, pointIm, pointCamNN, 3, 3, 3, 1);
+
+		float t31 = d_curPosCameraMapCenterGlobal[2*4 + 0];
+		float t32 = d_curPosCameraMapCenterGlobal[2*4 + 1];
+		float t33 = d_curPosCameraMapCenterGlobal[2*4 + 2];
+		float t34 = d_curPosCameraMapCenterGlobal[2*4 + 3];
+		float s = (-t34) / (t31 * pointCamNN[0] + t32 * pointCamNN[1] + t33 * pointCamNN[2]); //at z_glob = 0
+
+		float pointCam[4] = {pointCamNN[0]*s,
+							pointCamNN[1]*s,
+							pointCamNN[2]*s,
+							1};
+		float pointMapCenter[4];
+		multMat(d_curPosCameraMapCenterGlobal, pointCam, pointMapCenter, 4, 4, 4, 1);
+
+		d_coords[(idxY * numCols + idxX) * 4 + 0] = pointMapCenter[0];
+		d_coords[(idxY * numCols + idxX) * 4 + 1] = pointMapCenter[1];
+		d_coords[(idxY * numCols + idxX) * 4 + 2] = pointMapCenter[2];
+		d_coords[(idxY * numCols + idxX) * 4 + 3] = pointMapCenter[3];
 	}
 }
 
