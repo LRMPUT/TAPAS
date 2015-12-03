@@ -1097,7 +1097,7 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 	for(int i = 0; i < images.size(); i++){
 		cout << "Segmenting" << endl;
 #ifdef NO_CUDA
-		vector<Mat> pixelCoordsVec = computeMapCoords(poses[i]);
+		vector<Mat> pixelCoordsVec = computeMapCoords(posesOrigMapCenter[i]);
 #else
 		vector<Mat> pixelCoordsVec = computeMapCoordsGpu(posesOrigMapCenter[i]);
 #endif
@@ -1347,7 +1347,7 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	for(int i = 0; i < images.size(); i++){
 		cout << "Segmenting" << endl;
 #ifdef NO_CUDA
-		vector<Mat> pixelCoordsVec = computeMapCoords(poses[i]);
+		vector<Mat> pixelCoordsVec = computeMapCoords(posesOrigMapCenter[i]);
 #else
 		vector<Mat> pixelCoordsVec = computeMapCoordsGpu(posesOrigMapCenter[i]);
 #endif

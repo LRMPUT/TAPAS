@@ -79,6 +79,7 @@ cv::Mat ExtendedKalmanFilter::state() {
 }
 
 cv::Mat ExtendedKalmanFilter::jacobian() {
+	//TODO Correct values of jacobian.
 
 	cv::Mat F = cv::Mat::zeros(4, 4, CV_64F);
 
