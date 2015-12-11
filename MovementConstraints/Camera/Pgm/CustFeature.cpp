@@ -100,7 +100,15 @@ double TerClassNodeFeature::comp(const std::vector<double>& vals,
 								const std::vector<double>& obsVec)
 {
 	int label = (int)(vals[0] + 0.5);
-	return log(obsVec[obsNums()[label]])/4;
+	int obsLab = (int)(obsVec[obsNums()[0]] + 0.5);
+//	cout << "label = " << label << ", obsVec = " << obsVec <<
+//			", obsNums()[0] = " << obsNums()[0] << ", obsNums()[1] = " << obsNums()[1] <<
+//			", obsLab = " << obsLab << endl;
+	int ind = 0;
+	if(label == obsLab){
+		ind = 1;
+	}
+	return ind * log(obsVec[obsNums()[1]])/4;
 }
 
 double TerClassNodeFeature::compParam(const std::vector<double>& vals,

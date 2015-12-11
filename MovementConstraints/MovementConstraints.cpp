@@ -383,9 +383,9 @@ void MovementConstraints::updateCurPosOrigMapCenter(){
 	}
 #else
 	std::unique_lock<std::mutex> lck(mtxPointCloud);
-	cout << "updating curPosOrigMapCenter" << endl;
+//	cout << "updating curPosOrigMapCenter" << endl;
 	curPosOrigMapCenter = Mat::eye(4, 4, CV_32FC1);
-	cout << "end updating curPosOrigMapCenter" << endl;
+//	cout << "end updating curPosOrigMapCenter" << endl;
 	lck.unlock();
 #endif
 }

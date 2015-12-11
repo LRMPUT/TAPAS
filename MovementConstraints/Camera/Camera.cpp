@@ -948,7 +948,8 @@ void Camera::processDir(boost::filesystem::path dir,
 			}
 		}
 		imshow("test", image);
-		waitKey(100);
+		waitKey(50);
+//		waitKey();
 
 //		cout << "annotation" << endl;
 
@@ -1344,7 +1345,15 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	float maxControlError = 0.0;
 	int cntRelevantControlError = 0;
 
+	std::chrono::high_resolution_clock::duration durSegm(0);
+	std::chrono::high_resolution_clock::duration durClass(0);
+	std::chrono::high_resolution_clock::duration durUpdate(0);
+	std::chrono::high_resolution_clock::duration durInfPrep(0);
+	std::chrono::high_resolution_clock::duration durInfInf(0);
+
 	for(int i = 0; i < images.size(); i++){
+
+		std::chrono::high_resolution_clock::time_point timeBegSegm = std::chrono::high_resolution_clock::now();
 		cout << "Segmenting" << endl;
 #ifdef NO_CUDA
 		vector<Mat> pixelCoordsVec = computeMapCoords(posesOrigMapCenter[i]);
@@ -1352,6 +1361,9 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 		vector<Mat> pixelCoordsVec = computeMapCoordsGpu(posesOrigMapCenter[i]);
 #endif
 		Mat pixelCoords = pixelCoordsVec.front();
+
+		std::chrono::high_resolution_clock::time_point timeEndSegm  = std::chrono::high_resolution_clock::now();
+		durSegm += timeEndSegm - timeBegSegm;
 
 		Mat autoRegionsOnImage(images[i].rows, images[i].cols, CV_32SC1);
 
@@ -1381,12 +1393,14 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 				break;
 			}
 		}
+
 		//cout << "terrains[i].size() = " << terrains[i].size() << endl;
 		vector<Entry> newData = hierClassifiers.front()->extractEntries(images[i],
 																		terrains[i],
 																		autoRegionsOnImage,
 																		cameraParams.maskIgnore.front(),
 																		cameraParams.entryWeightThreshold);
+
 
 
 		for(int e = 0; e < newData.size(); e++){
@@ -1420,6 +1434,7 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 		imshow("labeled", visualization);
 		imshow("segments", hierClassifiers.front()->colorSegments(autoRegionsOnImage));
 
+		std::chrono::high_resolution_clock::time_point timeBegClass  = std::chrono::high_resolution_clock::now();
 		cout << "Classifing" << endl;
 		vector<Mat> classificationResult = hierClassifiers.front()->classify(images[i],
 																			terrains[i],
@@ -1427,6 +1442,8 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 																			cameraParams.maskIgnore.front(),
 																			cameraParams.entryWeightThreshold);
 		cout << "End classifing" << endl;
+		std::chrono::high_resolution_clock::time_point timeEndClass  = std::chrono::high_resolution_clock::now();
+		durClass += timeEndClass - timeBegClass;
 
 		//display current classification results
 		for(int l = 0; l < cameraParams.labels.size(); l++){
@@ -1476,6 +1493,8 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 			manualLabelsOnImage.setTo(it->second, manualRegionsOnImages[i] == it->first);
 		}
 
+		std::chrono::high_resolution_clock::time_point timeBegUpdate  = std::chrono::high_resolution_clock::now();
+
 		updatePixelData(pixelCoordsAll,
 						classResultsAll,
 						manualLabelsAll,
@@ -1487,6 +1506,9 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 						classificationResult,
 						images[i],
 						manualLabelsOnImage);
+
+		std::chrono::high_resolution_clock::time_point timeEndUpdate  = std::chrono::high_resolution_clock::now();
+		durUpdate += timeEndUpdate - timeBegUpdate;
 
 		cout << "Num pixels = " << pixelCoordsAll.cols << endl;
 
@@ -1517,6 +1539,8 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	//		Mat segmentMask(segmentManualLabels.size(), CV_32SC1, Scalar(0));
 	//		segmentMask.setTo(Scalar(1), segmentManualLabels >= 0);
 
+			std::chrono::high_resolution_clock::time_point timeBegInfPrep  = std::chrono::high_resolution_clock::now();
+
 			cout << "prepare segment info" << endl;
 			prepareSegmentInfo(segmentPriors,
 								segmentFeats,
@@ -1536,10 +1560,18 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 						segmentFeats,
 						segmentPixelCount);
 
+			std::chrono::high_resolution_clock::time_point timeEndInfPrep  = std::chrono::high_resolution_clock::now();
+			durInfPrep += timeEndInfPrep - timeBegInfPrep;
+
+			std::chrono::high_resolution_clock::time_point timeBegInfInf  = std::chrono::high_resolution_clock::now();
+
 			cout << "infer terrain labels" << endl;
 			segmentResults = inferTerrainLabels(pgm,
 												obsVec,
 												segIdToVarClusterId);
+
+			std::chrono::high_resolution_clock::time_point timeEndInfInf  = std::chrono::high_resolution_clock::now();
+			durInfInf += timeEndInfInf - timeBegInfInf;
 
 			cout << "infer results" << endl;
 			for(int d = 0; d < manualLabelsAll.cols; ++d){
@@ -1803,6 +1835,13 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 		cout << "Max control error = " << maxControlError << endl;
 		cout << "Counter relevant control error = " << cntRelevantControlError << endl;
 	}
+
+
+	cout << "Map segments time: " << std::chrono::duration_cast<std::chrono::milliseconds>(durSegm).count()/images.size() << " ms" << endl;
+	cout << "Map class time: " << std::chrono::duration_cast<std::chrono::milliseconds>(durClass).count()/images.size() << " ms" << endl;
+	cout << "Map pixel cloud update time: " << std::chrono::duration_cast<std::chrono::milliseconds>(durUpdate).count()/images.size() << " ms" << endl;
+	cout << "Map inference preparation time: " << std::chrono::duration_cast<std::chrono::milliseconds>(durInfPrep).count()/images.size() << " ms" << endl;
+	cout << "Map inference inference time: " << std::chrono::duration_cast<std::chrono::milliseconds>(durInfInf).count()/images.size() << " ms" << endl;
 
 	if(estimatePgmParams){
 		ParamEst paramEst;
@@ -2403,7 +2442,7 @@ void Camera::draw3DVis(cv::viz::Viz3d& win,
 	// Start event loop once for 5 + 5 millisecond
     int count = 0;
     win.spinOnce(5, true);
-	while(!win.wasStopped() && count < 20)
+	while(!win.wasStopped() && count < 5)
 	{
 		// Interact with window
 
@@ -2654,14 +2693,23 @@ void Camera::constructPgm(Pgm& pgm,
 	vector<double> params;
 
 	int numSegFeat = segmentFeats.front().rows;
+//	//hack to consider only first 3 image features
+//	int numSegFeat = 3;
 	int numLabels = segmentPriors.front().rows;
 
 	//observation vector
+	//label observations
+	for(int l = 0; l < numLabels; ++l){
+		obsVec.push_back(l);
+	}
+	//observations for segments
 	for(int seg = 0; seg < segmentPixelCount.size(); ++seg){
 		if(segmentPixelCount[seg] > 0){
+			//prior labels for each label
 			for(int l = 0; l < numLabels; ++l){
 				obsVec.push_back(segmentPriors[seg].at<float>(l));
 			}
+			//values of image features
 			for(int f = 0; f < numSegFeat; ++f){
 				obsVec.push_back(segmentFeats[seg].at<float>(f));
 			}
@@ -2671,7 +2719,7 @@ void Camera::constructPgm(Pgm& pgm,
 	//random variables
 	int nextRandVarId = 0;
 	vector<double> randVarVals;
-	for(int l = 0; l < cameraParams.labels.size(); ++l){
+	for(int l = 0; l < numLabels; ++l){
 		randVarVals.push_back(l);
 	}
 	for(int seg = 0; seg < segmentPixelCount.size(); ++seg){
@@ -2684,12 +2732,16 @@ void Camera::constructPgm(Pgm& pgm,
 
 	//features
 	int nextFeatId = 0;
-	vector<int> nodeFeatObsNums;
+//	vector<int> nodeFeatObsNums;
+//	for(int l = 0; l < numLabels; ++l){
+//		nodeFeatObsNums.push_back(l);
+//	}
+//	features.push_back(new TerClassNodeFeature(nextFeatId, nextFeatId, nodeFeatObsNums));
+//	++nextFeatId;
 	for(int l = 0; l < numLabels; ++l){
-		nodeFeatObsNums.push_back(l);
+		features.push_back(new TerClassNodeFeature(nextFeatId, nextFeatId, vector<int>{l, numLabels + l}));
+		++nextFeatId;
 	}
-	features.push_back(new TerClassNodeFeature(nextFeatId, nextFeatId, nodeFeatObsNums));
-	++nextFeatId;
 
 	for(int f = 0; f < numSegFeat; ++f){
 		features.push_back(new TerClassPairFeature(nextFeatId, nextFeatId, vector<int>{f, f + numSegFeat}));
@@ -2719,11 +2771,16 @@ void Camera::constructPgm(Pgm& pgm,
 		if(segmentPixelCount[seg] > 0){
 			int randVarId = segIdToRandVarId[seg];
 			vector<int> obsVecIdxs;
+			//labels identifiers
 			for(int l = 0; l < numLabels; ++l){
-				obsVecIdxs.push_back(randVarId * (numLabels + numSegFeat) + l);
+				obsVecIdxs.push_back(l);
+			}
+			//prior labels for a current segment
+			for(int l = 0; l < numLabels; ++l){
+				obsVecIdxs.push_back(numLabels + randVarId * (numLabels + numSegFeat) + l);
 			}
 			Cluster* curCluster = new Cluster(nextClusterId,
-												vector<Feature*>(features.begin(), features.begin() + 1),
+												vector<Feature*>(features.begin(), features.begin() + 2),
 												vector<RandVar*>{randVars[randVarId]},
 												vector<int>{0},
 												obsVecIdxs);
@@ -2767,10 +2824,10 @@ void Camera::constructPgm(Pgm& pgm,
 						int nRandVarId = segIdToRandVarId[nId];
 						vector<int> obsVecIdxs;
 						for(int f = 0; f < numSegFeat; ++f){
-							obsVecIdxs.push_back(randVarId * (numLabels + numSegFeat) + numLabels + f);
+							obsVecIdxs.push_back(numLabels + randVarId * (numLabels + numSegFeat) + numLabels + f);
 						}
 						for(int f = 0; f < numSegFeat; ++f){
-							obsVecIdxs.push_back(nRandVarId * (numLabels + numSegFeat) + numLabels + f);
+							obsVecIdxs.push_back(numLabels + nRandVarId * (numLabels + numSegFeat) + numLabels + f);
 						}
 
 						vector<RandVar*> clustRandVars;
@@ -2784,7 +2841,7 @@ void Camera::constructPgm(Pgm& pgm,
 						}
 
 						Cluster* curCluster = new Cluster(nextClusterId,
-															vector<Feature*>(features.begin() + 1, features.end()),
+															vector<Feature*>(features.begin() + 2, features.end()),
 															clustRandVars,
 															vector<int>{0, 1},
 															obsVecIdxs);

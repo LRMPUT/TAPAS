@@ -179,16 +179,18 @@
 			debug: Debug level: 0 - no debug, 1, 2 - debug
 		-->
 
-		<Camera runThread="false" number="1" rows="480" cols="640" entryWeightThreshold="400" pixelsTimeout="2000" debug="1">
+		<Camera runThread="false" number="1" rows="480" cols="640" entryWeightThreshold="400" pixelsTimeout="2000" debug="0">
 			<!--
 				saveEnable: [true/false] - Whether to save cache after learning classifier or not.
 				loadEnable: [true/false] - Whether to load cache during construction of Camera class.
 			-->
 			<cache saveEnabled="true" loadEnabled="true"/>
 			<inference enabled="true">
-				<!--1.562563	-0.876518	-0.811642	-0.769054	-0.374949	-0.361825-->
+				<!-- 1.562563	-0.876518	-0.811642	-0.769054	-0.374949	-0.361825-->
+				<!-- 1.65718 -0.919813 -0.843494 -0.793375 0.0 0.0 -->
+				<!-- 1.25429 0.945932 -1.03118 -0.946808 -0.881485  -->
 				<params>
-					1.65718 -0.919813 -0.843494 -0.793375 0.0 0.0
+					1.65718 1.65718 -0.919813 -0.843494 -0.793375 0.0 0.0
 				</params>
 			</inference>
 			<HierClassifier debug="0">
