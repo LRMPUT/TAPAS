@@ -1,7 +1,15 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
+# 0 - without CUDA
+# 1 - with CUDA
 set(CUDA 1)
+
+# 0 - TAPAS
+# 1 - TROBOT
 set(TROBOT 0)
+
+# Debug
+# Release
 set(CMAKE_BUILD_TYPE "Release")
 
 project(Tapas)
@@ -16,6 +24,7 @@ IF (TROBOT GREATER 0)
 	add_definitions(-DTROBOT)
 ENDIF (TROBOT GREATER 0)
 
+# Standard library directory when manual installed
 set(urg_LIBRARIES_DIR /usr/local/lib)
 set(urg_LIBRARIES urg_cpp)
 set(TinyXML_LIBRARIES tinyxml)
@@ -163,6 +172,7 @@ find_package(OpenGL REQUIRED)
 set(QGLViewer_LIBRARIES QGLViewer)
 
 find_package(Qt4 COMPONENTS QtCore QtXml QtGui QtOpenGL REQUIRED)
+
 set(TapasQt_SOURCES
 	TapasQt/CameraWindow.cpp
 	TapasQt/Chart.cpp
@@ -178,6 +188,7 @@ set(TapasQt_SOURCES
 	TapasQt/Viewer.cpp
 	TapasQt/TapasQt.cpp
 	TapasQt/QtEncoders.cpp)
+	
 set(TapasQt_HEADERS
 	TapasQt/CameraWindow.h
 	TapasQt/Chart.h
@@ -192,39 +203,46 @@ set(TapasQt_HEADERS
 	TapasQt/Viewer.h
 	TapasQt/TapasQt.h
 	TapasQt/QtEncoders.h)
+	
 set(TapasQt_FORMS
 	TapasQt/CameraWindow.ui
 	TapasQt/TapasQt.ui)
+	
 qt4_wrap_cpp(TapasQt_HEADERS_MOC ${TapasQt_HEADERS} OPTIONS -DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED -DBOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION)
 qt4_wrap_ui(TapasQt_FORMS_HEADERS ${TapasQt_FORMS})
 include(${QT_USE_FILE})
 add_definitions(${QT_DEFINITIONS})
 
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
 IF (CUDA GREATER 0)
-	cuda_add_executable(TapasQt/gui
+	cuda_add_executable(TapasGui
 		${Tapas_SOURCES}
 		${Tapas_CUDA_SOURCES}
 		${TapasQt_SOURCES}
 		${TapasQt_HEADERS_MOC}
 		${TapasQt_FORMS_HEADERS})
 ELSEIF (CUDA EQUAL 0)
-	add_executable(TapasQt/gui
+	add_executable(TapasGui
 		${Tapas_SOURCES}
 		${TapasQt_SOURCES}
 		${TapasQt_HEADERS_MOC}
 		${TapasQt_FORMS_HEADERS})
 ENDIF (CUDA GREATER 0)	
 
-message("Copying generated ui headers")
-foreach(file ${TapasQt_FORMS_HEADERS})
-	get_filename_component(filename ${file} NAME)
-	message("Copying: " ${filename})
-	add_custom_command(
-		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/TapasQt/${filename}
-		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${filename} ${CMAKE_CURRENT_SOURCE_DIR}/TapasQt/${filename}
-		MAIN_DEPENDENCY ${CMAKE_CURRENT_BINARY_DIR}/${filename})
-endforeach()
-target_link_libraries(TapasQt/gui
+
+#message("Copying generated ui headers")
+# Adding command for automatically copying generated ui headers 
+#foreach(file ${TapasQt_FORMS_HEADERS})
+#	get_filename_component(filename ${file} NAME)
+#	message("Copying: " ${filename})
+#	add_custom_command(
+#		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/TapasQt/${filename}
+#		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${filename} ${CMAKE_CURRENT_SOURCE_DIR}/TapasQt/${filename}
+#		MAIN_DEPENDENCY ${CMAKE_CURRENT_BINARY_DIR}/${filename})
+#endforeach()
+
+target_link_libraries(TapasGui
 	${QT_LIBRARIES}
 	${OpenCV_LIBS}
 	${Boost_LIBRARIES}

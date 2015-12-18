@@ -185,7 +185,7 @@
 				loadEnable: [true/false] - Whether to load cache during construction of Camera class.
 			-->
 			<cache saveEnabled="true" loadEnabled="true"/>
-			<inference enabled="true">
+			<inference enabled="false">
 				<!-- 1.562563	-0.876518	-0.811642	-0.769054	-0.374949	-0.361825-->
 				<!-- 1.65718 -0.919813 -0.843494 -0.793375 0.0 0.0 -->
 				<!-- 1.25429 0.945932 -1.03118 -0.946808 -0.881485  -->
@@ -264,23 +264,23 @@
 					</svm>
 					<info desc_beg="7" desc_end="8" />
 				</Classifier>-->
-				<!-- <Classifier type="SVM">
+				<Classifier type="SVM">
 					<cache enabled="true" />
 					<svm type="C_SVC">
 						<kernelType value="RBF" />
 						<gamma value="0.5" />
 						<degree value="2" />
 						<C value="512" />
-					</svm> -->
+					</svm>
 					<!--
 						Index of descriptors used in classifier, desc_beg inclusive, desc_end exclusive.
 					-->
-					<!-- <info desc_beg="0" desc_end="7" />
-				</Classifier> -->
-				<Classifier type="RF">
+					 <info desc_beg="0" desc_end="7" />
+				</Classifier>
+				<!--<Classifier type="RF">
 					<cache enabled="true" />
 					<info desc_beg="0" desc_end="7" />
-				</Classifier>
+				</Classifier>-->
 			</HierClassifier>
 			<!--
 				enabled: [true/flase] - Whether to train classifier during construction of Camera class.
