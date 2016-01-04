@@ -60,15 +60,19 @@ int main(int argc, char* argv[])
 
 		dirsTrain.push_back("../MovementConstraints/Camera/database/przejazd6");
 		dirsTrain.push_back("../MovementConstraints/Camera/database/przejazd7");
+		dirsTrain.push_back("../MovementConstraints/Camera/database/przejazd9");
+		dirsTrain.push_back("../MovementConstraints/Camera/database/przejazd10");
 
-		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew1");
+//		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew1");
 //		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew2");
 //		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew3");
+		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew4");
 //		dirsTest.push_back("../MovementConstraints/Camera/database/przejazd9");
 //		dirsTest.push_back("../MovementConstraints/Camera/database/przejazd10");
 //		dirsTest.push_back("../MovementConstraints/Camera/database/przejazd11");
 
 		debug.testClassification(dirsTrain, dirsTest);
+//		debug.testClassification(dirsTrain, dirsTrain);
 
 		/*char a;
 		while((waitKey(200) & 0xff) != 's')

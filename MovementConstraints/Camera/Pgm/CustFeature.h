@@ -63,11 +63,39 @@ public:
 
 //------------------Terrain classification------------------
 
+class TerClassBlindNodeFeature : public Feature
+{
+
+public:
+	TerClassBlindNodeFeature(int iid, int iparamNum, const std::vector<int>& iobsNums = std::vector<int>());
+
+	virtual double comp(const std::vector<double>& vals,
+			const std::vector<double>& obsVec = std::vector<double>());
+
+	virtual double compParam(const std::vector<double>& vals,
+							const std::vector<double>& params,
+							const std::vector<double>& obsVec = std::vector<double>());
+};
+
 class TerClassNodeFeature : public Feature
 {
 
 public:
 	TerClassNodeFeature(int iid, int iparamNum, const std::vector<int>& iobsNums = std::vector<int>());
+
+	virtual double comp(const std::vector<double>& vals,
+			const std::vector<double>& obsVec = std::vector<double>());
+
+	virtual double compParam(const std::vector<double>& vals,
+							const std::vector<double>& params,
+							const std::vector<double>& obsVec = std::vector<double>());
+};
+
+class TerClassBlindPairFeature : public Feature
+{
+
+public:
+	TerClassBlindPairFeature(int iid, int iparamNum, const std::vector<int>& iobsNums = std::vector<int>());
 
 	virtual double comp(const std::vector<double>& vals,
 			const std::vector<double>& obsVec = std::vector<double>());

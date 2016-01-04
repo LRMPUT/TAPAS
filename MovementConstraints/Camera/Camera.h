@@ -282,7 +282,8 @@ private:
 					float goalDir = 0.0,
 					float bestDir = 0.0,
 					float bestDirRef = 0.0,
-					bool stopFlag = false);
+					bool stopFlag = false,
+					bool saveScreenshots = false);
 
 	void updatePixelData(cv::Mat& pixelCoordsAll,
 						std::vector<cv::Mat>& classResultsAll,

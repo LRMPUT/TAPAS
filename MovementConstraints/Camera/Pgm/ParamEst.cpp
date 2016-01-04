@@ -373,7 +373,7 @@ void ParamEst::evaluate(const std::vector<double>& paramValsMapped,
 	}
 
 	//Regularization
-	static const double sigma = 0.5;
+	static const double sigma = 4.0;
 	double regPenalty = 0.0;
 	for(int p = 0; p < (int)paramVals.size(); ++p){
 		regPenalty += paramVals[p] * paramVals[p] / (2 * sigma * sigma);

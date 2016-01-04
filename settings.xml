@@ -185,12 +185,11 @@
 				loadEnable: [true/false] - Whether to load cache during construction of Camera class.
 			-->
 			<cache saveEnabled="true" loadEnabled="true"/>
-			<inference enabled="false">
-				<!-- 1.562563	-0.876518	-0.811642	-0.769054	-0.374949	-0.361825-->
-				<!-- 1.65718 -0.919813 -0.843494 -0.793375 0.0 0.0 -->
-				<!-- 1.25429 0.945932 -1.03118 -0.946808 -0.881485  -->
+			<inference enabled="true">
+				<!-- najlepsze RF, sigma = 4.0 : 4.52932 -1.82345 -0.961341 -1.92918 -0.979321 -0.829175 -->
+				<!-- najlepsze SVM, sigma = 4.0 : 2.62121 -1.80826 -1.16711 -1.97035 -0.918071 -0.875569 -->
 				<params>
-					1.65718 1.65718 -0.919813 -0.843494 -0.793375 0.0 0.0
+					3.59711 -1.53024 -0.628831 -1.61923 -1.68689
 				</params>
 			</inference>
 			<HierClassifier debug="0">
@@ -204,9 +203,9 @@
 				<descriptor>
 					<hist_HS len_H="4" len_S="4" />
 					<hist_V len="8" />
+					<hist_DI len_D="1" len_I="25" />
 					<mean_HSV len="3" />
 					<covar_HSV len="9" />
-					<hist_DI len_D="1" len_I="25" />
 					<mean_laser len="2" />
 					<covar_laser len="4" />
 					<!--kurt_laser len="2" />-->
@@ -221,8 +220,11 @@
 						<gamma value="5.4061" />
 						<degree value="2" />
 						<C value="5535.84" />
-					</svm>
-					<info desc_beg="0" desc_end="1" />
+					</svm> -->
+					<!--
+						Index of descriptors used in classifier, desc_beg inclusive, desc_end exclusive.
+					-->
+					<!-- <info desc_beg="0" desc_end="1" />
 				</Classifier>
 				<Classifier type="SVM">
 					<cache enabled="true" />
@@ -264,7 +266,7 @@
 					</svm>
 					<info desc_beg="7" desc_end="8" />
 				</Classifier>-->
-				<Classifier type="SVM">
+				<!-- <Classifier type="SVM">
 					<cache enabled="true" />
 					<svm type="C_SVC">
 						<kernelType value="RBF" />
@@ -272,15 +274,12 @@
 						<degree value="2" />
 						<C value="512" />
 					</svm>
-					<!--
-						Index of descriptors used in classifier, desc_beg inclusive, desc_end exclusive.
-					-->
-					 <info desc_beg="0" desc_end="7" />
-				</Classifier>
-				<!--<Classifier type="RF">
+					<info desc_beg="0" desc_end="7" />
+				</Classifier> -->
+				<Classifier type="RF">
 					<cache enabled="true" />
 					<info desc_beg="0" desc_end="7" />
-				</Classifier>-->
+				</Classifier>
 			</HierClassifier>
 			<!--
 				enabled: [true/flase] - Whether to train classifier during construction of Camera class.
@@ -290,6 +289,8 @@
 			<learning enabled="false">
 				"../MovementConstraints/Camera/database/przejazd6"
 				"../MovementConstraints/Camera/database/przejazd7"
+				"../MovementConstraints/Camera/database/przejazd9"
+				"../MovementConstraints/Camera/database/przejazd10"
 			</learning>
 			<!--
 				All labels used have to be declared here. Id starts from 0 and has to be consecutive numbers.

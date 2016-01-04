@@ -359,6 +359,8 @@ bool Inference::runBP(const Pgm& pgm,
 	while(iter < maxIter){
 //		cout << "Iteration " << iter << endl;
 
+//		cout << "obsVec = " << obsVec << endl;
+
 //		using namespace chrono;
 //
 //		high_resolution_clock::time_point start = high_resolution_clock::now();

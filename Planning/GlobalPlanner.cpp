@@ -958,7 +958,7 @@ void GlobalPlanner::chooseNextSubGoal(double robotX, double robotY,
 					* 180.0 / M_PI;
 
 			// This is the node we go to (because it is further away than threshold or the direction is the same):
-			if (sqrt(dist) > globalPlannerParams.subgoalThreshold)
+			if (sqrt(dist) > globalPlannerParams.subgoalThreshold2)
 			{
 
 				setGoalDirection(direction);

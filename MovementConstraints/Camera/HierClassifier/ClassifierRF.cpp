@@ -310,12 +310,36 @@ void ClassifierRF::train(	const std::vector<Entry>& entries,
 //	Mat varType(descLen + 1, 1, CV_8UC1, Scalar(CV_VAR_NUMERICAL));
 //	varType.at<unsigned char>(descLen) = CV_VAR_CATEGORICAL;
 
+//	FileStorage trainDataFile("log/trainData.yml", FileStorage::WRITE);
+//	trainDataFile << "trainData" << trainData;
+//
+//	FileStorage dataLabelsFile("log/dataLabels.yml", FileStorage::WRITE);
+//	dataLabelsFile << "dataLabels" << dataLabels;
 
 	cv::Ptr<cv::ml::TrainData> trainDataStruct = cv::ml::TrainData::create(trainData,
 																			cv::ml::SampleTypes::ROW_SAMPLE,
 																			dataLabels);
 //	rf = cv::ml::RTrees::create();
 	rf->train(trainDataStruct);
+
+	double score = 0.0;
+	for(int e = 0; e < trainData.rows; ++e){
+		Mat res;
+	//	cout << "Predicting" << endl;
+		rf->predict(trainData.rowRange(e, e + 1), res, cv::ml::RTrees::Flags::PREDICT_SUM);
+	//	cout << "res = " << res << endl;
+
+		Mat ret(1, numLabels, CV_32FC1, Scalar(0));
+		int numTrees = rf->getRoots().size();
+		ret.at<float>(0) = 1.0 - (float)res.at<float>(0) / numTrees;
+		ret.at<float>(1) = (float)res.at<float>(0) / numTrees;
+
+		score += ret.at<float>(dataLabels.at<int>(e));
+	}
+	cout << "Training set score = " << score/numEntries << endl;
+
+//	double trainError = rf->calcError(trainDataStruct, false, Mat());
+//	cout << "Train error = " << trainError << endl;
 
 //	rf.train(trainData,
 //			CV_ROW_SAMPLE,
