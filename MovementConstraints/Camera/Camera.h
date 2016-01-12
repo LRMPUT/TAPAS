@@ -312,7 +312,8 @@ private:
 					std::vector<double>& obsVec,
 					const std::vector<cv::Mat>& segmentPriors,
 					const std::vector<cv::Mat>& segmentFeats,
-					const std::vector<int>& segmentPixelCount);
+					const std::vector<int>& segmentPixelCount,
+					bool forEstimation = false);
 
 	cv::Mat inferTerrainLabels(const Pgm& pgm,
 								const std::vector<double>& obsVec,

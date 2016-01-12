@@ -108,7 +108,7 @@ double TerClassBlindNodeFeature::comp(const std::vector<double>& vals,
 	if(label == obsLab){
 		ind = 1;
 	}
-	return ind/4;
+	return ind/4.0;
 }
 
 double TerClassBlindNodeFeature::compParam(const std::vector<double>& vals,
@@ -138,7 +138,7 @@ double TerClassNodeFeature::comp(const std::vector<double>& vals,
 	if(label == obsLab){
 		ind = 1;
 	}
-	return ind * log(obsVec[obsNums()[1]])/4;
+	return ind * log(obsVec[obsNums()[1]])/8.0;
 }
 
 double TerClassNodeFeature::compParam(const std::vector<double>& vals,
@@ -162,7 +162,7 @@ double TerClassBlindPairFeature::comp(const std::vector<double>& vals,
 
 	int ind = (fabs(vals[0] - vals[1]) < 1e-4 ? 0 : 1);
 //	cout << "vals = " << vals << ", ind = " << ind << endl;
-	return ind;
+	return (double)ind;
 }
 
 double TerClassBlindPairFeature::compParam(const std::vector<double>& vals,
@@ -183,9 +183,15 @@ TerClassPairFeature::TerClassPairFeature(int iid, int iparamNum, const std::vect
 double TerClassPairFeature::comp(const std::vector<double>& vals,
 								const std::vector<double>& obsVec)
 {
+	static const double eps = 1e-4;
 	static const double beta = 0.05;
 	int ind = (fabs(vals[0] - vals[1]) < 1e-4 ? 0 : 1);
-	double diff = obsVec[obsNums()[0]] - obsVec[obsNums()[1]];
+	double diff = 255.0;
+	if(fabs(obsVec[obsNums()[0]]) > eps && fabs(obsVec[obsNums()[1]]) > eps){
+		diff = (obsVec[obsNums()[0]] - obsVec[obsNums()[1]]);
+	}
+//	diff /= 255.0;
+
 	return ind * exp(-beta * diff * diff);
 }
 
@@ -196,5 +202,33 @@ double TerClassPairFeature::compParam(const std::vector<double>& vals,
 	return params[paramNum()] * comp(vals, obsVec);
 }
 
+//-------------TERRAIN CLASSIFICATION PAIRWISE VECTOR-------------
+
+TerClassPairVecFeature::TerClassPairVecFeature(int iid, int iparamNum, const std::vector<int>& iobsNums) :
+		Feature(iid, iparamNum, iobsNums)
+{
+
+}
+
+double TerClassPairVecFeature::comp(const std::vector<double>& vals,
+								const std::vector<double>& obsVec)
+{
+	static const double beta = 2.0;
+	int ind = (fabs(vals[0] - vals[1]) < 1e-4 ? 0 : 1);
+	static const int vecDim = 3;
+	double diff = 0.0;
+	for(int d = 0; d < vecDim; ++d){
+		double curDiff = (obsVec[obsNums()[d]] - obsVec[obsNums()[d + vecDim]])/255.0;
+		diff += curDiff*curDiff;
+	}
+	return ind * exp(-beta * diff * diff);
+}
+
+double TerClassPairVecFeature::compParam(const std::vector<double>& vals,
+						const std::vector<double>& params,
+						const std::vector<double>& obsVec)
+{
+	return params[paramNum()] * comp(vals, obsVec);
+}
 
 

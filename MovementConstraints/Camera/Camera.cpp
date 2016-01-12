@@ -1561,7 +1561,8 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 						obsVec,
 						segmentPriors,
 						segmentFeats,
-						segmentPixelCount);
+						segmentPixelCount,
+						estimatePgmParams /* forEstimation */);
 
 			std::chrono::high_resolution_clock::time_point timeEndInfPrep  = std::chrono::high_resolution_clock::now();
 			durInfPrep += timeEndInfPrep - timeBegInfPrep;
@@ -2636,8 +2637,8 @@ void Camera::prepareSegmentInfo(std::vector<cv::Mat>& segmentPriors,
 			//if any point of the point cloud falls into segment
 			if(segmentPointCount[seg] > 0){
 				//normalize values to have approx. the same range as RGB features
-				segmentFeats[seg].at<float>(3) /= segmentPointCount[seg] * 10;
-				segmentFeats[seg].at<float>(4) /= segmentPointCount[seg] * 10;
+				segmentFeats[seg].at<float>(3) /= segmentPointCount[seg] * 20;
+				segmentFeats[seg].at<float>(4) /= segmentPointCount[seg] * 20;
 			}
 			else{
 				segmentFeats[seg].at<float>(3) = 0.0;
@@ -2690,7 +2691,8 @@ void Camera::constructPgm(Pgm& pgm,
 						std::vector<double>& obsVec,
 						const std::vector<cv::Mat>& segmentPriors,
 						const std::vector<cv::Mat>& segmentFeats,
-						const std::vector<int>& segmentPixelCount)
+						const std::vector<int>& segmentPixelCount,
+						bool forEstimation)
 {
 	static const bool enableBlind = false;
 
@@ -2700,7 +2702,7 @@ void Camera::constructPgm(Pgm& pgm,
 	vector<double> params;
 
 //	int numSegFeat = segmentFeats.front().rows;
-//	//hack to consider only first 3 image features (mean R, G, B)
+//	//hack to consider only first 4 features (mean R, G, B, intensity)
 	int numSegFeat = 4;
 	int numLabels = segmentPriors.front().rows;
 
@@ -2722,11 +2724,46 @@ void Camera::constructPgm(Pgm& pgm,
 					int nY = curY + nhood[nh][1];
 					if(nX >= 0 && nX < MAP_SIZE && nY >= 0 && nY < MAP_SIZE){
 						int nId = nX*MAP_SIZE + nY;
-						//is neighbor and there is no information
-						if(segmentPixelCount[nId] == 0){
-							cout << "segment " << nId << " is blind" << endl;
-							isBlind[nId] = true;
+
+						if(forEstimation){
+							//is neighbor and there is no information
+							if(segmentPixelCount[nId] == 0){
+//								cout << "segment " << seg << " is blind" << endl;
+								isBlind[seg] = true;
+							}
 						}
+						else{
+							//is neighbor and there is no information
+							if(segmentPixelCount[nId] == 0){
+//								cout << "segment " << nId << " is blind" << endl;
+								isBlind[nId] = true;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	vector<int> nhCnt(segmentPixelCount.size(), 0);
+
+	for(int seg = 0; seg < segmentPixelCount.size(); ++seg){
+		if(segmentPixelCount[seg] > 0){
+			//Neighborhood
+			int nhood[][2] = {{1, 0},
+								{0, 1},
+								{-1, 0},
+								{0, -1}};
+			int curX = seg / MAP_SIZE;
+			int curY = seg % MAP_SIZE;
+			for(int nh = 0; nh < (int)(sizeof(nhood)/sizeof(nhood[0])); ++nh){
+				int nX = curX + nhood[nh][0];
+				int nY = curY + nhood[nh][1];
+				if(nX >= 0 && nX < MAP_SIZE && nY >= 0 && nY < MAP_SIZE){
+					int nId = nX*MAP_SIZE + nY;
+
+					if(segmentPixelCount[nId] > 0){
+						++nhCnt[seg];
 					}
 				}
 			}
@@ -2771,11 +2808,14 @@ void Camera::constructPgm(Pgm& pgm,
 	}
 	for(int seg = 0; seg < segmentPixelCount.size(); ++seg){
 		if(segmentPixelCount[seg] > 0 || isBlind[seg] == true){
+//			cout << "Rand var for segment " << seg << endl;
 			randVars.push_back(new RandVar(nextRandVarId, randVarVals));
 			segIdToRandVarId[seg] = nextRandVarId;
 			++nextRandVarId;
 		}
 	}
+
+//	cout << "randVars.size() = " << randVars.size() << endl;
 
 	//features
 	int nextFeatId = 0;
@@ -2799,6 +2839,20 @@ void Camera::constructPgm(Pgm& pgm,
 		++nextFeatId;
 		++nextParamId;
 	}
+
+//	{
+//		vector<int> obsNums;
+//		for(int f = 0; f < numSegFeat; ++f){
+//			obsNums.push_back(f);
+//		}
+//		for(int f = 0; f < numSegFeat; ++f){
+//			obsNums.push_back(f + numSegFeat);
+//		}
+//		features.push_back(new TerClassPairVecFeature(nextFeatId, nextParamId, obsNums));
+//
+//		++nextFeatId;
+//		++nextParamId;
+//	}
 
 	if(enableBlind){
 		//same parameter for all blind node features
@@ -2876,7 +2930,7 @@ void Camera::constructPgm(Pgm& pgm,
 	//pair-wise factor clusters
 	vector<set<int> > addedEdges(segmentPixelCount.size());
 	for(int seg = 0; seg < segmentPixelCount.size(); ++seg){
-		if(segmentPixelCount[seg] > 0){
+		if(segmentPixelCount[seg] > 0 && isBlind[seg] == false){
 //			cout << "seg = " << seg << endl;
 			int randVarId = segIdToRandVarId[seg];
 
@@ -2899,7 +2953,7 @@ void Camera::constructPgm(Pgm& pgm,
 					if(segmentPixelCount[nId] > 0 &&
 						addedEdges[seg].count(nId) == 0)
 					{
-//						cout << "Adding edge between " << seg << " and " << nId << endl;
+//						cout << "Adding regular edge between " << seg << " and " << nId << endl;
 						int nRandVarId = segIdToRandVarId[nId];
 						vector<int> obsVecIdxs;
 						for(int f = 0; f < numSegFeat; ++f){
@@ -2962,6 +3016,7 @@ void Camera::constructPgm(Pgm& pgm,
 						addedEdges[seg].count(nId) == 0)
 					{
 //						cout << "Adding edge between " << seg << " and " << nId << endl;
+//						cout << "Adding blind edge between " << seg << " and " << nId << endl;
 						int nRandVarId = segIdToRandVarId[nId];
 						vector<int> obsVecIdxs;
 
@@ -2981,6 +3036,8 @@ void Camera::constructPgm(Pgm& pgm,
 															clustRandVars,
 															vector<int>{0, 1},
 															obsVecIdxs);
+
+//						cout << "Cluster " << clusters.size() << endl;
 						clusters.push_back(curCluster);
 
 						//add edge to cluster for variable

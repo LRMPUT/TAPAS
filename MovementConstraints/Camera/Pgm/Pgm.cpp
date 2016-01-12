@@ -530,7 +530,7 @@ std::vector<double> Cluster::marginalize(const std::vector<RandVar*>& margVars /
 //						", value = " << featuresData[f]->compParam(curVarValsOrdered, params, curObsVec) << endl;
 				double exponent = featuresData[f]->compParam(curVarValsOrdered, params, curObsVec);
 //				cout << "end computing" << endl;
-//				if(id() == 100256){
+//				if(id() == 148){
 //					cout << "curVarValsOrdered = " << curVarValsOrdered << endl;
 //					cout << "params = " << params << endl;
 //					cout << "curObsVec = " << curObsVec << endl;
@@ -598,7 +598,7 @@ std::vector<double> Cluster::marginalize(const std::vector<RandVar*>& margVars /
 				}
 			}
 
-//			if(id() == 29778){
+//			if(id() == 148){
 //				cout << "marg[" << margIdx << "] = max(" << margCurVal << ", " << marg[margIdx] << ")" << endl;
 //			}
 
@@ -623,7 +623,7 @@ std::vector<double> Cluster::marginalize(const std::vector<RandVar*>& margVars /
 //	}
 //	cout << endl;
 
-//	if(id() == 80){
+//	if(id() == 148){
 //		cout << "before norm, marg = " << marg << endl;
 //	}
 
@@ -636,12 +636,12 @@ std::vector<double> Cluster::marginalize(const std::vector<RandVar*>& margVars /
 //	}
 //	cout << endl;
 
-//	if(id() == 80){
+//	if(id() == 148){
 //		cout << "after norm, marg = " << marg << endl;
 //
 //		cout << "inMsgs = " << inMsgs << endl;
-////		char a;
-////		cin >> a;
+//		char a;
+//		cin >> a;
 //	}
 
 //	for(int m = 0; m < (int)marg.size(); ++m){

@@ -119,5 +119,19 @@ public:
 							const std::vector<double>& obsVec = std::vector<double>());
 };
 
+class TerClassPairVecFeature : public Feature
+{
+
+public:
+	TerClassPairVecFeature(int iid, int iparamNum, const std::vector<int>& iobsNums = std::vector<int>());
+
+	virtual double comp(const std::vector<double>& vals,
+			const std::vector<double>& obsVec = std::vector<double>());
+
+	virtual double compParam(const std::vector<double>& vals,
+							const std::vector<double>& params,
+							const std::vector<double>& obsVec = std::vector<double>());
+};
+
 
 #endif /* CUSTFEATURE_H_ */

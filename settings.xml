@@ -187,9 +187,10 @@
 			<cache saveEnabled="true" loadEnabled="true"/>
 			<inference enabled="true">
 				<!-- najlepsze RF, sigma = 4.0 : 4.52932 -1.82345 -0.961341 -1.92918 -0.979321 -0.829175 -->
+				<!-- najlepsze RF bez distance, sigma = 4.0 : 3.59711 -1.53024 -0.628831 -1.61923 -1.68689 -->
 				<!-- najlepsze SVM, sigma = 4.0 : 2.62121 -1.80826 -1.16711 -1.97035 -0.918071 -0.875569 -->
 				<params>
-					3.59711 -1.53024 -0.628831 -1.61923 -1.68689
+					5.19067 -1.77422 -0.62596 -1.67547 -1.45437
 				</params>
 			</inference>
 			<HierClassifier debug="0">
@@ -203,9 +204,9 @@
 				<descriptor>
 					<hist_HS len_H="4" len_S="4" />
 					<hist_V len="8" />
-					<hist_DI len_D="1" len_I="25" />
 					<mean_HSV len="3" />
 					<covar_HSV len="9" />
+					<hist_DI len_D="1" len_I="25" />
 					<mean_laser len="2" />
 					<covar_laser len="4" />
 					<!--kurt_laser len="2" />-->
