@@ -228,7 +228,8 @@ static int progress(void *instance,
 ParamEst::ParamEst() :
 		pgm(NULL),
 		varVals(NULL),
-		obsVec(NULL)
+		obsVec(NULL),
+		paramMap(NULL)
 {
 
 }
@@ -289,11 +290,13 @@ void ParamEst::evaluate(const std::vector<double>& paramValsMapped,
 				if(curEval[t] == NULL){
 					cout << "Spawning new thread at curEval[" << t << "] for data instance " << nextDataInst << endl;
 					int pgmIdx = min(nextDataInst, (int)pgm->size() - 1);
+					Pgm& curPgm = (*pgm)[pgmIdx];
+					const vector<double>& curVarVals = (*varVals)[nextDataInst];
 
 					if(obsVec->empty()){
-						curEval[t] = new EvaluateThread((*pgm)[pgmIdx],
+						curEval[t] = new EvaluateThread(curPgm,
 														vector<double>(),
-														(*varVals)[nextDataInst],
+														curVarVals,
 														paramVals,
 														logPartFuncAll[nextDataInst],
 														likelihoodNumAll[nextDataInst],
@@ -305,10 +308,11 @@ void ParamEst::evaluate(const std::vector<double>& paramValsMapped,
 					else{
 //						cout << "varVals = " << (*varVals)[nextDataInst] << endl;
 //						cout << "obsVec = " << (*obsVec)[nextDataInst] << endl;
+						const vector<double>& curObsVec = (*obsVec)[nextDataInst];
 
-						curEval[t] = new EvaluateThread((*pgm)[pgmIdx],
-														(*obsVec)[nextDataInst],
-														(*varVals)[nextDataInst],
+						curEval[t] = new EvaluateThread(curPgm,
+														curObsVec,
+														curVarVals,
 														paramVals,
 														logPartFuncAll[nextDataInst],
 														likelihoodNumAll[nextDataInst],
@@ -394,11 +398,13 @@ void ParamEst::evaluate(const std::vector<double>& paramValsMapped,
 
 	if(!separateMarg){
 		int pgmIdx = 0;
+		Pgm& curPgm = (*pgm)[pgmIdx];
+
 		//Model expectation
 		cout << "Model expectation MRF" << endl;
 
-		for(int c = 0; c < (int)(*pgm)[pgmIdx].constClusters().size(); ++c){
-			Cluster* curCluster = (*pgm)[pgmIdx].clusters()[c];
+		for(int c = 0; c < (int)curPgm.constClusters().size(); ++c){
+			Cluster* curCluster = curPgm.clusters()[c];
 			const vector<vector<double> >& curClustMsgs = msgs.front()[curCluster->id()];
 			vector<double> curEfi = curCluster->compSumModelExpectation(curClustMsgs, paramVals, vector<double>());
 

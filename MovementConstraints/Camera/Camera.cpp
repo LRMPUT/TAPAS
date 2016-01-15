@@ -710,7 +710,7 @@ void Camera::processDir(boost::filesystem::path dir,
 		cout << "Camera time: " << cameraCurTime << ", camera file: " << cameraImageFile.stem() << endl;
 
 		while(hokuyoCurTime <= cameraCurTime && !hokuyoFile.eof()){
-			cout << "Hokuyo time: " << hokuyoCurTime << endl;
+//			cout << "Hokuyo time: " << hokuyoCurTime << endl;
 
 			Mat hokuyoData, hokuyoCurPointsDist, hokuyoCurPointsInt;
 			char tmpChar;
@@ -723,7 +723,7 @@ void Camera::processDir(boost::filesystem::path dir,
 
 			static const float stepAngle = 0.25*PI/180;
 			float startAngle = -(hokuyoCurPointsDist.cols - 1)/2 * stepAngle;
-			cout << "startAngle = " << startAngle << endl;
+//			cout << "startAngle = " << startAngle << endl;
 			for(int i = 0; i < hokuyoCurPointsDist.cols; i++){
 				if(hokuyoCurPointsDist.at<int>(i) > 100){
 					Mat curPoint(1, 4, CV_32FC1);
@@ -734,7 +734,7 @@ void Camera::processDir(boost::filesystem::path dir,
 					hokuyoData.push_back(curPoint);
 				}
 			}
-			cout << endl;
+//			cout << endl;
 			hokuyoData = hokuyoData.t();
 
 			//narrow hokuyo scan range 45 - 135
@@ -802,7 +802,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			//cout << "trans = " << trans << endl;
 			//cout << "curTrans = " << curTrans << endl;
 			//cout << "curRot = " << curRot << endl;
-			cout << "curPosOrigMapCenter = " << endl << curPosOrigMapCenter << endl;
+//			cout << "curPosOrigMapCenter = " << endl << curPosOrigMapCenter << endl;
 			//cout << "globalPos.inv()*curPos = " << globalPos.inv()*curPos << endl;
 
 //			std::chrono::duration<int,std::milli> durTmp(hokuyoCurTime);
@@ -833,7 +833,7 @@ void Camera::processDir(boost::filesystem::path dir,
 			covarLaser = (covarLaser*numPts + covarLaserCur*hokuyoCurPoints.cols)/(numPts + hokuyoCurPoints.cols);
 			numPts += hokuyoCurPoints.cols;*/
 
-			cout << "hokuyoAllPointsGlobal.cols = " << hokuyoAllPointsOrigMapCenter.cols << endl;
+//			cout << "hokuyoAllPointsGlobal.cols = " << hokuyoAllPointsOrigMapCenter.cols << endl;
 
 			std::chrono::high_resolution_clock::time_point curTimestamp(
 					std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::milliseconds(hokuyoCurTime)));
@@ -1231,12 +1231,12 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	static const bool saveScreenshots = false;
 
 	cout << "Classifying" << endl;
-	for(int l = 0; l < cameraParams.labels.size(); l++){
-		namedWindow(cameraParams.labels[l]);
-	}
-	namedWindow("segments");
-	namedWindow("labeled");
-	namedWindow("classified");
+//	for(int l = 0; l < cameraParams.labels.size(); l++){
+//		namedWindow(cameraParams.labels[l]);
+//	}
+//	namedWindow("segments");
+//	namedWindow("labeled");
+//	namedWindow("classified");
 
 	//create a window for visualization
 	viz::Viz3d win("camera visualization");
@@ -1634,10 +1634,11 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	//		cout << "segmentResults = " << segmentResults << endl;
 		}
 
-		float bestDirLocalMap = 0;
-		float goalDirLocalMap = 0;
-		float bestDirLocalMapManual = 0;
-		float goalDirLocalMapManual = 0;
+		float bestDirLocalMap = 0.0;
+		float goalDirLocalMap = 0.0;
+		float bestDirLocalMapManual = 0.0;
+		float goalDirLocalMapManual = 0.0;
+		float curControlError = 0.0;
 		bool stopFlag = false;
 		if(computeControlError){
 			if(cameraParams.debugLevel >= 1){
@@ -1667,8 +1668,8 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 			cout << "bestDir = " << bestDirLocalMap << endl;
 			cout << "bestDir manual = " << bestDirLocalMapManual << endl;
 
-			float curControlError = min(fabs(bestDirLocalMap - bestDirLocalMapManual),
-									fabs(fabs(bestDirLocalMap - bestDirLocalMapManual) - 360));
+			curControlError = min(fabs(bestDirLocalMap - bestDirLocalMapManual),
+								fabs(fabs(bestDirLocalMap - bestDirLocalMapManual) - 360));
 			cout << "curControlError = " << curControlError << endl;
 			if(curControlError >= 30){
 //				stopFlag = true;
@@ -1799,6 +1800,13 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 			}
 			cout << endl;
 		}
+
+//		if(curControlError >= 30){
+//			stopFlag = true;
+//		}
+//		else{
+//			stopFlag = false;
+//		}
 
 		draw3DVis(win,
 				pixelCoordsAll,
@@ -2694,56 +2702,19 @@ void Camera::constructPgm(Pgm& pgm,
 						const std::vector<int>& segmentPixelCount,
 						bool forEstimation)
 {
-	static const bool enableBlind = false;
 
 	vector<RandVar*> randVars;
 	vector<Cluster*> clusters;
 	vector<Feature*> features;
 	vector<double> params;
 
+	static int numBorderNodes = 0;
+	static int numInnerNodes = 0;
+
 //	int numSegFeat = segmentFeats.front().rows;
 //	//hack to consider only first 4 features (mean R, G, B, intensity)
-	int numSegFeat = 4;
+	int numSegFeat = 3;
 	int numLabels = segmentPriors.front().rows;
-
-	//if true there is no information about that segment, but there is information about one of it neighbors
-	vector<bool> isBlind(segmentPixelCount.size(), false);
-
-	if(enableBlind){
-		for(int seg = 0; seg < segmentPixelCount.size(); ++seg){
-			if(segmentPixelCount[seg] > 0){
-				//Neighborhood
-				int nhood[][2] = {{1, 0},
-									{0, 1},
-									{-1, 0},
-									{0, -1}};
-				int curX = seg / MAP_SIZE;
-				int curY = seg % MAP_SIZE;
-				for(int nh = 0; nh < (int)(sizeof(nhood)/sizeof(nhood[0])); ++nh){
-					int nX = curX + nhood[nh][0];
-					int nY = curY + nhood[nh][1];
-					if(nX >= 0 && nX < MAP_SIZE && nY >= 0 && nY < MAP_SIZE){
-						int nId = nX*MAP_SIZE + nY;
-
-						if(forEstimation){
-							//is neighbor and there is no information
-							if(segmentPixelCount[nId] == 0){
-//								cout << "segment " << seg << " is blind" << endl;
-								isBlind[seg] = true;
-							}
-						}
-						else{
-							//is neighbor and there is no information
-							if(segmentPixelCount[nId] == 0){
-//								cout << "segment " << nId << " is blind" << endl;
-								isBlind[nId] = true;
-							}
-						}
-					}
-				}
-			}
-		}
-	}
 
 	vector<int> nhCnt(segmentPixelCount.size(), 0);
 
@@ -2787,16 +2758,6 @@ void Camera::constructPgm(Pgm& pgm,
 				obsVec.push_back(segmentFeats[seg].at<float>(f));
 			}
 		}
-		else if(isBlind[seg] == true){
-			//prior labels for each label
-			for(int l = 0; l < numLabels; ++l){
-				obsVec.push_back(0.0);
-			}
-			//values of image features
-			for(int f = 0; f < numSegFeat; ++f){
-				obsVec.push_back(0.0);
-			}
-		}
 	}
 //	cout << "obsVec = " << obsVec << endl;
 
@@ -2807,7 +2768,7 @@ void Camera::constructPgm(Pgm& pgm,
 		randVarVals.push_back(l);
 	}
 	for(int seg = 0; seg < segmentPixelCount.size(); ++seg){
-		if(segmentPixelCount[seg] > 0 || isBlind[seg] == true){
+		if(segmentPixelCount[seg] > 0){
 //			cout << "Rand var for segment " << seg << endl;
 			randVars.push_back(new RandVar(nextRandVarId, randVarVals));
 			segIdToRandVarId[seg] = nextRandVarId;
@@ -2827,15 +2788,51 @@ void Camera::constructPgm(Pgm& pgm,
 //	features.push_back(new TerClassNodeFeature(nextFeatId, nextFeatId, nodeFeatObsNums));
 //	++nextFeatId;
 
+	vector<Feature*> nodeFeats12;
+
 	//same parameter for all node features
 	for(int l = 0; l < numLabels; ++l){
 		features.push_back(new TerClassNodeFeature(nextFeatId, nextParamId, vector<int>{l, numLabels + l}));
+		nodeFeats12.push_back(features.back());
 		++nextFeatId;
 	}
 	++nextParamId;
 
+	vector<Feature*> nodeFeats3;
+
+	//same parameter for all node features
+	for(int l = 0; l < numLabels; ++l){
+		features.push_back(new TerClassNodeFeature(nextFeatId, nextParamId, vector<int>{l, numLabels + l}));
+		nodeFeats3.push_back(features.back());
+		++nextFeatId;
+	}
+	++nextParamId;
+
+	vector<Feature*> nodeFeats4;
+
+	//same parameter for all node features
+	for(int l = 0; l < numLabels; ++l){
+		features.push_back(new TerClassNodeFeature(nextFeatId, nextParamId, vector<int>{l, numLabels + l}));
+		nodeFeats4.push_back(features.back());
+		++nextFeatId;
+	}
+	++nextParamId;
+
+//	vector<Feature*> borderNodeFeats;
+//
+//	//same parameter for all border node features
+//	for(int l = 0; l < numLabels; ++l){
+//		features.push_back(new TerClassNodeFeature(nextFeatId, nextParamId, vector<int>{l, numLabels + l}));
+//		borderNodeFeats.push_back(features.back());
+//		++nextFeatId;
+//	}
+//	++nextParamId;
+
+	vector<Feature*> pairFeats;
+
 	for(int f = 0; f < numSegFeat; ++f){
 		features.push_back(new TerClassPairFeature(nextFeatId, nextParamId, vector<int>{f, f + numSegFeat}));
+		pairFeats.push_back(features.back());
 		++nextFeatId;
 		++nextParamId;
 	}
@@ -2854,25 +2851,12 @@ void Camera::constructPgm(Pgm& pgm,
 //		++nextParamId;
 //	}
 
-	if(enableBlind){
-		//same parameter for all blind node features
-		for(int l = 0; l < numLabels; ++l){
-			features.push_back(new TerClassBlindNodeFeature(nextFeatId, nextParamId, vector<int>{l}));
-			++nextFeatId;
-		}
-		++nextParamId;
-
-		features.push_back(new TerClassBlindPairFeature(nextFeatId, nextParamId, vector<int>()));
-		++nextFeatId;
-		++nextParamId;
-	}
-
 	params = vector<double>(nextParamId, 1.0);
 
 	//var clusters
 	int nextClusterId = 0;
 	for(int seg = 0; seg < segmentPixelCount.size(); ++seg){
-		if(segmentPixelCount[seg] > 0 || isBlind[seg] == true){
+		if(segmentPixelCount[seg] > 0){
 			int randVarId = segIdToRandVarId[seg];
 			Cluster* curCluster = new Cluster(nextClusterId,
 												vector<Feature*>{},
@@ -2887,33 +2871,40 @@ void Camera::constructPgm(Pgm& pgm,
 	//node factor clusters
 	map<int, int> segIdToNodeFactClusterId;
 	for(int seg = 0; seg < segmentPixelCount.size(); ++seg){
-		if(segmentPixelCount[seg] > 0 || isBlind[seg] == true){
+		if(segmentPixelCount[seg] > 0){
 			int randVarId = segIdToRandVarId[seg];
 			vector<int> obsVecIdxs;
 			//labels identifiers
 			for(int l = 0; l < numLabels; ++l){
 				obsVecIdxs.push_back(l);
 			}
-			if(isBlind[seg] == false){
-				//prior labels for a current segment
-				for(int l = 0; l < numLabels; ++l){
-					obsVecIdxs.push_back(numLabels + randVarId * (numLabels + numSegFeat) + l);
-				}
+			//prior labels for a current segment
+			for(int l = 0; l < numLabels; ++l){
+				obsVecIdxs.push_back(numLabels + randVarId * (numLabels + numSegFeat) + l);
 			}
 
-			vector<Feature*> curFeatures;
-			if(isBlind[seg] == false){
-				curFeatures = vector<Feature*>(features.begin(), features.begin() + numLabels);
+			vector<Feature*> curFeats;
+			//if segment has all neighbors - isn't on a border
+			if(nhCnt[seg] == 4){
+				curFeats = nodeFeats4;
+
+				++numInnerNodes;
+			}
+			//if segment is on a border
+			else if(nhCnt[seg] == 3){
+				curFeats = nodeFeats3;
+
+				++numBorderNodes;
 			}
 			else{
-				curFeatures = vector<Feature*>(features.begin() + numLabels + numSegFeat,
-												features.begin() + numLabels + numSegFeat + numLabels);
-			}
+				curFeats = nodeFeats12;
 
+				++numBorderNodes;
+			}
 //			cout << "RandVarId = " << randVarId << endl;
 //			cout << "obsVecIdxs = " << obsVecIdxs << endl;
 			Cluster* curCluster = new Cluster(nextClusterId,
-												curFeatures,
+												curFeats,
 												vector<RandVar*>{randVars[randVarId]},
 												vector<int>{0},
 												obsVecIdxs);
@@ -2930,7 +2921,7 @@ void Camera::constructPgm(Pgm& pgm,
 	//pair-wise factor clusters
 	vector<set<int> > addedEdges(segmentPixelCount.size());
 	for(int seg = 0; seg < segmentPixelCount.size(); ++seg){
-		if(segmentPixelCount[seg] > 0 && isBlind[seg] == false){
+		if(segmentPixelCount[seg] > 0){
 //			cout << "seg = " << seg << endl;
 			int randVarId = segIdToRandVarId[seg];
 
@@ -2974,70 +2965,10 @@ void Camera::constructPgm(Pgm& pgm,
 						}
 
 						Cluster* curCluster = new Cluster(nextClusterId,
-															vector<Feature*>(features.begin() + numLabels,
-																			features.begin() + numLabels + numSegFeat),
+															pairFeats,
 															clustRandVars,
 															vector<int>{0, 1},
 															obsVecIdxs);
-						clusters.push_back(curCluster);
-
-						//add edge to cluster for variable
-						addEdgeToPgm(curCluster, clusters[segIdToVarClusterId[seg]], vector<RandVar*>{randVars[randVarId]});
-						addEdgeToPgm(curCluster, clusters[segIdToVarClusterId[nId]], vector<RandVar*>{randVars[nRandVarId]});
-
-						addedEdges[seg].insert(nId);
-						addedEdges[nId].insert(seg);
-
-						++nextClusterId;
-					}
-				}
-			}
-		}
-		else if(isBlind[seg] == true){
-			int randVarId = segIdToRandVarId[seg];
-
-			//Neighborhood
-			int nhood[][2] = {{1, 0},
-								{0, 1},
-								{-1, 0},
-								{0, -1}};
-			int curX = seg / MAP_SIZE;
-			int curY = seg % MAP_SIZE;
-			for(int nh = 0; nh < (int)(sizeof(nhood)/sizeof(nhood[0])); ++nh){
-				int nX = curX + nhood[nh][0];
-				int nY = curY + nhood[nh][1];
-				if(nX >= 0 && nX < MAP_SIZE && nY >= 0 && nY < MAP_SIZE){
-					int nId = nX*MAP_SIZE + nY;
-//					cout << "nId = " << nId << endl;
-//					cout << "segIdToVarClusterId.count(nId) = " << segIdToVarClusterId.count(nId) << endl;
-//					cout << "addedEdges[seg].count(nId) = " << addedEdges[seg].count(nId) << endl;
-					//if neighboring segment exists and edge not added
-					if(segIdToVarClusterId.count(nId) > 0 &&
-						addedEdges[seg].count(nId) == 0)
-					{
-//						cout << "Adding edge between " << seg << " and " << nId << endl;
-//						cout << "Adding blind edge between " << seg << " and " << nId << endl;
-						int nRandVarId = segIdToRandVarId[nId];
-						vector<int> obsVecIdxs;
-
-						vector<RandVar*> clustRandVars;
-						if(randVarId < nRandVarId){
-							clustRandVars.push_back(randVars[randVarId]);
-							clustRandVars.push_back(randVars[nRandVarId]);
-						}
-						else{
-							clustRandVars.push_back(randVars[nRandVarId]);
-							clustRandVars.push_back(randVars[randVarId]);
-						}
-
-						Cluster* curCluster = new Cluster(nextClusterId,
-															vector<Feature*>(features.begin() + numLabels + numSegFeat + numLabels,
-																			features.begin() + numLabels + numSegFeat + numLabels + 1),
-															clustRandVars,
-															vector<int>{0, 1},
-															obsVecIdxs);
-
-//						cout << "Cluster " << clusters.size() << endl;
 						clusters.push_back(curCluster);
 
 						//add edge to cluster for variable
@@ -3058,6 +2989,9 @@ void Camera::constructPgm(Pgm& pgm,
 	pgm = Pgm(randVars, clusters, features);
 	pgm.params() = params;
 
+	ofstream logNodes("log/nodesCnt.log");
+	logNodes << "numInnerNodes = " << numInnerNodes << endl;
+	logNodes << "numBorderNodes = " << numBorderNodes << endl;
 //	cout << "nextRandVarId = " << nextRandVarId << endl;
 //	cout << "nextFeatId = " << nextFeatId << endl;
 //	cout << "nextClusterId = " << nextClusterId << endl;

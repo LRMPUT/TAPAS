@@ -88,36 +88,6 @@ double IsingNodeFeature::compParam(const std::vector<double>& vals,
 	return params[paramNum()]*vals[0]*obsVec[0];
 }
 
-//-------------TERRAIN CLASSIFICATION BLIND NODE-------------
-
-TerClassBlindNodeFeature::TerClassBlindNodeFeature(int iid, int iparamNum, const std::vector<int>& iobsNums) :
-		Feature(iid, iparamNum, iobsNums)
-{
-
-}
-
-double TerClassBlindNodeFeature::comp(const std::vector<double>& vals,
-								const std::vector<double>& obsVec)
-{
-	int label = (int)(vals[0] + 0.5);
-	int obsLab = (int)(obsVec[obsNums()[0]] + 0.5);
-//	cout << "label = " << label << ", obsVec = " << obsVec <<
-//			", obsNums()[0] = " << obsNums()[0] <<
-//			", obsLab = " << obsLab << endl;
-	int ind = 0;
-	if(label == obsLab){
-		ind = 1;
-	}
-	return ind/4.0;
-}
-
-double TerClassBlindNodeFeature::compParam(const std::vector<double>& vals,
-						const std::vector<double>& params,
-						const std::vector<double>& obsVec)
-{
-	return params[paramNum()]*comp(vals, obsVec);
-}
-
 //-------------TERRAIN CLASSIFICATION NODE-------------
 
 TerClassNodeFeature::TerClassNodeFeature(int iid, int iparamNum, const std::vector<int>& iobsNums) :
@@ -138,7 +108,7 @@ double TerClassNodeFeature::comp(const std::vector<double>& vals,
 	if(label == obsLab){
 		ind = 1;
 	}
-	return ind * log(obsVec[obsNums()[1]])/8.0;
+	return ind * log(obsVec[obsNums()[1]]);
 }
 
 double TerClassNodeFeature::compParam(const std::vector<double>& vals,
@@ -148,29 +118,6 @@ double TerClassNodeFeature::compParam(const std::vector<double>& vals,
 	return params[paramNum()]*comp(vals, obsVec);
 }
 
-//-------------TERRAIN CLASSIFICATION BLIND PAIRWISE-------------
-
-TerClassBlindPairFeature::TerClassBlindPairFeature(int iid, int iparamNum, const std::vector<int>& iobsNums) :
-		Feature(iid, iparamNum, iobsNums)
-{
-
-}
-
-double TerClassBlindPairFeature::comp(const std::vector<double>& vals,
-								const std::vector<double>& obsVec)
-{
-
-	int ind = (fabs(vals[0] - vals[1]) < 1e-4 ? 0 : 1);
-//	cout << "vals = " << vals << ", ind = " << ind << endl;
-	return (double)ind;
-}
-
-double TerClassBlindPairFeature::compParam(const std::vector<double>& vals,
-						const std::vector<double>& params,
-						const std::vector<double>& obsVec)
-{
-	return params[paramNum()] * comp(vals, obsVec);
-}
 
 //-------------TERRAIN CLASSIFICATION PAIRWISE-------------
 
@@ -185,7 +132,7 @@ double TerClassPairFeature::comp(const std::vector<double>& vals,
 {
 	static const double eps = 1e-4;
 	static const double beta = 0.05;
-	int ind = (fabs(vals[0] - vals[1]) < 1e-4 ? 0 : 1);
+	int ind = (fabs(vals[0] - vals[1]) < eps ? 0 : 1);
 	double diff = 255.0;
 	if(fabs(obsVec[obsNums()[0]]) > eps && fabs(obsVec[obsNums()[1]]) > eps){
 		diff = (obsVec[obsNums()[0]] - obsVec[obsNums()[1]]);

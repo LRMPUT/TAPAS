@@ -65,10 +65,10 @@ int main(int argc, char* argv[])
 
 //		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew1");
 //		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew2");
-//		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew3");
+		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew3");
 //		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew4");
 //		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew5");
-		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew6");
+//		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew6");
 //		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew7");
 //		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew8");
 //		dirsTest.push_back("../MovementConstraints/Camera/database/przejazd9");

@@ -189,8 +189,10 @@
 				<!-- najlepsze RF, sigma = 4.0 : 4.52932 -1.82345 -0.961341 -1.92918 -0.979321 -0.829175 -->
 				<!-- najlepsze RF bez distance, sigma = 4.0 : 3.59711 -1.53024 -0.628831 -1.61923 -1.68689 -->
 				<!-- najlepsze SVM, sigma = 4.0 : 2.62121 -1.80826 -1.16711 -1.97035 -0.918071 -0.875569 -->
+				<!-- najlepsze RF, border, sigma = 8.0 : 5.13964 7.13118 -1.96993 -0.464176 -1.8064 -1.46342 -->
+				<!-- 1.33835 1.53565 -2.05861 -0.912178 -2.16437 -->
 				<params>
-					5.19067 -1.77422 -0.62596 -1.67547 -1.45437
+					1.03899 0.870667 0.920218 -1.88262 -1.07997 -1.90631
 				</params>
 			</inference>
 			<HierClassifier debug="0">
@@ -279,7 +281,7 @@
 				</Classifier> -->
 				<Classifier type="RF">
 					<cache enabled="true" />
-					<info desc_beg="0" desc_end="7" />
+					<info desc_beg="0" desc_end="4" />
 				</Classifier>
 			</HierClassifier>
 			<!--
