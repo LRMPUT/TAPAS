@@ -1,0 +1,5 @@
+---
+float32[16] curPosOrigMapCenter
+int32 cloudRows
+int32 cloudCols
+float32[] pointCloudOrigMapCenter

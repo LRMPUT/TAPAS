@@ -1,0 +1,399 @@
+<Robot>
+	<!--
+		runThread:				1 - module ON, 0 - module OFF
+		processingFrequency: 			The frequency of processing in global planner thread in Hz
+		computeEveryNth:			Recompute the globalPlan globalPlannerParams.changedPlanDelayTimeglobalPlannerParams.changedPlanDelayTimeafter Nth steps | Integer >0
+		debug:					1 - debug ON, 0 - debug OFF
+		subgoalThreshold:			next subgoal must be further than subgoalThreshold (in meters)
+		subgoalThreshold2:			next subgoal must be NOT further than subgoalThreshold2 (in meters)
+		subgoalAngularThreshold:			next subgoal after first found must be compatible with the previously computed direction (degree)
+		preciseToGoalMaxTime:			Maximum time for precise localization (in ms)
+		changedPlanWaitingTime:			Maximum time we wait for a plan to stabilize in case of rapid change (in ms)
+		changedPlanThreshold:			Minimal changed in overall plan distance to active some anti-drastic change plan (in meters)
+		changedPlanDelayTime:			Minimal time between consecutive anti-drastic change plan behaviours (in ms)
+		sound:					1 - ON, 0 - OFF
+		runHomologation:			1 - overrides global Planner to perform Homologation
+		mapFile:				file in open street map used in navigation
+		goalLatitude:				latitude N/S
+		goalLongitude:				longitude W/E 
+		startLatitude:				latitude N/S
+		startLongitude:				longitude W/E
+		 // Alternative coordinates in PP :
+		 // -> latitude="52.401979" longitude="16.953083" // Ławeczki, po prawej wychodząc z CM
+		 // -> latitude="52.401660" longitude="16.953071" // Blisko, na drodze wychodząc na wprost z CM
+		 // -> latitude="52.401886" longitude="16.953509" // Druga strona CM
+		 // -> latitude="52.401680" longitude="16.951594" // Wejście A8
+		 // -> latitude="52.401306" longitude="16.951138" // A8 to Elektryk, nie schody, nie rampa dla niepełnosprawnych, to dla aut
+		 // -> latitude="52.402261" longitude="16.952285" // Blisko mostku, po prawej wychodząc z CM 
+		 // -> latitude="52.403418" longitude="16.950173" // CW
+		 // 
+		 // MALTA
+		 // -> latitude="52.406590" longitude="16.955018" 
+		 // -> latitude="52.407100" longitude="16.956102"
+		 // -> latitude="52.406838" longitude="16.956617"
+		 // -> latitude="52.406019" longitude="16.956263"
+		 // -> latitude="52.405588" longitude="16.955419"
+		 // MALTA - on the road
+		 // -> latitude="52.407537" longitude="16.956452" // Przy moscie
+		 // -> latitude="52.406512" longitude="16.955068" // Dalej od wody, na wysokosci kolka
+		 // -> latitude="52.406731" longitude="16.956404" // Kolo kolka
+		 // -> latitude="52.407065" longitude="16.955223" // Dalej od wodu, dalej niz kolko
+		 // -> latitude="52.406938" longitude="16.956827" // Przy wodzie, dalej niz kolko
+		 // Robotour - Pilzen, Czechy
+		 // -> startLatitude="49.725131" startLongitude="13.367541" // Glowny start
+		 // -> startLatitude="49.722581" startLongitude="13.364215" // Na koncu prostej
+		 // -> startLatitude="49.720559" startLongitude="13.361688" // Najdalej od startu
+		 // -> startLatitude="49.723972" startLongitude="13.367407" // Kawalek od startu
+		 // -> startLatitude="49.723369" startLongitude="13.366425" // Kolo poczatku prostej
+		 // -> startLatitude="49.721867" startLongitude="13.365127" // Obok konca prostej
+	-->
+	<GlobalPlanner 		runThread="1" 
+						processingFrequency="5" 
+						computeEveryNth="25" 
+						debug="0" 
+						subgoalThreshold="8" 
+						subgoalThreshold2="10"
+						subgoalAngularThreshold="10"
+						preciseToGoalMaxTime="5000"
+						changedPlanWaitingTime="30000"
+						changedPlanThreshold="40"
+						changedPlanDelayTime="300000"
+						sound="1"
+						runHomologation="0" 
+						mapFile="ppMap.osm"
+						goalLatitude="52.402261" goalLongitude="16.952285"
+						startLatitude="52.401979" startLongitude="16.953083"/>
+
+
+	<!--
+		runThread: 				1 - module ON, 0 - module OFF
+		debug:					1 - debug ON, 0 - debug OFF
+		avoidObstacles:	        0 - run as globalPlanner wants and stop in front of obstacles, 1 - take into account the obstacles.
+		VFH_HistResolution: 	Resolution of directions in VFH in degrees.
+		VFH_SteeringMargin:		The dead_zone of steering deciding upon going straight, left, right.
+		VFH_Gauss3sig:			3 sigma of the Gaussian used to smooth the histograms.
+		VFH_MaxDistance:		Max distance of the obstacle (penalty for this obstacle is 0)
+		VFH_NormalSpeed: 		Speed used in normal run in %.
+		VFH_PreciseSpeed:		Speed used when approaching the target in %.
+		VFH_GentleTurnMargin:	Margin of gentle turn in degrees.
+		VFH_GentleTurnSpeedDiff: Difference of wheels speed in %.
+		VFH_TurnSpeed:	Speed used to rotate the robot in %.
+		VFH_TurnTimeout:	Time after which robot attempts to exit deadlock in ms.
+		VFH_InterruptTime:	Time that robot tries to exit deadlock.
+		VFH_InterruptSpeed:	Speed at which robot tries to exit deadlock.
+		VFH_ImuAccVarianceLimit: Limit of accelerometer variance. When it is to high robot slows down.
+	-->
+	
+
+	<LocalPlanner 		runThread="1" 
+						debug="1"
+						avoidObstacles="1" 
+						VFH_HistResolution="10"
+						VFH_SteeringMargin="10" 
+						VFH_Gauss3sig="40"
+						VFH_MaxDistance="3000"
+						VFH_BackwardsPenalty="1.5" 
+						VFH_NormalSpeed="40" 
+						VFH_PreciseSpeed="20"
+						VFH_GentleTurnMargin="20"
+						VFH_GentleTurnSpeedDiff="70"
+						VFH_TurnSpeed="90"
+						VFH_TurnTimeout="8000"
+						VFH_InterruptTime="1000"
+						VFH_InterruptSpeed="40"
+						VFH_ImuAccVarianceLimit="0.1" />
+
+	<!--
+		runThread: 				1 - module ON, 0 - module OFF
+		processingFrequency:	The frequency of processing in position estimation thread in Hz
+		debug:					1 - debug ON, 0 - debug OFF
+		encoderTickPerRev:		number of encoder ticks per one revolution
+		wheelDiameter:			wheel diameter in meters
+		wheelBase:				wheel base in meters
+		predictionVariance:		Variance of the predict -> 10
+		gpsVariance:			Variance of the GPS -> 100m
+		imuVariance:			Variance of the IMU -> 0.01745329251 rad (it is equal to 1 degree)
+		encoderVariance:		Variance of the Encoders -> 0.01 m/s
+	-->
+	<PositionEstimation 	runThread="1" 
+							processingFrequency="20" 
+							debug="0" 
+							encoderTicksPerRev="300" 
+							wheelDiameter="0.16" 
+							wheelBase="0.452"
+							predictionVariance="10"
+							gpsVariance="100"
+							imuVariance="0.01745329251"
+							encoderVariance="0.01"/>
+
+	<!--
+		runThread: true - MovementConstraints thred runs, false otherwise
+		debug: Debug level: 0 - no debug, 1, 2 - debug
+	-->
+	<MovementConstraints runThread="true" debug="0">
+		<odometry diam="160" base="452" encodersCPR="300" />
+		<!--
+			minDist: Minimal distance taken into consideration. Other points are discarted.
+			maxTimePoint: Time that point is considered valid. After that time it is removed from point cloud.
+			maxTimeMap: Time that map is considered valid. After that time new origin of local map is computed.
+		-->
+		<point_cloud minDist="100" maxTimePoint="4000" maxTimeMap="4000" />
+		<!--
+			lowerThreshold: Obstacles below this height have penalty 0.
+			upperThreshold: Obstacles above this height have penalty 1. Other scale linearly.
+		-->
+		<laser_constraints lowerThreshold="50" upperThreshold="80" minPts="5" />
+		<!--
+			Transformation matrix from laser coordinate system to camera coordinate system.
+		-->
+		<camera_position_laser>
+			0.999975467433325   0.006201805494175   0.003256092768350	19.302285337921
+  		-0.006965113845532   0.831082312695594   0.556105814313842 -581.986641194198
+   		0.000742778986283  -0.556114850667697   0.831105120394660	-482.975425071840
+		 0 0 0 1
+		</camera_position_laser>
+		<!--
+			Transformation matrix from camera coordinate system to imu coordinate system.
+		-->
+		<imu_position_camera>
+ 			0.018692784122079   0.999638449057612   0.019327467176493 0
+  		-0.660864075823663  -0.002152701714531   0.750502524420182 0
+  		0.750272785796941  -0.026801810405667   0.660584899805829 0
+			0	0	0	1
+		</imu_position_camera>
+		<!--
+			Transformation matrix from robot coordinate system to imu coordinate system. Hand written - no calibration.
+		-->
+		<imu_position_robot>
+			1	0	0	-220
+			0	1	0	0
+			0	0	1	-810
+			0	0	0	1
+		</imu_position_robot>
+		<!--
+			runThread: true - Camera thred runs, false otherwise
+			number: Number of cameras, currently only 1 suppored.
+			rows: Number of rows of the image.
+			cols: Number of cols of the image.
+			entryWeightThreshold: Minimal entry's number of pixels.
+			debug: Debug level: 0 - no debug, 1, 2 - debug
+		-->
+
+		<Camera runThread="false" number="1" rows="480" cols="640" entryWeightThreshold="400" pixelsTimeout="2000" debug="0">
+			<!--
+				saveEnable: [true/false] - Whether to save cache after learning classifier or not.
+				loadEnable: [true/false] - Whether to load cache during construction of Camera class.
+			-->
+			<cache saveEnabled="true" loadEnabled="true"/>
+			<inference enabled="true">
+				<!-- najlepsze RF, sigma = 4.0 : 4.52932 -1.82345 -0.961341 -1.92918 -0.979321 -0.829175 -->
+				<!-- najlepsze SVM, sigma = 4.0 : 2.62121 -1.80826 -1.16711 -1.97035 -0.918071 -0.875569 -->
+				<params>
+					3.59711 -1.53024 -0.628831 -1.61923 -1.68689
+				</params>
+			</inference>
+			<HierClassifier debug="0">
+				<!--
+					Parameters of segmentation algorithm. See "Efficient Graph-Based Image Segmentation" Falzenszwalb, Huttenlocher
+				-->
+				<segmentation k="200" min_size="200" />
+				<!--
+					Lengths of descriptors (i.e. numbers of histogram's bins)
+				-->
+				<descriptor>
+					<hist_HS len_H="4" len_S="4" />
+					<hist_V len="8" />
+					<hist_DI len_D="1" len_I="25" />
+					<mean_HSV len="3" />
+					<covar_HSV len="9" />
+					<mean_laser len="2" />
+					<covar_laser len="4" />
+					<!--kurt_laser len="2" />-->
+				</descriptor>
+				<!--
+					Settings for classifiers used in AdaBoost algorithm.
+				-->
+				<!--<Classifier type="SVM">
+					<cache enabled="true" />
+					<svm type="C_SVC">
+						<kernelType value="RBF" />
+						<gamma value="5.4061" />
+						<degree value="2" />
+						<C value="5535.84" />
+					</svm> -->
+					<!--
+						Index of descriptors used in classifier, desc_beg inclusive, desc_end exclusive.
+					-->
+					<!-- <info desc_beg="0" desc_end="1" />
+				</Classifier>
+				<Classifier type="SVM">
+					<cache enabled="true" />
+					<svm type="C_SVC">
+						<kernelType value="RBF" />
+						<gamma value="5.4061" />
+						<degree value="2" />
+						<C value="5535.84" />
+					</svm>
+					<info desc_beg="1" desc_end="2" />
+				</Classifier>
+				<Classifier type="SVM">
+					<cache enabled="true" />
+					<svm type="C_SVC">
+						<kernelType value="RBF" />
+						<gamma value="5.4061" />
+						<degree value="2" />
+						<C value="16607.5" />
+					</svm>
+					<info desc_beg="2" desc_end="4" />
+				</Classifier>-->
+				<!--<Classifier type="SVM">
+					<cache enabled="true" />
+					<svm type="C_SVC">
+						<kernelType value="RBF" />
+						<gamma value="5.4061" />
+						<degree value="2" />
+						<C value="16607.5" />
+					</svm>
+					<info desc_beg="4" desc_end="7" />
+				</Classifier>
+				<Classifier type="SVM">
+					<cache enabled="true" />
+					<svm type="C_SVC">
+						<kernelType value="RBF" />
+						<gamma value="1.80203" />
+						<degree value="2" />
+						<C value="16607.5" />
+					</svm>
+					<info desc_beg="7" desc_end="8" />
+				</Classifier>-->
+				<!-- <Classifier type="SVM">
+					<cache enabled="true" />
+					<svm type="C_SVC">
+						<kernelType value="RBF" />
+						<gamma value="0.5" />
+						<degree value="2" />
+						<C value="512" />
+					</svm>
+					<info desc_beg="0" desc_end="7" />
+				</Classifier> -->
+				<Classifier type="RF">
+					<cache enabled="true" />
+					<info desc_beg="0" desc_end="7" />
+				</Classifier>
+			</HierClassifier>
+			<!--
+				enabled: [true/flase] - Whether to train classifier during construction of Camera class.
+				
+				Directories with prepared training data.
+			-->
+			<learning enabled="false">
+				"../MovementConstraints/Camera/database/przejazd6"
+				"../MovementConstraints/Camera/database/przejazd7"
+				"../MovementConstraints/Camera/database/przejazd9"
+				"../MovementConstraints/Camera/database/przejazd10"
+			</learning>
+			<!--
+				All labels used have to be declared here. Id starts from 0 and has to be consecutive numbers.
+			-->
+			<labels>
+				<label text="grass" id="0"/>
+				<label text="pavement" id="1"/>
+			</labels>
+
+			<!--
+				Transformation matrix from robot coordinate system to imu coordinate system. Hand written - no calibration.
+			-->
+			<imu_position_robot>
+				1	0	0	-220
+				0	1	0	0
+				0	0	1	-810
+				0	0	0	1
+			</imu_position_robot>
+			
+			<!--
+				Settings for camera sensor.
+			-->
+			<sensor id="left">
+				<!--
+					Transformation matrix from camera coordinate system to imu coordinate system.
+				-->
+				<imu_position_camera>
+					 0.018692784122079   0.999638449057612   0.019327467176493 0
+					-0.660864075823663  -0.002152701714531   0.750502524420182 0
+					 0.750272785796941  -0.026801810405667   0.660584899805829	0
+					0	0	0	1
+				</imu_position_camera>
+				<!--
+					Transformation matrix from laser coordinate system to camera coordinate system.
+				-->
+				<position_laser>
+					0.999975467433325   0.006201805494175   0.003256092768350	19.302285337921
+					-0.006965113845532   0.831082312695594   0.556105814313842 -581.986641194198
+			 		0.000742778986283  -0.556114850667697   0.831105120394660	-482.975425071840
+				 0 0 0 1
+				</position_laser>
+				<!--
+					Intrisincs parameters of camera sensor. See http://docs.opencv.org/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
+				-->
+				<camera_matrix>
+					646.345999973665580	0	312.531846659870780
+        			0	645.650527914581740	244.961100510703430
+        			0	0	1.0000
+				</camera_matrix>
+				<!--
+					Intrisincs parameters of camera sensor. See http://docs.opencv.org/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
+				-->
+				<dist_coeffs>
+					-0.002321429512793 0.042019134230480 -0.000280334014614 0.001284356067402 0.000000000000000 
+				</dist_coeffs>
+				<!--
+					Mask of pixels to ignore, so robot does not see itself.
+				-->
+				<mask_ignore>
+				 <polygon>
+					 <pt>
+						<x>61</x>
+						<y>479</y>
+					 </pt>
+					 <pt>
+						<x>58</x>
+						<y>406</y>
+					 </pt>
+					 <pt>
+						<x>139</x>
+						<y>363</y>
+					 </pt>
+					 <pt>
+						<x>279</x>
+						<y>363</y>
+					 </pt>
+					 <pt>
+						<x>281</x>
+						<y>340</y>
+					 </pt>
+					 <pt>
+						<x>338</x>
+						<y>338</y>
+					 </pt>
+					 <pt>
+						<x>346</x>
+						<y>360</y>
+					 </pt>
+					 <pt>
+						<x>477</x>
+						<y>359</y>
+					 </pt>
+					 <pt>
+						<x>557</x>
+						<y>399</y>
+					 </pt>
+					 <pt>
+						<x>558</x>
+						<y>479</y>
+					 </pt>
+					</polygon>
+				</mask_ignore>
+			</sensor>
+		</Camera>
+	</MovementConstraints>
+</Robot>
