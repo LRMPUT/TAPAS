@@ -75,15 +75,15 @@ int main(int argc, char* argv[])
 //		dirsTestList.push_back("../MovementConstraints/Camera/database/przejazd10");
 //		dirsTestList.push_back("../MovementConstraints/Camera/database/przejazd11");
 
-		for(boost::filesystem::path dir : dirsTestList){
-			ofstream resLog("log/res.log", ios::app);
-			resLog << dir.string() << endl;
-			resLog.close();
-
-			std::vector<boost::filesystem::path> dirsTest{dir};
-			debug.testClassification(dirsTrain, dirsTest);
-		}
-//		debug.testClassification(dirsTrain, dirsTrain);
+//		for(boost::filesystem::path dir : dirsTestList){
+//			ofstream resLog("log/res.log", ios::app);
+//			resLog << dir.string() << endl;
+//			resLog.close();
+//
+//			std::vector<boost::filesystem::path> dirsTest{dir};
+//			debug.testClassification(dirsTrain, dirsTest);
+//		}
+		debug.testClassification(dirsTrain, dirsTrain);
 
 		/*char a;
 		while((waitKey(200) & 0xff) != 's')

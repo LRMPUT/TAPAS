@@ -1224,10 +1224,10 @@ void Camera::learnFromDir(std::vector<boost::filesystem::path> dirs){
 
 void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 	static const bool compareWithExt = false;
-	static const bool estimatePgmParams = false;
-	static const bool computeControlError = true;
-//	static const bool estimatePgmParams = true;
-//	static const bool computeControlError = false;
+//	static const bool estimatePgmParams = false;
+//	static const bool computeControlError = true;
+	static const bool estimatePgmParams = true;
+	static const bool computeControlError = false;
 	static const bool saveScreenshots = false;
 
 	cout << "Classifying" << endl;
@@ -2727,7 +2727,7 @@ void Camera::constructPgm(Pgm& pgm,
 
 //	int numSegFeat = segmentFeats.front().rows;
 //	//hack to consider only first 4 features (mean R, G, B, intensity)
-	int numSegFeat = 3;
+	int numSegFeat = 4;
 	int numLabels = segmentPriors.front().rows;
 
 	vector<int> nhCnt(segmentPixelCount.size(), 0);
@@ -2844,27 +2844,27 @@ void Camera::constructPgm(Pgm& pgm,
 
 	vector<Feature*> pairFeats;
 
-//	for(int f = 0; f < numSegFeat; ++f){
-//		features.push_back(new TerClassPairFeature(nextFeatId, nextParamId, vector<int>{f, f + numSegFeat}));
-//		pairFeats.push_back(features.back());
-//		++nextFeatId;
-//		++nextParamId;
-//	}
-
-	{
-		vector<int> obsNums;
-		for(int f = 0; f < numSegFeat; ++f){
-			obsNums.push_back(f);
-		}
-		for(int f = 0; f < numSegFeat; ++f){
-			obsNums.push_back(f + numSegFeat);
-		}
-		features.push_back(new TerClassPairVecFeature(nextFeatId, nextParamId, obsNums));
+	for(int f = 0; f < numSegFeat; ++f){
+		features.push_back(new TerClassPairFeature(nextFeatId, nextParamId, vector<int>{f, f + numSegFeat}));
 		pairFeats.push_back(features.back());
-
 		++nextFeatId;
 		++nextParamId;
 	}
+
+//	{
+//		vector<int> obsNums;
+//		for(int f = 0; f < numSegFeat; ++f){
+//			obsNums.push_back(f);
+//		}
+//		for(int f = 0; f < numSegFeat; ++f){
+//			obsNums.push_back(f + numSegFeat);
+//		}
+//		features.push_back(new TerClassPairVecFeature(nextFeatId, nextParamId, obsNums));
+//		pairFeats.push_back(features.back());
+//
+//		++nextFeatId;
+//		++nextParamId;
+//	}
 
 	params = vector<double>(nextParamId, 1.0);
 
