@@ -29,6 +29,7 @@
 
 #include <iostream>
 #include "Robot.h"
+#include <unistd.h>
 
 using namespace std;
 
@@ -39,6 +40,8 @@ Robot::Robot(boost::filesystem::path settingsFile) :
 		globalPlannerBeingDeleted(false)
 {
 	cout << "Robot()" << endl;
+	char *path = get_current_dir_name();
+	cout << path << endl;
 	TiXmlDocument settings(settingsFile.c_str());
 	if(!settings.LoadFile()){
 //		cout << "Settings file: " << settingsFile << endl;

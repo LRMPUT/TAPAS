@@ -1,5 +1,5 @@
 <launch>
-  <node pkg="TAPAS" name="TapasGui" type="TapasGui"/>
+  <node pkg="TAPAS" name="TapasGui" type="TapasGui" args="settings.xml"/>
   <node pkg="TAPAS" name="Camera" type="Camera"/>
 
   <param name="wheelCir" value="160" />

@@ -348,7 +348,7 @@ void MovementConstraints::insertCameraConstraints(cv::Mat map,
 
 	memcpy(srv.request.constraintsMap.data(), map.data, map_size);
 	srv.request.timestamp = std::chrono::duration_cast<std::chrono::nanoseconds>(curTimestampMap.time_since_epoch()).count();
-	memcpy(srv.request.mapMove.data(), map.data, 16*sizeof(float));
+	memcpy(srv.request.mapMove.data(), mapMove.data, 16*sizeof(float));
 	cameraConstraintsClient.call(srv);
 	memcpy(map.data, srv.response.constraintsMap.data(), map_size);
 }
