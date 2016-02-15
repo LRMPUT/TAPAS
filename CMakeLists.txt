@@ -1,8 +1,45 @@
+<<<<<<< HEAD
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 # 0 - without CUDA
 # 1 - with CUDA
 set(CUDA 1)
+=======
+cmake_minimum_required(VERSION 2.8.3)
+project(TAPAS)
+
+find_package(catkin REQUIRED COMPONENTS
+  roscpp
+  std_msgs
+  message_generation
+)
+
+add_service_files(
+  FILES
+  PointCloud.srv
+  CameraConstraints.srv
+)
+
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
+
+catkin_package(
+  INCLUDE_DIRS include
+#  LIBRARIES TAPAS
+#  CATKIN_DEPENDS roscpp std_msgs
+#  DEPENDS system_lib
+)
+
+include_directories(
+  ${catkin_INCLUDE_DIRS}
+)
+
+# 0 - without CUDA
+# 1 - with CUDA
+set(CUDA 0)
+>>>>>>> master
 
 # 0 - TAPAS
 # 1 - TROBOT
@@ -106,6 +143,10 @@ set(Tapas_SOURCES
 	MovementConstraints/Camera/HierClassifier/ClassifierSVM.cpp
 	MovementConstraints/Camera/HierClassifier/ClassifierRF.cpp
 	MovementConstraints/Camera/HierClassifier/HierClassifier.cpp
+<<<<<<< HEAD
+=======
+	MovementConstraints/ConstraintsHelpers.cpp
+>>>>>>> master
 	MovementConstraints/MovementConstraints.cpp
 	#Planning/PlanningSearching/LocalPlannerSearching.cpp
 	#Planning/PlanningToGold/LocalPlannerToGold.cpp
@@ -113,6 +154,10 @@ set(Tapas_SOURCES
 	Planning/RobotDrivers/robotDrivers.cpp
 	Planning/GlobalPlanner.cpp
 	Planning/LocalPlanner.cpp
+<<<<<<< HEAD
+=======
+	Planning/PlannerHelpers.cpp
+>>>>>>> master
 	PositionEstimation/Util/ExtendedKalmanFilter.cpp
 	PositionEstimation/Encoders/Encoders.cpp
 	PositionEstimation/GPS/src/context.c
@@ -166,7 +211,12 @@ target_link_libraries(Tapas
 	${Boost_LIBRARIES}
 	${urg_LIBRARIES}
 	${TinyXML_LIBRARIES}
+<<<<<<< HEAD
 	${LBFGS_LIBRARIES})
+=======
+	${LBFGS_LIBRARIES}
+	${catkin_LIBRARIES})
+>>>>>>> master
 
 find_package(OpenGL REQUIRED)
 set(QGLViewer_LIBRARIES QGLViewer)
@@ -230,6 +280,48 @@ ELSEIF (CUDA EQUAL 0)
 		${TapasQt_FORMS_HEADERS})
 ENDIF (CUDA GREATER 0)	
 
+<<<<<<< HEAD
+=======
+target_link_libraries(TapasGui
+	${QT_LIBRARIES}
+	${OpenCV_LIBS}
+	${Boost_LIBRARIES}
+	${OPENGL_LIBRARIES}
+	${QGLViewer_LIBRARIES}
+	${urg_LIBRARIES}
+	${TinyXML_LIBRARIES}
+	${LBFGS_LIBRARIES}
+	${catkin_LIBRARIES})
+
+set(Camera_SOURCES
+	MovementConstraints/Camera/LibSVM-weights/svm.cpp
+	MovementConstraints/Camera/Pgm/CustFeature.cpp
+	MovementConstraints/Camera/Pgm/Inference.cpp
+	MovementConstraints/Camera/Pgm/ParamEst.cpp
+	MovementConstraints/Camera/Pgm/Pgm.cpp
+	#MovementConstraints/Camera/Pgm/UnionFind.cpp
+	MovementConstraints/Camera/Camera.cpp
+	MovementConstraints/Camera/HierClassifier/UnionFind.cpp
+	MovementConstraints/Camera/HierClassifier/Classifier.cpp
+	MovementConstraints/Camera/HierClassifier/ClassifierSVM.cpp
+	MovementConstraints/Camera/HierClassifier/ClassifierRF.cpp
+	MovementConstraints/Camera/HierClassifier/HierClassifier.cpp
+	MovementConstraints/ConstraintsHelpers.cpp
+	Planning/PlannerHelpers.cpp)
+
+IF( CUDA GREATER 0)
+	cuda_add_executable(Camera
+		${Camera_SOURCES}
+		${Tapas_CUDA_SOURCES}
+		MovementConstraints/Camera/main.cpp
+	)
+ELSEIF ( CUDA EQUAL 0)
+	add_executable(Camera 
+		${Camera_SOURCES}
+		MovementConstraints/Camera/main.cpp
+	)
+ENDIF( CUDA GREATER 0)
+>>>>>>> master
 
 #message("Copying generated ui headers")
 # Adding command for automatically copying generated ui headers 
@@ -242,6 +334,7 @@ ENDIF (CUDA GREATER 0)
 #		MAIN_DEPENDENCY ${CMAKE_CURRENT_BINARY_DIR}/${filename})
 #endforeach()
 
+<<<<<<< HEAD
 target_link_libraries(TapasGui
 	${QT_LIBRARIES}
 	${OpenCV_LIBS}
@@ -251,3 +344,11 @@ target_link_libraries(TapasGui
 	${urg_LIBRARIES}
 	${TinyXML_LIBRARIES}
 	${LBFGS_LIBRARIES})
+=======
+target_link_libraries(Camera
+	${OpenCV_LIBS}
+	${Boost_LIBRARIES}
+	${TinyXML_LIBRARIES}
+	${LBFGS_LIBRARIES}
+	${catkin_LIBRARIES})
+>>>>>>> master

@@ -27,8 +27,8 @@
 	OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef MOVEMENTCONSTAINTS_H_
-#define MOVEMENTCONSTAINTS_H_
+#ifndef MOVEMENTCONSTRAINTS_H_
+#define MOVEMENTCONSTRAINTS_H_
 
 //STL
 #include <string>
@@ -37,6 +37,7 @@
 #include <mutex>
 #include <chrono>
 #include <queue>
+#include <functional>
 //OpenCV
 #include <opencv2/opencv.hpp>
 //TinyXML
@@ -45,6 +46,9 @@
 #include "Camera/Camera.h"
 #include "Hokuyo/Hokuyo.h"
 #include "Sharp/Sharp.h"
+#include "ConstraintsHelpers.h"
+//ROS
+#include "TAPAS/PointCloud.h"
 
 class Robot;
 class Debug;
@@ -53,14 +57,6 @@ class MovementConstraints {
 	friend class Debug;
 
 public:
-	struct PointsPacket{
-		std::chrono::high_resolution_clock::time_point timestamp;
-		int numPoints;
-		PointsPacket(std::chrono::high_resolution_clock::time_point itimestamp,
-					int inumPoints) : timestamp(itimestamp), numPoints(inumPoints)
-		{}
-	};
-
 	struct PointCloudSettings{
 		float wheelCir;
 
@@ -89,6 +85,8 @@ private:
 	//Parent class Robot
 	Robot* robot;
 
+	ros::ServiceClient cameraConstraintsClient;
+
 	//CV_32FC1 4x4: camera origin position and orientation w.r.t. global coordinate system
 	cv::Mat imuOrigRobot;
 
@@ -115,7 +113,7 @@ private:
 	std::chrono::high_resolution_clock::time_point timestampMap;
 
 	//Queue of points
-	std::queue<PointsPacket> pointsQueue;
+	std::queue<ConstraintsHelpers::PointsPacket> pointsQueue;
 
 	cv::Mat imuPrev, encodersPrev;
 
@@ -147,6 +145,10 @@ private:
 								std::chrono::high_resolution_clock::time_point curTimestampMap,
 								cv::Mat mapMove);
 
+	void insertCameraConstraints(cv::Mat map,
+								std::chrono::high_resolution_clock::time_point curTimestampMap,
+								cv::Mat mapMove);
+
 	void updateCurPosOrigMapCenter();
 
 	void updatePointCloud();
@@ -158,29 +160,6 @@ public:
 	// Stop MovementConstraints thread.
 	void stopThread();
 
-	static cv::Mat compOrient(cv::Mat imuData);
-
-	static cv::Mat compTrans(	cv::Mat orient,
-								cv::Mat encodersDiff,
-								const PointCloudSettings& pointCloudSettings);
-
-	static cv::Mat compNewPos(cv::Mat lprevImu, cv::Mat lcurImu,
-								cv::Mat lprevEnc, cv::Mat lcurEnc,
-								cv::Mat lposOrigMapCenter,
-								cv::Mat lmapCenterOrigGlobal,
-								const PointCloudSettings& pointCloudSettings);
-
-	static void processPointCloud(cv::Mat hokuyoData,
-								cv::Mat& pointCloudOrigMapCenter,
-								std::queue<PointsPacket>& pointsInfo,
-								std::chrono::high_resolution_clock::time_point hokuyoTimestamp,
-								std::chrono::high_resolution_clock::time_point curTimestamp,
-								cv::Mat curPosOrigMapCenter,
-								std::mutex& mtxPointCloud,
-								cv::Mat cameraOrigLaser,
-								cv::Mat cameraOrigImu,
-								const PointCloudSettings& pointCloudSettings);
-
 	const PointCloudSettings& getPointCloudSettings();
 
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
@@ -190,6 +169,8 @@ public:
 	//----------------------ACCESS TO COMPUTED DATA
 	//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)
 	const cv::Mat getMovementConstraints();
+
+	bool getPointCloud(TAPAS::PointCloud::Request &req, TAPAS::PointCloud::Response &res);
 
 	cv::Mat getPointCloud(cv::Mat& curPosMapCenter);
 

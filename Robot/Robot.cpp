@@ -29,6 +29,10 @@
 
 #include <iostream>
 #include "Robot.h"
+<<<<<<< HEAD
+=======
+#include <unistd.h>
+>>>>>>> master
 
 using namespace std;
 
@@ -39,6 +43,11 @@ Robot::Robot(boost::filesystem::path settingsFile) :
 		globalPlannerBeingDeleted(false)
 {
 	cout << "Robot()" << endl;
+<<<<<<< HEAD
+=======
+	char *path = get_current_dir_name();
+	cout << path << endl;
+>>>>>>> master
 	TiXmlDocument settings(settingsFile.c_str());
 	if(!settings.LoadFile()){
 //		cout << "Settings file: " << settingsFile << endl;
@@ -272,3 +281,10 @@ cv::Mat Robot::getPosImuConstraintsMapCenter(){
 void Robot::getLocalPlanData(cv::Mat& constraintsMap,cv::Mat& posRobotMapCenter, cv::Mat& globalMapCenter){
 	movementConstraints->getLocalPlanningData(constraintsMap, posRobotMapCenter, globalMapCenter);
 }
+<<<<<<< HEAD
+=======
+
+ros::NodeHandle &Robot::getNodeHandle() {
+	return nh;
+}
+>>>>>>> master

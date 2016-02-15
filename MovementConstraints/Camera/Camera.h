@@ -47,6 +47,9 @@
 //TAPAS
 #include "HierClassifier/HierClassifier.h"
 #include "Pgm/Pgm.h"
+//ROS
+#include "ros/ros.h"
+#include "TAPAS/CameraConstraints.h"
 
 class MovementConstraints;
 class Debug;
@@ -58,13 +61,15 @@ class Camera {
 	friend class Debug;
 
 public:
-	Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings);
+	Camera(TiXmlElement* settings);
 	virtual ~Camera();
 
 	//Inserts computed constraints into map
-	void insertConstraints(cv::Mat map,
-							std::chrono::high_resolution_clock::time_point curTimestampMap,
-							cv::Mat mapMove);
+	// void insertConstraints(cv::Mat map,
+	// 						std::chrono::high_resolution_clock::time_point curTimestampMap,
+	// 						cv::Mat mapMove);
+
+	bool insertConstraints(TAPAS::CameraConstraints::Request &req, TAPAS::CameraConstraints::Response &res);
 
 	//CV_8UC3 1x640x480: left, right image
 	const std::vector<cv::Mat> getData();
@@ -128,6 +133,10 @@ public:
 	};
 
 private:
+	ros::NodeHandle nh;
+
+	ros::ServiceClient pointCloudClient;
+
 	//Parent MovementConstraints class
 	MovementConstraints* movementConstraints;
 
@@ -256,6 +265,8 @@ private:
 
 	void readSettings(TiXmlElement* settings);
 
+	void getPointCloud(cv::Mat &pointCloudOrigMapCenter, cv::Mat &curPosOrigMapCenter);
+
 	cv::Mat readMatrixSettings(TiXmlElement* parent, const char* node, int rows, int cols);
 
 	std::vector<double> readVectorSettings(TiXmlElement* parent, const char* node);
@@ -332,6 +343,6 @@ private:
 
 };
 
-#include "../MovementConstraints.h"
+#include "../ConstraintsHelpers.h"
 
 #endif /* CAMERA_H_ */

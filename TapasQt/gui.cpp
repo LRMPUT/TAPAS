@@ -21,6 +21,7 @@
 */
 
 #include "TapasQt.h"
+#include "ros/ros.h"
 #include <QtGui/QApplication>
 #include <iostream>
 
@@ -29,6 +30,7 @@ using namespace std;
 int main(int argc, char *argv[])
 {
 	try{
+		ros::init(argc, argv, "TapasGui");
 		QApplication a(argc, argv);
 		if(argc != 2){
 			throw "Usage: gui settings_file";

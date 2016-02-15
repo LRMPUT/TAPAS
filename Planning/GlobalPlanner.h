@@ -46,7 +46,6 @@
 #include <tinyxml.h>
 //TAPAS
 #include "RobotDrivers/robotDrivers.h"
-#include "LocalPlanner.h"
 
 #ifdef TROBOT
 #include "../Trobot/include/RobotDrive.h"
@@ -259,6 +258,7 @@ public:
 	bool isRobotsDriveOpen();
 };
 
+#include "LocalPlanner.h"
 #include "../Robot/Robot.h"
 
 #endif /* GLOBALPLANNER_H_ */

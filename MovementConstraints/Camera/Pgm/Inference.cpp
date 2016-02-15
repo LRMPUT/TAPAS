@@ -126,7 +126,11 @@ void Inference::passMessage(const Pgm& pgm,
 												obsVec,
 												dst);
 
+<<<<<<< HEAD
 //	if(dst->id() == 1 || dst->id() == 148){
+=======
+//	if((dst->id() == 66748) || (dst->id() == 67404)){
+>>>>>>> master
 //		cout << "message from " << src->id() << " to " << dst->id() << " = " << msgSrcDst << endl;
 //	}
 
