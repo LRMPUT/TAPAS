@@ -1238,6 +1238,8 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 //	namedWindow("labeled");
 //	namedWindow("classified");
 
+	ofstream resLog("log/res.log", ios::app);
+
 	//create a window for visualization
 	viz::Viz3d win("camera visualization");
 	init3DVis(win);
@@ -1849,6 +1851,18 @@ void Camera::classifyFromDir(std::vector<boost::filesystem::path> dirs){
 		cout << "Counter relevant control error = " << cntRelevantControlError << endl;
 	}
 
+	resLog << "General pixel results: " << endl;
+	for(int t = 0; t < cameraParams.labels.size(); t++){
+		for(int p = 0; p < cameraParams.labels.size(); p++){
+			resLog << classResultsPix[t][p] << " ";
+		}
+		resLog << endl;
+	}
+	if(computeControlError){
+		resLog << "Int = " << controlError << endl;
+		resLog << "Max = " << maxControlError << endl;
+		resLog << "Relev = " << cntRelevantControlError << endl;
+	}
 
 	cout << "Map segments time: " << std::chrono::duration_cast<std::chrono::milliseconds>(durSegm).count()/images.size() << " ms" << endl;
 	cout << "Map class time: " << std::chrono::duration_cast<std::chrono::milliseconds>(durClass).count()/images.size() << " ms" << endl;
@@ -2788,35 +2802,35 @@ void Camera::constructPgm(Pgm& pgm,
 //	features.push_back(new TerClassNodeFeature(nextFeatId, nextFeatId, nodeFeatObsNums));
 //	++nextFeatId;
 
-	vector<Feature*> nodeFeats12;
+	vector<Feature*> nodeFeats;
 
 	//same parameter for all node features
 	for(int l = 0; l < numLabels; ++l){
 		features.push_back(new TerClassNodeFeature(nextFeatId, nextParamId, vector<int>{l, numLabels + l}));
-		nodeFeats12.push_back(features.back());
+		nodeFeats.push_back(features.back());
 		++nextFeatId;
 	}
 	++nextParamId;
-
-	vector<Feature*> nodeFeats3;
-
-	//same parameter for all node features
-	for(int l = 0; l < numLabels; ++l){
-		features.push_back(new TerClassNodeFeature(nextFeatId, nextParamId, vector<int>{l, numLabels + l}));
-		nodeFeats3.push_back(features.back());
-		++nextFeatId;
-	}
-	++nextParamId;
-
-	vector<Feature*> nodeFeats4;
-
-	//same parameter for all node features
-	for(int l = 0; l < numLabels; ++l){
-		features.push_back(new TerClassNodeFeature(nextFeatId, nextParamId, vector<int>{l, numLabels + l}));
-		nodeFeats4.push_back(features.back());
-		++nextFeatId;
-	}
-	++nextParamId;
+//
+//	vector<Feature*> nodeFeats3;
+//
+//	//same parameter for all node features
+//	for(int l = 0; l < numLabels; ++l){
+//		features.push_back(new TerClassNodeFeature(nextFeatId, nextParamId, vector<int>{l, numLabels + l}));
+//		nodeFeats3.push_back(features.back());
+//		++nextFeatId;
+//	}
+//	++nextParamId;
+//
+//	vector<Feature*> nodeFeats4;
+//
+//	//same parameter for all node features
+//	for(int l = 0; l < numLabels; ++l){
+//		features.push_back(new TerClassNodeFeature(nextFeatId, nextParamId, vector<int>{l, numLabels + l}));
+//		nodeFeats4.push_back(features.back());
+//		++nextFeatId;
+//	}
+//	++nextParamId;
 
 //	vector<Feature*> borderNodeFeats;
 //
@@ -2830,26 +2844,27 @@ void Camera::constructPgm(Pgm& pgm,
 
 	vector<Feature*> pairFeats;
 
-	for(int f = 0; f < numSegFeat; ++f){
-		features.push_back(new TerClassPairFeature(nextFeatId, nextParamId, vector<int>{f, f + numSegFeat}));
-		pairFeats.push_back(features.back());
-		++nextFeatId;
-		++nextParamId;
-	}
-
-//	{
-//		vector<int> obsNums;
-//		for(int f = 0; f < numSegFeat; ++f){
-//			obsNums.push_back(f);
-//		}
-//		for(int f = 0; f < numSegFeat; ++f){
-//			obsNums.push_back(f + numSegFeat);
-//		}
-//		features.push_back(new TerClassPairVecFeature(nextFeatId, nextParamId, obsNums));
-//
+//	for(int f = 0; f < numSegFeat; ++f){
+//		features.push_back(new TerClassPairFeature(nextFeatId, nextParamId, vector<int>{f, f + numSegFeat}));
+//		pairFeats.push_back(features.back());
 //		++nextFeatId;
 //		++nextParamId;
 //	}
+
+	{
+		vector<int> obsNums;
+		for(int f = 0; f < numSegFeat; ++f){
+			obsNums.push_back(f);
+		}
+		for(int f = 0; f < numSegFeat; ++f){
+			obsNums.push_back(f + numSegFeat);
+		}
+		features.push_back(new TerClassPairVecFeature(nextFeatId, nextParamId, obsNums));
+		pairFeats.push_back(features.back());
+
+		++nextFeatId;
+		++nextParamId;
+	}
 
 	params = vector<double>(nextParamId, 1.0);
 
@@ -2884,23 +2899,24 @@ void Camera::constructPgm(Pgm& pgm,
 			}
 
 			vector<Feature*> curFeats;
+			curFeats = nodeFeats;
 			//if segment has all neighbors - isn't on a border
-			if(nhCnt[seg] == 4){
-				curFeats = nodeFeats4;
-
-				++numInnerNodes;
-			}
-			//if segment is on a border
-			else if(nhCnt[seg] == 3){
-				curFeats = nodeFeats3;
-
-				++numBorderNodes;
-			}
-			else{
-				curFeats = nodeFeats12;
-
-				++numBorderNodes;
-			}
+//			if(nhCnt[seg] == 4){
+//				curFeats = nodeFeats4;
+//
+//				++numInnerNodes;
+//			}
+//			//if segment is on a border
+//			else if(nhCnt[seg] == 3){
+//				curFeats = nodeFeats3;
+//
+//				++numBorderNodes;
+//			}
+//			else{
+//				curFeats = nodeFeats12;
+//
+//				++numBorderNodes;
+//			}
 //			cout << "RandVarId = " << randVarId << endl;
 //			cout << "obsVecIdxs = " << obsVecIdxs << endl;
 			Cluster* curCluster = new Cluster(nextClusterId,

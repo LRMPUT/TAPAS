@@ -56,26 +56,33 @@ int main(int argc, char* argv[])
 		robot.openRobotsDrive("/dev/robots/driverLeft", "/dev/robots/driverRight");
 		robot.openCamera(vector<string>(1, "/dev/video0"));*/
 		std::vector<boost::filesystem::path> dirsTrain;
-		std::vector<boost::filesystem::path> dirsTest;
+		std::vector<boost::filesystem::path> dirsTestList;
 
 		dirsTrain.push_back("../MovementConstraints/Camera/database/przejazd6");
 		dirsTrain.push_back("../MovementConstraints/Camera/database/przejazd7");
 		dirsTrain.push_back("../MovementConstraints/Camera/database/przejazd9");
 		dirsTrain.push_back("../MovementConstraints/Camera/database/przejazd10");
 
-//		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew1");
-//		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew2");
-		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew3");
-//		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew4");
-//		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew5");
-//		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew6");
-//		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew7");
-//		dirsTest.push_back("../MovementConstraints/Camera/database/przejazdNew8");
-//		dirsTest.push_back("../MovementConstraints/Camera/database/przejazd9");
-//		dirsTest.push_back("../MovementConstraints/Camera/database/przejazd10");
-//		dirsTest.push_back("../MovementConstraints/Camera/database/przejazd11");
+		dirsTestList.push_back("../MovementConstraints/Camera/database/przejazdNew1");
+		dirsTestList.push_back("../MovementConstraints/Camera/database/przejazdNew2");
+		dirsTestList.push_back("../MovementConstraints/Camera/database/przejazdNew3");
+		dirsTestList.push_back("../MovementConstraints/Camera/database/przejazdNew4");
+		dirsTestList.push_back("../MovementConstraints/Camera/database/przejazdNew5");
+		dirsTestList.push_back("../MovementConstraints/Camera/database/przejazdNew6");
+		dirsTestList.push_back("../MovementConstraints/Camera/database/przejazdNew7");
+		dirsTestList.push_back("../MovementConstraints/Camera/database/przejazdNew8");
+//		dirsTestList.push_back("../MovementConstraints/Camera/database/przejazd9");
+//		dirsTestList.push_back("../MovementConstraints/Camera/database/przejazd10");
+//		dirsTestList.push_back("../MovementConstraints/Camera/database/przejazd11");
 
-		debug.testClassification(dirsTrain, dirsTest);
+		for(boost::filesystem::path dir : dirsTestList){
+			ofstream resLog("log/res.log", ios::app);
+			resLog << dir.string() << endl;
+			resLog.close();
+
+			std::vector<boost::filesystem::path> dirsTest{dir};
+			debug.testClassification(dirsTrain, dirsTest);
+		}
 //		debug.testClassification(dirsTrain, dirsTrain);
 
 		/*char a;

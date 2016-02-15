@@ -231,17 +231,6 @@ ELSEIF (CUDA EQUAL 0)
 ENDIF (CUDA GREATER 0)	
 
 
-#message("Copying generated ui headers")
-# Adding command for automatically copying generated ui headers 
-#foreach(file ${TapasQt_FORMS_HEADERS})
-#	get_filename_component(filename ${file} NAME)
-#	message("Copying: " ${filename})
-#	add_custom_command(
-#		OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/TapasQt/${filename}
-#		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${filename} ${CMAKE_CURRENT_SOURCE_DIR}/TapasQt/${filename}
-#		MAIN_DEPENDENCY ${CMAKE_CURRENT_BINARY_DIR}/${filename})
-#endforeach()
-
 target_link_libraries(TapasGui
 	${QT_LIBRARIES}
 	${OpenCV_LIBS}

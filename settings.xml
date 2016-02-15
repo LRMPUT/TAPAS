@@ -192,7 +192,7 @@
 				<!-- najlepsze RF, border, sigma = 8.0 : 5.13964 7.13118 -1.96993 -0.464176 -1.8064 -1.46342 -->
 				<!-- 1.33835 1.53565 -2.05861 -0.912178 -2.16437 -->
 				<params>
-					1.03899 0.870667 0.920218 -1.88262 -1.07997 -1.90631
+					0.5 -1.0
 				</params>
 			</inference>
 			<HierClassifier debug="0">
@@ -281,7 +281,7 @@
 				</Classifier> -->
 				<Classifier type="RF">
 					<cache enabled="true" />
-					<info desc_beg="0" desc_end="4" />
+					<info desc_beg="0" desc_end="7" />
 				</Classifier>
 			</HierClassifier>
 			<!--
