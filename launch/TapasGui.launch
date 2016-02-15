@@ -1,0 +1,10 @@
+<launch>
+  <node pkg="TAPAS" name="TapasGui" type="TapasGui" args="settings.xml"/>
+  <node pkg="TAPAS" name="Camera" type="Camera"/>
+
+  <param name="wheelCir" value="160" />
+  <param name="encodersCPR" value="300" />
+  <param name="wheelDistance" value="452" />
+  <param name="minLaserDist" value="100" />
+  <param name="pointCloudTimeout" value="4000" />
+</launch>

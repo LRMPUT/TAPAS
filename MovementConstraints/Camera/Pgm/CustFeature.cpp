@@ -177,5 +177,3 @@ double TerClassPairVecFeature::compParam(const std::vector<double>& vals,
 {
 	return params[paramNum()] * comp(vals, obsVec);
 }
-
-

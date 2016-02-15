@@ -43,6 +43,8 @@
 // Time measurement
 #include <chrono>
 
+//ROS
+#include "ros/ros.h"
 class Robot;
 class Debug;
 
@@ -67,6 +69,8 @@ class Robot {
 	friend class Debug;
 
 	void readPositionEstimationSettings(TiXmlElement* settings);
+
+	ros::NodeHandle nh;
 
 	// Class containing information about our position estimation from sensors
 	PositionEstimation* positionEstimation;
@@ -172,6 +176,8 @@ public:
 	//cv::Mat getLocalMapPosInGlobalMap();
 
 	void getLocalPlanData(cv::Mat& constraintsMap,cv::Mat& posRobotMapCenter, cv::Mat& globalMapCenter);
+
+	ros::NodeHandle &getNodeHandle();
 };
 
 #endif /* ROBOT_H_ */

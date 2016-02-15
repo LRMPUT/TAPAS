@@ -29,6 +29,7 @@
 
 #include <iostream>
 #include "Robot.h"
+#include <unistd.h>
 
 using namespace std;
 
@@ -271,4 +272,8 @@ cv::Mat Robot::getPosImuConstraintsMapCenter(){
 
 void Robot::getLocalPlanData(cv::Mat& constraintsMap,cv::Mat& posRobotMapCenter, cv::Mat& globalMapCenter){
 	movementConstraints->getLocalPlanningData(constraintsMap, posRobotMapCenter, globalMapCenter);
+}
+
+ros::NodeHandle &Robot::getNodeHandle() {
+	return nh;
 }

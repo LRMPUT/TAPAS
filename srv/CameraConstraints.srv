@@ -1,0 +1,5 @@
+float32[2500] constraintsMap
+uint64 timestamp
+float32[16] mapMove
+---
+float32[2500] constraintsMap

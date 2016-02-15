@@ -47,7 +47,7 @@
 #include "Pgm/CustFeature.h"
 #include "Pgm/Inference.h"
 #include "Pgm/ParamEst.h"
-#include "../../Planning/LocalPlanner.h"
+#include "../../Planning/PlannerHelpers.h"
 
 using namespace boost;
 using namespace std;
@@ -77,8 +77,7 @@ inline void __checkCudaErrors(cudaError err, const char *file, const int line )
 }
 #endif
 
-Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings) :
-		movementConstraints(imovementConstraints),
+Camera::Camera(TiXmlElement* settings) :
 		runThread(false)
 {
 	if(!settings){
@@ -86,6 +85,10 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 	}
 
 	readSettings(settings);
+
+	pointCloudClient = nh.serviceClient<TAPAS::PointCloud>("point_cloud");
+
+	ros::ServiceServer service = nh.advertiseService("camera_constraints", &Camera::insertConstraints, this);
 
 	cameras.resize(cameraParams.numCameras);
 	classifiedImage.resize(cameraParams.numCameras);
@@ -658,7 +661,7 @@ void Camera::processDir(boost::filesystem::path dir,
 	Mat curMapMove = Mat::eye(4, 4, CV_32FC1);
 	float curGoalDirGlobal = 0.0;
 
-	std::queue<MovementConstraints::PointsPacket> pointsQueue;
+	std::queue<ConstraintsHelpers::PointsPacket> pointsQueue;
 	std::chrono::high_resolution_clock::time_point mapMoveTimestamp(
 			std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::milliseconds(0)));
 
@@ -753,7 +756,7 @@ void Camera::processDir(boost::filesystem::path dir,
 				imuPrev = imuPrev.reshape(1, 3);
 			}
 			if(imuOrigGlobal.empty()){
-				imuOrigGlobal = movementConstraints->compOrient(imuPrev);
+				imuOrigGlobal = ConstraintsHelpers::compOrient(imuPrev);
 				curPosOrigMapCenter = Mat::eye(4, 4, CV_32FC1);
 			}
 			Mat imuCur, encodersCur;
@@ -783,11 +786,11 @@ void Camera::processDir(boost::filesystem::path dir,
 			}
 			//cout << "Computing curPos" << endl;
 			//cout << "encodersCur = " << encodersCur << endl << "encodersPrev = " << encodersPrev << endl;
-			curPosOrigMapCenter = movementConstraints->compNewPos(imuPrev, imuCur,
+			curPosOrigMapCenter = ConstraintsHelpers::compNewPos(imuPrev, imuCur,
 																	encodersPrev, encodersCur,
 																	curPosOrigMapCenter,
 																	imuOrigGlobal,
-																	movementConstraints->getPointCloudSettings());
+																	nh);
 
 
 			/*Mat trans = compTrans(compOrient(imuPrev), encodersCur - encodersPrev);
@@ -811,7 +814,7 @@ void Camera::processDir(boost::filesystem::path dir,
 
 			std::mutex mtxPointCloud;
 
-			MovementConstraints::processPointCloud(hokuyoData,
+			ConstraintsHelpers::processPointCloud(hokuyoData,
 													hokuyoAllPointsOrigMapCenter,
 													pointsQueue,
 													hokuyoTimestamp,
@@ -820,7 +823,7 @@ void Camera::processDir(boost::filesystem::path dir,
 													mtxPointCloud,
 													cameraParams.cameraOrigLaser.front(),
 													cameraParams.cameraOrigImu.front(),
-													movementConstraints->getPointCloudSettings());
+													nh);
 
 			//waitKey();
 			/*Mat covarLaserCur, meanLaserCur;
@@ -847,7 +850,7 @@ void Camera::processDir(boost::filesystem::path dir,
 				newPointCloudCoords.copyTo(hokuyoAllPointsOrigMapCenter.rowRange(0, 4));
 
 				//cout << "Calculating new posMapCenterGlobal" << endl;
-				imuOrigGlobal = MovementConstraints::compOrient(imuCur);
+				imuOrigGlobal = ConstraintsHelpers::compOrient(imuCur);
 				curPosOrigMapCenter = Mat::eye(4, 4, CV_32FC1);
 
 				curMapMove = mapMove * curMapMove;
@@ -1886,12 +1889,13 @@ void Camera::run(){
 			std::chrono::high_resolution_clock::time_point timeEndMapCoords;
 			std::chrono::high_resolution_clock::time_point timeEndClassification;
 			std::chrono::high_resolution_clock::time_point timeEndUpdate;
-			Mat curPosOrigMapCenter;
+			Mat curPosOrigMapCenter = Mat(4, 4, CV_32FC1);
+			Mat pointCloudOrigMapCenter;
 
 			std::unique_lock<std::mutex> lckClassRes(mtxClassResults);
 
 			std::chrono::high_resolution_clock::time_point curTimestamp = std::chrono::high_resolution_clock::now();
-			Mat pointCloudOrigMapCenter = movementConstraints->getPointCloud(curPosOrigMapCenter);
+			getPointCloud(pointCloudOrigMapCenter, curPosOrigMapCenter);
 
 			mapMoveSinceGetPointCloud = Mat::eye(4, 4, CV_32FC1);
 
@@ -2224,6 +2228,16 @@ void Camera::readSettings(TiXmlElement* settings){
 	svmParams.gamma = gamma;*/
 }
 
+void Camera::getPointCloud(Mat &pointCloudOrigMapCenter, Mat &curPosOrigMapCenter) {
+	TAPAS::PointCloud srv;
+	pointCloudClient.call(srv);
+	
+	memcpy(curPosOrigMapCenter.data, srv.response.curPosOrigMapCenter.data(), 16*sizeof(float));
+	
+	pointCloudOrigMapCenter = Mat(srv.response.cloudRows, srv.response.cloudCols, CV_32FC1);
+	int cloudSize = srv.response.cloudRows * srv.response.cloudCols * sizeof(float);
+	memcpy(pointCloudOrigMapCenter.data, srv.response.pointCloudOrigMapCenter.data(), cloudSize);
+}
 void Camera::insertNewData(cv::Mat& dataAll, cv::Mat newData, int dataSkipped){
 //	cout << "Camera::insertNewData" << endl;
 
@@ -3056,7 +3070,7 @@ void Camera::computeBestDirLocalMap(cv::Mat segmentResults,
 									float& bestDirLocalMap,
 									float& goalDirLocalMap)
 {
-	LocalPlanner::Parameters localPlannerParams;
+	PlannerHelpers::Parameters localPlannerParams;
 	localPlannerParams.debug = 0;
 	localPlannerParams.avoidObstacles = 1;
 	localPlannerParams.histResolution = 10;
@@ -3077,7 +3091,7 @@ void Camera::computeBestDirLocalMap(cv::Mat segmentResults,
 
 	int numSectors = (float)360 / localPlannerParams.histResolution + 0.5;
 	vector<float> histSectors(numSectors, 0.0);
-	LocalPlanner::updateHistogram(histSectors,
+	PlannerHelpers::updateHistogram(histSectors,
 								posOrigMapCenter,
 								segmentResultsFloat,
 								localPlannerParams);
@@ -3087,7 +3101,7 @@ void Camera::computeBestDirLocalMap(cv::Mat segmentResults,
 		cout << "smoothing" << endl;
 	}
 
-	LocalPlanner::smoothHistogram(histSectors, localPlannerParams);
+	PlannerHelpers::smoothHistogram(histSectors, localPlannerParams);
 
 	if(cameraParams.debugLevel >= 1){
 //				cout << "histSectors = " << histSectors << endl;
@@ -3097,14 +3111,14 @@ void Camera::computeBestDirLocalMap(cv::Mat segmentResults,
 //						", goalDirsGlobal.size() = " << goalDirsGlobal.size() << endl;
 	}
 
-	goalDirLocalMap = LocalPlanner::determineGoalInLocalMap(mapCenterOrigGlobal, goalDirGlobal);
+	goalDirLocalMap = PlannerHelpers::determineGoalInLocalMap(mapCenterOrigGlobal, goalDirGlobal);
 
 	if(cameraParams.debugLevel >= 1){
 		cout << "finding optim sector" << endl;
 	}
 
 	/// optimal direction in the local map - nearest to the goal
-	bestDirLocalMap = LocalPlanner::findOptimSector(histSectors,
+	bestDirLocalMap = PlannerHelpers::findOptimSector(histSectors,
 													posOrigMapCenter,
 													goalDirLocalMap,
 													localPlannerParams);
@@ -3206,11 +3220,7 @@ void Camera::saveCache(boost::filesystem::path cacheFile){
 	}
 }
 
-//Inserts computed constraints into map
-void Camera::insertConstraints(	cv::Mat map,
-								std::chrono::high_resolution_clock::time_point curTimestampMap,
-								cv::Mat mapMove)
-{
+bool Camera::insertConstraints(TAPAS::CameraConstraints::Request &req, TAPAS::CameraConstraints::Response &res) {
 //	std::unique_lock<std::mutex> lck(mtxConstr);
 //	if(!constraints.empty() && curTimestampMap < curTimestamp){
 //		for(int x = 0; x < MAP_SIZE; x++){
@@ -3223,6 +3233,13 @@ void Camera::insertConstraints(	cv::Mat map,
 //	}
 //	lck.unlock();
 
+	Mat map = Mat(MAP_SIZE, MAP_SIZE, CV_32FC1);
+	Mat mapMove = Mat(4, 4, CV_32FC1);
+	std::chrono::nanoseconds nano(req.timestamp);
+
+	memcpy(map.data, req.constraintsMap.data(), req.constraintsMap.size() * sizeof(float));
+	memcpy(mapMove.data, req.mapMove.data(), req.mapMove.size() * sizeof(float));
+	std::chrono::high_resolution_clock::time_point curTimestampMap(nano);
 
 	if(!pixelCoordsMapOrigRobotMapCenter.empty()){
 		std::chrono::high_resolution_clock::time_point timeBegin;
@@ -3352,6 +3369,8 @@ void Camera::insertConstraints(	cv::Mat map,
 		cout << "Infering time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndInfering - timeEndPreparing).count() << " ms" << endl;
 
 	}
+	memcpy(res.constraintsMap.data(), map.data, MAP_SIZE * MAP_SIZE * sizeof(float));
+	return true;
 }
 
 //CV_8UC3 2x640x480: left, right image
