@@ -1,10 +1,4 @@
-<<<<<<< HEAD
-cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
-# 0 - without CUDA
-# 1 - with CUDA
-set(CUDA 1)
-=======
 cmake_minimum_required(VERSION 2.8.3)
 project(TAPAS)
 
@@ -39,7 +33,6 @@ include_directories(
 # 0 - without CUDA
 # 1 - with CUDA
 set(CUDA 0)
->>>>>>> master
 
 # 0 - TAPAS
 # 1 - TROBOT
@@ -143,10 +136,7 @@ set(Tapas_SOURCES
 	MovementConstraints/Camera/HierClassifier/ClassifierSVM.cpp
 	MovementConstraints/Camera/HierClassifier/ClassifierRF.cpp
 	MovementConstraints/Camera/HierClassifier/HierClassifier.cpp
-<<<<<<< HEAD
-=======
 	MovementConstraints/ConstraintsHelpers.cpp
->>>>>>> master
 	MovementConstraints/MovementConstraints.cpp
 	#Planning/PlanningSearching/LocalPlannerSearching.cpp
 	#Planning/PlanningToGold/LocalPlannerToGold.cpp
@@ -154,10 +144,7 @@ set(Tapas_SOURCES
 	Planning/RobotDrivers/robotDrivers.cpp
 	Planning/GlobalPlanner.cpp
 	Planning/LocalPlanner.cpp
-<<<<<<< HEAD
-=======
 	Planning/PlannerHelpers.cpp
->>>>>>> master
 	PositionEstimation/Util/ExtendedKalmanFilter.cpp
 	PositionEstimation/Encoders/Encoders.cpp
 	PositionEstimation/GPS/src/context.c
@@ -211,12 +198,8 @@ target_link_libraries(Tapas
 	${Boost_LIBRARIES}
 	${urg_LIBRARIES}
 	${TinyXML_LIBRARIES}
-<<<<<<< HEAD
-	${LBFGS_LIBRARIES})
-=======
 	${LBFGS_LIBRARIES}
 	${catkin_LIBRARIES})
->>>>>>> master
 
 find_package(OpenGL REQUIRED)
 set(QGLViewer_LIBRARIES QGLViewer)
@@ -280,8 +263,6 @@ ELSEIF (CUDA EQUAL 0)
 		${TapasQt_FORMS_HEADERS})
 ENDIF (CUDA GREATER 0)	
 
-<<<<<<< HEAD
-=======
 target_link_libraries(TapasGui
 	${QT_LIBRARIES}
 	${OpenCV_LIBS}
@@ -321,7 +302,6 @@ ELSEIF ( CUDA EQUAL 0)
 		MovementConstraints/Camera/main.cpp
 	)
 ENDIF( CUDA GREATER 0)
->>>>>>> master
 
 #message("Copying generated ui headers")
 # Adding command for automatically copying generated ui headers 
@@ -334,21 +314,9 @@ ENDIF( CUDA GREATER 0)
 #		MAIN_DEPENDENCY ${CMAKE_CURRENT_BINARY_DIR}/${filename})
 #endforeach()
 
-<<<<<<< HEAD
-target_link_libraries(TapasGui
-	${QT_LIBRARIES}
-	${OpenCV_LIBS}
-	${Boost_LIBRARIES}
-	${OPENGL_LIBRARIES}
-	${QGLViewer_LIBRARIES}
-	${urg_LIBRARIES}
-	${TinyXML_LIBRARIES}
-	${LBFGS_LIBRARIES})
-=======
 target_link_libraries(Camera
 	${OpenCV_LIBS}
 	${Boost_LIBRARIES}
 	${TinyXML_LIBRARIES}
 	${LBFGS_LIBRARIES}
 	${catkin_LIBRARIES})
->>>>>>> master
