@@ -135,6 +135,8 @@ public:
 private:
 	ros::NodeHandle nh;
 
+	ros::ServiceServer constraintsService;
+
 	ros::ServiceClient pointCloudClient;
 
 	//Parent MovementConstraints class

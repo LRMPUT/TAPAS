@@ -86,10 +86,9 @@ Camera::Camera(TiXmlElement* settings) :
 
 	readSettings(settings);
 
+	constraintsService = nh.advertiseService("camera_constraints", &Camera::insertConstraints, this);
+
 	pointCloudClient = nh.serviceClient<TAPAS::PointCloud>("point_cloud");
-
-	ros::ServiceServer service = nh.advertiseService("camera_constraints", &Camera::insertConstraints, this);
-
 	cameras.resize(cameraParams.numCameras);
 	classifiedImage.resize(cameraParams.numCameras);
 

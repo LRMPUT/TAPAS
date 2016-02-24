@@ -277,3 +277,4 @@ void Robot::getLocalPlanData(cv::Mat& constraintsMap,cv::Mat& posRobotMapCenter,
 ros::NodeHandle &Robot::getNodeHandle() {
 	return nh;
 }
+

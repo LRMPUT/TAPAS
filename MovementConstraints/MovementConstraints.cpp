@@ -46,9 +46,8 @@ MovementConstraints::MovementConstraints(Robot* irobot, TiXmlElement* settings) 
 	}
 	readSettings(settings);
 	TiXmlElement* pCamera = settings->FirstChildElement("Camera");
-	camera = new Camera(pCamera);
-
 	ros::NodeHandle nh = robot->getNodeHandle();
+	camera = new Camera(pCamera);
 
 	cameraConstraintsClient = nh.serviceClient<TAPAS::CameraConstraints>("camera_constraints");
 
