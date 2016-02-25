@@ -87,6 +87,8 @@ Camera::Camera(TiXmlElement* settings) :
 	readSettings(settings);
 
 	constraintsService = nh.advertiseService("camera_constraints", &Camera::insertConstraints, this);
+	segmentService = nh.advertiseService("segment_image", &Camera::segmentImage, this);
+	colorService = nh.advertiseService("color_segments", &Camera::colorSegments, this);
 
 	pointCloudClient = nh.serviceClient<TAPAS::PointCloud>("point_cloud");
 	cameras.resize(cameraParams.numCameras);
@@ -124,6 +126,31 @@ Camera::~Camera(){
 	for(int i = 0; i < hierClassifiers.size(); i++){
 		delete hierClassifiers[i];
 	}
+}
+
+bool Camera::segmentImage(TAPAS::SegmentImage::Request &req, TAPAS::SegmentImage::Response &res) {
+	sensor_msgs::Image imageMsg = req.image;
+	cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvCopy(imageMsg);
+	Mat image = cv_ptr->image;
+
+	Mat segments = hierClassifiers[0]->segmentImage(image, req.kCurSegment);
+	
+	res.segmentsRows = segments.rows;
+	res.segmentsCols = segments.cols;
+	memcpy(res.segments.data(), segments.data, segments.rows * segments.cols * sizeof(int));
+	return true;
+}
+
+bool Camera::colorSegments(TAPAS::ColorSegments::Request &req, TAPAS::ColorSegments::Response &res) {
+	Mat segments(req.segmentsRows, req.segmentsCols, CV_32SC1);
+	memcpy(segments.data, req.segments.data(), req.segmentsRows * req.segmentsCols * sizeof(int));
+
+	Mat image = hierClassifiers[0]->colorSegments(segments);
+
+	cv_bridge::CvImagePtr cv_ptr;
+	cv_ptr->image = image;
+	cv_ptr->toImageMsg(res.image);
+	return true;
 }
 
 //void Camera::computeConstraints(std::vector<cv::Mat> mapSegments,

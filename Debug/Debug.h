@@ -10,6 +10,7 @@
 
 #include "../Robot/Robot.h"
 #include "../Planning/GlobalPlanner.h"
+#include <cv_bridge/cv_bridge.h>
 
 class Debug{
 	Robot* robot;
@@ -43,6 +44,8 @@ public:
 
 	//CV_8UC3 2x640x480: left, right image
 	const std::vector<cv::Mat> getCameraData();
+
+	cv::Mat colorImage(cv::Mat image);
 
 	void testSegmentation(boost::filesystem::path dir);
 

@@ -86,6 +86,29 @@ const std::vector<cv::Mat> Debug::getCameraData(){
 	return robot->movementConstraints->camera->getData();
 }
 
+Mat Debug::colorImage(Mat image) {
+	ros::NodeHandle nh;
+
+	ros::ServiceClient segmentClient = nh.serviceClient<TAPAS::SegmentImage>("segment_image");
+	TAPAS::SegmentImage segmentSrv;
+	cv_bridge::CvImagePtr cv_ptr;
+	cv_ptr->image = image;
+	cv_ptr->toImageMsg(segmentSrv.request.image);
+	segmentSrv.request.kCurSegment = -1;
+	segmentClient.call(segmentSrv);
+	
+	ros::ServiceClient colorClient = nh.serviceClient<TAPAS::ColorSegments>("color_segments");
+	TAPAS::ColorSegments colorSrv;
+	colorSrv.request.segmentsRows = segmentSrv.response.segmentsRows;
+	colorSrv.request.segmentsCols = segmentSrv.response.segmentsCols;
+	colorSrv.request.segments = segmentSrv.response.segments;
+	colorClient.call(colorSrv);
+	cv_ptr = cv_bridge::toCvCopy(colorSrv.response.image);
+	Mat colored = cv_ptr->image;
+
+	return colored;
+}
+
 void Debug::testSegmentation(boost::filesystem::path dir){
 	filesystem::directory_iterator endIt;
 	namedWindow("segmented");
@@ -95,12 +118,10 @@ void Debug::testSegmentation(boost::filesystem::path dir){
 		if(dirIt->path().filename().string().find(".jpg") != string::npos){
 			cout << "Processing image " << dirIt->path().string() << endl;
 			Mat image = imread(dirIt->path().string());
-			if(robot->movementConstraints->camera->hierClassifiers.size() > 0){
-				Mat segments = robot->movementConstraints->camera->hierClassifiers[0]->segmentImage(image);
-				Mat colored = robot->movementConstraints->camera->hierClassifiers[0]->colorSegments(segments);
-				imshow("original", image);
-				imshow("segmented", colored);
-			}
+			Mat colored = colorImage(image);
+
+			imshow("original", image);
+			imshow("segmented", colored);
 			waitKey();
 		}
 	}

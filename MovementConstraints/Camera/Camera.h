@@ -49,7 +49,11 @@
 #include "Pgm/Pgm.h"
 //ROS
 #include "ros/ros.h"
+#include <cv_bridge/cv_bridge.h>
+#include "sensor_msgs/Image.h"
 #include "TAPAS/CameraConstraints.h"
+#include "TAPAS/SegmentImage.h"
+#include "TAPAS/ColorSegments.h"
 
 class MovementConstraints;
 class Debug;
@@ -70,6 +74,10 @@ public:
 	// 						cv::Mat mapMove);
 
 	bool insertConstraints(TAPAS::CameraConstraints::Request &req, TAPAS::CameraConstraints::Response &res);
+
+	bool segmentImage(TAPAS::SegmentImage::Request &req, TAPAS::SegmentImage::Response &res);
+
+	bool colorSegments(TAPAS::ColorSegments::Request &req, TAPAS::ColorSegments::Response &res);
 
 	//CV_8UC3 1x640x480: left, right image
 	const std::vector<cv::Mat> getData();
@@ -136,6 +144,10 @@ private:
 	ros::NodeHandle nh;
 
 	ros::ServiceServer constraintsService;
+
+	ros::ServiceServer segmentService;
+
+	ros::ServiceServer colorService;
 
 	ros::ServiceClient pointCloudClient;
 

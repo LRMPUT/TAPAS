@@ -4,7 +4,9 @@ project(TAPAS)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  cv_bridge
   std_msgs
+  sensor_msgs
   message_generation
 )
 
@@ -12,11 +14,14 @@ add_service_files(
   FILES
   PointCloud.srv
   CameraConstraints.srv
+  SegmentImage.srv
+  ColorSegments.srv
 )
 
 generate_messages(
   DEPENDENCIES
   std_msgs
+  sensor_msgs
 )
 
 catkin_package(

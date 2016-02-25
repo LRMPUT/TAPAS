@@ -126,7 +126,6 @@ void HierClassifier::clearData(){
 HierClassifier::HierClassifier(cv::Mat icameraMatrix) :
 	cameraMatrix(icameraMatrix)
 {
-
 }
 
 HierClassifier::HierClassifier(cv::Mat icameraMatrix, TiXmlElement* settings) :
