@@ -48,6 +48,7 @@
 #include "Pgm/Inference.h"
 #include "Pgm/ParamEst.h"
 #include "../../Planning/PlannerHelpers.h"
+#include "std_msgs/String.h"
 
 using namespace boost;
 using namespace std;
@@ -85,8 +86,9 @@ Camera::Camera(TiXmlElement* settings) :
 	}
 
 	readSettings(settings);
-
-	constraintsService = nh.advertiseService("camera_constraints", &Camera::insertConstraints, this);
+	if(ros::this_node::getName() == "/Camera") { 
+		constraintsService = nh.advertiseService("camera_constraints", &Camera::insertConstraints, this);
+	}
 	segmentService = nh.advertiseService("segment_image", &Camera::segmentImage, this);
 	colorService = nh.advertiseService("color_segments", &Camera::colorSegments, this);
 
@@ -115,6 +117,9 @@ Camera::Camera(TiXmlElement* settings) :
 		readCache("cache/cameraCache");
 	}
 	cameraThread = std::thread(&Camera::run, this);
+	if(ros::this_node::getName() == "/Camera") { 
+		dataThread = std::thread(&Camera::sendData, this);
+	}
 }
 
 Camera::~Camera(){
@@ -129,8 +134,7 @@ Camera::~Camera(){
 }
 
 bool Camera::segmentImage(TAPAS::SegmentImage::Request &req, TAPAS::SegmentImage::Response &res) {
-	sensor_msgs::Image imageMsg = req.image;
-	cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvCopy(imageMsg);
+	cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvCopy(req.image);
 	Mat image = cv_ptr->image;
 
 	Mat segments = hierClassifiers[0]->segmentImage(image, req.kCurSegment);
@@ -2081,7 +2085,58 @@ void Camera::run(){
 	}
 }
 
+void Camera::sendData(){
+	vector<Scalar> colors;
+	colors.push_back(Scalar(0, 255, 0));	//grass - green
+	colors.push_back(Scalar(0, 0, 255));	//wood - red
+	colors.push_back(Scalar(0, 255, 255));	//yellow - ceramic
+	colors.push_back(Scalar(255, 0, 0));	//blue - asphalt
+	Mat image, classified;
+	sensor_msgs::ImagePtr image_msg, classified_msg;
 
+  	ros::Publisher image_pub = nh.advertise<sensor_msgs::Image>("camera_image", 10);
+  	ros::Publisher classified_pub = nh.advertise<sensor_msgs::Image>("camera_classified", 10);
+  	ros::Publisher test_pub = nh.advertise<std_msgs::String>("camera_test", 10);
+
+  	ros::Rate loop_rate(10);
+	
+	while(ros::ok()) {
+		std_msgs::String msg;
+		msg.data = "camera test";
+		test_pub.publish(msg);
+
+		std::unique_lock<std::mutex> image_lck(mtxDevice);
+		cameras[0].grab();
+		cameras[0].retrieve(image);
+		if(!image.empty() && (image.rows != cameraParams.numRows || image.cols != cameraParams.numCols)){
+			Mat imageResized;
+			resize(image, imageResized, Size(cameraParams.numCols, cameraParams.numRows));
+			image = imageResized;
+		}
+		image_lck.unlock();
+		sensor_msgs::ImagePtr image_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image).toImageMsg();
+
+		image_pub.publish(image_msg);
+
+		std::unique_lock<std::mutex> classified_lck(mtxClassIm);
+
+		if(!sharedClassifiedImage.empty() && !sharedOriginalImage.empty()){
+			Mat coloredOriginal = sharedOriginalImage.clone();
+			for(int l = 0; l < cameraParams.labels.size(); l++){
+				coloredOriginal.setTo(colors[l], sharedClassifiedImage == l);
+			}
+			classified = coloredOriginal * 0.25 + sharedOriginalImage * 0.75;
+			classified.setTo(Scalar(0, 0, 0), cameraParams.maskIgnore.front() != 0);
+		}
+		classified_lck.unlock();
+		sensor_msgs::ImagePtr classified_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", classified).toImageMsg();
+
+		classified_pub.publish(classified_msg);
+
+		ros::spinOnce();
+		loop_rate.sleep();
+	}
+}
 
 void Camera::readSettings(TiXmlElement* settings){
 	if(settings->QueryBoolAttribute("runThread", &runThread) != TIXML_SUCCESS){

@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
 		TiXmlElement *pCamera = settings.FirstChildElement("Robot")->
 			FirstChildElement("MovementConstraints")->FirstChildElement("Camera");
 		Camera c(pCamera);
-		// c.open(vector<string>(1, "/dev/video0"));
+		c.open(vector<string>(1, "/dev/video0"));
 		ros::spin();
 	}
 	catch(char const* error){

@@ -14,6 +14,16 @@
 
 class Debug{
 	Robot* robot;
+
+	cv::Mat cameraImage;
+
+	cv::Mat classifiedImage;
+
+	ros::NodeHandle nh;
+
+	ros::Subscriber image_sub;
+
+	ros::Subscriber classified_sub;
 public:
 	Debug(Robot* irobot);
 
@@ -41,6 +51,10 @@ public:
 
 	//CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right
 	const cv::Mat getHokuyoData();
+
+	void imageCallback(const sensor_msgs::ImagePtr& msg);
+
+	void classifiedCallback(const sensor_msgs::ImagePtr& msg);
 
 	//CV_8UC3 2x640x480: left, right image
 	const std::vector<cv::Mat> getCameraData();

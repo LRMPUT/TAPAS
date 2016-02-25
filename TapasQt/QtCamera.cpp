@@ -54,8 +54,8 @@ std::vector<cv::Mat> QtCamera::getFrame(){
 
 void QtCamera::refresh(){
 //	cout << "QtCamera::refresh()" << endl;
-	if(robot->isCameraOpen()){
-		vector<Mat> frames = getFrame();
+	vector<Mat> frames = getFrame();
+	if(!frames[0].empty()){
 		Mat frameDisp;
 
 		cvtColor(frames[0], frameDisp, CV_BGR2RGB);

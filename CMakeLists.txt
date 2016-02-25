@@ -5,6 +5,7 @@ project(TAPAS)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   cv_bridge
+  image_transport
   std_msgs
   sensor_msgs
   message_generation

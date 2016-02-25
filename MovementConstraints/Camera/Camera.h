@@ -175,6 +175,8 @@ private:
 
 	std::thread cameraThread;
 
+	std::thread dataThread;
+
 	std::mutex mtxDevice;
 
 	std::mutex mtxConstr;
@@ -276,6 +278,8 @@ private:
 
 	//Run as separate thread
 	void run();
+
+	void sendData();
 
 	void readSettings(TiXmlElement* settings);
 

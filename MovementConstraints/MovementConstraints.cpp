@@ -50,7 +50,6 @@ MovementConstraints::MovementConstraints(Robot* irobot, TiXmlElement* settings) 
 	camera = new Camera(pCamera);
 
 	cameraConstraintsClient = nh.serviceClient<TAPAS::CameraConstraints>("camera_constraints");
-
 	constraintsMap = Mat(MAP_SIZE, MAP_SIZE, CV_32FC1, Scalar(0));
 
 	ros::ServiceServer service = nh.advertiseService("point_cloud", &MovementConstraints::getPointCloud, this);

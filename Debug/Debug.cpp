@@ -28,6 +28,9 @@ using namespace boost;
 
 Debug::Debug(Robot* irobot) : robot(irobot){
 	cout << "Debug::Debug" << endl;
+	ros::NodeHandle nh;
+	image_sub = nh.subscribe("camera_image", 10, &Debug::imageCallback, this);
+	classified_sub = nh.subscribe("camera_classified", 10, &Debug::classifiedCallback, this);
 }
 
 //----------------------MODES OF OPERATION
@@ -81,9 +84,26 @@ const cv::Mat Debug::getHokuyoData(){
 	return robot->movementConstraints->hokuyo.getData(timestamp);
 }
 
+void Debug::imageCallback(const sensor_msgs::ImagePtr& msg) {
+	cout << "image callback" << endl;
+	cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, "bgr8");
+	cout << "image callback 2" << endl;
+	cameraImage = cv_ptr->image;
+}
+
+void Debug::classifiedCallback(const sensor_msgs::ImagePtr& msg) {
+	cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, "bgr8");
+	classifiedImage = cv_ptr->image;
+	if(classifiedImage.empty()) {
+		cout << "image empty" << endl;
+	} else {
+		cout << "image not empty" << endl;
+	}
+}
+
 //CV_8UC3 2x640x480: left, right image
 const std::vector<cv::Mat> Debug::getCameraData(){
-	return robot->movementConstraints->camera->getData();
+	return vector<Mat>(1, cameraImage);
 }
 
 Mat Debug::colorImage(Mat image) {
