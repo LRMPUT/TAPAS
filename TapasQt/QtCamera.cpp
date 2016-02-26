@@ -82,12 +82,10 @@ void QtCamera::connect(){
 	if(ui->cameraPortCombo->count() != 0){
 		vector<string> ports;
 		ports.push_back(ui->gpsPortCombo->currentText().toAscii().data());
-		robot->openCamera(ports);
 	}
 }
 
 void QtCamera::disconnect(){
-	robot->closeCamera();
 }
 
 void QtCamera::openCameraWindow(){

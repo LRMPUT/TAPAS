@@ -73,9 +73,6 @@ public:
 
 private:
 
-	// Class to get data from Camera
-	Camera* camera;
-
 	// Class to get data from Hokuyo
 	Hokuyo hokuyo;
 
@@ -186,13 +183,6 @@ public:
 	void closeHokuyo();
 
 	bool isHokuyoOpen();
-
-	//Camera
-	void openCamera(std::vector<std::string> device);
-
-	void closeCamera();
-
-	bool isCameraOpen();
 };
 
 #include "../Robot/Robot.h"

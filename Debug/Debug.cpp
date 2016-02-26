@@ -26,11 +26,12 @@ using namespace cv;
 using namespace std;
 using namespace boost;
 
-Debug::Debug(Robot* irobot) : robot(irobot){
+Debug::Debug(Robot* irobot) : robot(irobot), it(nh){
 	cout << "Debug::Debug" << endl;
-	ros::NodeHandle nh;
-	image_sub = nh.subscribe("camera_image", 10, &Debug::imageCallback, this);
-	classified_sub = nh.subscribe("camera_classified", 10, &Debug::classifiedCallback, this);
+	image_sub = it.subscribe("camera_image", 10, &Debug::imageCallback, this);
+	// classified_sub = it.subscribe("camera_classified", 10, &Debug::classifiedCallback, this);
+	coords_sub = nh.subscribe("camera_coords", 10, &Debug::coordsCallback, this);
+	colors_sub = nh.subscribe("camera_colors", 10, &Debug::colorsCallback, this);
 }
 
 //----------------------MODES OF OPERATION
@@ -84,21 +85,21 @@ const cv::Mat Debug::getHokuyoData(){
 	return robot->movementConstraints->hokuyo.getData(timestamp);
 }
 
-void Debug::imageCallback(const sensor_msgs::ImagePtr& msg) {
-	cout << "image callback" << endl;
-	cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, "bgr8");
-	cout << "image callback 2" << endl;
-	cameraImage = cv_ptr->image;
+void Debug::imageCallback(const sensor_msgs::ImageConstPtr& msg) {
+	cameraImage = RosHelpers::readImageMsg(msg);
 }
 
-void Debug::classifiedCallback(const sensor_msgs::ImagePtr& msg) {
-	cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, "bgr8");
+void Debug::classifiedCallback(const sensor_msgs::ImageConstPtr& msg) {
+	cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
 	classifiedImage = cv_ptr->image;
-	if(classifiedImage.empty()) {
-		cout << "image empty" << endl;
-	} else {
-		cout << "image not empty" << endl;
-	}
+}
+
+void Debug::coordsCallback(const TAPAS::Matrix msg) {
+	pixelCoords = RosHelpers::readMatrixMsg(msg);
+}
+
+void Debug::colorsCallback(const TAPAS::Matrix msg) {
+	pixelColors = RosHelpers::readMatrixMsg(msg);
 }
 
 //CV_8UC3 2x640x480: left, right image
@@ -147,36 +148,6 @@ void Debug::testSegmentation(boost::filesystem::path dir){
 	}
 }
 
-void Debug::testTraining(std::vector<boost::filesystem::path> dirs){
-	robot->movementConstraints->camera->learnFromDir(dirs);
-}
-
-void Debug::testClassification(	std::vector<boost::filesystem::path> dirsTrain,
-								std::vector<boost::filesystem::path> dirsTest)
-{
-//	robot->movementConstraints->camera->learnFromDir(dirsTrain);
-	robot->movementConstraints->camera->classifyFromDir(dirsTest);
-}
-
-void Debug::testConstraints(boost::filesystem::path dirTrain,
-							boost::filesystem::path dirTest)
-{
-	//robot->movementConstraints->camera->learnFromDir(dirTrain);
-	robot->movementConstraints->camera->readCache("cameraCache");
-	filesystem::directory_iterator endIt;
-	for(filesystem::directory_iterator dirIt(dirTrain); dirIt != endIt; dirIt++){
-		if(dirIt->path().filename().string().find(".jpg") != string::npos){
-			Mat image = imread(dirIt->path().string());
-			if(image.data == NULL){
-				throw "Bad image file";
-			}
-			vector<Mat> data(1, image);
-			//robot->movementConstraints->camera->computeConstraints(data);
-			waitKey();
-		}
-	}
-}
-
 void Debug::testEncoders(){
 	robot->openEncoders("/dev/robots/encoders");
 	while(true){
@@ -219,9 +190,8 @@ std::vector<cv::Point2f> Debug::getPointCloudCamera(cv::Mat& image){
 	Mat curPosMapCenter;
 	Mat pointCloudCameraMapCenter = robot->movementConstraints->getPointCloud(curPosMapCenter);
 	//cout << "Got point cloud" << endl;
-	if(robot->movementConstraints->camera->isOpen()){
-		image = robot->movementConstraints->camera->getData().front();
-	}
+	image = cameraImage;
+
 	vector<Point2f> pointsImage;
 	//cout << curPosMapCenter.size() << ", " << pointCloudCameraMapCenter.size() << endl;
 	if(!curPosMapCenter.empty() && !pointCloudCameraMapCenter.empty()){
@@ -232,8 +202,8 @@ std::vector<cv::Point2f> Debug::getPointCloudCamera(cv::Mat& image){
 		projectPoints(	allPointsCamera.rowRange(0, 3).t(),
 						Matx<float, 3, 1>(0, 0, 0),
 						Matx<float, 3, 1>(0, 0, 0),
-						robot->movementConstraints->camera->cameraParams.cameraMatrix.front(),
-						robot->movementConstraints->camera->cameraParams.distCoeffs.front(),
+						RosHelpers::readMatrixParam(nh, "cameraMatrix", 3, 3),
+						RosHelpers::readMatrixParam(nh, "distCoeffs", 1, 5),
 						pointsImage);
 	}
 	return pointsImage;
@@ -247,7 +217,7 @@ cv::Mat Debug::getPointCloudImu(cv::Mat& curImuOrigMapCenter, cv::Mat& curMapCen
 }
 
 cv::Mat Debug::getClassifiedImage(){
-	return robot->movementConstraints->camera->getClassifiedImage();
+	return classifiedImage;
 }
 
 GlobalPlanner::GlobalPlanInfo Debug::getGlobalPlan(){
@@ -268,7 +238,8 @@ float Debug::getHeadingToGoal(){
 void Debug::getPixelPointCloud(cv::Mat& retPixelCoords,
 							cv::Mat& retPixelColors)
 {
-	robot->movementConstraints->camera->getPixelPointCloud(retPixelCoords, retPixelColors);
+	retPixelCoords = pixelCoords;
+	retPixelColors = pixelColors;
 }
 
 float Debug::getImuAccVariance(){

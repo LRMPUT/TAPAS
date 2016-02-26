@@ -141,7 +141,7 @@ bool Camera::segmentImage(TAPAS::SegmentImage::Request &req, TAPAS::SegmentImage
 	
 	res.segmentsRows = segments.rows;
 	res.segmentsCols = segments.cols;
-	memcpy(res.segments.data(), segments.data, segments.rows * segments.cols * sizeof(int));
+	res.segments.assign((float*)segments.datastart, (float*)segments.dataend);
 	return true;
 }
 
@@ -2094,17 +2094,16 @@ void Camera::sendData(){
 	Mat image, classified;
 	sensor_msgs::ImagePtr image_msg, classified_msg;
 
-  	ros::Publisher image_pub = nh.advertise<sensor_msgs::Image>("camera_image", 10);
-  	ros::Publisher classified_pub = nh.advertise<sensor_msgs::Image>("camera_classified", 10);
-  	ros::Publisher test_pub = nh.advertise<std_msgs::String>("camera_test", 10);
+	image_transport::ImageTransport it(nh);
+
+  	image_transport::Publisher image_pub = it.advertise("camera_image", 10);
+  	image_transport::Publisher classified_pub = it.advertise("camera_classified", 10);
+  	ros::Publisher coords_pub = nh.advertise<TAPAS::Matrix>("camera_coords", 10);
+  	ros::Publisher colors_pub = nh.advertise<TAPAS::Matrix>("camera_colors", 10);
 
   	ros::Rate loop_rate(10);
 	
 	while(ros::ok()) {
-		std_msgs::String msg;
-		msg.data = "camera test";
-		test_pub.publish(msg);
-
 		std::unique_lock<std::mutex> image_lck(mtxDevice);
 		cameras[0].grab();
 		cameras[0].retrieve(image);
@@ -2114,7 +2113,7 @@ void Camera::sendData(){
 			image = imageResized;
 		}
 		image_lck.unlock();
-		sensor_msgs::ImagePtr image_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", image).toImageMsg();
+		sensor_msgs::ImagePtr image_msg = cv_bridge::CvImage(std_msgs::Header(), sensor_msgs::image_encodings::BGR8, image).toImageMsg();
 
 		image_pub.publish(image_msg);
 
@@ -2129,9 +2128,19 @@ void Camera::sendData(){
 			classified.setTo(Scalar(0, 0, 0), cameraParams.maskIgnore.front() != 0);
 		}
 		classified_lck.unlock();
-		sensor_msgs::ImagePtr classified_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", classified).toImageMsg();
+		sensor_msgs::ImagePtr classified_msg = cv_bridge::CvImage(std_msgs::Header(), sensor_msgs::image_encodings::BGR8, classified).toImageMsg();
 
 		classified_pub.publish(classified_msg);
+
+		std::unique_lock<std::mutex> cloud_lck(mtxClassResults);
+
+		TAPAS::Matrix coords_msg = RosHelpers::makeMatrixMsg(pixelCoordsMapOrigRobotMapCenter);
+		TAPAS::Matrix colors_msg = RosHelpers::makeMatrixMsg(pixelColorsMap);
+
+		coords_pub.publish(coords_msg);
+		colors_pub.publish(colors_msg);
+
+		cloud_lck.unlock();
 
 		ros::spinOnce();
 		loop_rate.sleep();
