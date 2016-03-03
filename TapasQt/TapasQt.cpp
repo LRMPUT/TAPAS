@@ -82,7 +82,7 @@ TapasQt::TapasQt(const char* settingsFile, QWidget *parent, Qt::WFlags flags)
 //	cout << "Opening robots drive" << endl;
 //	robot.openRobotsDrive("/dev/robots/driverLeft", "/dev/robots/driverRight");
 	cout << "camera" << endl;
-	robot.openCamera(vector<string>(1, "/dev/video0"));
+	// robot.openCamera(vector<string>(1, "/dev/video0"));
 
 	cout << "End TapasQt::TapasQt" << endl;
 }

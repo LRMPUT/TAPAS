@@ -4,19 +4,27 @@ project(TAPAS)
 
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  cv_bridge
+  image_transport
   std_msgs
+  sensor_msgs
   message_generation
 )
 
-add_service_files(
-  FILES
+add_message_files(DIRECTORY msg FILES Matrix.msg)
+
+add_service_files(DIRECTORY srv 
+  FILES 
   PointCloud.srv
   CameraConstraints.srv
+  SegmentImage.srv
+  ColorSegments.srv
 )
 
 generate_messages(
   DEPENDENCIES
   std_msgs
+  sensor_msgs
 )
 
 catkin_package(
@@ -124,18 +132,18 @@ set(Tapas_SOURCES
 	MechanicalGrabber/MechanicalGrabber.cpp
 	MovementConstraints/Hokuyo/Hokuyo.cpp
 	MovementConstraints/Sharp/Sharp.cpp
-	MovementConstraints/Camera/LibSVM-weights/svm.cpp
-	MovementConstraints/Camera/Pgm/CustFeature.cpp
-	MovementConstraints/Camera/Pgm/Inference.cpp
-	MovementConstraints/Camera/Pgm/ParamEst.cpp
-	MovementConstraints/Camera/Pgm/Pgm.cpp
+	#MovementConstraints/Camera/LibSVM-weights/svm.cpp
+	#MovementConstraints/Camera/Pgm/CustFeature.cpp
+	#MovementConstraints/Camera/Pgm/Inference.cpp
+	#MovementConstraints/Camera/Pgm/ParamEst.cpp
+	#MovementConstraints/Camera/Pgm/Pgm.cpp
 	#MovementConstraints/Camera/Pgm/UnionFind.cpp
-	MovementConstraints/Camera/Camera.cpp
-	MovementConstraints/Camera/HierClassifier/UnionFind.cpp
-	MovementConstraints/Camera/HierClassifier/Classifier.cpp
-	MovementConstraints/Camera/HierClassifier/ClassifierSVM.cpp
-	MovementConstraints/Camera/HierClassifier/ClassifierRF.cpp
-	MovementConstraints/Camera/HierClassifier/HierClassifier.cpp
+	#MovementConstraints/Camera/Camera.cpp
+	#MovementConstraints/Camera/HierClassifier/UnionFind.cpp
+	#MovementConstraints/Camera/HierClassifier/Classifier.cpp
+	#MovementConstraints/Camera/HierClassifier/ClassifierSVM.cpp
+	#MovementConstraints/Camera/HierClassifier/ClassifierRF.cpp
+	#MovementConstraints/Camera/HierClassifier/HierClassifier.cpp
 	MovementConstraints/ConstraintsHelpers.cpp
 	MovementConstraints/MovementConstraints.cpp
 	#Planning/PlanningSearching/LocalPlannerSearching.cpp
@@ -162,6 +170,7 @@ set(Tapas_SOURCES
 	PositionEstimation/IMU/IMU.cpp
 	PositionEstimation/PositionEstimation.cpp
 	Robot/Robot.cpp
+	Robot/RosHelpers.cpp
 	Trobot/source/SerialPort.cpp
 )
 
@@ -200,6 +209,8 @@ target_link_libraries(Tapas
 	${TinyXML_LIBRARIES}
 	${LBFGS_LIBRARIES}
 	${catkin_LIBRARIES})
+
+add_dependencies(Tapas TAPAS_gencpp)
 
 find_package(OpenGL REQUIRED)
 set(QGLViewer_LIBRARIES QGLViewer)
@@ -274,6 +285,8 @@ target_link_libraries(TapasGui
 	${LBFGS_LIBRARIES}
 	${catkin_LIBRARIES})
 
+add_dependencies(TapasGui TAPAS_gencpp)
+
 set(Camera_SOURCES
 	MovementConstraints/Camera/LibSVM-weights/svm.cpp
 	MovementConstraints/Camera/Pgm/CustFeature.cpp
@@ -288,7 +301,8 @@ set(Camera_SOURCES
 	MovementConstraints/Camera/HierClassifier/ClassifierRF.cpp
 	MovementConstraints/Camera/HierClassifier/HierClassifier.cpp
 	MovementConstraints/ConstraintsHelpers.cpp
-	Planning/PlannerHelpers.cpp)
+	Planning/PlannerHelpers.cpp
+	Robot/RosHelpers.cpp)
 
 IF( CUDA GREATER 0)
 	cuda_add_executable(Camera
@@ -320,3 +334,5 @@ target_link_libraries(Camera
 	${TinyXML_LIBRARIES}
 	${LBFGS_LIBRARIES}
 	${catkin_LIBRARIES})
+
+add_dependencies(Camera TAPAS_gencpp)

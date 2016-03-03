@@ -46,12 +46,9 @@ MovementConstraints::MovementConstraints(Robot* irobot, TiXmlElement* settings) 
 	}
 	readSettings(settings);
 	TiXmlElement* pCamera = settings->FirstChildElement("Camera");
-	camera = new Camera(pCamera);
-
 	ros::NodeHandle nh = robot->getNodeHandle();
 
 	cameraConstraintsClient = nh.serviceClient<TAPAS::CameraConstraints>("camera_constraints");
-
 	constraintsMap = Mat(MAP_SIZE, MAP_SIZE, CV_32FC1, Scalar(0));
 
 	ros::ServiceServer service = nh.advertiseService("point_cloud", &MovementConstraints::getPointCloud, this);
@@ -63,7 +60,6 @@ MovementConstraints::MovementConstraints(Robot* irobot, TiXmlElement* settings) 
 
 MovementConstraints::~MovementConstraints() {
 	cout << "~MovementConstraints()" << endl;
-	delete camera;
 	stopThread();
 	cout << "End ~MovementConstraints()" << endl;
 }
@@ -530,17 +526,4 @@ void MovementConstraints::closeHokuyo(){
 
 bool MovementConstraints::isHokuyoOpen(){
 	return hokuyo.isOpen();
-}
-
-//Camera
-void MovementConstraints::openCamera(std::vector<std::string> device){
-	camera->open(device);
-}
-
-void MovementConstraints::closeCamera(){
-	camera->close();
-}
-
-bool MovementConstraints::isCameraOpen(){
-	return camera->isOpen();
 }

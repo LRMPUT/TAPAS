@@ -45,6 +45,7 @@
 
 //ROS
 #include "ros/ros.h"
+#include "RosHelpers.h"
 class Robot;
 class Debug;
 
@@ -149,13 +150,6 @@ public:
 	void closeHokuyo();
 
 	bool isHokuyoOpen();
-
-	//Camera
-	void openCamera(std::vector<std::string> device);
-
-	void closeCamera();
-
-	bool isCameraOpen();
 
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
 	//CV_32SC1 2x1: left, right encoder

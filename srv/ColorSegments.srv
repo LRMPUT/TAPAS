@@ -1,0 +1,5 @@
+int32 segmentsRows
+int32 segmentsCols
+int32[] segments
+---
+sensor_msgs/Image image

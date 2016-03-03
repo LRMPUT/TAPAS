@@ -215,19 +215,6 @@ bool Robot::isHokuyoOpen(){
 	return movementConstraints->isHokuyoOpen();
 }
 
-//Camera
-void Robot::openCamera(std::vector<std::string> device){
-	movementConstraints->openCamera(device);
-}
-
-void Robot::closeCamera(){
-	movementConstraints->closeCamera();
-}
-
-bool Robot::isCameraOpen(){
-	return movementConstraints->isCameraOpen();
-}
-
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 //CV_32SC1 2x1: left, right encoder
 cv::Mat Robot::getEncoderData(std::chrono::high_resolution_clock::time_point& timestamp){
@@ -277,3 +264,4 @@ void Robot::getLocalPlanData(cv::Mat& constraintsMap,cv::Mat& posRobotMapCenter,
 ros::NodeHandle &Robot::getNodeHandle() {
 	return nh;
 }
+
