@@ -117,9 +117,7 @@ Camera::Camera(TiXmlElement* settings) :
 		readCache("cache/cameraCache");
 	}
 	cameraThread = std::thread(&Camera::run, this);
-	if(ros::this_node::getName() == "/Camera") { 
-		dataThread = std::thread(&Camera::sendData, this);
-	}
+	dataThread = std::thread(&Camera::sendData, this);
 }
 
 Camera::~Camera(){

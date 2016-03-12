@@ -55,7 +55,7 @@ Robot::Robot(boost::filesystem::path settingsFile) :
 	positionEstimation = new PositionEstimation(this, pRobot);
 
 	TiXmlElement* pMovementConstraints = pRobot->FirstChildElement("MovementConstraints");
-	movementConstraints = new MovementConstraints(this, pMovementConstraints);
+	movementConstraints = new MovementConstraints(pMovementConstraints);
 
 	globalPlanner = new GlobalPlanner(this, pRobot);
 

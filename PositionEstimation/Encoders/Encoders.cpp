@@ -50,6 +50,26 @@ Encoders::~Encoders() {
 	closePort();
 }
 
+void Encoders::sendData() {
+  	ros::Publisher encoders_pub = nh.advertise<TAPAS::Encoders>("encoders_data", 10);
+  	ros::Rate loop_rate(10);
+
+  	cv::Mat encodersData;
+  	TAPAS::Encoders msg;
+
+	std::chrono::high_resolution_clock::time_point timestamp;
+	while(ros::ok()) {
+		encodersData = getEncoders(timestamp);
+
+		msg.left = encodersData.at<int>(0);
+		msg.right = encodersData.at<int>(1);
+		encoders_pub.publish(msg);
+
+		ros::spinOnce();
+		loop_rate.sleep();
+	}
+}
+
 void Encoders::run(){
 	try{
 		while(runThread){
@@ -137,6 +157,7 @@ void Encoders::openPort(const std::string& device, unsigned int baud){
 	serialPort.open(baud, device);
 	runThread = true;
 	readingThread = std::thread(&Encoders::run, this);
+	dataThread = std::thread(&Encoders::sendData, this);
 }
 
 void Encoders::closePort(){

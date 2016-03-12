@@ -49,6 +49,7 @@
 #include "ConstraintsHelpers.h"
 //ROS
 #include "TAPAS/PointCloud.h"
+#include "TAPAS/IMU.h"
 
 class Robot;
 class Debug;
@@ -79,8 +80,11 @@ private:
 //	// Class to get data from Sharp
 //	Sharp sharp;
 
-	//Parent class Robot
-	Robot* robot;
+	ros::NodeHandle nh;
+
+	ros::Subscriber imu_sub;
+
+	ros::Subscriber encoders_sub;
 
 	ros::ServiceClient cameraConstraintsClient;
 
@@ -101,6 +105,10 @@ private:
 
 	std::mutex mtxMap;
 
+	std::mutex mtxImu;
+
+	std::mutex mtxEncoders;
+
 	cv::Mat curPosOrigMapCenter;
 
 	cv::Mat curMapCenterOrigGlobal;
@@ -111,6 +119,10 @@ private:
 
 	//Queue of points
 	std::queue<ConstraintsHelpers::PointsPacket> pointsQueue;
+
+	bool imuActive, encodersActive;
+
+	cv::Mat imuCur, encodersCur;
 
 	cv::Mat imuPrev, encodersPrev;
 
@@ -136,6 +148,10 @@ private:
 
 	cv::Mat readMatrixSettings(TiXmlElement* parent, const char* node, int rows, int cols);
 
+	void imuCallback(const TAPAS::IMU msg);
+
+	void encodersCallback(const TAPAS::Encoders msg);
+
 	void updateConstraintsMap();
 
 	void insertHokuyoConstraints(cv::Mat map,
@@ -151,7 +167,7 @@ private:
 	void updatePointCloud();
 
 public:
-	MovementConstraints(Robot* irobot, TiXmlElement* settings);
+	MovementConstraints(TiXmlElement* settings);
 	virtual ~MovementConstraints();
 
 	// Stop MovementConstraints thread.

@@ -36,22 +36,24 @@
 using namespace cv;
 using namespace std;
 
-MovementConstraints::MovementConstraints(Robot* irobot, TiXmlElement* settings) :
-		robot(irobot),
+MovementConstraints::MovementConstraints(TiXmlElement* settings) :
 		runThread(false),
-		constraintsMapThreadRunning(false)
+		constraintsMapThreadRunning(false),
+		imuActive(false),
+		encodersActive(false)
 {
 	if(!settings){
 		throw "Bad settings file - entry MovementConstraints not found";
 	}
 	readSettings(settings);
 	TiXmlElement* pCamera = settings->FirstChildElement("Camera");
-	ros::NodeHandle nh = robot->getNodeHandle();
 
 	cameraConstraintsClient = nh.serviceClient<TAPAS::CameraConstraints>("camera_constraints");
 	constraintsMap = Mat(MAP_SIZE, MAP_SIZE, CV_32FC1, Scalar(0));
 
 	ros::ServiceServer service = nh.advertiseService("point_cloud", &MovementConstraints::getPointCloud, this);
+	imu_sub = nh.subscribe("imu_data", 10, &MovementConstraints::imuCallback, this);
+	encoders_sub = nh.subscribe("encoders_data", 10, &MovementConstraints::encodersCallback, this);
 
 	//runThread = false;
 	movementConstraintsThread = std::thread(&MovementConstraints::run, this);
@@ -62,6 +64,22 @@ MovementConstraints::~MovementConstraints() {
 	cout << "~MovementConstraints()" << endl;
 	stopThread();
 	cout << "End ~MovementConstraints()" << endl;
+}
+
+void MovementConstraints::imuCallback(const TAPAS::IMU msg) {
+	imuActive = true;
+	std::unique_lock<std::mutex> lck(mtxImu);
+	imuCur = RosHelpers::readIMUMsg(msg);
+	lck.unlock();
+}
+
+void MovementConstraints::encodersCallback(const TAPAS::Encoders msg) {
+	encodersActive = true;
+	std::unique_lock<std::mutex> lck(mtxEncoders);
+	encodersCur = Mat(2, 1, CV_32SC1);
+	encodersCur.at<int>(0) = msg.left;
+	encodersCur.at<int>(1) = msg.right;
+	lck.unlock();
 }
 
 void MovementConstraints::readSettings(TiXmlElement* settings){
@@ -149,18 +167,13 @@ void MovementConstraints::run(){
 	cout << "MovementConstraints::run()" << endl;
 	try{
 	#ifndef ROBOT_OFFLINE
+		cout << "Waiting for encoders and IMU" << endl;
 		while(runThread){
-			if(robot->isEncodersOpen() && robot->isImuOpen()){
+			if(encodersActive && imuActive){
 				//cout << "robot->isEncodersOpen() = " << robot->isEncodersOpen() << ", robot->isImuOpen() = " << robot->isImuOpen() << endl;
 				break;
 			}
 			//cout << "robot->isEncodersOpen() = " << robot->isEncodersOpen() << ", robot->isImuOpen() = " << robot->isImuOpen() << endl;
-			std::chrono::milliseconds duration(100);
-			std::this_thread::sleep_for(duration);
-		}
-		cout << "Waiting for isImuDataValid()" << endl;
-		while(runThread && !robot->isImuDataValid()){
-			//cout << "Waiting for isImuDataValid()" << endl;
 			std::chrono::milliseconds duration(100);
 			std::this_thread::sleep_for(duration);
 		}
@@ -241,16 +254,12 @@ void MovementConstraints::updateConstraintsMap(){
 
 //	cout << "Moving map" << endl;
 	std::chrono::high_resolution_clock::time_point imuTimestamp;
-//	cout << "getting imu data" << endl;
-	Mat imuCur(3, 4, CV_32FC1, Scalar(0));
-	if(robot->isImuDataValid()){
-		imuCur = robot->getImuData(imuTimestamp);
-	}
 //	cout << "updating cur pos" << endl;
 	updateCurPosOrigMapCenter();
 
 	std::unique_lock<std::mutex> lckMap(mtxMap);
 	std::unique_lock<std::mutex> lckPointCloud(mtxPointCloud);
+	std::unique_lock<std::mutex> lckImu(mtxImu);
 
 	Mat mapMove = curPosOrigMapCenter.inv();
 
@@ -259,6 +268,7 @@ void MovementConstraints::updateConstraintsMap(){
 	curPosOrigMapCenter = Mat::eye(4, 4, CV_32FC1);
 //	cout << "Map moved" << endl;
 	timestampMap = timestampMapCur;
+	lckImu.unlock();
 	lckPointCloud.unlock();
 	lckMap.unlock();
 
@@ -351,16 +361,16 @@ void MovementConstraints::insertCameraConstraints(cv::Mat map,
 
 void MovementConstraints::updateCurPosOrigMapCenter(){
 #ifndef ROBOT_OFFLINE
-	if(robot->isImuOpen() && robot->isEncodersOpen()){
+	if(imuActive && encodersActive){
 		std::chrono::high_resolution_clock::time_point imuTimestamp;
 		std::chrono::high_resolution_clock::time_point encTimestamp;
-		Mat encodersCur = robot->getEncoderData(encTimestamp);
-		Mat imuCur = robot->getImuData(imuTimestamp);
 
 //		cout << "Euler angles: " << imuCur.at<float>(2, 3) << " " << imuCur.at<float>(1, 3) << " " << imuCur.at<float>(0, 3) << endl;
 //		cout << "imuCur = " << imuCur << endl;
 //		cout << "encodersCur = " << encodersCur << endl;
 
+		std::unique_lock<std::mutex> lckImu(mtxImu);
+		std::unique_lock<std::mutex> lckEncoders(mtxEncoders);
 		if(imuPrev.empty()){
 			imuCur.copyTo(imuPrev);
 		}
@@ -391,6 +401,8 @@ void MovementConstraints::updateCurPosOrigMapCenter(){
 
 		imuCur.copyTo(imuPrev);
 		encodersCur.copyTo(encodersPrev);
+		lckImu.unlock();
+		lckEncoders.unlock();
 	}
 #else
 	std::unique_lock<std::mutex> lck(mtxPointCloud);
@@ -424,7 +436,7 @@ void MovementConstraints::updatePointCloud(){
 						mtxPointCloud,
 						cameraOrigLaser,
 						cameraOrigImu,
-						robot->getNodeHandle());
+						nh);
 	}
 	else{
 		if(debugLevel >= 1){
@@ -458,10 +470,12 @@ const cv::Mat MovementConstraints::getMovementConstraints(){
 
 bool MovementConstraints::getPointCloud(TAPAS::PointCloud::Request &req, TAPAS::PointCloud::Response &res){
 	//cout << "getPointCloud()" << endl;
+	std::unique_lock<std::mutex> lck(mtxPointCloud);
 	memcpy(res.curPosOrigMapCenter.data(), curPosOrigMapCenter.data, 16*sizeof(float));
 	res.cloudRows = pointCloudOrigMapCenter.rows;
 	res.cloudCols = pointCloudOrigMapCenter.cols;
 	res.pointCloudOrigMapCenter.assign((float*)pointCloudOrigMapCenter.datastart, (float*)pointCloudOrigMapCenter.dataend);
+	lck.unlock();
 	//cout << "End getPointCloud()" << endl;
 	return true;
 }

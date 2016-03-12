@@ -11,7 +11,12 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
 )
 
-add_message_files(DIRECTORY msg FILES Matrix.msg)
+add_message_files(DIRECTORY msg 
+  FILES 
+  Matrix.msg
+  IMU.msg
+  Encoders.msg
+)
 
 add_service_files(DIRECTORY srv 
   FILES 
@@ -317,6 +322,45 @@ ELSEIF ( CUDA EQUAL 0)
 	)
 ENDIF( CUDA GREATER 0)
 
+target_link_libraries(Camera
+	${OpenCV_LIBS}
+	${Boost_LIBRARIES}
+	${TinyXML_LIBRARIES}
+	${LBFGS_LIBRARIES}
+	${catkin_LIBRARIES})
+
+add_dependencies(Camera TAPAS_gencpp)
+
+set(MovementConstraints_SOURCES
+	MovementConstraints/Hokuyo/Hokuyo.cpp
+	MovementConstraints/Sharp/Sharp.cpp
+	MovementConstraints/ConstraintsHelpers.cpp
+	MovementConstraints/MovementConstraints.cpp
+	Robot/RosHelpers.cpp)
+
+IF( CUDA GREATER 0)
+	cuda_add_executable(MovementConstraints
+		${MovementConstraints_SOURCES}
+		${Tapas_CUDA_SOURCES}
+		MovementConstraints/main.cpp
+	)
+ELSEIF ( CUDA EQUAL 0)
+	add_executable(MovementConstraints 
+		${MovementConstraints_SOURCES}
+		MovementConstraints/main.cpp
+	)
+ENDIF( CUDA GREATER 0)
+
+target_link_libraries(MovementConstraints
+	${OpenCV_LIBS}
+	${Boost_LIBRARIES}
+	${urg_LIBRARIES}
+	${TinyXML_LIBRARIES}
+	${LBFGS_LIBRARIES}
+	${catkin_LIBRARIES})
+
+add_dependencies(MovementConstraints TAPAS_gencpp)
+
 #message("Copying generated ui headers")
 # Adding command for automatically copying generated ui headers 
 #foreach(file ${TapasQt_FORMS_HEADERS})
@@ -327,12 +371,3 @@ ENDIF( CUDA GREATER 0)
 #		COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_BINARY_DIR}/${filename} ${CMAKE_CURRENT_SOURCE_DIR}/TapasQt/${filename}
 #		MAIN_DEPENDENCY ${CMAKE_CURRENT_BINARY_DIR}/${filename})
 #endforeach()
-
-target_link_libraries(Camera
-	${OpenCV_LIBS}
-	${Boost_LIBRARIES}
-	${TinyXML_LIBRARIES}
-	${LBFGS_LIBRARIES}
-	${catkin_LIBRARIES})
-
-add_dependencies(Camera TAPAS_gencpp)

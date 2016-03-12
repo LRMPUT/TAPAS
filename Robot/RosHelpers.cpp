@@ -11,10 +11,19 @@ TAPAS::Matrix RosHelpers::makeMatrixMsg(cv::Mat matrix) {
 	return msg;
 }
 
+TAPAS::IMU RosHelpers::makeIMUMsg(cv::Mat matrix) {
+  	TAPAS::IMU msg;
+	memcpy(msg.data.data(), matrix.data, 3*4*sizeof(float));
+	return msg;
+}
+
 cv::Mat RosHelpers::readMatrixMsg(TAPAS::Matrix msg) {
-	cv::Mat mat(msg.rows, msg.cols, CV_32FC1);
-	int matSize = msg.rows * msg.cols * sizeof(float);
-	memcpy(mat.data, msg.data.data(), matSize);
+	cv::Mat mat(msg.rows, msg.cols, CV_32FC1, msg.data.data());
+	return mat;
+}
+
+cv::Mat RosHelpers::readIMUMsg(TAPAS::IMU msg) {
+	cv::Mat mat(3, 4, CV_32FC1, msg.data.data());
 	return mat;
 }
 
