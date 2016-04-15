@@ -1,0 +1,3 @@
+TAPAS/Matrix constraintsMap
+TAPAS/Matrix posRobotMapCenter
+TAPAS/Matrix globalMapCenter
