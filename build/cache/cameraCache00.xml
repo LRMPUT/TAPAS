@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<weak_classifiers num_labels="2">
+    <classifier type="RF" cache_file="cache/cameraCache00.xml.00.cache" weight="1" desc_beg="0" desc_end="67">
+        <scales desc_len="67">
+            <value idx="0" sub="0" div="1" />
+            <value idx="1" sub="0" div="0.999999" />
+            <value idx="2" sub="0" div="0.894017" />
+            <value idx="3" sub="0" div="0.211015" />
+            <value idx="4" sub="0" div="0.981861" />
+            <value idx="5" sub="0" div="0.999831" />
+            <value idx="6" sub="0" div="0.998341" />
+            <value idx="7" sub="0" div="0.231761" />
+            <value idx="8" sub="0" div="0.955598" />
+            <value idx="9" sub="0" div="0.99862" />
+            <value idx="10" sub="0" div="1" />
+            <value idx="11" sub="0" div="0.895562" />
+            <value idx="12" sub="0" div="0.246617" />
+            <value idx="13" sub="0" div="0.610615" />
+            <value idx="14" sub="0" div="0.728721" />
+            <value idx="15" sub="0" div="0.673516" />
+            <value idx="16" sub="0" div="0.997613" />
+            <value idx="17" sub="0" div="0.999667" />
+            <value idx="18" sub="0" div="0.999998" />
+            <value idx="19" sub="0" div="1" />
+            <value idx="20" sub="0" div="1" />
+            <value idx="21" sub="0" div="0.999901" />
+            <value idx="22" sub="0" div="0.99942" />
+            <value idx="23" sub="0" div="1" />
+            <value idx="24" sub="12.8009" div="114.123" />
+            <value idx="25" sub="14.1233" div="112.433" />
+            <value idx="26" sub="12.537" div="112.848" />
+            <value idx="27" sub="463.838" div="11516.9" />
+            <value idx="28" sub="-5580.16" div="17456.3" />
+            <value idx="29" sub="-5598.48" div="17528.1" />
+            <value idx="30" sub="-5580.16" div="17456.3" />
+            <value idx="31" sub="474.237" div="11591.8" />
+            <value idx="32" sub="-5469.12" div="17541.4" />
+            <value idx="33" sub="-5598.48" div="17528.1" />
+            <value idx="34" sub="-5469.12" div="17541.4" />
+            <value idx="35" sub="344.398" div="11794.7" />
+            <value idx="36" sub="0" div="0.523227" />
+            <value idx="37" sub="0" div="0.727988" />
+            <value idx="38" sub="0" div="0.804171" />
+            <value idx="39" sub="0" div="0.804355" />
+            <value idx="40" sub="0" div="0.879599" />
+            <value idx="41" sub="0" div="0.817549" />
+            <value idx="42" sub="0" div="0.742308" />
+            <value idx="43" sub="0" div="1" />
+            <value idx="44" sub="0" div="0.757775" />
+            <value idx="45" sub="0" div="0.995037" />
+            <value idx="46" sub="0" div="0.948683" />
+            <value idx="47" sub="0" div="1" />
+            <value idx="48" sub="0" div="1" />
+            <value idx="49" sub="0" div="1" />
+            <value idx="50" sub="0" div="0.912871" />
+            <value idx="51" sub="0" div="0.886405" />
+            <value idx="52" sub="0" div="1" />
+            <value idx="53" sub="0" div="1" />
+            <value idx="54" sub="0" div="0.787839" />
+            <value idx="55" sub="0" div="0.862044" />
+            <value idx="56" sub="0" div="1" />
+            <value idx="57" sub="0" div="0.839839" />
+            <value idx="58" sub="0" div="1" />
+            <value idx="59" sub="0" div="0.774597" />
+            <value idx="60" sub="0" div="0.657596" />
+            <value idx="61" sub="0" div="2519.75" />
+            <value idx="62" sub="0" div="5042.02" />
+            <value idx="63" sub="0" div="501829" />
+            <value idx="64" sub="-489348" div="493997" />
+            <value idx="65" sub="-489348" div="493997" />
+            <value idx="66" sub="0" div="846619" />
+        </scales>
+        <labels num="2" />
+    </classifier>
+</weak_classifiers>

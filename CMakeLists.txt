@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 # 0 - without CUDA
 # 1 - with CUDA
-set(CUDA 1)
+set(CUDA 0)
 
 # 0 - TAPAS
 # 1 - TROBOT
