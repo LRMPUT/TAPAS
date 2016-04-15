@@ -140,6 +140,7 @@ set(Tapas_SOURCES
 	MovementConstraints/Hokuyo/Hokuyo.cpp
 	MovementConstraints/Sharp/Sharp.cpp
 	MovementConstraints/ConstraintsHelpers.cpp
+	MovementConstraints/MovementConstraints.cpp
 	#Planning/PlanningSearching/LocalPlannerSearching.cpp
 	#Planning/PlanningToGold/LocalPlannerToGold.cpp
 	#Planning/PlanningWithGold/LocalPlannerWithGold.cpp
