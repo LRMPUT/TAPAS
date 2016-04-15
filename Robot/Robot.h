@@ -50,6 +50,7 @@ class Robot;
 class Debug;
 
 //RobotsIntellect
+#include "../MovementConstraints/MovementConstraints.h"
 #include "../PositionEstimation/PositionEstimation.h"
 #include "../Planning/GlobalPlanner.h"
 //TinyXML
@@ -74,6 +75,8 @@ class Robot {
 
 	// Class containing information about our position estimation from sensors
 	PositionEstimation* positionEstimation;
+
+	MovementConstraints* movementConstraints;
 
 	// Class responsible for planning
 	GlobalPlanner* globalPlanner;

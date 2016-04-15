@@ -87,8 +87,7 @@ const cv::Mat Debug::getImuData(){
 
 //CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right
 const cv::Mat Debug::getHokuyoData(){
-	std::chrono::high_resolution_clock::time_point timestamp;
-	return robot->movementConstraints->hokuyo.getData(timestamp);
+	return hokuyoData;
 }
 
 void Debug::imageCallback(const sensor_msgs::ImageConstPtr& msg) {

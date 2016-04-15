@@ -52,6 +52,7 @@
 #include "TAPAS/PointCloud.h"
 #include "TAPAS/IMU.h"
 #include "TAPAS/PlanningData.h"
+#include "TAPAS/Encoders.h"
 
 class Robot;
 class Debug;
