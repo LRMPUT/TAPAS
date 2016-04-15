@@ -170,11 +170,6 @@ void Recording::startRec() {
 		gpsTimer.start();
 	}
 	if (ui->includeCamerasCheckBox->isChecked() == true) {
-		if (!robot->isCameraOpen()) {
-			ui->recStatusLabel->setText("Camera error");
-			stopRec();
-			return;
-		}
 		cameraStream.open("rec/camera.data");
 		cameraTimer.setInterval(
 				max((int) (1000 / ui->saRateCamerasLineEdit->text().toFloat()),

@@ -43,6 +43,9 @@
 // Time measurement
 #include <chrono>
 
+//ROS
+#include "ros/ros.h"
+#include "RosHelpers.h"
 class Robot;
 class Debug;
 
@@ -67,6 +70,8 @@ class Robot {
 	friend class Debug;
 
 	void readPositionEstimationSettings(TiXmlElement* settings);
+
+	ros::NodeHandle nh;
 
 	// Class containing information about our position estimation from sensors
 	PositionEstimation* positionEstimation;
@@ -146,13 +151,6 @@ public:
 
 	bool isHokuyoOpen();
 
-	//Camera
-	void openCamera(std::vector<std::string> device);
-
-	void closeCamera();
-
-	bool isCameraOpen();
-
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
 	//CV_32SC1 2x1: left, right encoder
 	cv::Mat getEncoderData(std::chrono::high_resolution_clock::time_point& timestamp);
@@ -172,6 +170,8 @@ public:
 	//cv::Mat getLocalMapPosInGlobalMap();
 
 	void getLocalPlanData(cv::Mat& constraintsMap,cv::Mat& posRobotMapCenter, cv::Mat& globalMapCenter);
+
+	ros::NodeHandle &getNodeHandle();
 };
 
 #endif /* ROBOT_H_ */

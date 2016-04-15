@@ -1,0 +1,14 @@
+<launch>
+  <node pkg="TAPAS" name="TapasGui" type="TapasGui" args="settings.xml"/>
+  <node pkg="TAPAS" name="Camera" type="Camera"/>
+
+  <param name="wheelCir" value="160" />
+  <param name="encodersCPR" value="300" />
+  <param name="wheelDistance" value="452" />
+  <param name="minLaserDist" value="100" />
+  <param name="pointCloudTimeout" value="4000" />
+  <param name="cameraMatrix" value="646.345999973665580	0	312.531846659870780
+        			0	645.650527914581740	244.961100510703430
+        			0	0	1.0000" />
+  <param name="distCoeffs" value="-0.002321429512793 0.042019134230480 -0.000280334014614 0.001284356067402 0.000000000000000" />
+</launch>

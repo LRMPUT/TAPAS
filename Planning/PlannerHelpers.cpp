@@ -3,7 +3,7 @@
 using namespace cv;
 using namespace std;
 
-float LocalPlanner::rotMatToEulerYaw(Mat rotMat) {
+float PlannerHelpers::rotMatToEulerYaw(Mat rotMat) {
 
 	float R11 = rotMat.at<float>(0, 0);
 	float R21 = rotMat.at<float>(1, 0);
@@ -26,7 +26,7 @@ float LocalPlanner::rotMatToEulerYaw(Mat rotMat) {
 	return fi1;
 }
 
-void LocalPlanner::updateHistogram(std::vector<float>& histSectors,
+void PlannerHelpers::updateHistogram(std::vector<float>& histSectors,
 									cv::Mat posRobotMapCenter,
 									cv::Mat constraints,
 									Parameters localPlannerParams)
@@ -78,7 +78,7 @@ void LocalPlanner::updateHistogram(std::vector<float>& histSectors,
 //	}
 }
 
-void LocalPlanner::smoothHistogram(std::vector<float>& histSectors,
+void PlannerHelpers::smoothHistogram(std::vector<float>& histSectors,
 									Parameters localPlannerParams)
 {
 
@@ -103,7 +103,7 @@ void LocalPlanner::smoothHistogram(std::vector<float>& histSectors,
 
 /// return Goal Direction converted from Global Map to
 /// local MAP
-float LocalPlanner::determineGoalInLocalMap(cv::Mat posLocalToGlobalMap,
+float PlannerHelpers::determineGoalInLocalMap(cv::Mat posLocalToGlobalMap,
 											float goalDirGlobalMap) {
 
 	float globalYaw = 0.0;
@@ -125,7 +125,7 @@ float LocalPlanner::determineGoalInLocalMap(cv::Mat posLocalToGlobalMap,
 	return goalDirGlobalMap - globalYaw;
 }
 
-float LocalPlanner::findOptimSector(const std::vector<float>& histSectors,
+float PlannerHelpers::findOptimSector(const std::vector<float>& histSectors,
 									cv::Mat posRobotMapCenter,
 									float goalDirLocalMap,
 									Parameters localPlannerParams)

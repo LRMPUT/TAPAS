@@ -36,20 +36,24 @@
 #include <mutex>
 #include <opencv2/opencv.hpp>
 #include "../../Trobot/include/SerialPort.h"
+#include "ros/ros.h"
+#include "TAPAS/Encoders.h"
 
 class Robot;
 
 class Encoders {
 	trobot::SerialPort serialPort;
 	Robot *robot;
+	ros::NodeHandle nh;
 
-	std::thread readingThread;
+	std::thread readingThread, dataThread;
 	cv::Mat curEnc;
 	std::chrono::high_resolution_clock::time_point curTimestamp;
 	std::mutex mtx;
 	bool runThread;
 	bool dataValid;
 
+	void sendData();
 	void run();
 public:
 	Encoders();

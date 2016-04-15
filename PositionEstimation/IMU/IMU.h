@@ -30,11 +30,16 @@
 #ifndef IMU_H_
 #define IMU_H_
 
+#include <chrono>
+#include <thread>
 #include <opencv2/opencv.hpp>
 #ifdef TROBOT
 #include "../../Trobot/include/Imu.h"
 #endif
 #include "include/IMU_driver.h"
+#include "ros/ros.h"
+#include "TAPAS/IMU.h"
+#include "../../Robot/RosHelpers.h"
 
 class Debug;
 class Robot;
@@ -67,6 +72,9 @@ class IMU {
 	trobot::Imu* imu;
 #endif
 	Robot *robot;
+	ros::NodeHandle nh;
+
+	std::thread dataThread;
 
 	cv::Mat getUM6Data(std::chrono::high_resolution_clock::time_point &timestamp);
 	cv::Mat getGX4Data(std::chrono::high_resolution_clock::time_point &timestamp);
@@ -76,6 +84,7 @@ public:
 	IMU(Robot* irobot);
 	virtual ~IMU();
 
+	void sendData();
 	void openPort(std::string port);
 	void closePort();
 	bool isPortOpen();

@@ -21,20 +21,29 @@
 */
 
 #include "TapasQt.h"
+#include "ros/ros.h"
 #include <QtGui/QApplication>
 #include <iostream>
+#include "std_msgs/String.h"
 
 using namespace std;
+
+void runRos() {
+	ros::spin();
+}
 
 int main(int argc, char *argv[])
 {
 	try{
+		ros::init(argc, argv, "TapasGui");
+		
 		QApplication a(argc, argv);
 		if(argc != 2){
 			throw "Usage: gui settings_file";
 		}
 		TapasQt w(argv[1]);
 		w.show();
+		std::thread rosThread(runRos);
 		return a.exec();
 	}
 	catch(char const* error){

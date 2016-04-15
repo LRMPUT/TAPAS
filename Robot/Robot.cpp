@@ -29,6 +29,7 @@
 
 #include <iostream>
 #include "Robot.h"
+#include <unistd.h>
 
 using namespace std;
 
@@ -54,7 +55,7 @@ Robot::Robot(boost::filesystem::path settingsFile) :
 	positionEstimation = new PositionEstimation(this, pRobot);
 
 	TiXmlElement* pMovementConstraints = pRobot->FirstChildElement("MovementConstraints");
-	movementConstraints = new MovementConstraints(this, pMovementConstraints);
+	movementConstraints = new MovementConstraints(pMovementConstraints);
 
 	globalPlanner = new GlobalPlanner(this, pRobot);
 
@@ -214,19 +215,6 @@ bool Robot::isHokuyoOpen(){
 	return movementConstraints->isHokuyoOpen();
 }
 
-//Camera
-void Robot::openCamera(std::vector<std::string> device){
-	movementConstraints->openCamera(device);
-}
-
-void Robot::closeCamera(){
-	movementConstraints->closeCamera();
-}
-
-bool Robot::isCameraOpen(){
-	return movementConstraints->isCameraOpen();
-}
-
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 //CV_32SC1 2x1: left, right encoder
 cv::Mat Robot::getEncoderData(std::chrono::high_resolution_clock::time_point& timestamp){
@@ -272,3 +260,8 @@ cv::Mat Robot::getPosImuConstraintsMapCenter(){
 void Robot::getLocalPlanData(cv::Mat& constraintsMap,cv::Mat& posRobotMapCenter, cv::Mat& globalMapCenter){
 	movementConstraints->getLocalPlanningData(constraintsMap, posRobotMapCenter, globalMapCenter);
 }
+
+ros::NodeHandle &Robot::getNodeHandle() {
+	return nh;
+}
+

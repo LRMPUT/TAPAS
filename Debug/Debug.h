@@ -10,9 +10,31 @@
 
 #include "../Robot/Robot.h"
 #include "../Planning/GlobalPlanner.h"
+#include <cv_bridge/cv_bridge.h>
+#include <image_transport/image_transport.h>
 
 class Debug{
 	Robot* robot;
+
+	cv::Mat cameraImage;
+
+	cv::Mat classifiedImage;
+
+	cv::Mat pixelCoords;
+
+	cv::Mat pixelColors;
+
+	ros::NodeHandle nh;
+
+	image_transport::ImageTransport it;
+
+	image_transport::Subscriber image_sub;
+
+	image_transport::Subscriber classified_sub;
+
+	ros::Subscriber coords_sub;
+
+	ros::Subscriber colors_sub;
 public:
 	Debug(Robot* irobot);
 
@@ -41,17 +63,20 @@ public:
 	//CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right
 	const cv::Mat getHokuyoData();
 
+	void imageCallback(const sensor_msgs::ImageConstPtr& msg);
+
+	void classifiedCallback(const sensor_msgs::ImageConstPtr& msg);
+
+	void coordsCallback(const TAPAS::Matrix msg);
+
+	void colorsCallback(const TAPAS::Matrix msg);
+
 	//CV_8UC3 2x640x480: left, right image
 	const std::vector<cv::Mat> getCameraData();
 
+	cv::Mat colorImage(cv::Mat image);
+
 	void testSegmentation(boost::filesystem::path dir);
-
-	void testTraining(std::vector<boost::filesystem::path> dirsTrain);
-
-	void testClassification(std::vector<boost::filesystem::path> dirsTrain,
-							std::vector<boost::filesystem::path> dirsTest);
-
-	void testConstraints(boost::filesystem::path dirTrain, boost::filesystem::path dirTest);
 
 	void testEncoders();
 

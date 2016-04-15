@@ -47,7 +47,8 @@
 #include "Pgm/CustFeature.h"
 #include "Pgm/Inference.h"
 #include "Pgm/ParamEst.h"
-#include "../../Planning/LocalPlanner.h"
+#include "../../Planning/PlannerHelpers.h"
+#include "std_msgs/String.h"
 
 using namespace boost;
 using namespace std;
@@ -77,8 +78,7 @@ inline void __checkCudaErrors(cudaError err, const char *file, const int line )
 }
 #endif
 
-Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings) :
-		movementConstraints(imovementConstraints),
+Camera::Camera(TiXmlElement* settings) :
 		runThread(false)
 {
 	if(!settings){
@@ -86,7 +86,13 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 	}
 
 	readSettings(settings);
+	if(ros::this_node::getName() == "/Camera") { 
+		constraintsService = nh.advertiseService("camera_constraints", &Camera::insertConstraints, this);
+	}
+	segmentService = nh.advertiseService("segment_image", &Camera::segmentImage, this);
+	colorService = nh.advertiseService("color_segments", &Camera::colorSegments, this);
 
+	pointCloudClient = nh.serviceClient<TAPAS::PointCloud>("point_cloud");
 	cameras.resize(cameraParams.numCameras);
 	classifiedImage.resize(cameraParams.numCameras);
 
@@ -111,6 +117,7 @@ Camera::Camera(MovementConstraints* imovementConstraints, TiXmlElement* settings
 		readCache("cache/cameraCache");
 	}
 	cameraThread = std::thread(&Camera::run, this);
+	dataThread = std::thread(&Camera::sendData, this);
 }
 
 Camera::~Camera(){
@@ -122,6 +129,30 @@ Camera::~Camera(){
 	for(int i = 0; i < hierClassifiers.size(); i++){
 		delete hierClassifiers[i];
 	}
+}
+
+bool Camera::segmentImage(TAPAS::SegmentImage::Request &req, TAPAS::SegmentImage::Response &res) {
+	cv_bridge::CvImageConstPtr cv_ptr = cv_bridge::toCvCopy(req.image);
+	Mat image = cv_ptr->image;
+
+	Mat segments = hierClassifiers[0]->segmentImage(image, req.kCurSegment);
+	
+	res.segmentsRows = segments.rows;
+	res.segmentsCols = segments.cols;
+	res.segments.assign((float*)segments.datastart, (float*)segments.dataend);
+	return true;
+}
+
+bool Camera::colorSegments(TAPAS::ColorSegments::Request &req, TAPAS::ColorSegments::Response &res) {
+	Mat segments(req.segmentsRows, req.segmentsCols, CV_32SC1);
+	memcpy(segments.data, req.segments.data(), req.segmentsRows * req.segmentsCols * sizeof(int));
+
+	Mat image = hierClassifiers[0]->colorSegments(segments);
+
+	cv_bridge::CvImagePtr cv_ptr;
+	cv_ptr->image = image;
+	cv_ptr->toImageMsg(res.image);
+	return true;
 }
 
 //void Camera::computeConstraints(std::vector<cv::Mat> mapSegments,
@@ -658,7 +689,7 @@ void Camera::processDir(boost::filesystem::path dir,
 	Mat curMapMove = Mat::eye(4, 4, CV_32FC1);
 	float curGoalDirGlobal = 0.0;
 
-	std::queue<MovementConstraints::PointsPacket> pointsQueue;
+	std::queue<ConstraintsHelpers::PointsPacket> pointsQueue;
 	std::chrono::high_resolution_clock::time_point mapMoveTimestamp(
 			std::chrono::duration_cast<std::chrono::high_resolution_clock::duration>(std::chrono::milliseconds(0)));
 
@@ -753,7 +784,7 @@ void Camera::processDir(boost::filesystem::path dir,
 				imuPrev = imuPrev.reshape(1, 3);
 			}
 			if(imuOrigGlobal.empty()){
-				imuOrigGlobal = movementConstraints->compOrient(imuPrev);
+				imuOrigGlobal = ConstraintsHelpers::compOrient(imuPrev);
 				curPosOrigMapCenter = Mat::eye(4, 4, CV_32FC1);
 			}
 			Mat imuCur, encodersCur;
@@ -783,11 +814,11 @@ void Camera::processDir(boost::filesystem::path dir,
 			}
 			//cout << "Computing curPos" << endl;
 			//cout << "encodersCur = " << encodersCur << endl << "encodersPrev = " << encodersPrev << endl;
-			curPosOrigMapCenter = movementConstraints->compNewPos(imuPrev, imuCur,
+			curPosOrigMapCenter = ConstraintsHelpers::compNewPos(imuPrev, imuCur,
 																	encodersPrev, encodersCur,
 																	curPosOrigMapCenter,
 																	imuOrigGlobal,
-																	movementConstraints->getPointCloudSettings());
+																	nh);
 
 
 			/*Mat trans = compTrans(compOrient(imuPrev), encodersCur - encodersPrev);
@@ -811,7 +842,7 @@ void Camera::processDir(boost::filesystem::path dir,
 
 			std::mutex mtxPointCloud;
 
-			MovementConstraints::processPointCloud(hokuyoData,
+			ConstraintsHelpers::processPointCloud(hokuyoData,
 													hokuyoAllPointsOrigMapCenter,
 													pointsQueue,
 													hokuyoTimestamp,
@@ -820,7 +851,7 @@ void Camera::processDir(boost::filesystem::path dir,
 													mtxPointCloud,
 													cameraParams.cameraOrigLaser.front(),
 													cameraParams.cameraOrigImu.front(),
-													movementConstraints->getPointCloudSettings());
+													nh);
 
 			//waitKey();
 			/*Mat covarLaserCur, meanLaserCur;
@@ -847,7 +878,7 @@ void Camera::processDir(boost::filesystem::path dir,
 				newPointCloudCoords.copyTo(hokuyoAllPointsOrigMapCenter.rowRange(0, 4));
 
 				//cout << "Calculating new posMapCenterGlobal" << endl;
-				imuOrigGlobal = MovementConstraints::compOrient(imuCur);
+				imuOrigGlobal = ConstraintsHelpers::compOrient(imuCur);
 				curPosOrigMapCenter = Mat::eye(4, 4, CV_32FC1);
 
 				curMapMove = mapMove * curMapMove;
@@ -1886,12 +1917,13 @@ void Camera::run(){
 			std::chrono::high_resolution_clock::time_point timeEndMapCoords;
 			std::chrono::high_resolution_clock::time_point timeEndClassification;
 			std::chrono::high_resolution_clock::time_point timeEndUpdate;
-			Mat curPosOrigMapCenter;
+			Mat curPosOrigMapCenter = Mat(4, 4, CV_32FC1);
+			Mat pointCloudOrigMapCenter;
 
 			std::unique_lock<std::mutex> lckClassRes(mtxClassResults);
 
 			std::chrono::high_resolution_clock::time_point curTimestamp = std::chrono::high_resolution_clock::now();
-			Mat pointCloudOrigMapCenter = movementConstraints->getPointCloud(curPosOrigMapCenter);
+			getPointCloud(pointCloudOrigMapCenter, curPosOrigMapCenter);
 
 			mapMoveSinceGetPointCloud = Mat::eye(4, 4, CV_32FC1);
 
@@ -2051,7 +2083,67 @@ void Camera::run(){
 	}
 }
 
+void Camera::sendData(){
+	vector<Scalar> colors;
+	colors.push_back(Scalar(0, 255, 0));	//grass - green
+	colors.push_back(Scalar(0, 0, 255));	//wood - red
+	colors.push_back(Scalar(0, 255, 255));	//yellow - ceramic
+	colors.push_back(Scalar(255, 0, 0));	//blue - asphalt
+	Mat image, classified;
+	sensor_msgs::ImagePtr image_msg, classified_msg;
 
+	image_transport::ImageTransport it(nh);
+
+  	image_transport::Publisher image_pub = it.advertise("camera_image", 10);
+  	image_transport::Publisher classified_pub = it.advertise("camera_classified", 10);
+  	ros::Publisher coords_pub = nh.advertise<TAPAS::Matrix>("camera_coords", 10);
+  	ros::Publisher colors_pub = nh.advertise<TAPAS::Matrix>("camera_colors", 10);
+
+  	ros::Rate loop_rate(10);
+	
+	while(ros::ok()) {
+		std::unique_lock<std::mutex> image_lck(mtxDevice);
+		cameras[0].grab();
+		cameras[0].retrieve(image);
+		if(!image.empty() && (image.rows != cameraParams.numRows || image.cols != cameraParams.numCols)){
+			Mat imageResized;
+			resize(image, imageResized, Size(cameraParams.numCols, cameraParams.numRows));
+			image = imageResized;
+		}
+		image_lck.unlock();
+		sensor_msgs::ImagePtr image_msg = cv_bridge::CvImage(std_msgs::Header(), sensor_msgs::image_encodings::BGR8, image).toImageMsg();
+
+		image_pub.publish(image_msg);
+
+		std::unique_lock<std::mutex> classified_lck(mtxClassIm);
+
+		if(!sharedClassifiedImage.empty() && !sharedOriginalImage.empty()){
+			Mat coloredOriginal = sharedOriginalImage.clone();
+			for(int l = 0; l < cameraParams.labels.size(); l++){
+				coloredOriginal.setTo(colors[l], sharedClassifiedImage == l);
+			}
+			classified = coloredOriginal * 0.25 + sharedOriginalImage * 0.75;
+			classified.setTo(Scalar(0, 0, 0), cameraParams.maskIgnore.front() != 0);
+		}
+		classified_lck.unlock();
+		sensor_msgs::ImagePtr classified_msg = cv_bridge::CvImage(std_msgs::Header(), sensor_msgs::image_encodings::BGR8, classified).toImageMsg();
+
+		classified_pub.publish(classified_msg);
+
+		std::unique_lock<std::mutex> cloud_lck(mtxClassResults);
+
+		TAPAS::Matrix coords_msg = RosHelpers::makeMatrixMsg(pixelCoordsMapOrigRobotMapCenter);
+		TAPAS::Matrix colors_msg = RosHelpers::makeMatrixMsg(pixelColorsMap);
+
+		coords_pub.publish(coords_msg);
+		colors_pub.publish(colors_msg);
+
+		cloud_lck.unlock();
+
+		ros::spinOnce();
+		loop_rate.sleep();
+	}
+}
 
 void Camera::readSettings(TiXmlElement* settings){
 	if(settings->QueryBoolAttribute("runThread", &runThread) != TIXML_SUCCESS){
@@ -2224,6 +2316,16 @@ void Camera::readSettings(TiXmlElement* settings){
 	svmParams.gamma = gamma;*/
 }
 
+void Camera::getPointCloud(Mat &pointCloudOrigMapCenter, Mat &curPosOrigMapCenter) {
+	TAPAS::PointCloud srv;
+	pointCloudClient.call(srv);
+	
+	memcpy(curPosOrigMapCenter.data, srv.response.curPosOrigMapCenter.data(), 16*sizeof(float));
+	
+	pointCloudOrigMapCenter = Mat(srv.response.cloudRows, srv.response.cloudCols, CV_32FC1);
+	int cloudSize = srv.response.cloudRows * srv.response.cloudCols * sizeof(float);
+	memcpy(pointCloudOrigMapCenter.data, srv.response.pointCloudOrigMapCenter.data(), cloudSize);
+}
 void Camera::insertNewData(cv::Mat& dataAll, cv::Mat newData, int dataSkipped){
 //	cout << "Camera::insertNewData" << endl;
 
@@ -3056,7 +3158,7 @@ void Camera::computeBestDirLocalMap(cv::Mat segmentResults,
 									float& bestDirLocalMap,
 									float& goalDirLocalMap)
 {
-	LocalPlanner::Parameters localPlannerParams;
+	PlannerHelpers::Parameters localPlannerParams;
 	localPlannerParams.debug = 0;
 	localPlannerParams.avoidObstacles = 1;
 	localPlannerParams.histResolution = 10;
@@ -3077,7 +3179,7 @@ void Camera::computeBestDirLocalMap(cv::Mat segmentResults,
 
 	int numSectors = (float)360 / localPlannerParams.histResolution + 0.5;
 	vector<float> histSectors(numSectors, 0.0);
-	LocalPlanner::updateHistogram(histSectors,
+	PlannerHelpers::updateHistogram(histSectors,
 								posOrigMapCenter,
 								segmentResultsFloat,
 								localPlannerParams);
@@ -3087,7 +3189,7 @@ void Camera::computeBestDirLocalMap(cv::Mat segmentResults,
 		cout << "smoothing" << endl;
 	}
 
-	LocalPlanner::smoothHistogram(histSectors, localPlannerParams);
+	PlannerHelpers::smoothHistogram(histSectors, localPlannerParams);
 
 	if(cameraParams.debugLevel >= 1){
 //				cout << "histSectors = " << histSectors << endl;
@@ -3097,14 +3199,14 @@ void Camera::computeBestDirLocalMap(cv::Mat segmentResults,
 //						", goalDirsGlobal.size() = " << goalDirsGlobal.size() << endl;
 	}
 
-	goalDirLocalMap = LocalPlanner::determineGoalInLocalMap(mapCenterOrigGlobal, goalDirGlobal);
+	goalDirLocalMap = PlannerHelpers::determineGoalInLocalMap(mapCenterOrigGlobal, goalDirGlobal);
 
 	if(cameraParams.debugLevel >= 1){
 		cout << "finding optim sector" << endl;
 	}
 
 	/// optimal direction in the local map - nearest to the goal
-	bestDirLocalMap = LocalPlanner::findOptimSector(histSectors,
+	bestDirLocalMap = PlannerHelpers::findOptimSector(histSectors,
 													posOrigMapCenter,
 													goalDirLocalMap,
 													localPlannerParams);
@@ -3206,11 +3308,7 @@ void Camera::saveCache(boost::filesystem::path cacheFile){
 	}
 }
 
-//Inserts computed constraints into map
-void Camera::insertConstraints(	cv::Mat map,
-								std::chrono::high_resolution_clock::time_point curTimestampMap,
-								cv::Mat mapMove)
-{
+bool Camera::insertConstraints(TAPAS::CameraConstraints::Request &req, TAPAS::CameraConstraints::Response &res) {
 //	std::unique_lock<std::mutex> lck(mtxConstr);
 //	if(!constraints.empty() && curTimestampMap < curTimestamp){
 //		for(int x = 0; x < MAP_SIZE; x++){
@@ -3223,6 +3321,13 @@ void Camera::insertConstraints(	cv::Mat map,
 //	}
 //	lck.unlock();
 
+	Mat map = Mat(MAP_SIZE, MAP_SIZE, CV_32FC1);
+	Mat mapMove = Mat(4, 4, CV_32FC1);
+	std::chrono::nanoseconds nano(req.timestamp);
+
+	memcpy(map.data, req.constraintsMap.data(), req.constraintsMap.size() * sizeof(float));
+	memcpy(mapMove.data, req.mapMove.data(), req.mapMove.size() * sizeof(float));
+	std::chrono::high_resolution_clock::time_point curTimestampMap(nano);
 
 	if(!pixelCoordsMapOrigRobotMapCenter.empty()){
 		std::chrono::high_resolution_clock::time_point timeBegin;
@@ -3352,6 +3457,8 @@ void Camera::insertConstraints(	cv::Mat map,
 		cout << "Infering time: " << std::chrono::duration_cast<std::chrono::milliseconds>(timeEndInfering - timeEndPreparing).count() << " ms" << endl;
 
 	}
+	memcpy(res.constraintsMap.data(), map.data, MAP_SIZE * MAP_SIZE * sizeof(float));
+	return true;
 }
 
 //CV_8UC3 2x640x480: left, right image

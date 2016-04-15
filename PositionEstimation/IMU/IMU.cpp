@@ -73,11 +73,38 @@ IMU::IMU(Robot* irobot) :
 		robot(irobot),
 		usedIMUType(IMU_MICROSTRAIN_GX4_25)
 {
-
+	dataThread = std::thread(&IMU::sendData, this);
 }
 
 IMU::~IMU() {
 	closePort();
+}
+
+void IMU::sendData() {
+  	ros::Publisher imu_pub = nh.advertise<TAPAS::IMU>("imu_data", 10);
+  	ros::Rate loop_rate(10);
+
+  	cv::Mat imuData;
+  	TAPAS::IMU msg;
+
+	while(ros::ok() && !isDataValid()) {
+		ros::spinOnce();
+		loop_rate.sleep();
+	}
+
+	std::chrono::high_resolution_clock::time_point timestamp;
+	while(ros::ok()) {
+		if ( usedIMUType == IMU_UM6)
+			imuData = getUM6Data(timestamp);
+		else if ( usedIMUType == IMU_MICROSTRAIN_GX4_25)
+			imuData = getGX4Data(timestamp);
+
+		msg = RosHelpers::makeIMUMsg(imuData);
+		imu_pub.publish(msg);
+
+		ros::spinOnce();
+		loop_rate.sleep();
+	}
 }
 
 void IMU::openPort(std::string port){

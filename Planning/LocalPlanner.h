@@ -1,3 +1,4 @@
+
 /*
 	Copyright (c) 2014,	TAPAS Team:
 	-Michal Nowicki (michal.nowicki@put.poznan.pl),
@@ -41,6 +42,7 @@
 #include <tinyxml.h>
 //TAPAS
 #include "RobotDrivers/robotDrivers.h"
+#include "PlannerHelpers.h"
 
 
 class Robot;
@@ -54,30 +56,8 @@ class GlobalPlanner;
 class LocalPlanner {
 	friend class Debug;
 
-public:
-	struct Parameters {
-		int runThread;
-		int debug;
-		int avoidObstacles;
-		int histResolution;
-		//float threshold;
-		float steeringMargin;
-		float gauss3sig;
-		float maxDistance;
-		float backwardsPenalty;
-		float normalSpeed;
-		float preciseSpeed;
-		float gentleTurnMargin;
-		float gentleTurnSpeedDiff;
-		float turnSpeed;
-		int turnTimeout;
-		int interruptTime;
-		float interruptSpeed;
-		float imuAccVarianceLimit;
-	};
-
 private:
-	Parameters localPlannerParams;
+	PlannerHelpers::Parameters localPlannerParams;
 	int numHistSectors;
 
 	//parent class robot
@@ -134,26 +114,6 @@ public:
 	void setNormalSpeed();
 
 	void getVecFieldHist(std::vector<float>& retVecFieldHist, float& retGoalDirection, float& retBestDirection);
-
-	//---------------------STATIC FUNCTIONS---------------------
-
-	static void updateHistogram(std::vector<float>& histSectors,
-							cv::Mat posRobotMapCenter,
-							cv::Mat constraints,
-							Parameters localPlannerParams);
-
-	static void smoothHistogram(std::vector<float>& histSectors,
-								Parameters localPlannerParams);
-
-	static float determineGoalInLocalMap(cv::Mat posLocalToGlobalMap,
-										float goalDirGlobalMap);
-
-	static float findOptimSector(const std::vector<float>& histSectors,
-								cv::Mat posRobotMapCenter,
-								float goalDirLocalMap,
-								Parameters localPlannerParams);
-
-	static float rotMatToEulerYaw(cv::Mat rotMat);
 };
 
 #include "GlobalPlanner.h"

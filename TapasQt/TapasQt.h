@@ -45,6 +45,7 @@
 #include "QtEncoders.h"
 #include "Calibration.h"
 #include "Constraints.h"
+    #include "std_msgs/String.h"
 
 class TapasQt : public QMainWindow
 {
