@@ -51,7 +51,6 @@ class Debug;
 
 //RobotsIntellect
 #include "../PositionEstimation/PositionEstimation.h"
-#include "../MovementConstraints/MovementConstraints.h"
 #include "../Planning/GlobalPlanner.h"
 //TinyXML
 #include <tinyxml.h>
@@ -79,8 +78,6 @@ class Robot {
 	// Class responsible for planning
 	GlobalPlanner* globalPlanner;
 	bool globalPlannerBeingDeleted;
-
-	MovementConstraints* movementConstraints;
 
 	// Global time of start
 	std::chrono::high_resolution_clock::time_point startTime;
@@ -142,14 +139,6 @@ public:
 	void closeEncoders();
 
 	bool isEncodersOpen();
-
-	//----------------------MENAGMENT OF MovementConstraints DEVICES
-	//Hokuyo
-	void openHokuyo(std::string port);
-
-	void closeHokuyo();
-
-	bool isHokuyoOpen();
 
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
 	//CV_32SC1 2x1: left, right encoder

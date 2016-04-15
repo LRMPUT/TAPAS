@@ -47,9 +47,11 @@
 #include "Hokuyo/Hokuyo.h"
 #include "Sharp/Sharp.h"
 #include "ConstraintsHelpers.h"
+#include "../Robot/RosHelpers.h"
 //ROS
 #include "TAPAS/PointCloud.h"
 #include "TAPAS/IMU.h"
+#include "TAPAS/PlanningData.h"
 
 class Robot;
 class Debug;
@@ -135,6 +137,8 @@ private:
 
 	std::thread movementConstraintsThread;
 
+	std::thread dataThread;
+
 	bool runThread;
 
 	int debugLevel;
@@ -143,6 +147,8 @@ private:
 
 	// Main loop of MovementContraints thread.
 	void run();
+
+	void sendData();
 
 	void readSettings(TiXmlElement* settings);
 

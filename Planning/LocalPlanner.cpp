@@ -48,6 +48,7 @@ LocalPlanner::LocalPlanner(Robot* irobot, GlobalPlanner* planer,
 
 	readSettings(settings);
 	numHistSectors = (float)360/localPlannerParams.histResolution + 0.5;
+	planning_sub = nh.subscribe("planning_data", 10, &LocalPlanner::planningCallback, this);
 
 	localPlannerThread = std::thread(&LocalPlanner::run, this);
 
@@ -169,6 +170,12 @@ void LocalPlanner::readSettings(TiXmlElement* settings) {
 
 }
 
+void LocalPlanner::planningCallback(const TAPAS::PlanningData& msg) {
+	constraints = RosHelpers::readMatrixMsg(msg.constraintsMap);
+	posRobotMapCenter = RosHelpers::readMatrixMsg(msg.posRobotMapCenter);
+	posLocalToGlobalMap = RosHelpers::readMatrixMsg(msg.globalMapCenter);
+}
+
 void LocalPlanner::startLocalPlanner() {
 	cout<<"LocalPlanner::startLocalPlanner()"<<endl;
 	startOperate = true;
@@ -230,9 +237,6 @@ void LocalPlanner::executeVFH() {
 	Mat posRobotMapCenter;
 	Mat posLocalToGlobalMap;
 
-	robot->getLocalPlanData(constraints,
-							posRobotMapCenter,
-							posLocalToGlobalMap);
 	if(!constraints.empty() && !posRobotMapCenter.empty() && !posLocalToGlobalMap.empty()){
 		vector<float> histSectors(numHistSectors, 0);
 		//vector<int> freeSectors;

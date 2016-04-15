@@ -24,6 +24,10 @@ class Debug{
 
 	cv::Mat pixelColors;
 
+	cv::Mat hokuyoData;
+
+	cv::Mat movementConstraints;
+
 	ros::NodeHandle nh;
 
 	image_transport::ImageTransport it;
@@ -35,6 +39,12 @@ class Debug{
 	ros::Subscriber coords_sub;
 
 	ros::Subscriber colors_sub;
+
+	ros::Subscriber hokuyo_sub;
+
+	ros::Subscriber constraints_sub;
+
+	bool hokuyoActive;
 public:
 	Debug(Robot* irobot);
 
@@ -42,6 +52,8 @@ public:
 	void switchMode(OperationMode mode);
 
 	void setMotorsVel(float motLeft, float motRight);
+
+	bool isHokuyoActive();
 
 	//----------------------EXTERNAL ACCESS TO MEASUREMENTS
 	//CV_32SC1 2x1: left, right encoder
@@ -70,6 +82,10 @@ public:
 	void coordsCallback(const TAPAS::Matrix msg);
 
 	void colorsCallback(const TAPAS::Matrix msg);
+
+	void hokuyoCallback(const TAPAS::Matrix msg);
+
+	void constraintsCallback(const TAPAS::Matrix msg);
 
 	//CV_8UC3 2x640x480: left, right image
 	const std::vector<cv::Mat> getCameraData();

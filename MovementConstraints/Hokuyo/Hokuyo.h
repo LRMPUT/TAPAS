@@ -38,6 +38,11 @@ class Hokuyo;
 #include <chrono>
 #include <opencv2/opencv.hpp>
 #include <urg_cpp/Urg_driver.h>
+#include "ros/ros.h"
+#include "TAPAS/Matrix.h"
+#include "TAPAS/OpenPort.h"
+#include "std_srvs/Empty.h"
+#include "../../Robot/RosHelpers.h"
 
 #define HOKUYO_SCANS 1081
 
@@ -51,7 +56,10 @@ class Hokuyo {
 		UTM30LX
 	};
 
+	ros::NodeHandle nh;
+
 	std::thread readingThread;
+	std::thread dataThread;
 	volatile bool runThread;
 
 	qrk::Urg_driver hokuyo;
@@ -64,10 +72,19 @@ class Hokuyo {
 
 	bool dataValid;
 
+	ros::ServiceServer openService;
+	ros::ServiceServer closeService;
+
 	void run();
 public:
 	Hokuyo();
 	virtual ~Hokuyo();
+
+	void sendData();
+
+	bool openHokuyo(TAPAS::OpenPort::Request &req, TAPAS::OpenPort::Response &res);
+
+	bool closeHokuyo(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res);
 
 	void openPort(std::string port);
 

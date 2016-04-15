@@ -55,6 +55,7 @@
 #include "TAPAS/CameraConstraints.h"
 #include "TAPAS/SegmentImage.h"
 #include "TAPAS/ColorSegments.h"
+#include "TAPAS/PointCloud.h"
 
 class MovementConstraints;
 class Debug;

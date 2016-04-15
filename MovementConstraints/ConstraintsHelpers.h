@@ -7,6 +7,7 @@
 #include <queue>
 #include <opencv2/opencv.hpp>
 #include "ros/ros.h"
+#include "../Robot/RosHelpers.h"
 
 class ConstraintsHelpers {
 

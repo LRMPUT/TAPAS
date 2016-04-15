@@ -1,6 +1,7 @@
 <launch>
   <node pkg="TAPAS" name="TapasGui" type="TapasGui" args="settings.xml"/>
   <node pkg="TAPAS" name="Camera" type="Camera"/>
+  <node pkg="TAPAS" name="MovementConstraints" type="MovementConstraints"/>
 
   <param name="wheelCir" value="160" />
   <param name="encodersCPR" value="300" />

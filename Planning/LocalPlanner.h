@@ -43,7 +43,9 @@
 //TAPAS
 #include "RobotDrivers/robotDrivers.h"
 #include "PlannerHelpers.h"
-
+//ROs
+#include "ros/ros.h"
+#include "TAPAS/PlanningData.h"
 
 class Robot;
 class Debug;
@@ -82,6 +84,14 @@ private:
 	float shGoalDirLocalMap;
 	float shBestDirLocalMap;
 
+	cv::Mat constraints;
+	cv::Mat posRobotMapCenter;
+	cv::Mat posLocalToGlobalMap;
+
+	ros::NodeHandle nh;
+
+	ros::Subscriber planning_sub;
+
 	void run();
 
 	void determineDriversCommand(cv::Mat posRobotMapCenter,
@@ -100,6 +110,7 @@ public:
 	LocalPlanner(Robot* irobot, GlobalPlanner* planer, TiXmlElement* settings);
 	virtual ~LocalPlanner();
 
+	void planningCallback(const TAPAS::PlanningData& msg);
 
 	void stopThread();
 

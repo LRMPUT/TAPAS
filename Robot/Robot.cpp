@@ -201,20 +201,6 @@ bool Robot::isEncodersOpen(){
 #endif
 }
 
-//----------------------MENAGMENT OF MovementConstraints DEVICES
-//Hokuyo
-void Robot::openHokuyo(std::string port){
-	movementConstraints->openHokuyo(port);
-}
-
-void Robot::closeHokuyo(){
-	movementConstraints->closeHokuyo();
-}
-
-bool Robot::isHokuyoOpen(){
-	return movementConstraints->isHokuyoOpen();
-}
-
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
 //CV_32SC1 2x1: left, right encoder
 cv::Mat Robot::getEncoderData(std::chrono::high_resolution_clock::time_point& timestamp){
@@ -243,23 +229,9 @@ const cv::Mat Robot::getEstimatedPosition(){
 	return positionEstimation->getEstimatedPosition();
 }
 
-//CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)
-cv::Mat Robot::getMovementConstraints(){
-	return movementConstraints->getMovementConstraints();
-}
-
-
-cv::Mat Robot::getPosImuConstraintsMapCenter(){
-	return movementConstraints->getPosImuMapCenter();
-}
-
 //cv::Mat Robot::getLocalMapPosInGlobalMap(){
 //	return movementConstraints->getPosGlobalMap();
 //}
-
-void Robot::getLocalPlanData(cv::Mat& constraintsMap,cv::Mat& posRobotMapCenter, cv::Mat& globalMapCenter){
-	movementConstraints->getLocalPlanningData(constraintsMap, posRobotMapCenter, globalMapCenter);
-}
 
 ros::NodeHandle &Robot::getNodeHandle() {
 	return nh;

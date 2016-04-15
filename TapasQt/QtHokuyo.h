@@ -33,6 +33,10 @@
 #include "../Debug/Debug.h"
 //Trobot Qt
 #include "ui_TapasQt.h"
+//ROS
+#include "ros/ros.h"
+#include "TAPAS/OpenPort.h"
+#include "std_srvs/Empty.h"
 
 
 class QtHokuyo : public QObject
@@ -45,6 +49,10 @@ class QtHokuyo : public QObject
 
 	QPixmap map;
 	QTimer refreshTimer;
+
+	ros::NodeHandle nh;
+	ros::ServiceClient openHokuyoClient;
+	ros::ServiceClient closeHokuyoClient;
 
 public:
 	QtHokuyo(Ui::TapasQtClass* iui, Robot* irobot, Debug* idebug);

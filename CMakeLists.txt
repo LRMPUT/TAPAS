@@ -16,6 +16,7 @@ add_message_files(DIRECTORY msg
   Matrix.msg
   IMU.msg
   Encoders.msg
+  PlanningData.msg
 )
 
 add_service_files(DIRECTORY srv 
@@ -24,6 +25,7 @@ add_service_files(DIRECTORY srv
   CameraConstraints.srv
   SegmentImage.srv
   ColorSegments.srv
+  OpenPort.srv
 )
 
 generate_messages(
@@ -137,20 +139,7 @@ set(Tapas_SOURCES
 	MechanicalGrabber/MechanicalGrabber.cpp
 	MovementConstraints/Hokuyo/Hokuyo.cpp
 	MovementConstraints/Sharp/Sharp.cpp
-	#MovementConstraints/Camera/LibSVM-weights/svm.cpp
-	#MovementConstraints/Camera/Pgm/CustFeature.cpp
-	#MovementConstraints/Camera/Pgm/Inference.cpp
-	#MovementConstraints/Camera/Pgm/ParamEst.cpp
-	#MovementConstraints/Camera/Pgm/Pgm.cpp
-	#MovementConstraints/Camera/Pgm/UnionFind.cpp
-	#MovementConstraints/Camera/Camera.cpp
-	#MovementConstraints/Camera/HierClassifier/UnionFind.cpp
-	#MovementConstraints/Camera/HierClassifier/Classifier.cpp
-	#MovementConstraints/Camera/HierClassifier/ClassifierSVM.cpp
-	#MovementConstraints/Camera/HierClassifier/ClassifierRF.cpp
-	#MovementConstraints/Camera/HierClassifier/HierClassifier.cpp
 	MovementConstraints/ConstraintsHelpers.cpp
-	MovementConstraints/MovementConstraints.cpp
 	#Planning/PlanningSearching/LocalPlannerSearching.cpp
 	#Planning/PlanningToGold/LocalPlannerToGold.cpp
 	#Planning/PlanningWithGold/LocalPlannerWithGold.cpp

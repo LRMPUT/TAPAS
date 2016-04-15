@@ -86,9 +86,8 @@ Camera::Camera(TiXmlElement* settings) :
 	}
 
 	readSettings(settings);
-	if(ros::this_node::getName() == "/Camera") { 
-		constraintsService = nh.advertiseService("camera_constraints", &Camera::insertConstraints, this);
-	}
+	
+	constraintsService = nh.advertiseService("camera_constraints", &Camera::insertConstraints, this);
 	segmentService = nh.advertiseService("segment_image", &Camera::segmentImage, this);
 	colorService = nh.advertiseService("color_segments", &Camera::colorSegments, this);
 

@@ -134,7 +134,7 @@ void Recording::startRec() {
 	time.start();
 
 	if (ui->includeHokuyoCheckBox->isChecked() == true) {
-		if (!robot->isHokuyoOpen()) {
+		if (!debug->isHokuyoActive()) {
 			ui->recStatusLabel->setText("Hokuyo not active");
 			stopRec();
 			return;

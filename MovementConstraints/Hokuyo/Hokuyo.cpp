@@ -105,16 +105,46 @@ void Hokuyo::run(){
 	}
 }
 
+void Hokuyo::sendData() {
+  	ros::Publisher hokuyo_pub = nh.advertise<TAPAS::Matrix>("hokuyo_data", 10);
+  	ros::Rate loop_rate(10);
+
+  	cv::Mat hokuyoData;
+  	TAPAS::Matrix msg;
+
+	std::chrono::high_resolution_clock::time_point timestamp;
+	while(ros::ok()) {
+		hokuyoData = getData(timestamp);
+
+		msg = RosHelpers::makeMatrixMsg(hokuyoData);
+		hokuyo_pub.publish(msg);
+
+		ros::spinOnce();
+		loop_rate.sleep();
+	}
+}
+
 Hokuyo::Hokuyo() :
 		runThread(false),
 		dataValid(false),
 		hokuyoType(HokuyoType::UTM30LX)
 {
-
+	openService = nh.advertiseService("open_hokuyo", &Hokuyo::openHokuyo, this);
+	closeService = nh.advertiseService("close_hokuyo", &Hokuyo::closeHokuyo, this);
 }
 
 Hokuyo::~Hokuyo() {
 	closePort();
+}
+
+bool Hokuyo::openHokuyo(TAPAS::OpenPort::Request &req, TAPAS::OpenPort::Response &res){
+	openPort(req.port);
+	return true;
+}
+
+bool Hokuyo::closeHokuyo(std_srvs::Empty::Request &req, std_srvs::Empty::Response &res){
+	closePort();
+	return true;
 }
 
 void Hokuyo::openPort(std::string port){
@@ -126,6 +156,7 @@ void Hokuyo::openPort(std::string port){
 		hokuyo.set_scanning_parameter(hokuyo.deg2step(-100), hokuyo.deg2step(100));
 		runThread = true;
 		readingThread = std::thread(&Hokuyo::run, this);
+		dataThread = std::thread(&Hokuyo::sendData, this);
 	}
 }
 
@@ -148,7 +179,7 @@ bool Hokuyo::isDataValid(){
 }
 
 //CV_32SC1 4xHOKUYO_SCANS: x, y, distance, intensity - points from left to right
-cv::Mat Hokuyo:: getData(std::chrono::high_resolution_clock::time_point &timestamp){
+cv::Mat Hokuyo::getData(std::chrono::high_resolution_clock::time_point &timestamp){
 	Mat ret(curMeas.rows, curMeas.cols, CV_32SC1);
 	std::unique_lock<std::mutex> lck(mtx);
 	curMeas.copyTo(ret);

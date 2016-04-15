@@ -15,6 +15,7 @@ int main(int argc, char *argv[]) {
 		TiXmlElement *pMovementConstraints = settings.FirstChildElement("Robot")->
 			FirstChildElement("MovementConstraints");
 		MovementConstraints m(pMovementConstraints);
+//		m.openHokuyo("/dev/robots/hokuyo");
 		ros::spin();
 	}
 	catch(char const* error){

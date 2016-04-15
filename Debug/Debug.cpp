@@ -26,12 +26,14 @@ using namespace cv;
 using namespace std;
 using namespace boost;
 
-Debug::Debug(Robot* irobot) : robot(irobot), it(nh){
+Debug::Debug(Robot* irobot) : robot(irobot), it(nh), hokuyoActive(false){
 	cout << "Debug::Debug" << endl;
 	image_sub = it.subscribe("camera_image", 10, &Debug::imageCallback, this);
 	// classified_sub = it.subscribe("camera_classified", 10, &Debug::classifiedCallback, this);
 	coords_sub = nh.subscribe("camera_coords", 10, &Debug::coordsCallback, this);
 	colors_sub = nh.subscribe("camera_colors", 10, &Debug::colorsCallback, this);
+	hokuyo_sub = nh.subscribe("hokuyo_data", 10, &Debug::hokuyoCallback, this);
+	constraints_sub = nh.subscribe("movement_constraints", 10, &Debug::constraintsCallback, this);
 }
 
 //----------------------MODES OF OPERATION
@@ -41,6 +43,10 @@ void Debug::switchMode(OperationMode mode){
 
 void Debug::setMotorsVel(float motLeft, float motRight){
 	robot->globalPlanner->setMotorsVel(motLeft, motRight);
+}
+
+bool Debug::isHokuyoActive() {
+	return hokuyoActive;
 }
 
 //----------------------EXTERNAL ACCESS TO MEASUREMENTS
@@ -100,6 +106,15 @@ void Debug::coordsCallback(const TAPAS::Matrix msg) {
 
 void Debug::colorsCallback(const TAPAS::Matrix msg) {
 	pixelColors = RosHelpers::readMatrixMsg(msg);
+}
+
+void Debug::hokuyoCallback(const TAPAS::Matrix msg) {
+	hokuyoActive = true;
+	hokuyoData = RosHelpers::readMatrixMsg(msg);
+}
+
+void Debug::constraintsCallback(const TAPAS::Matrix msg) {
+	movementConstraints = RosHelpers::readMatrixMsg(msg);
 }
 
 //CV_8UC3 2x640x480: left, right image
@@ -183,7 +198,7 @@ const cv::Mat Debug::getEstimatedPosition(){
 
 //CV_32FC1 MAP_SIZExMAP_SIZE: 0-1 chance of being occupied, robot's position (MAP_SIZE/2, 0)
 const cv::Mat Debug::getMovementConstraints(){
-	return robot->movementConstraints->getMovementConstraints();
+	return movementConstraints;
 }
 
 std::vector<cv::Point2f> Debug::getPointCloudCamera(cv::Mat& image){

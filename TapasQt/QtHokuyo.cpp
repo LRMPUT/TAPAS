@@ -48,6 +48,8 @@ QtHokuyo::QtHokuyo(Ui::TapasQtClass* iui, Robot* irobot, Debug* idebug) :
 	refreshTimer.start();
 
 	map = QPixmap(ui->calibLaserLabel->width(), ui->calibLaserLabel->height());
+	openHokuyoClient = nh.serviceClient<TAPAS::PointCloud>("open_hokuyo");
+	closeHokuyoClient = nh.serviceClient<std_srvs::Empty>("close_hokuyo");
 }
 
 QtHokuyo::~QtHokuyo(){
@@ -59,7 +61,7 @@ cv::Mat QtHokuyo::getData(){
 
 void QtHokuyo::refresh(){
 //	cout << "QtHokuyo::refresh(), robot->isHokuyoOpen() = " << robot->isHokuyoOpen() << endl;
-	if(robot->isHokuyoOpen()){
+	if(debug->isHokuyoActive()){
 		Mat data = getData();
 
 		map.fill(Qt::white);
@@ -88,10 +90,13 @@ void QtHokuyo::refresh(){
 
 void QtHokuyo::connect(){
 	if(ui->hokuyoPortCombo->count() != 0){
-		robot->openHokuyo(ui->hokuyoPortCombo->currentText().toAscii().data());
+		TAPAS::OpenPort srv;
+		srv.request.port = ui->hokuyoPortCombo->currentText().toAscii().data();
+		openHokuyoClient.call(srv);
 	}
 }
 
 void QtHokuyo::disconnect(){
-	robot->closeHokuyo();
+	std_srvs::Empty srv;
+	closeHokuyoClient.call(srv);
 }

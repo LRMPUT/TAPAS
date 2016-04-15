@@ -50,6 +50,7 @@ MovementConstraints::MovementConstraints(TiXmlElement* settings) :
 
 	cameraConstraintsClient = nh.serviceClient<TAPAS::CameraConstraints>("camera_constraints");
 	constraintsMap = Mat(MAP_SIZE, MAP_SIZE, CV_32FC1, Scalar(0));
+	imuCur = Mat(3, 4, CV_32FC1);
 
 	ros::ServiceServer service = nh.advertiseService("point_cloud", &MovementConstraints::getPointCloud, this);
 	imu_sub = nh.subscribe("imu_data", 10, &MovementConstraints::imuCallback, this);
@@ -57,8 +58,8 @@ MovementConstraints::MovementConstraints(TiXmlElement* settings) :
 
 	//runThread = false;
 	movementConstraintsThread = std::thread(&MovementConstraints::run, this);
-
-}
+	dataThread = std::thread(&MovementConstraints::sendData, this);
+} 
 
 MovementConstraints::~MovementConstraints() {
 	cout << "~MovementConstraints()" << endl;
@@ -238,6 +239,38 @@ void MovementConstraints::run(){
 	}
 }
 
+
+void MovementConstraints::sendData(){
+  	ros::Publisher constraints_pub = nh.advertise<TAPAS::Matrix>("movement_constraints", 10);
+  	ros::Publisher planning_pub = nh.advertise<TAPAS::PlanningData>("planning_data", 10);
+
+  	TAPAS::Matrix constraints_msg;
+  	TAPAS::PlanningData planning_msg;
+  	ros::Rate loop_rate(10);
+	
+	while(ros::ok()) {
+		Mat ret;
+		std::unique_lock<std::mutex> lckMap(mtxMap);
+		std::unique_lock<std::mutex> lckPC(mtxPointCloud);
+
+		constraints_msg = RosHelpers::makeMatrixMsg(constraintsMap);
+		constraints_pub.publish(constraints_msg);
+		planning_msg.constraintsMap = constraints_msg;
+		Mat posRobotMapCenter;
+		if(!curPosOrigMapCenter.empty() && !imuOrigRobot.empty()){
+			posRobotMapCenter = curPosOrigMapCenter*imuOrigRobot;
+		}
+		planning_msg.posRobotMapCenter = RosHelpers::makeMatrixMsg(posRobotMapCenter);
+		planning_msg.globalMapCenter = RosHelpers::makeMatrixMsg(curMapCenterOrigGlobal);
+		planning_pub.publish(planning_msg);
+		lckPC.unlock();
+		lckMap.unlock();
+
+		ros::spinOnce();
+		loop_rate.sleep();
+	}
+}
+
 // Stop MovementConstraints thread.
 void MovementConstraints::stopThread(){
 	runThread = false;
@@ -263,10 +296,10 @@ void MovementConstraints::updateConstraintsMap(){
 
 	Mat mapMove = curPosOrigMapCenter.inv();
 
-//	cout << "Calculating new curMapCenterOrigGlobal" << endl;
+	// cout << "Calculating new curMapCenterOrigGlobal" << endl;
 	curMapCenterOrigGlobal = ConstraintsHelpers::compOrient(imuCur);
 	curPosOrigMapCenter = Mat::eye(4, 4, CV_32FC1);
-//	cout << "Map moved" << endl;
+	// cout << "Map moved" << endl;
 	timestampMap = timestampMapCur;
 	lckImu.unlock();
 	lckPointCloud.unlock();
