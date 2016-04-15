@@ -1,0 +1,15 @@
+# Hashes of file build rules.
+d004f0d7cb09c25dc581f36b48f6cd79 TapasQt/moc_Calibration.cxx
+10baff5ce2d57a3f3a24a8ae6fc4fe32 TapasQt/moc_CameraWindow.cxx
+64a1cccd71ac88f05a51416509dd4905 TapasQt/moc_Chart.cxx
+6d6ea6e3593a9ddca1f78faccd030326 TapasQt/moc_Constraints.cxx
+813b21025d324d8f02b8d26e4aeb047d TapasQt/moc_QtCamera.cxx
+22f4de70993f01e27d11a71728c5fd35 TapasQt/moc_QtEncoders.cxx
+dc5807af914b9cec52196447d7ab48d1 TapasQt/moc_QtGps.cxx
+1e609b7a960d7e456b87fb07394f49d3 TapasQt/moc_QtHokuyo.cxx
+549d22c1cffe659b67166c88af9d64b0 TapasQt/moc_QtRobotDrive.cxx
+fe27ff6b1dc8ab75194c6c276d8d25d3 TapasQt/moc_Recording.cxx
+1d004f495a8bad89b263a6c5dc35e45a TapasQt/moc_TapasQt.cxx
+53f2fb9b30c44aac999115348af0024c TapasQt/moc_Viewer.cxx
+615b6db6def871cfbdac6659fdc96b7d ui_CameraWindow.h
+b7b6f979304bb6059e35f91cd37a3a51 ui_TapasQt.h

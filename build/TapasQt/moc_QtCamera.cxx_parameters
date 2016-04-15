@@ -1,0 +1,9 @@
+-I/home/michal/TAPAS/MicrostrainSDK/Library/Include
+-I/home/michal/TAPAS/MicrostrainSDK/Utilities/Include
+-I/home/michal/TAPAS/MicrostrainSDK/Library/User Functions
+-DNO_CUDA
+-DBOOST_TT_HAS_OPERATOR_HPP_INCLUDED
+-DBOOST_NO_TEMPLATE_PARTIAL_SPECIALIZATION
+-o
+/home/michal/TAPAS/build/TapasQt/moc_QtCamera.cxx
+/home/michal/TAPAS/TapasQt/QtCamera.h

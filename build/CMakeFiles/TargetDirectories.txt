@@ -1,0 +1,2 @@
+/home/michal/TAPAS/build/CMakeFiles/Tapas.dir
+/home/michal/TAPAS/build/CMakeFiles/TapasGui.dir
